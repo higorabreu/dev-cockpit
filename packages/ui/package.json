@@ -1,0 +1,20 @@
+{
+  "name": "@dck/ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@dck/core": "workspace:^",
+    "@dck/design": "workspace:^",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.8"
+  }
+}

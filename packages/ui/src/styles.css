@@ -1,0 +1,41 @@
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  color: var(--fg);
+  font: 13px / 1.5 var(--font-sans);
+}
+
+body {
+  background: rgba(var(--bg-rgb), var(--surface-alpha, 0.92));
+}
+
+#host {
+  position: absolute;
+  inset: 0;
+  padding: 8px 10px;
+}
+
+.xterm,
+.xterm .xterm-viewport,
+.xterm .xterm-scrollable-element {
+  background-color: transparent !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body.enter {
+    animation: enter var(--motion-normal) var(--motion-easing);
+  }
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
