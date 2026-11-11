@@ -40,6 +40,25 @@ export function createTranslator(locale: Locale): Translator {
   }
 }
 
+export interface LiveTranslator extends Translator {
+  // Troca a língua: quem guardou `t` ou `plural` passa a traduzir na nova, sem recriar nada
+  setLocale(locale: Locale): void
+}
+
+export function createLiveTranslator(initial: Locale): LiveTranslator {
+  let current = createTranslator(initial)
+  return {
+    get locale() {
+      return current.locale
+    },
+    t: (key, params) => current.t(key, params),
+    plural: (key, count, params) => current.plural(key, count, params),
+    setLocale(locale) {
+      if (locale !== current.locale) current = createTranslator(locale)
+    },
+  }
+}
+
 // Língua do sistema, com o português como padrão quando não há correspondência
 export function pickLocale(languages: readonly string[]): Locale {
   for (const language of languages) {

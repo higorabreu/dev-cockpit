@@ -331,6 +331,12 @@ export function createPanel(options: PanelOptions) {
     open: () => setOpen(true),
     close: () => setOpen(false),
     render,
+    // Depois de trocar a língua: refaz o trilho e o painel mesmo sem nada ter mudado
+    retranslate() {
+      railSignature = ''
+      signature = ''
+      render()
+    },
     refresh: () => void refresh(),
   }
 }

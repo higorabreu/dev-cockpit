@@ -29,7 +29,10 @@ export function createProjectSearch(
   t: Translate,
 ) {
   const { overlay, input, results, hint } = elements
-  hint.innerHTML = `<kbd>Ctrl+D</kbd> ${escapeHtml(t('projects.hint'))}`
+  const drawHint = () => {
+    hint.innerHTML = `<kbd>Ctrl+D</kbd> ${escapeHtml(t('projects.hint'))}`
+  }
+  drawHint()
   let entries: readonly SearchEntry[] = []
   let matches: readonly SearchEntry[] = []
   let selected = 0
@@ -108,6 +111,10 @@ export function createProjectSearch(
       overlay.classList.add('open')
       filter()
       input.focus()
+    },
+    retranslate() {
+      drawHint()
+      if (isOpen()) draw()
     },
     // Atualiza a lista mantendo o texto digitado e o item destacado, depois de fixar ou soltar
     update(items: readonly SearchEntry[]) {

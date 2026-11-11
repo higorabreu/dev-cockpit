@@ -252,7 +252,9 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
 
   return {
     id: 'git',
-    label: i18n.t('git.label'),
+    get label() {
+      return i18n.t('git.label')
+    },
     icon: BRANCH_ICON,
     expandedByDefault: true,
     summary() {

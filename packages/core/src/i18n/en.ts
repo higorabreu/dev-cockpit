@@ -170,7 +170,6 @@ export const en: Record<MessageKey, string> = {
   'settings.language.auto': 'Automatic (from the system)',
   'settings.language.pt': 'Português',
   'settings.language.en': 'English',
-  'settings.language.note': 'Applies when the cockpit is reopened.',
   'settings.group.appearance': 'Appearance',
   'settings.theme': 'Theme',
   'settings.theme.dark': 'Dark',

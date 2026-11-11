@@ -9,7 +9,7 @@ export interface TabBarCallbacks {
 export function createTabBar(
   container: HTMLElement,
   callbacks: TabBarCallbacks,
-  finishedLabel: string,
+  finishedLabel: () => string,
 ) {
   let dragging: HTMLElement | undefined
 
@@ -32,7 +32,7 @@ export function createTabBar(
             const pip = document.createElement('span')
             pip.className = 'pip'
             pip.setAttribute('role', 'img')
-            pip.setAttribute('aria-label', finishedLabel)
+            pip.setAttribute('aria-label', finishedLabel())
             button.append(pip)
           }
           button.addEventListener('click', () => callbacks.activate(tab.id))

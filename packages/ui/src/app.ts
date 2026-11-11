@@ -5,7 +5,7 @@ import {
   closeOtherTabs,
   closeTab,
   createAttentionTracker,
-  createTranslator,
+  createLiveTranslator,
   defaultSettings,
   emptyTabs,
   formatDuration,
@@ -75,7 +75,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const { bar, host } = elements
   const sessions = new Map<string, TerminalSession>()
   const projectTabs = new Map<string, string>()
-  const i18n = createTranslator(localeFor(settings.current().language, navigator.languages))
+  const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
   const notice = createNotice(elements.notice, bar, i18n)
   const menu = createTabMenu(elements.menu)
@@ -310,6 +310,16 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
 
   settings.onChange((next, changed) => {
     if (changed.includes('theme')) showTheme()
+    if (changed.includes('language')) {
+      i18n.setLocale(localeFor(next.language, navigator.languages))
+      translateStatic(i18n)
+      panel.retranslate()
+      search.retranslate()
+      settingsView.rerender()
+      tabBar.render(state, new Set(attention.unseenIds()))
+    }
+    // A pasta e a profundidade só são lidas na listagem: recarrega para o menu e a busca
+    if (changed.some((key) => key.startsWith('projects.'))) void refreshProjects()
     if (changed.includes('opacity')) applyOpacity(next.opacity)
     if (changed.includes('fontSize')) {
       for (const session of sessions.values()) session.setFontSize(next.fontSize)
@@ -342,7 +352,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         )
       },
     },
-    i18n.t('tabs.finished'),
+    () => i18n.t('tabs.finished'),
   )
 
   const actions = {

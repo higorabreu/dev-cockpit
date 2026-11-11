@@ -33,7 +33,9 @@ function describe(i18n: Translator, info: SessionActivityInfo | undefined) {
 export function createSessionsSection(source: SessionsSource, i18n: Translator): PanelSection {
   return {
     id: 'sessions',
-    label: i18n.t('sessions.label'),
+    get label() {
+      return i18n.t('sessions.label')
+    },
     icon: '<path d="M4 6h16M4 12h16M4 18h10"/>',
     expandedByDefault: true,
     summary: () => i18n.plural('sessions.count', source.tabs().length),

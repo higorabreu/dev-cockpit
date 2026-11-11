@@ -52,7 +52,9 @@ export function createEnvironmentSection(
 ): PanelSection {
   return {
     id: 'env',
-    label: i18n.t('env.label'),
+    get label() {
+      return i18n.t('env.label')
+    },
     icon: CUBE_ICON,
     expandedByDefault: false,
     summary() {

@@ -13,6 +13,7 @@ import {
   createTranslator,
   hostChannels,
   pickLocale,
+  type Translate,
 } from '@dck/core'
 import {
   app,
@@ -310,17 +311,22 @@ app.whenReady().then(async () => {
         window.webContents.send(hostChannels.windowOpenSettings)
       },
       autostart,
-      t: createTranslator(
-        loaded.settings.language === 'auto'
-          ? pickLocale(app.getPreferredSystemLanguages())
-          : loaded.settings.language,
-      ).t,
+      // Lido a cada montagem do menu: a língua pode mudar nas configurações com o app aberto
+      t: ((key, params) => {
+        const { language } = settingsStore.get().settings
+        return createTranslator(
+          language === 'auto' ? pickLocale(app.getPreferredSystemLanguages()) : language,
+        ).t(key, params)
+      }) as Translate,
       quit: () => app.quit(),
       onChange: () => void refreshTrayMenu(),
     }
     const trayIcon = statusIcons.create({ tooltip: 'Dev Cockpit', menu: [] })
     const refreshTrayMenu = async () => trayIcon.setMenu(await buildTrayMenu(menuDeps))
     void refreshTrayMenu()
+    settingsStore.onChange((_settings, changed) => {
+      if (changed.includes('language')) void refreshTrayMenu()
+    })
     app.on('before-quit', () => trayIcon.dispose())
     logger.info('tray icon created')
   }

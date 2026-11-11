@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { catalogs, createTranslator, pickLocale } from './translator.ts'
+import { catalogs, createLiveTranslator, createTranslator, pickLocale } from './translator.ts'
 
 describe('createTranslator', () => {
   it('should return the text of the locale when translating a key', () => {
@@ -65,5 +65,34 @@ describe('pickLocale', () => {
   it('should fall back to portuguese when no language is known', () => {
     expect(pickLocale(['ja-JP'])).toBe('pt-BR')
     expect(pickLocale([])).toBe('pt-BR')
+  })
+})
+
+describe('createLiveTranslator', () => {
+  it('should translate in the new language when the locale is switched', () => {
+    const live = createLiveTranslator('pt-BR')
+
+    live.setLocale('en')
+
+    expect(live.t('git.changes')).toBe('Changes')
+    expect(live.locale).toBe('en')
+  })
+
+  it('should translate in the new language for functions that were kept before the switch', () => {
+    const live = createLiveTranslator('pt-BR')
+    const { t, plural } = live
+
+    live.setLocale('en')
+
+    expect(t('git.changes')).toBe('Changes')
+    expect(plural('sessions.count', 3)).toBe('3 tabs')
+  })
+
+  it('should keep translating the same when the locale is set to the current one', () => {
+    const live = createLiveTranslator('en')
+
+    live.setLocale('en')
+
+    expect(live.t('git.changes')).toBe('Changes')
   })
 })

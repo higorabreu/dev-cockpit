@@ -339,7 +339,6 @@ export function createSettingsView(
             ['pt-BR', t('settings.language.pt')],
             ['en', t('settings.language.en')],
           ]),
-          t('settings.language.note'),
         ),
       ),
       group(
@@ -473,5 +472,12 @@ export function createSettingsView(
     if (isOpen() && local === 0) render()
   })
 
-  return { open, close: closeView, isOpen, toggle: () => (isOpen() ? closeView() : open()) }
+  return {
+    open,
+    close: closeView,
+    isOpen,
+    // Depois de trocar a língua, refaz a tela aberta com os textos novos
+    rerender: () => (isOpen() ? render() : undefined),
+    toggle: () => (isOpen() ? closeView() : open()),
+  }
 }
