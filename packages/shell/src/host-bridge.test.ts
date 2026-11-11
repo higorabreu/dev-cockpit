@@ -31,6 +31,12 @@ function setup() {
         activity: 'idle' as const,
       }),
     },
+    agents: {
+      session: async (pid: number) => ({
+        agent: { id: 'fake', name: 'Fake', processes: [] },
+        details: [{ id: 'pid', value: String(pid) }],
+      }),
+    },
     environment: {
       status: async (pid: number) => ({ kind: 'ok' as const, project: `p${pid}`, containers: [] }),
     },
@@ -219,5 +225,20 @@ describe('registerHostBridge clipboard and window', () => {
     const { call } = setup()
 
     expect(await call(hostChannels.environmentInspect, 99)).toEqual({ kind: 'none' })
+  })
+
+  it('should read the agent session of the terminal when the interface asks for it', async () => {
+    const { call, ptyHost } = setup()
+    const id = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+
+    const session = (await call(hostChannels.agentInspect, id)) as { details: unknown[] }
+
+    expect(session.details).toEqual([{ id: 'pid', value: String(ptyHost.sessions[0]?.pid) }])
+  })
+
+  it('should return nothing when the terminal does not exist and the agent is asked', async () => {
+    const { call } = setup()
+
+    expect(await call(hostChannels.agentInspect, 99)).toBeUndefined()
   })
 })

@@ -1,4 +1,4 @@
-import type { GitStatus } from '@dck/core'
+import type { AgentProfile, GitStatus } from '@dck/core'
 import { describe, expect, it } from 'vitest'
 import { createSessionInspector } from './session-inspector.ts'
 
@@ -17,8 +17,11 @@ const status: GitStatus = {
   submodulesClean: 0,
 }
 
+const agent: AgentProfile = { id: 'claude', name: 'Claude', processes: ['claude'] }
+
 const inspector = (foreground: string | undefined, git: GitStatus | undefined) =>
   createSessionInspector({
+    agents: [agent],
     processes: {
       inspect: async () => (foreground === undefined ? undefined : { cwd: '/p/app', foreground }),
     },
@@ -38,10 +41,11 @@ describe('createSessionInspector', () => {
     expect(snapshot).toEqual({ cwd: '/p/app', process: 'zsh', activity: 'idle' })
   })
 
-  it('should mark the session as claude when claude is in the foreground', async () => {
+  it('should mark the session as an agent when a known agent is in the foreground', async () => {
     const snapshot = await inspector('claude', status).snapshot(1)
 
-    expect(snapshot?.activity).toBe('claude')
+    expect(snapshot?.activity).toBe('agent')
+    expect(snapshot?.agent).toEqual(agent)
   })
 
   it('should be undefined when the process is gone', async () => {

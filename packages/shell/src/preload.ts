@@ -27,6 +27,9 @@ const api: HostApi = {
     show: (notification) => ipcRenderer.send(hostChannels.notificationsShow, notification),
     onClick: (listener) => subscribe<[string]>(hostChannels.notificationsClick, listener),
   },
+  agent: {
+    inspect: (ptyId) => ipcRenderer.invoke(hostChannels.agentInspect, ptyId),
+  },
   environment: {
     inspect: (ptyId) => ipcRenderer.invoke(hostChannels.environmentInspect, ptyId),
   },
