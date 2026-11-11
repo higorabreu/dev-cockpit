@@ -7,6 +7,7 @@ import { terminalTheme } from './theme.ts'
 
 export interface TerminalSession {
   readonly element: HTMLElement
+  readonly ptyId: number
   focus(): void
   write(data: string): void
   fit(): void
@@ -93,6 +94,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
 
   return {
     element,
+    ptyId: id,
     focus: () => terminal.focus(),
     write: (data) => api.pty.write(id, data),
     fit: () => fit.fit(),

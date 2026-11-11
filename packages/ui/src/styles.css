@@ -58,15 +58,57 @@ body.full #bar {
   outline: 1px dashed var(--muted);
 }
 
-#host {
+#main {
   order: 1;
   flex: 1;
   min-height: 0;
+  display: flex;
+}
+
+body.full #main {
+  order: 2;
+}
+
+#host {
+  flex: 1;
+  min-width: 0;
   position: relative;
 }
 
-body.full #host {
-  order: 2;
+#panel {
+  flex: none;
+  width: 240px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+  border-left: 1px solid var(--line);
+}
+
+#panel[hidden] {
+  display: none;
+}
+
+#panel h2 {
+  margin: 0 0 3px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+#panel p {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#panel p.sub {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .session {

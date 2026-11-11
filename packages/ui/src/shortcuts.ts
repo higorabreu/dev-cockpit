@@ -6,6 +6,7 @@ export interface ShortcutActions {
   goToTab(index: number): void
   toggleTheme(): void
   searchProjects(): void
+  togglePanel(): void
   changeOpacity(direction: 1 | -1): void
   changeFontSize(delta: number | 'reset'): void
 }
@@ -34,6 +35,7 @@ export function bindShortcuts(actions: ShortcutActions): () => void {
       if (key === 'w') return run(actions.closeTab)
       if (key === 'l') return run(actions.toggleTheme)
       if (key === 'o') return run(actions.searchProjects)
+      if (key === 'b') return run(actions.togglePanel)
     }
     if (event.ctrlKey && !event.altKey) {
       if (event.key === '=' || event.key === '+') return run(() => actions.changeFontSize(1))

@@ -20,6 +20,7 @@ import type { ThemeName } from '@dck/design'
 import { createHoldMenuController } from './hold-menu-controller.ts'
 import { setFullHeight } from './layout-mode.ts'
 import { createNotice } from './notice.ts'
+import { createPanel } from './panel.ts'
 import {
   applyOpacity,
   loadFontSize,
@@ -37,6 +38,8 @@ import { applyTheme } from './theme.ts'
 export interface AppElements {
   readonly bar: HTMLElement
   readonly host: HTMLElement
+  readonly main: HTMLElement
+  readonly panel: HTMLElement
   readonly notice: HTMLElement
   readonly menu: HTMLElement
   readonly scrim: HTMLElement
@@ -86,6 +89,14 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     })
   }
 
+  const panel = createPanel({
+    element: elements.panel,
+    inspect: async () => {
+      const id = activeSession()?.ptyId
+      return id === undefined ? undefined : api.session.inspect(id)
+    },
+  })
+
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
 
   function render() {
@@ -96,6 +107,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     const active = activeSession()
     active?.fit()
     active?.focus()
+    panel.refresh()
   }
 
   function update(next: TabsState) {
@@ -188,6 +200,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     goToTab: (index: number) => update(activateTabAt(state, index)),
     toggleTheme,
     searchProjects,
+    togglePanel: panel.toggle,
     changeOpacity(direction: 1 | -1) {
       opacity = stepOpacity(opacity, direction)
       saveOpacity(opacity)
@@ -210,6 +223,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     'agent:resume': () => activeSession()?.write('claude --resume\r'),
     'system:full-height': () => api.window.toggleFullHeight(),
     'system:theme': toggleTheme,
+    'system:panel': panel.toggle,
     'project:search': searchProjects,
   }
 
@@ -261,6 +275,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
         icon: 'sliders',
         items: [
           { id: 'system:full-height', label: 'Altura total', shortcut: 'F11' },
+          { id: 'system:panel', label: 'Painel lateral', shortcut: 'Ctrl+Shift+B' },
           { id: 'system:theme', label: 'Tema claro ou escuro', shortcut: 'Ctrl+Shift+L' },
         ],
       },
@@ -294,7 +309,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     },
   )
 
-  api.window.onFullHeightChange((full) => setFullHeight(full, [bar, host]))
+  api.window.onFullHeightChange((full) => setFullHeight(full, [bar, elements.main]))
   api.window.onShown(() => {
     document.body.classList.remove('enter')
     void document.body.offsetWidth

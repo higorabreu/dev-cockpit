@@ -17,6 +17,8 @@ await startApp(
   {
     bar: element('bar'),
     host: element('host'),
+    main: element('main'),
+    panel: element('panel'),
     notice: element('notice'),
     menu: element('tab-menu'),
     search: element('search'),
