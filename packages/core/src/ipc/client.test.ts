@@ -14,6 +14,6 @@ describe('createClient', () => {
     const result = await pending
 
     expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.error.code).toBe('DCK-IPC-005')
+    if (!result.ok) expect(result.error.data?.code).toBe('DCK-IPC-005')
   })
 })

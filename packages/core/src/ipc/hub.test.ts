@@ -47,7 +47,7 @@ describe('hub requests', () => {
     const result = await client.request('nao.existe')
 
     expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.error.code).toBe('DCK-IPC-001')
+    if (!result.ok) expect(result.error.data?.code).toBe('DCK-IPC-001')
   })
 
   it('should forward the error code when a handler throws a DckError', async () => {
@@ -60,7 +60,7 @@ describe('hub requests', () => {
     const result = await client.request('falha')
 
     expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.error.code).toBe('DCK-IPC-003')
+    if (!result.ok) expect(result.error.data?.code).toBe('DCK-IPC-003')
   })
 
   it('should hide the internal details when a handler throws an unexpected error', async () => {
@@ -74,7 +74,7 @@ describe('hub requests', () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error.code).toBe('DCK-IPC-002')
+      expect(result.error.data?.code).toBe('DCK-IPC-002')
       expect(result.error.message).not.toContain('segredo')
     }
     expect(errors).toEqual(['ipc handler failed'])
@@ -132,6 +132,6 @@ describe('hub subscriptions', () => {
     const result = await client.request('subscribe', {})
 
     expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.error.code).toBe('DCK-IPC-003')
+    if (!result.ok) expect(result.error.data?.code).toBe('DCK-IPC-003')
   })
 })

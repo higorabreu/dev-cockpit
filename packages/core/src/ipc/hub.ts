@@ -3,6 +3,8 @@ import { DckError } from '../errors.ts'
 import type { Logger } from '../ports/logger.ts'
 import { errorBody, isRequest, type Message, type Request } from './protocol.ts'
 
+const jsonrpc = '2.0' as const
+
 export interface Peer {
   send(message: Message): void
 }
@@ -43,19 +45,19 @@ export function createHub(handlers: Readonly<Record<string, Handler>>, logger: L
   async function respond(request: Request, peer: Peer) {
     const handler = methods[request.method]
     if (!handler) {
-      peer.send({ id: request.id, error: errorBody('DCK-IPC-001', request.method) })
+      peer.send({ jsonrpc, id: request.id, error: errorBody('DCK-IPC-001', request.method) })
       return
     }
     try {
-      peer.send({ id: request.id, result: (await handler(request.params, peer)) ?? null })
+      peer.send({ jsonrpc, id: request.id, result: (await handler(request.params, peer)) ?? null })
     } catch (error) {
       if (error instanceof z.ZodError) {
-        peer.send({ id: request.id, error: errorBody('DCK-IPC-003') })
+        peer.send({ jsonrpc, id: request.id, error: errorBody('DCK-IPC-003') })
       } else if (error instanceof DckError) {
-        peer.send({ id: request.id, error: { code: error.code, message: error.message } })
+        peer.send({ jsonrpc, id: request.id, error: errorBody(error.code, error.detail) })
       } else {
         logger.error('ipc handler failed', { method: request.method, error: String(error) })
-        peer.send({ id: request.id, error: errorBody('DCK-IPC-002') })
+        peer.send({ jsonrpc, id: request.id, error: errorBody('DCK-IPC-002') })
       }
     }
   }
@@ -73,7 +75,7 @@ export function createHub(handlers: Readonly<Record<string, Handler>>, logger: L
     },
     publish(topic, data) {
       const peers = subscribers.get(topic) ?? new Set<Peer>()
-      for (const peer of peers) peer.send({ event: topic, data })
+      for (const peer of peers) peer.send({ jsonrpc, method: topic, params: data })
       return peers.size
     },
   }

@@ -49,7 +49,7 @@ describe('node-net IPC', () => {
     const second = await serve(path)
 
     expect(second.ok).toBe(false)
-    if (!second.ok) expect(second.error.code).toBe('DCK-DMN-001')
+    if (!second.ok) expect(second.error.data?.code).toBe('DCK-DMN-001')
   })
 
   it('should take over the endpoint when a stale file is left there', async () => {
@@ -65,7 +65,7 @@ describe('node-net IPC', () => {
     const result = await connectTo(endpoint(), silentLogger)
 
     expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.error.code).toBe('DCK-DMN-002')
+    if (!result.ok) expect(result.error.data?.code).toBe('DCK-DMN-002')
   })
 
   it('should keep working when a client sends a line that is not valid JSON', async () => {
@@ -80,7 +80,7 @@ describe('node-net IPC', () => {
     raw.on('data', (chunk: string) => replies.push(chunk))
 
     raw.write('isto nao e json\n')
-    raw.write('{"id":1,"method":"ping"}\n')
+    raw.write('{"jsonrpc":"2.0","id":1,"method":"ping"}\n')
     await new Promise((resolve) => setTimeout(resolve, 100))
 
     expect(replies.join('')).toContain('"result":"pong"')

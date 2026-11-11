@@ -1,6 +1,6 @@
 import type { Unsubscribe } from '../ports/pty.ts'
 import { fail, ok, type Result } from '../result.ts'
-import { type ErrorBody, errorBody, isEvent, isResponse, type Message } from './protocol.ts'
+import { type ErrorBody, errorBody, isNotification, isResponse, type Message } from './protocol.ts'
 
 export interface Transport {
   send(message: Message): void
@@ -25,8 +25,8 @@ export function createClient(transport: Transport): Client {
       const settle = pending.get(message.id)
       pending.delete(message.id)
       if (settle) settle('error' in message ? fail(message.error) : ok(message.result))
-    } else if (isEvent(message)) {
-      for (const listener of topics.get(message.event) ?? []) listener(message.data)
+    } else if (isNotification(message)) {
+      for (const listener of topics.get(message.method) ?? []) listener(message.params)
     }
   })
 
@@ -39,7 +39,7 @@ export function createClient(transport: Transport): Client {
     return new Promise<Result<unknown, ErrorBody>>((resolve) => {
       const id = nextId++
       pending.set(id, resolve)
-      transport.send({ id, method, params })
+      transport.send({ jsonrpc: '2.0', id, method, params })
     })
   }
 

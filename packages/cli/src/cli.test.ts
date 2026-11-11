@@ -5,7 +5,7 @@ import { connectTo } from '@dck/adapter-node-net'
 import { createClient, silentLogger } from '@dck/core'
 import { startDaemon } from '@dck/daemon'
 import { afterEach, describe, expect, it } from 'vitest'
-import { EXIT, runCli } from './cli.ts'
+import { EXIT, exitCodeFor, runCli } from './cli.ts'
 
 const cleanups: Array<() => Promise<void>> = []
 afterEach(async () => {
@@ -56,7 +56,7 @@ describe('runCli', () => {
 
     const result = run(['toggle'], endpoint)
 
-    expect(await result.code).toBe(EXIT.noWindow)
+    expect(await result.code).toBe(EXIT.unavailable)
     expect(result.err.join('')).toContain('Nenhuma janela')
   })
 
@@ -65,7 +65,7 @@ describe('runCli', () => {
 
     const result = run(['toggle'], endpoint)
 
-    expect(await result.code).toBe(EXIT.failed)
+    expect(await result.code).toBe(EXIT.unavailable)
     expect(result.err.join('')).toContain('dck daemon')
   })
 
@@ -83,5 +83,24 @@ describe('runCli', () => {
 
     expect(await result.code).toBe(EXIT.usage)
     expect(result.err.join('')).toContain('Uso: dck')
+  })
+})
+
+describe('exitCodeFor', () => {
+  const error = (category: string) => ({
+    code: -32000,
+    message: 'x',
+    data: { code: 'DCK-X-001', category },
+  })
+
+  it('should map the error category to the sysexits code when choosing the exit code', () => {
+    expect(exitCodeFor(error('invalid_argument'))).toBe(EXIT.usage)
+    expect(exitCodeFor(error('unavailable'))).toBe(EXIT.unavailable)
+    expect(exitCodeFor(error('internal'))).toBe(EXIT.software)
+  })
+
+  it('should use the general failure code when the category has no specific mapping', () => {
+    expect(exitCodeFor(error('not_found'))).toBe(EXIT.failed)
+    expect(exitCodeFor({ code: -32000, message: 'x' })).toBe(EXIT.failed)
   })
 })

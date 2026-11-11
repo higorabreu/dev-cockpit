@@ -1,39 +1,63 @@
 import { z } from 'zod'
-import { describeError, type ErrorCode } from '../errors.ts'
+import { type ErrorCode, errorInfo } from '../errors.ts'
 import { fail, ok, type Result } from '../result.ts'
 
+// JSON-RPC 2.0: https://www.jsonrpc.org/specification
+const version = z.literal('2.0')
+const id = z.number().int()
+
 const requestSchema = z.object({
-  id: z.number().int(),
+  jsonrpc: version,
+  id,
   method: z.string().min(1),
   params: z.unknown().optional(),
 })
 
-const errorBodySchema = z.object({ code: z.string(), message: z.string() })
+const notificationSchema = z.object({
+  jsonrpc: version,
+  method: z.string().min(1),
+  params: z.unknown().optional(),
+})
+
+const errorBodySchema = z.object({
+  code: z.number().int(),
+  message: z.string(),
+  data: z
+    .object({
+      code: z.string(),
+      category: z.string().optional(),
+      retryable: z.boolean().optional(),
+    })
+    .optional(),
+})
 
 const responseSchema = z.union([
-  z.object({ id: z.number().int(), result: z.unknown() }),
-  z.object({ id: z.number().int(), error: errorBodySchema }),
+  z.object({ jsonrpc: version, id, result: z.unknown() }),
+  z.object({ jsonrpc: version, id, error: errorBodySchema }),
 ])
 
-const eventSchema = z.object({ event: z.string().min(1), data: z.unknown().optional() })
-
-const messageSchema = z.union([requestSchema, responseSchema, eventSchema])
+const messageSchema = z.union([requestSchema, notificationSchema, responseSchema])
 
 export type Request = z.infer<typeof requestSchema>
+export type Notification = z.infer<typeof notificationSchema>
 export type ErrorBody = z.infer<typeof errorBodySchema>
 export type Response = z.infer<typeof responseSchema>
-export type EventMessage = z.infer<typeof eventSchema>
-export type Message = Request | Response | EventMessage
+export type Message = Request | Notification | Response
 
-export const isRequest = (message: Message): message is Request => 'method' in message
-export const isEvent = (message: Message): message is EventMessage => 'event' in message
-export const isResponse = (message: Message): message is Response =>
-  'id' in message && !('method' in message)
+export const isRequest = (message: Message): message is Request =>
+  'method' in message && 'id' in message
+export const isNotification = (message: Message): message is Notification =>
+  'method' in message && !('id' in message)
+export const isResponse = (message: Message): message is Response => !('method' in message)
 
-export const errorBody = (code: ErrorCode, detail?: string): ErrorBody => ({
-  code,
-  message: detail ? `${describeError(code)}: ${detail}` : describeError(code),
-})
+export function errorBody(code: ErrorCode, detail?: string): ErrorBody {
+  const info = errorInfo(code)
+  return {
+    code: info.rpc,
+    message: detail ? `${info.message}: ${detail}` : info.message,
+    data: { code, category: info.category, retryable: info.retryable },
+  }
+}
 
 export function encode(message: Message): string {
   return `${JSON.stringify(message)}\n`

@@ -1,9 +1,44 @@
 {
-  "DCK-IPC-001": "Método desconhecido",
-  "DCK-IPC-002": "O método falhou",
-  "DCK-IPC-003": "Parâmetros inválidos",
-  "DCK-IPC-004": "Mensagem inválida",
-  "DCK-IPC-005": "Conexão encerrada antes da resposta",
-  "DCK-DMN-001": "Já existe um daemon em execução",
-  "DCK-DMN-002": "Não foi possível falar com o daemon"
+  "DCK-IPC-001": {
+    "message": "Método desconhecido",
+    "category": "not_found",
+    "retryable": false,
+    "rpc": -32601
+  },
+  "DCK-IPC-002": {
+    "message": "O método falhou",
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32603
+  },
+  "DCK-IPC-003": {
+    "message": "Parâmetros inválidos",
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32602
+  },
+  "DCK-IPC-004": {
+    "message": "Mensagem inválida",
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32600
+  },
+  "DCK-IPC-005": {
+    "message": "Conexão encerrada antes da resposta",
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32001
+  },
+  "DCK-DMN-001": {
+    "message": "Já existe um daemon em execução",
+    "category": "already_exists",
+    "retryable": false,
+    "rpc": -32002
+  },
+  "DCK-DMN-002": {
+    "message": "Não foi possível falar com o daemon",
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32003
+  }
 }

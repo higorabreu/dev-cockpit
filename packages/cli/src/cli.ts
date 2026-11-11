@@ -15,7 +15,21 @@ Comandos:
   daemon   Roda o daemon em primeiro plano
 `
 
-export const EXIT = { ok: 0, failed: 1, noWindow: 2, usage: 64 } as const
+// Códigos de saída do sysexits.h, a convenção BSD para ferramentas de linha de comando
+export const EXIT = { ok: 0, failed: 1, usage: 64, unavailable: 69, software: 70 } as const
+
+export function exitCodeFor(error: ErrorBody): number {
+  switch (error.data?.category) {
+    case 'invalid_argument':
+      return EXIT.usage
+    case 'unavailable':
+      return EXIT.unavailable
+    case 'internal':
+      return EXIT.software
+    default:
+      return EXIT.failed
+  }
+}
 
 export async function runCli(argv: readonly string[], deps: CliDeps): Promise<number> {
   const [command] = argv
@@ -27,7 +41,7 @@ export async function runCli(argv: readonly string[], deps: CliDeps): Promise<nu
   const connected = await deps.connect(deps.endpoint)
   if (!connected.ok) {
     deps.err(`${connected.error.message}\nInicie o daemon com: dck daemon\n`)
-    return EXIT.failed
+    return exitCodeFor(connected.error)
   }
 
   const client = createClient(connected.value)
@@ -35,7 +49,7 @@ export async function runCli(argv: readonly string[], deps: CliDeps): Promise<nu
     const reply = await client.request(command === 'ping' ? 'ping' : 'window.toggle')
     if (!reply.ok) {
       deps.err(`${reply.error.message}\n`)
-      return EXIT.failed
+      return exitCodeFor(reply.error)
     }
     if (command === 'ping') {
       deps.out(`${String(reply.value)}\n`)
@@ -44,7 +58,7 @@ export async function runCli(argv: readonly string[], deps: CliDeps): Promise<nu
     const delivered = (reply.value as { delivered?: number } | null)?.delivered ?? 0
     if (delivered === 0) {
       deps.err('Nenhuma janela está conectada ao daemon.\n')
-      return EXIT.noWindow
+      return EXIT.unavailable
     }
     return EXIT.ok
   } finally {
