@@ -8,6 +8,7 @@ import { createDockController, createJsonLogger, hostChannels } from '@dck/core'
 import { app, BrowserWindow, clipboard, globalShortcut, ipcMain, Menu, screen } from 'electron'
 import { launchDaemon } from './daemon-launcher.ts'
 import { startDaemonLink } from './daemon-link.ts'
+import { logDockWindow, logScreen } from './dock-log.ts'
 import { createElectronDockWindow } from './electron-dock-window.ts'
 import { createElectronIpc } from './electron-ipc.ts'
 import { createElectronScreen } from './electron-screen.ts'
@@ -39,11 +40,15 @@ app.whenReady().then(() => {
   })
   window.setVisibleOnAllWorkspaces(true)
 
+  const electronScreen = createElectronScreen(screen)
+  const dockWindow = createElectronDockWindow(window, {
+    onShown: () => window.webContents.send(hostChannels.windowShown),
+  })
+  const traceDock = process.env.DCK_LOG_DOCK === '1'
+
   const dock = createDockController({
-    screen: createElectronScreen(screen),
-    window: createElectronDockWindow(window, {
-      onShown: () => window.webContents.send(hostChannels.windowShown),
-    }),
+    screen: traceDock ? logScreen(electronScreen, logger) : electronScreen,
+    window: traceDock ? logDockWindow(dockWindow, logger) : dockWindow,
     scheduler: {
       after(milliseconds, task) {
         const timer = setTimeout(task, milliseconds)
