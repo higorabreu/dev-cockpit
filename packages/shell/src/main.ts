@@ -21,6 +21,7 @@ import {
   Tray,
 } from 'electron'
 import { createAgentInspector } from './agent-inspector.ts'
+import { createAgentReports } from './agent-reports.ts'
 import { launchDaemon } from './daemon-launcher.ts'
 import { startDaemonLink } from './daemon-link.ts'
 import { logDockWindow, logScreen } from './dock-log.ts'
@@ -83,6 +84,7 @@ app.whenReady().then(() => {
 
   // Para aceitar outro agente basta acrescentar a fonte dele aqui
   const agentSources = [createClaudeSource()]
+  const agentReports = createAgentReports(agentSources)
 
   logger.info('notifications available', { supported: Notification.isSupported() })
 
@@ -102,7 +104,11 @@ app.whenReady().then(() => {
       git: createGitInspector(),
       agents: agentSources.map((source) => source.profile),
     }),
-    agents: createAgentInspector({ processes: createProcessInspector(), sources: agentSources }),
+    agents: createAgentInspector({
+      processes: createProcessInspector(),
+      sources: agentSources,
+      report: (ptyId, agentId) => agentReports.latest(ptyId, agentId),
+    }),
     environment: createEnvironmentInspector({
       processes: createProcessInspector(),
       compose: createComposeInspector({ stopAt: homedir() }),
@@ -169,6 +175,9 @@ app.whenReady().then(() => {
         },
         logger,
       )
+    },
+    onAgentReport: (message) => {
+      if (!agentReports.accept(message)) logger.warn('agent report ignored')
     },
     onToggle: () => {
       logger.info('toggle requested by the daemon')

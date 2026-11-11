@@ -31,7 +31,7 @@ export interface BridgeOptions {
   readonly clipboard: Clipboard
   readonly projects: ProjectCatalog
   readonly notifier: Notifier
-  readonly agents: { session(pid: number): Promise<AgentSession | undefined> }
+  readonly agents: { session(pid: number, ptyId: number): Promise<AgentSession | undefined> }
   readonly environment: { status(pid: number): Promise<ComposeStatus> }
   readonly sessions: {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
@@ -56,6 +56,8 @@ export function registerHostBridge(options: BridgeOptions) {
       file: options.shell,
       args: [],
       cwd: create.cwd ?? options.home,
+      // Qualquer script rodando neste terminal, como o statusLine do Claude, sabe a qual aba pertence
+      env: { DCK_PTY_ID: String(id) },
       cols: create.cols,
       rows: create.rows,
     })
@@ -96,7 +98,7 @@ export function registerHostBridge(options: BridgeOptions) {
   )
   ipcMain.handle(hostChannels.agentInspect, (_event, id: number) => {
     const session = sessions.get(id)
-    return session ? options.agents.session(session.pid) : undefined
+    return session ? options.agents.session(session.pid, id) : undefined
   })
   ipcMain.handle(hostChannels.sessionActivity, (_event, id: number) => {
     const session = sessions.get(id)

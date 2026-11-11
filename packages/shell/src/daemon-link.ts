@@ -14,6 +14,8 @@ export interface DaemonLinkOptions {
   readonly scheduler: Scheduler
   readonly logger: Logger
   onToggle(): void
+  // Dados que um agente empurrou pelo daemon (por exemplo o statusLine do Claude)
+  onAgentReport?(message: unknown): void
   // Chamado na primeira falha de conexão, para quem quiser subir o daemon
   onUnavailable?(): void
   readonly retryMs?: number
@@ -60,6 +62,7 @@ export function startDaemonLink(options: DaemonLinkOptions): { stop(): void } {
       if (windowEvent.safeParse(data).success) onToggle()
     })
     if (subscribed.ok) logger.info('daemon connected')
+    await client.subscribe('agent', (data) => options.onAgentReport?.(data))
   }
 
   void attempt()

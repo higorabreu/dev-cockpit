@@ -19,6 +19,7 @@ type Attempt = () => Result<Transport, ErrorBody>
 function start(attempts: Attempt[]) {
   const scheduler = new FakeScheduler()
   const toggles: number[] = []
+  const reports: unknown[] = []
   const queue = [...attempts]
   let calls = 0
   const link = startDaemonLink({
@@ -31,9 +32,10 @@ function start(attempts: Attempt[]) {
     scheduler,
     logger: silentLogger,
     onToggle: () => toggles.push(1),
+    onAgentReport: (message) => reports.push(message),
     retryMs: 2000,
   })
-  return { scheduler, toggles, link, calls: () => calls }
+  return { scheduler, toggles, reports, link, calls: () => calls }
 }
 
 describe('startDaemonLink', () => {
@@ -132,6 +134,18 @@ describe('startDaemonLink', () => {
 
     expect(reports).toBe(1)
     expect(hub).toBeDefined()
+    link.stop()
+  })
+
+  it('should pass an agent report to the handler when the daemon publishes one', async () => {
+    const hub = createHub({}, silentLogger)
+    const { reports, link } = start([() => ok(connectLoopback(hub))])
+    await tick()
+
+    hub.publish('agent', { agent: 'claude', ptyId: 1, payload: { a: 1 } })
+    await tick()
+
+    expect(reports).toEqual([{ agent: 'claude', ptyId: 1, payload: { a: 1 } }])
     link.stop()
   })
 })

@@ -32,7 +32,7 @@ function setup() {
       }),
     },
     agents: {
-      session: async (pid: number) => ({
+      session: async (pid: number, _ptyId: number) => ({
         agent: { id: 'fake', name: 'Fake', processes: [] },
         details: [{ id: 'pid', value: String(pid) }],
       }),
@@ -240,5 +240,15 @@ describe('registerHostBridge clipboard and window', () => {
     const { call } = setup()
 
     expect(await call(hostChannels.agentInspect, 99)).toBeUndefined()
+  })
+
+  it('should give every terminal its own id in the environment when it is created', async () => {
+    const { call, ptyHost } = setup()
+
+    const first = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+    const second = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+
+    expect(ptyHost.sessions[0]?.env.DCK_PTY_ID).toBe(String(first))
+    expect(ptyHost.sessions[1]?.env.DCK_PTY_ID).toBe(String(second))
   })
 })
