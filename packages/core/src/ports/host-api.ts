@@ -1,5 +1,6 @@
 import type { Project } from './projects.ts'
 import type { PtyExit, Unsubscribe } from './pty.ts'
+import type { SessionSnapshot } from './session.ts'
 
 export interface PtyCreateOptions {
   readonly cols: number
@@ -21,6 +22,9 @@ export interface HostApi {
     readText(): Promise<string>
     writeText(text: string): Promise<void>
   }
+  readonly session: {
+    inspect(ptyId: number): Promise<SessionSnapshot | undefined>
+  }
   readonly projects: {
     list(): Promise<readonly Project[]>
     touch(path: string): void
@@ -41,6 +45,7 @@ export const hostChannels = {
   ptyExit: 'pty:exit',
   clipboardRead: 'clipboard:read',
   clipboardWrite: 'clipboard:write',
+  sessionInspect: 'session:inspect',
   projectsList: 'projects:list',
   projectsTouch: 'projects:touch',
   windowToggleFullHeight: 'window:toggle-full-height',
