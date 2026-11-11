@@ -3,5 +3,7 @@
   "DCK-IPC-002": "O método falhou",
   "DCK-IPC-003": "Parâmetros inválidos",
   "DCK-IPC-004": "Mensagem inválida",
-  "DCK-IPC-005": "Conexão encerrada antes da resposta"
+  "DCK-IPC-005": "Conexão encerrada antes da resposta",
+  "DCK-DMN-001": "Já existe um daemon em execução",
+  "DCK-DMN-002": "Não foi possível falar com o daemon"
 }
