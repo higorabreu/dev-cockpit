@@ -119,6 +119,17 @@ plans/        contexto, roadmap, decisões e um plano por marco em andamento
   chaves e os mesmos parâmetros nas duas línguas. Língua pelo sistema, com a escolha do usuário
   gravada em `dck-locale` quando a tela de configurações existir.
 
+## Configurações
+
+- Fonte única: `settings.json` no diretório de dados do app, lido e gravado só pelo host
+  (`shell/src/settings-store.ts`) e validado pelo modelo em `@dck/core` (`settings/settings.ts`).
+  Campo inválido volta ao padrão sozinho; número fora do intervalo é cortado no limite.
+- **Configuração nova:** acrescente o campo em `settingsSchema` com padrão e limites, a linha em
+  `settings-view.ts` (com o texto nos dois catálogos) e reaja à mudança em `settings.onChange`. Nada de
+  `localStorage` para preferência do usuário.
+- Variáveis `DCK_*` vencem o arquivo e aparecem como bloqueadas na tela (`env-overrides.ts`).
+- Mudança que o sistema pode recusar (atalho global) passa pelo `veto` do store e volta ao valor anterior.
+
 ## Acessibilidade
 
 - Padrão do projeto: WCAG 2.2 nível AA, nos temas escuro e claro.
