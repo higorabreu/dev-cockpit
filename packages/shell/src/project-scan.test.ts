@@ -104,4 +104,11 @@ describe('createProjectScanner', () => {
 
     expect(project?.activity).toBeGreaterThan(0)
   })
+
+  it('should find deeper repositories when the depth is raised', async () => {
+    await repo('a', 'b', 'c', 'deep')
+
+    expect(await scanProjects(root, 2)).toEqual([])
+    expect((await scanProjects(root, 4)).map((project) => project.name)).toEqual(['deep'])
+  })
 })

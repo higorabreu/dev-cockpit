@@ -40,13 +40,12 @@ import { registerHostBridge } from './host-bridge.ts'
 import { createProjectCatalog } from './project-catalog.ts'
 import { createRecencyStore } from './recency-store.ts'
 import { createSessionInspector } from './session-inspector.ts'
+import { createSettingsStore } from './settings-store.ts'
 import { buildTrayMenu } from './tray-menu.ts'
 import { createXdgAutostart, defaultAutostartDirectory } from './xdg-autostart.ts'
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
-const shortcutKey = process.env.DCK_KEY ?? 'F12'
-const heightRatio = Number(process.env.DCK_HEIGHT) || 0.5
 
 // Sem isto o Electron abre um diálogo atrás da janela translúcida; aqui o erro vai para o log
 process.on('uncaughtException', (error) => {
@@ -58,8 +57,53 @@ process.on('unhandledRejection', (reason) => {
 
 if (!app.requestSingleInstanceLock()) app.quit()
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   Menu.setApplicationMenu(null)
+
+  const shortcuts = createElectronShortcuts(globalShortcut)
+  let activeKey = ''
+  const toggleWindow = () => dock.toggle()
+
+  const registerKey = (key: string) => {
+    try {
+      return shortcuts.register(key, toggleWindow)
+    } catch (error) {
+      // Um acelerador malformado faz o Electron lançar em vez de devolver falso
+      logger.warn('shortcut is not valid', { key, error: String(error) })
+      return false
+    }
+  }
+
+  // Trocar a tecla da janela só vale se o sistema aceitar a nova; senão volta a antiga
+  const settingsStore = createSettingsStore({
+    file: join(app.getPath('userData'), 'settings.json'),
+    logger,
+    env: process.env,
+    veto(next, changed) {
+      if (!changed.includes('shortcuts.toggleWindow')) return []
+      const key = next.shortcuts.toggleWindow
+      if (activeKey) shortcuts.unregister(activeKey)
+      if (registerKey(key)) {
+        activeKey = key
+        logger.info('shortcut registered', { key })
+        return []
+      }
+      if (activeKey) registerKey(activeKey)
+      logger.warn('shortcut refused, keeping the previous one', { key })
+      return ['shortcuts.toggleWindow']
+    },
+  })
+  const loaded = await settingsStore.load()
+  logger.info('settings loaded', { fresh: loaded.fresh, locked: loaded.locked })
+
+  const autostart = createXdgAutostart({
+    directory: process.env.DCK_AUTOSTART_DIR ?? defaultAutostartDirectory(process.env, homedir()),
+    name: 'Dev Cockpit',
+    command: app.isPackaged
+      ? [process.execPath, '--no-sandbox']
+      : [process.execPath, app.getAppPath(), '--no-sandbox'],
+    env: { DCK_START_HIDDEN: '1' },
+  })
   const window = new BrowserWindow({
     show: false,
     frame: false,
@@ -91,7 +135,7 @@ app.whenReady().then(() => {
         return () => clearTimeout(timer)
       },
     },
-    heightRatio,
+    heightRatio: () => settingsStore.get().settings.window.heightRatio,
   })
 
   logger.info('notifications available', { supported: Notification.isSupported() })
@@ -103,8 +147,13 @@ app.whenReady().then(() => {
       readText: async () => clipboard.readText(),
       writeText: async (text) => clipboard.writeText(text),
     },
+    settings: settingsStore,
+    autostart,
     projects: createProjectCatalog(
-      process.env.DCK_PROJECTS_ROOT ?? join(homedir(), 'projetos'),
+      () => {
+        const { projects } = settingsStore.get().settings
+        return { root: projects.root ?? join(homedir(), 'projetos'), depth: projects.depth }
+      },
       createRecencyStore(join(app.getPath('userData'), 'recent-projects.json'), logger),
       createFavoritesStore(join(app.getPath('userData'), 'favorite-projects.json'), logger),
     ),
@@ -146,12 +195,17 @@ app.whenReady().then(() => {
     },
   })
 
-  const shortcuts = createElectronShortcuts(globalShortcut)
-  if (shortcuts.register(shortcutKey, () => dock.toggle())) {
-    logger.info('shortcut registered', { key: shortcutKey })
+  activeKey = loaded.settings.shortcuts.toggleWindow
+  if (registerKey(activeKey)) {
+    logger.info('shortcut registered', { key: activeKey })
   } else {
-    logger.warn('shortcut refused, another program owns it', { key: shortcutKey })
+    logger.warn('shortcut refused, another program owns it', { key: activeKey })
   }
+
+  settingsStore.onChange((settings, changed) => {
+    window.webContents.send(hostChannels.settingsChanged, settings, changed)
+    if (changed.includes('window.heightRatio')) dock.refresh()
+  })
 
   const daemonScript = join(__dirname, 'daemon.cjs')
   const processScanner = createProcessScanner()
@@ -242,14 +296,6 @@ app.whenReady().then(() => {
 
   // DCK_NO_TRAY existe para os testes automáticos não piscarem ícones na barra do usuário
   if (!process.env.DCK_NO_TRAY) {
-    const autostart = createXdgAutostart({
-      directory: process.env.DCK_AUTOSTART_DIR ?? defaultAutostartDirectory(process.env, homedir()),
-      name: 'Dev Cockpit',
-      command: app.isPackaged
-        ? [process.execPath, '--no-sandbox']
-        : [process.execPath, app.getAppPath(), '--no-sandbox'],
-      env: { DCK_START_HIDDEN: '1' },
-    })
     const statusIcons = createElectronStatusIcon(
       {
         createTray: (iconPath) => new Tray(iconPath),
@@ -260,7 +306,11 @@ app.whenReady().then(() => {
     const menuDeps = {
       toggleWindow: () => dock.toggle(),
       autostart,
-      t: createTranslator(pickLocale(app.getPreferredSystemLanguages())).t,
+      t: createTranslator(
+        loaded.settings.language === 'auto'
+          ? pickLocale(app.getPreferredSystemLanguages())
+          : loaded.settings.language,
+      ).t,
       quit: () => app.quit(),
       onChange: () => void refreshTrayMenu(),
     }
@@ -274,7 +324,7 @@ app.whenReady().then(() => {
   app.on('before-quit', () => {
     link.stop()
     bridge.killAll()
-    shortcuts.unregister(shortcutKey)
+    shortcuts.unregister(activeKey)
   })
 })
 

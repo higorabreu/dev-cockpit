@@ -38,7 +38,7 @@ function memoryRecency(initial: string[] = []) {
 describe('createProjectCatalog', () => {
   it('should list the recently opened project first when listing', async () => {
     const catalog = createProjectCatalog(
-      root,
+      { root, depth: 2 },
       memoryRecency([join(root, 'beta')]),
       memoryFavorites(),
     )
@@ -49,7 +49,7 @@ describe('createProjectCatalog', () => {
   })
 
   it('should move a project to the top when it is touched', async () => {
-    const catalog = createProjectCatalog(root, memoryRecency(), memoryFavorites())
+    const catalog = createProjectCatalog({ root, depth: 2 }, memoryRecency(), memoryFavorites())
 
     await catalog.touch(join(root, 'beta'))
     const projects = await catalog.list()
@@ -59,7 +59,7 @@ describe('createProjectCatalog', () => {
 
   it('should list a pinned project first and mark it when it is pinned', async () => {
     const catalog = createProjectCatalog(
-      root,
+      { root, depth: 2 },
       memoryRecency([join(root, 'beta')]),
       memoryFavorites([join(root, 'alpha')]),
     )
@@ -71,9 +71,23 @@ describe('createProjectCatalog', () => {
   })
 
   it('should pin a project and report it when toggling through the catalog', async () => {
-    const catalog = createProjectCatalog(root, memoryRecency(), memoryFavorites())
+    const catalog = createProjectCatalog({ root, depth: 2 }, memoryRecency(), memoryFavorites())
 
     expect(await catalog.toggleFavorite(join(root, 'beta'))).toBe(true)
     expect((await catalog.list())[0]?.name).toBe('beta')
+  })
+
+  it('should read the folder again on every listing when the config is a function', async () => {
+    let folder = root
+    const catalog = createProjectCatalog(
+      () => ({ root: folder, depth: 2 }),
+      memoryRecency(),
+      memoryFavorites(),
+    )
+    expect(await catalog.list()).toHaveLength(2)
+
+    folder = join(root, 'missing')
+
+    expect(await catalog.list()).toEqual([])
   })
 })

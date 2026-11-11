@@ -1,4 +1,5 @@
 import {
+  type Autostart,
   type Clipboard,
   type ComposeStatus,
   hostChannels,
@@ -10,8 +11,14 @@ import {
   type PtySession,
   type SessionActivityInfo,
   type SessionSnapshot,
+  type SettingsPatch,
+  type SettingsUpdate,
+  type SettingsView,
 } from '@dck/core'
 import { z } from 'zod'
+
+// O valor de cada campo é validado e corrigido pelo próprio modelo das configurações
+const patchSchema = z.record(z.string(), z.unknown())
 
 const notificationSchema = z.object({
   title: z.string().max(200),
@@ -30,6 +37,11 @@ export interface BridgeOptions {
   readonly clipboard: Clipboard
   readonly projects: ProjectCatalog
   readonly notifier: Notifier
+  readonly settings: {
+    get(): SettingsView
+    update(patch: SettingsPatch): Promise<SettingsUpdate>
+  }
+  readonly autostart: Autostart
   readonly environment: { status(pid: number): Promise<ComposeStatus> }
   readonly sessions: {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
@@ -86,6 +98,15 @@ export function registerHostBridge(options: BridgeOptions) {
       logger.info('notification requested', { tabId: parsed.data.tabId })
       options.notifier.notify(parsed.data)
     } else logger.warn('invalid notification request ignored')
+  })
+  ipcMain.handle(hostChannels.settingsGet, () => options.settings.get())
+  ipcMain.handle(hostChannels.settingsUpdate, (_event, patch: unknown) =>
+    options.settings.update(patchSchema.parse(patch) as SettingsPatch),
+  )
+  ipcMain.handle(hostChannels.autostartGet, () => options.autostart.isEnabled())
+  ipcMain.handle(hostChannels.autostartSet, async (_event, enabled: unknown) => {
+    await options.autostart.setEnabled(enabled === true)
+    return options.autostart.isEnabled()
   })
   ipcMain.handle(
     hostChannels.environmentInspect,

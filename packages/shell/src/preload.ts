@@ -1,4 +1,4 @@
-import type { PtyExit } from '@dck/core'
+import type { PtyExit, Settings } from '@dck/core'
 import { type HostApi, hostChannels } from '@dck/core/host-api'
 import { contextBridge, ipcRenderer } from 'electron'
 
@@ -29,6 +29,16 @@ const api: HostApi = {
   },
   environment: {
     inspect: (ptyId) => ipcRenderer.invoke(hostChannels.environmentInspect, ptyId),
+  },
+  settings: {
+    get: () => ipcRenderer.invoke(hostChannels.settingsGet),
+    update: (patch) => ipcRenderer.invoke(hostChannels.settingsUpdate, patch),
+    onChange: (listener) =>
+      subscribe<[Settings, readonly string[]]>(hostChannels.settingsChanged, listener),
+  },
+  autostart: {
+    isEnabled: () => ipcRenderer.invoke(hostChannels.autostartGet),
+    set: (enabled) => ipcRenderer.invoke(hostChannels.autostartSet, enabled),
   },
   session: {
     activity: (ptyId) => ipcRenderer.invoke(hostChannels.sessionActivity, ptyId),

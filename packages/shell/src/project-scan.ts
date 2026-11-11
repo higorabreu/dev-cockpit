@@ -2,7 +2,6 @@ import { readdir, readFile, stat } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import type { Project } from '@dck/core'
 
-const MAX_DEPTH = 2
 const SUBMODULE_PATH = /^\s*path\s*=\s*(.+?)\s*$/gm
 
 const exists = (path: string) =>
@@ -53,6 +52,6 @@ async function scan(directory: string, depth: number): Promise<Project[]> {
 }
 
 // Um repositório é um projeto, e cada submódulo declarado no .gitmodules também
-export async function scanProjects(root: string): Promise<readonly Project[]> {
-  return scan(root, MAX_DEPTH)
+export async function scanProjects(root: string, depth = 2): Promise<readonly Project[]> {
+  return scan(root, depth)
 }

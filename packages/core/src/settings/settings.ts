@@ -100,3 +100,17 @@ export function changedKeys(before: Settings, after: Settings): readonly string[
   walk(before, after, '')
   return keys
 }
+
+export interface SettingsView {
+  // Já com as variáveis de ambiente por cima: é o que o app usa
+  readonly settings: Settings
+  // Chaves (com ponto) fixadas por uma variável de ambiente
+  readonly locked: readonly string[]
+  // Não havia arquivo: primeira execução, quando vale trazer as preferências antigas
+  readonly fresh: boolean
+}
+
+export interface SettingsUpdate extends SettingsView {
+  // Chaves cuja mudança foi recusada, por exemplo um atalho que outro programa já usa
+  readonly rejected: readonly string[]
+}

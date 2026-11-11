@@ -1,3 +1,4 @@
+import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
 import type { ComposeStatus } from './environment.ts'
 import type { TabNotification } from './notifier.ts'
 import type { Project } from './projects.ts'
@@ -31,6 +32,15 @@ export interface HostApi {
   readonly environment: {
     inspect(ptyId: number): Promise<ComposeStatus>
   }
+  readonly settings: {
+    get(): Promise<SettingsView>
+    update(patch: SettingsPatch): Promise<SettingsUpdate>
+    onChange(listener: (settings: Settings, changed: readonly string[]) => void): Unsubscribe
+  }
+  readonly autostart: {
+    isEnabled(): Promise<boolean>
+    set(enabled: boolean): Promise<boolean>
+  }
   readonly session: {
     // Leve, sem git: serve para vigiar todas as abas
     activity(ptyId: number): Promise<SessionActivityInfo | undefined>
@@ -60,6 +70,11 @@ export const hostChannels = {
   notificationsShow: 'notifications:show',
   notificationsClick: 'notifications:click',
   environmentInspect: 'environment:inspect',
+  settingsGet: 'settings:get',
+  settingsUpdate: 'settings:update',
+  settingsChanged: 'settings:changed',
+  autostartGet: 'autostart:get',
+  autostartSet: 'autostart:set',
   sessionActivity: 'session:activity',
   sessionInspect: 'session:inspect',
   projectsList: 'projects:list',

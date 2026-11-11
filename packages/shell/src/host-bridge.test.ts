@@ -1,4 +1,4 @@
-import { hostChannels, silentLogger, type TabNotification } from '@dck/core'
+import { defaultSettings, hostChannels, silentLogger, type TabNotification } from '@dck/core'
 import { FakePtyHost, MemoryClipboard } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
 import { type IpcMainApi, registerHostBridge } from './host-bridge.ts'
@@ -14,6 +14,7 @@ function setup() {
   const sent: Array<[string, ...unknown[]]> = []
   let fullHeightToggles = 0
   const touched: string[] = []
+  let autostartOn = false
   const notified: TabNotification[] = []
   const bridge = registerHostBridge({
     ipcMain,
@@ -33,6 +34,21 @@ function setup() {
     },
     environment: {
       status: async (pid: number) => ({ kind: 'ok' as const, project: `p${pid}`, containers: [] }),
+    },
+    settings: {
+      get: () => ({ settings: defaultSettings, locked: [], fresh: true }),
+      update: async (patch) => ({
+        settings: { ...defaultSettings, theme: (patch as { theme?: 'light' }).theme ?? 'dark' },
+        locked: [],
+        fresh: false,
+        rejected: [],
+      }),
+    },
+    autostart: {
+      isEnabled: async () => autostartOn,
+      setEnabled: async (enabled) => {
+        autostartOn = enabled
+      },
     },
     notifier: { notify: (notification) => void notified.push(notification) },
     projects: {
@@ -237,5 +253,35 @@ describe('registerHostBridge clipboard and window', () => {
 
     expect(await call(hostChannels.projectsToggleFavorite, '/p/alpha')).toBe(true)
     expect(await call(hostChannels.projectsToggleFavorite, '/p/pinned')).toBe(false)
+  })
+
+  it('should return the current settings when the interface asks for them', async () => {
+    const { call } = setup()
+
+    expect(await call(hostChannels.settingsGet)).toMatchObject({ fresh: true, locked: [] })
+  })
+
+  it('should pass the patch to the store and return the result when the interface updates settings', async () => {
+    const { call } = setup()
+
+    const result = (await call(hostChannels.settingsUpdate, { theme: 'light' })) as {
+      settings: { theme: string }
+    }
+
+    expect(result.settings.theme).toBe('light')
+  })
+
+  it('should refuse a patch that is not an object when the interface updates settings', () => {
+    const { call } = setup()
+
+    expect(() => call(hostChannels.settingsUpdate, 'oops')).toThrow()
+  })
+
+  it('should toggle the autostart and report the new state when the interface sets it', async () => {
+    const { call } = setup()
+
+    expect(await call(hostChannels.autostartSet, true)).toBe(true)
+    expect(await call(hostChannels.autostartGet)).toBe(true)
+    expect(await call(hostChannels.autostartSet, false)).toBe(false)
   })
 })

@@ -153,4 +153,52 @@ describe('toggleFullHeight', () => {
 
     expect(window.bounds()).toEqual({ x: 3840, y: 0, width: 1920, height: 1200 })
   })
+
+  describe('height ratio', () => {
+    it('should follow the ratio at the moment of showing when the ratio is a function', () => {
+      let ratio = 0.5
+      const screen = new FakeScreen([left], { x: 300, y: 300 })
+      const window = new FakeDockWindow()
+      const dock = createDockController({
+        screen,
+        window,
+        scheduler: new FakeScheduler(),
+        heightRatio: () => ratio,
+      })
+
+      dock.show()
+      expect(window.bounds().height).toBe(540)
+      ratio = 0.7
+      dock.hide()
+      dock.show()
+
+      expect(window.bounds().height).toBe(756)
+    })
+
+    it('should reapply the size in place when refreshing a visible window', () => {
+      let ratio = 0.5
+      const screen = new FakeScreen([left], { x: 300, y: 300 })
+      const window = new FakeDockWindow()
+      const dock = createDockController({
+        screen,
+        window,
+        scheduler: new FakeScheduler(),
+        heightRatio: () => ratio,
+      })
+      dock.show()
+
+      ratio = 0.3
+      dock.refresh()
+
+      expect(window.bounds().height).toBe(324)
+    })
+
+    it('should not touch a hidden window when refreshing', () => {
+      const { dock, window } = setup()
+
+      dock.refresh()
+
+      expect(window.calls).toEqual([])
+    })
+  })
 })
