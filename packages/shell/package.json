@@ -1,0 +1,24 @@
+{
+  "name": "@dck/shell",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "node scripts/build.mjs",
+    "start": "electron . --no-sandbox"
+  },
+  "dependencies": {
+    "@dck/adapter-node-net": "workspace:^",
+    "@dck/adapter-node-pty": "workspace:^",
+    "@dck/core": "workspace:^",
+    "node-pty": "^1.1.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.2.1",
+    "electron": "^45.3.0",
+    "esbuild": "^0.28.2"
+  }
+}
