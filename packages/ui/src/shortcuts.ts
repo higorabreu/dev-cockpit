@@ -8,6 +8,7 @@ export interface ShortcutActions {
   searchProjects(): void
   togglePanel(): void
   toggleFullHeight(): void
+  nextFinished(): void
   changeOpacity(direction: 1 | -1): void
   changeFontSize(delta: number | 'reset'): void
 }
@@ -40,6 +41,7 @@ export function bindShortcuts(actions: ShortcutActions): () => void {
       if (key === 'l') return run(actions.toggleTheme)
       if (key === 'o') return run(actions.searchProjects)
       if (key === 'b') return run(actions.togglePanel)
+      if (key === 'j') return run(actions.nextFinished)
     }
     if (event.ctrlKey && !event.altKey) {
       if (event.key === '=' || event.key === '+') return run(() => actions.changeFontSize(1))

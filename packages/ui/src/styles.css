@@ -816,3 +816,21 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   flex-direction: column;
   gap: 1px;
 }
+
+.tab .pip {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: var(--fg);
+  vertical-align: 1px;
+}
+
+.new {
+  padding: 0 5px;
+  border: 1px solid var(--muted);
+  border-radius: var(--radius-small);
+  color: var(--fg);
+  font-size: 10.5px;
+}

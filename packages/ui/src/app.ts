@@ -3,8 +3,10 @@ import {
   activateTabAt,
   closeOtherTabs,
   closeTab,
+  createAttentionTracker,
   emptyTabs,
   FONT_SIZE,
+  formatDuration,
   type HostApi,
   type MenuCategory,
   openTab,
@@ -96,13 +98,43 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     })
   }
 
+  const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
+
   let activeSnapshot: SessionSnapshot | undefined
   let autoOpened = false
+
+  const attention = createAttentionTracker({ clock: { now: () => Date.now() } })
+
+  // Visto é a aba ativa numa janela com foco; fora disso o aviso fica pendente
+  const isSeen = (tabId: string) => tabId === state.activeId && document.hasFocus()
+
+  function markActiveSeen() {
+    if (state.activeId && document.hasFocus() && attention.unseenIds().includes(state.activeId)) {
+      attention.markSeen(state.activeId)
+      tabBar.render(state, new Set(attention.unseenIds()))
+      panel.render()
+    }
+  }
 
   const watcher = createSessionWatcher({
     tabs: () => [...sessions].map(([id, session]) => ({ id, ptyId: session.ptyId })),
     activity: (ptyId) => api.session.activity(ptyId),
-    onChange: () => panel.render(),
+    onChange() {
+      for (const tab of state.tabs) {
+        const info = watcher.get(tab.id)
+        if (!info) continue
+        const finished = attention.update(tab.id, info, isSeen(tab.id))
+        if (finished?.notify) {
+          api.notifications.show({
+            title: 'Dev Cockpit',
+            body: `${tab.label}: ${finished.process} terminou em ${formatDuration(finished.durationMs)}`,
+            tabId: tab.id,
+          })
+        }
+      }
+      tabBar.render(state, new Set(attention.unseenIds()))
+      panel.render()
+    },
   })
 
   const panel = createPanel({
@@ -117,6 +149,8 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
         tabs: () => state.tabs,
         activeId: () => state.activeId,
         info: (id) => watcher.get(id),
+        finished: (id) => attention.finished(id),
+        finishedCount: () => attention.unseenIds().length,
         select: (id) => update(activateTab(state, id)),
       }),
       createGitSection({ snapshot: () => activeSnapshot }),
@@ -138,16 +172,15 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     panel.toggle()
   }
 
-  const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
-
   function render() {
-    tabBar.render(state)
+    tabBar.render(state, new Set(attention.unseenIds()))
     for (const [id, session] of sessions) {
       session.element.classList.toggle('active', id === state.activeId)
     }
     const active = activeSession()
     active?.fit()
     active?.focus()
+    markActiveSeen()
     panel.refresh()
   }
 
@@ -160,6 +193,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
   function discard(id: string) {
     sessions.get(id)?.dispose()
     sessions.delete(id)
+    attention.forget(id)
     for (const [path, tabId] of projectTabs) if (tabId === id) projectTabs.delete(path)
   }
 
@@ -243,6 +277,10 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     searchProjects,
     togglePanel,
     toggleFullHeight: () => api.window.toggleFullHeight(),
+    nextFinished() {
+      const id = attention.unseenIds()[0]
+      if (id) update(activateTab(state, id))
+    },
     changeOpacity(direction: 1 | -1) {
       opacity = stepOpacity(opacity, direction)
       saveOpacity(opacity)
@@ -261,6 +299,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     'tab:close': actions.closeTab,
     'tab:next': actions.nextTab,
     'tab:previous': actions.previousTab,
+    'tab:finished': actions.nextFinished,
     'agent:claude': () => activeSession()?.write('claude\r'),
     'agent:resume': () => activeSession()?.write('claude --resume\r'),
     'system:full-height': () => api.window.toggleFullHeight(),
@@ -288,6 +327,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
           { id: 'tab:close', label: 'Fechar aba', shortcut: 'Ctrl+Shift+W' },
           { id: 'tab:next', label: 'Próxima aba', shortcut: 'Ctrl+Tab' },
           { id: 'tab:previous', label: 'Aba anterior', shortcut: 'Ctrl+Shift+Tab' },
+          { id: 'tab:finished', label: 'Próxima que terminou', shortcut: 'Ctrl+Shift+J' },
         ],
       },
       {
@@ -362,7 +402,12 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
       autoOpened = false
     }
   })
+  window.addEventListener('focus', markActiveSeen)
+  api.notifications.onClick((tabId) => {
+    if (state.tabs.some((tab) => tab.id === tabId)) update(activateTab(state, tabId))
+  })
   api.window.onShown(() => {
+    setTimeout(markActiveSeen, 150)
     document.body.classList.remove('enter')
     void document.body.offsetWidth
     document.body.classList.add('enter')

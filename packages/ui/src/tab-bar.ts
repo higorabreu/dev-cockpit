@@ -13,7 +13,7 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks)
   const currentOrder = () => [...container.children].map(idOf)
 
   return {
-    render(state: TabsState) {
+    render(state: TabsState, unseen: ReadonlySet<string> = new Set()) {
       container.replaceChildren(
         ...state.tabs.map((tab) => {
           const button = document.createElement('button')
@@ -24,6 +24,13 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks)
           button.setAttribute('role', 'tab')
           button.setAttribute('aria-selected', String(tab.id === state.activeId))
           button.textContent = tab.label
+          if (unseen.has(tab.id)) {
+            const pip = document.createElement('span')
+            pip.className = 'pip'
+            pip.setAttribute('role', 'img')
+            pip.setAttribute('aria-label', 'terminou')
+            button.append(pip)
+          }
           button.addEventListener('click', () => callbacks.activate(tab.id))
           button.addEventListener('contextmenu', (event) => {
             event.preventDefault()

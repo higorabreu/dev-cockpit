@@ -1,4 +1,4 @@
-import type { SessionActivityInfo } from '@dck/core'
+import { type FinishedCommand, formatDuration, type SessionActivityInfo } from '@dck/core'
 import { h } from './dom.ts'
 import { ACTIVITY_LABEL, activityGlyph } from './glyphs.ts'
 import type { PanelSection } from './panel.ts'
@@ -7,6 +7,9 @@ export interface SessionsSource {
   tabs(): readonly { id: string; label: string }[]
   activeId(): string | undefined
   info(id: string): SessionActivityInfo | undefined
+  // Algo que terminou fora da vista e o usuário ainda não viu
+  finished(id: string): FinishedCommand | undefined
+  finishedCount(): number
   select(id: string): void
 }
 
@@ -28,17 +31,23 @@ export function createSessionsSection(source: SessionsSource): PanelSection {
       const count = source.tabs().length
       return `${count} ${count === 1 ? 'aba' : 'abas'}`
     },
-    badge: () => undefined,
+    badge: () => (source.finishedCount() > 0 ? String(source.finishedCount()) : undefined),
     body() {
       const rows = source
         .tabs()
-        .map((tab, order) => ({ tab, order, info: source.info(tab.id) }))
+        .map((tab, order) => ({
+          tab,
+          order,
+          info: source.info(tab.id),
+          done: source.finished(tab.id),
+        }))
         .sort(
           (a, b) =>
+            Number(Boolean(b.done)) - Number(Boolean(a.done)) ||
             RANK[a.info?.activity ?? 'idle'] - RANK[b.info?.activity ?? 'idle'] ||
             a.order - b.order,
         )
-        .map(({ tab, info }) => {
+        .map(({ tab, info, done }) => {
           const row = h(
             'button',
             {
@@ -46,14 +55,26 @@ export function createSessionsSection(source: SessionsSource): PanelSection {
               class: 'srow',
               'aria-current': tab.id === source.activeId() ? 'true' : undefined,
             },
-            info ? activityGlyph(info.activity) : h('span', { class: 'glyph' }),
+            done
+              ? activityGlyph('done')
+              : info
+                ? activityGlyph(info.activity)
+                : h('span', { class: 'glyph' }),
             h(
               'span',
               { class: 'stext' },
               h('span', { class: 'sname' }, tab.label),
-              h('span', { class: 'sstate' }, describe(info)),
+              h(
+                'span',
+                { class: 'sstate' },
+                done
+                  ? `Terminou, ${done.process} em ${formatDuration(done.durationMs)}`
+                  : describe(info),
+              ),
             ),
-            info && h('span', { class: 'smeta' }, folder(info.cwd)),
+            done
+              ? h('span', { class: 'new' }, 'novo')
+              : info && h('span', { class: 'smeta' }, folder(info.cwd)),
           )
           row.addEventListener('click', () => source.select(tab.id))
           return row
