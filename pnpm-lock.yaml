@@ -65,6 +65,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@dck/adapter-agent-claude':
+        specifier: workspace:^
+        version: link:../adapters/agent-claude
       '@dck/adapter-node-net':
         specifier: workspace:^
         version: link:../adapters/node-net
@@ -89,6 +92,9 @@ importers:
       '@dck/core':
         specifier: workspace:^
         version: link:../core
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
 
   packages/design: {}
 

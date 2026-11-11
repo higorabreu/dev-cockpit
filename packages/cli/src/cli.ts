@@ -1,10 +1,13 @@
 import { createClient, type ErrorBody, type Result, type Transport } from '@dck/core'
+import { type AgentDeps, runAgentCommand } from './agent-commands.ts'
 
 export interface CliDeps {
   readonly endpoint: string
   connect(endpoint: string): Promise<Result<Transport, ErrorBody>>
   out(text: string): void
   err(text: string): void
+  // Presente quando o comando `agent` está disponível
+  readonly agent?: AgentDeps
 }
 
 const USAGE = `Uso: dck <comando>
@@ -13,6 +16,7 @@ Comandos:
   toggle   Mostra ou esconde a janela
   ping     Confere se o daemon está respondendo
   daemon   Roda o daemon em primeiro plano
+  agent    Liga um agente de código ao cockpit (report, install, uninstall)
 `
 
 // Códigos de saída do sysexits.h, a convenção BSD para ferramentas de linha de comando
@@ -32,7 +36,10 @@ export function exitCodeFor(error: ErrorBody): number {
 }
 
 export async function runCli(argv: readonly string[], deps: CliDeps): Promise<number> {
-  const [command] = argv
+  const [command, ...rest] = argv
+  if (command === 'agent' && deps.agent) {
+    return runAgentCommand(rest, deps, deps.agent)
+  }
   if (command !== 'toggle' && command !== 'ping') {
     deps.err(USAGE)
     return command === undefined || command === '--help' ? EXIT.ok : EXIT.usage

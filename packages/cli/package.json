@@ -11,8 +11,9 @@
     "dck": "node src/main.ts"
   },
   "dependencies": {
-    "@dck/core": "workspace:^",
+    "@dck/adapter-agent-claude": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
+    "@dck/core": "workspace:^",
     "@dck/daemon": "workspace:^"
   },
   "bin": {
