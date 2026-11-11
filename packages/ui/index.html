@@ -13,7 +13,11 @@
       <div id="bar" role="tablist" aria-label="Abas"></div>
       <div id="main">
         <div id="host"></div>
-        <aside id="panel" aria-label="Painel da sessão" hidden></aside>
+        <div id="dock" data-open="false">
+          <hr id="split" aria-orientation="vertical" aria-label="Largura do painel" aria-valuemin="220" aria-valuemax="420" aria-valuenow="300" tabindex="0" />
+          <aside id="panel" aria-label="Painel"></aside>
+          <nav id="rail" aria-label="Seções do painel"></nav>
+        </div>
       </div>
       <div id="notice" role="status"></div>
       <div id="tab-menu" role="menu" hidden></div>

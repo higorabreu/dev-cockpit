@@ -11,6 +11,7 @@ import {
   type Project,
   recentTabs,
   reorderTabs,
+  type SessionSnapshot,
   stepFontSize,
   stepOpacity,
   stepTab,
@@ -20,7 +21,9 @@ import type { ThemeName } from '@dck/design'
 import { createHoldMenuController } from './hold-menu-controller.ts'
 import { setFullHeight } from './layout-mode.ts'
 import { createNotice } from './notice.ts'
-import { createPanel } from './panel.ts'
+import { createGitSection } from './panel/git-section.ts'
+import { createPanel } from './panel/panel.ts'
+import { createSessionsSection } from './panel/sessions-section.ts'
 import {
   applyOpacity,
   loadFontSize,
@@ -29,6 +32,7 @@ import {
   saveOpacity,
 } from './preferences.ts'
 import { createProjectSearch } from './project-search.ts'
+import { createSessionWatcher } from './sessions-watcher.ts'
 import { bindShortcuts } from './shortcuts.ts'
 import { createTabBar } from './tab-bar.ts'
 import { createTabMenu } from './tab-menu.ts'
@@ -39,7 +43,10 @@ export interface AppElements {
   readonly bar: HTMLElement
   readonly host: HTMLElement
   readonly main: HTMLElement
+  readonly dock: HTMLElement
   readonly panel: HTMLElement
+  readonly rail: HTMLElement
+  readonly split: HTMLElement
   readonly notice: HTMLElement
   readonly menu: HTMLElement
   readonly scrim: HTMLElement
@@ -89,13 +96,46 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     })
   }
 
+  let activeSnapshot: SessionSnapshot | undefined
+  let autoOpened = false
+
+  const watcher = createSessionWatcher({
+    tabs: () => [...sessions].map(([id, session]) => ({ id, ptyId: session.ptyId })),
+    activity: (ptyId) => api.session.activity(ptyId),
+    onChange: () => panel.render(),
+  })
+
   const panel = createPanel({
-    element: elements.panel,
-    inspect: async () => {
+    elements: {
+      dock: elements.dock,
+      panel: elements.panel,
+      rail: elements.rail,
+      split: elements.split,
+    },
+    sections: [
+      createSessionsSection({
+        tabs: () => state.tabs,
+        activeId: () => state.activeId,
+        info: (id) => watcher.get(id),
+        select: (id) => update(activateTab(state, id)),
+      }),
+      createGitSection({ snapshot: () => activeSnapshot }),
+    ],
+    title: () => {
+      const cwd = state.activeId ? watcher.get(state.activeId)?.cwd : undefined
+      return cwd ? cwd.replace(/^\/(?:home|Users)\/[^/]+/, '~') : ''
+    },
+    refresh: async () => {
       const id = activeSession()?.ptyId
-      return id === undefined ? undefined : api.session.inspect(id)
+      activeSnapshot = id === undefined ? undefined : await api.session.inspect(id)
+      await watcher.poll()
     },
   })
+
+  function togglePanel() {
+    autoOpened = false
+    panel.toggle()
+  }
 
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
 
@@ -200,7 +240,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     goToTab: (index: number) => update(activateTabAt(state, index)),
     toggleTheme,
     searchProjects,
-    togglePanel: panel.toggle,
+    togglePanel,
     changeOpacity(direction: 1 | -1) {
       opacity = stepOpacity(opacity, direction)
       saveOpacity(opacity)
@@ -223,7 +263,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     'agent:resume': () => activeSession()?.write('claude --resume\r'),
     'system:full-height': () => api.window.toggleFullHeight(),
     'system:theme': toggleTheme,
-    'system:panel': panel.toggle,
+    'system:panel': togglePanel,
     'project:search': searchProjects,
   }
 
@@ -309,7 +349,17 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     },
   )
 
-  api.window.onFullHeightChange((full) => setFullHeight(full, [bar, elements.main]))
+  api.window.onFullHeightChange((full) => {
+    setFullHeight(full, [bar, elements.main])
+    // Em altura total sobra espaço: o painel abre sozinho e volta ao que era ao sair
+    if (full && !panel.isOpen()) {
+      panel.open()
+      autoOpened = true
+    } else if (!full && autoOpened) {
+      panel.close()
+      autoOpened = false
+    }
+  })
   api.window.onShown(() => {
     document.body.classList.remove('enter')
     void document.body.offsetWidth
