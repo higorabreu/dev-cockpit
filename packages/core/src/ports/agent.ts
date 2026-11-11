@@ -23,6 +23,8 @@ export interface AgentLimit {
 
 // O que o agente empurra durante a sessão (por exemplo pelo statusLine do Claude Code)
 export interface AgentReportData {
+  // Arquivo da sessão que está na tela, como o agente informa; vale mais que qualquer palpite
+  readonly transcriptPath?: string
   readonly model?: string
   readonly contextTokens?: number
   readonly contextWindow?: number
@@ -55,6 +57,8 @@ export interface AgentContext {
   readonly pid?: number
   // Início do processo (starttime do /proc), para não confundir com um PID reaproveitado
   readonly processStart?: string
+  // Arquivo da sessão informado pelo próprio agente, quando ele o empurrou
+  readonly transcriptPath?: string
 }
 
 // Uma fonte de dados de um agente: sabe reconhecê-lo e ler a sessão dele a partir do diretório

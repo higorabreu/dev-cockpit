@@ -4,7 +4,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createClaudeSource } from '@dck/adapter-agent-claude'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
-import { createProcessInspector } from '@dck/adapter-linux-proc'
+import { createProcessInspector, createProcessScanner } from '@dck/adapter-linux-proc'
 import { createGitInspector } from '@dck/adapter-node-git'
 import { connectTo, defaultEndpoint } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
@@ -149,6 +149,28 @@ app.whenReady().then(() => {
     logger.warn('shortcut refused, another program owns it', { key: shortcutKey })
   }
 
+  const daemonScript = join(__dirname, 'daemon.cjs')
+  const processScanner = createProcessScanner()
+
+  function startDaemonProcess() {
+    mkdirSync(dirname(endpoint), { recursive: true, mode: 0o700 })
+    launchDaemon(
+      {
+        spawn: (command, args, options) =>
+          spawn(command, [...args], {
+            detached: options.detached,
+            stdio: [...options.stdio],
+            env: options.env,
+          }),
+        execPath: process.execPath,
+        script: daemonScript,
+        env: process.env,
+        logFd: openSync(join(dirname(endpoint), 'daemon.log'), 'a'),
+      },
+      logger,
+    )
+  }
+
   const link = startDaemonLink({
     connect: () => connectTo(endpoint, logger),
     scheduler: {
@@ -158,23 +180,21 @@ app.whenReady().then(() => {
       },
     },
     logger,
-    onUnavailable: () => {
-      mkdirSync(dirname(endpoint), { recursive: true, mode: 0o700 })
-      launchDaemon(
-        {
-          spawn: (command, args, options) =>
-            spawn(command, [...args], {
-              detached: options.detached,
-              stdio: [...options.stdio],
-              env: options.env,
-            }),
-          execPath: process.execPath,
-          script: join(__dirname, 'daemon.cjs'),
-          env: process.env,
-          logFd: openSync(join(dirname(endpoint), 'daemon.log'), 'a'),
-        },
-        logger,
-      )
+    onUnavailable: startDaemonProcess,
+    // Um daemon de uma versão anterior sobrevive à atualização e recusaria os métodos novos
+    replaceDaemon: async (shutdown) => {
+      if (!(await shutdown())) {
+        // Daemons antigos nem conhecem `shutdown`: acha os processos do nosso próprio script
+        const pids = await processScanner.find({
+          argument: daemonScript,
+          endpoint: process.env.DCK_ENDPOINT,
+          exclude: process.pid,
+        })
+        for (const pid of pids) process.kill(pid, 'SIGTERM')
+        logger.warn('stale daemon stopped', { pids })
+      }
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      startDaemonProcess()
     },
     onAgentReport: (message) => {
       if (!agentReports.accept(message)) logger.warn('agent report ignored')

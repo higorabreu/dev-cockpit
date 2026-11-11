@@ -14,18 +14,19 @@ const args = process.argv.slice(2)
 
 if (args[0] === 'daemon') {
   const logger = createJsonLogger((line) => process.stderr.write(line))
-  const started = await startDaemon({ endpoint, logger })
+  let stopDaemon = async () => process.exit(0)
+  const started = await startDaemon({ endpoint, logger, onShutdown: () => void stopDaemon() })
   if (!started.ok) {
     logger.error('daemon did not start', { reason: started.error.message })
     process.exit(1)
   }
   logger.info('daemon started', { endpoint })
-  const stop = async () => {
+  stopDaemon = async () => {
     await started.value.stop()
     process.exit(0)
   }
-  process.on('SIGINT', stop)
-  process.on('SIGTERM', stop)
+  process.on('SIGINT', stopDaemon)
+  process.on('SIGTERM', stopDaemon)
 } else {
   const settingsPath = join(homedir(), '.claude', 'settings.json')
   const readStdin = async () => {

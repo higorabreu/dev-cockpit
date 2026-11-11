@@ -1,5 +1,6 @@
 import {
   createHub,
+  DAEMON_PROTOCOL,
   type ErrorBody,
   errorBody,
   fail,
@@ -16,7 +17,10 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 10))
 
 type Attempt = () => Result<Transport, ErrorBody>
 
-function start(attempts: Attempt[]) {
+function start(
+  attempts: Attempt[],
+  replaceDaemon?: (shutdown: () => Promise<boolean>) => Promise<void>,
+) {
   const scheduler = new FakeScheduler()
   const toggles: number[] = []
   const reports: unknown[] = []
@@ -33,6 +37,7 @@ function start(attempts: Attempt[]) {
     logger: silentLogger,
     onToggle: () => toggles.push(1),
     onAgentReport: (message) => reports.push(message),
+    replaceDaemon,
     retryMs: 2000,
   })
   return { scheduler, toggles, reports, link, calls: () => calls }
@@ -147,5 +152,71 @@ describe('startDaemonLink', () => {
 
     expect(reports).toEqual([{ agent: 'claude', ptyId: 1, payload: { a: 1 } }])
     link.stop()
+  })
+
+  describe('daemon version', () => {
+    const current = () => createHub({ info: () => ({ protocol: DAEMON_PROTOCOL }) }, silentLogger)
+
+    it('should keep the connection when the daemon speaks the current protocol', async () => {
+      let replaced = 0
+      const { toggles, link } = start([() => ok(connectLoopback(current()))], async () => {
+        replaced += 1
+      })
+      await tick()
+
+      expect(replaced).toBe(0)
+      expect(toggles).toHaveLength(0)
+      link.stop()
+    })
+
+    it('should ask to replace the daemon when it is older and does not know info', async () => {
+      const legacy = createHub({}, silentLogger)
+      const calls: string[] = []
+      const { link } = start([() => ok(connectLoopback(legacy))], async (shutdown) => {
+        calls.push(`replace shutdown=${await shutdown()}`)
+      })
+      await tick()
+
+      expect(calls).toEqual(['replace shutdown=false'])
+      link.stop()
+    })
+
+    it('should ask to replace the daemon when its protocol is different', async () => {
+      const older = createHub(
+        { info: () => ({ protocol: DAEMON_PROTOCOL - 1 }), shutdown: () => ({ stopping: true }) },
+        silentLogger,
+      )
+      const calls: string[] = []
+      const { link } = start([() => ok(connectLoopback(older))], async (shutdown) => {
+        calls.push(`replace shutdown=${await shutdown()}`)
+      })
+      await tick()
+
+      expect(calls).toEqual(['replace shutdown=true'])
+      link.stop()
+    })
+
+    it('should stop trying to replace after a couple of attempts when it keeps finding an old daemon', async () => {
+      const legacy = () => createHub({}, silentLogger)
+      let replaced = 0
+      const { scheduler, link } = start(
+        [
+          () => ok(connectLoopback(legacy())),
+          () => ok(connectLoopback(legacy())),
+          () => ok(connectLoopback(legacy())),
+        ],
+        async () => {
+          replaced += 1
+        },
+      )
+      await tick()
+      scheduler.advance(2000)
+      await tick()
+      scheduler.advance(2000)
+      await tick()
+
+      expect(replaced).toBe(2)
+      link.stop()
+    })
   })
 })

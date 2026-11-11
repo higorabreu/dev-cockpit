@@ -1,6 +1,7 @@
 import {
   type Cancel,
   createClient,
+  DAEMON_PROTOCOL,
   type ErrorBody,
   type Logger,
   type Result,
@@ -16,6 +17,9 @@ export interface DaemonLinkOptions {
   onToggle(): void
   // Dados que um agente empurrou pelo daemon (por exemplo o statusLine do Claude)
   onAgentReport?(message: unknown): void
+  // Chamado quando o daemon encontrado é mais antigo que esta versão do shell; quem chama
+  // o encerra (por `shutdown`, ou à força se ele nem conhece o método) e sobe um novo
+  replaceDaemon?(shutdown: () => Promise<boolean>): Promise<void>
   // Chamado na primeira falha de conexão, para quem quiser subir o daemon
   onUnavailable?(): void
   readonly retryMs?: number
@@ -24,11 +28,14 @@ export interface DaemonLinkOptions {
 const windowEvent = z.object({ action: z.literal('toggle') })
 
 // Mantém a janela ligada ao daemon: assina o tópico "window" e reconecta quando a conexão cai
+const MAX_REPLACEMENTS = 2
+
 export function startDaemonLink(options: DaemonLinkOptions): { stop(): void } {
   const { connect, scheduler, logger, onToggle } = options
   const retryMs = options.retryMs ?? 2000
   let stopped = false
   let reportedUnavailable = false
+  let replacements = 0
   let cancelRetry: Cancel | undefined
   let closeCurrent: (() => void) | undefined
 
@@ -58,6 +65,16 @@ export function startDaemonLink(options: DaemonLinkOptions): { stop(): void } {
       logger.warn('daemon connection lost')
       retry()
     })
+    const info = await client.request('info')
+    const protocol = info.ok ? (info.value as { protocol?: number } | null)?.protocol : undefined
+    if (protocol !== DAEMON_PROTOCOL && options.replaceDaemon && replacements < MAX_REPLACEMENTS) {
+      replacements += 1
+      logger.warn('daemon outdated, replacing it', { found: protocol ?? 'unknown' })
+      await options.replaceDaemon(async () => (await client.request('shutdown')).ok)
+      // Fechar dispara a reconexão, que já encontra o daemon novo
+      client.close()
+      return
+    }
     const subscribed = await client.subscribe('window', (data) => {
       if (windowEvent.safeParse(data).success) onToggle()
     })

@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { connectTo } from '@dck/adapter-node-net'
-import { createClient, silentLogger } from '@dck/core'
+import { createClient, DAEMON_PROTOCOL, silentLogger } from '@dck/core'
 import { afterEach, describe, expect, it } from 'vitest'
 import { type RunningDaemon, startDaemon } from './daemon.ts'
 
@@ -106,5 +106,36 @@ describe('startDaemon', () => {
     })
 
     expect(result.ok).toBe(false)
+  })
+
+  it('should report its protocol version when asked for info', async () => {
+    const { newClient } = await boot()
+    const client = await newClient()
+
+    expect(await client.request('info')).toEqual({ ok: true, value: { protocol: DAEMON_PROTOCOL } })
+  })
+
+  it('should answer and then call the shutdown hook when asked to shut down', async () => {
+    let stopped = 0
+    const endpoint = join(mkdtempSync(join(tmpdir(), 'dck-daemon-')), 'daemon.sock')
+    const started = await startDaemon({
+      endpoint,
+      logger: silentLogger,
+      onShutdown: () => {
+        stopped += 1
+      },
+    })
+    if (!started.ok) throw new Error(started.error.message)
+    cleanups.push(() => started.value.stop())
+    const connected = await connectTo(endpoint, silentLogger)
+    if (!connected.ok) throw new Error(connected.error.message)
+    const client = createClient(connected.value)
+    cleanups.push(async () => client.close())
+
+    const reply = await client.request('shutdown')
+    await new Promise((resolve) => setTimeout(resolve, 120))
+
+    expect(reply).toEqual({ ok: true, value: { stopping: true } })
+    expect(stopped).toBe(1)
   })
 })
