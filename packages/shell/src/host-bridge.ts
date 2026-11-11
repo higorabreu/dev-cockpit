@@ -6,6 +6,7 @@ import {
   type PtyCreateOptions,
   type PtyHost,
   type PtySession,
+  type SessionActivityInfo,
   type SessionSnapshot,
 } from '@dck/core'
 
@@ -19,7 +20,10 @@ export interface BridgeOptions {
   readonly ptyHost: PtyHost
   readonly clipboard: Clipboard
   readonly projects: ProjectCatalog
-  readonly sessions: { snapshot(pid: number): Promise<SessionSnapshot | undefined> }
+  readonly sessions: {
+    activity(pid: number): Promise<SessionActivityInfo | undefined>
+    snapshot(pid: number): Promise<SessionSnapshot | undefined>
+  }
   readonly shell: string
   readonly home: string
   readonly logger: Logger
@@ -63,6 +67,10 @@ export function registerHostBridge(options: BridgeOptions) {
   })
   ipcMain.handle(hostChannels.clipboardRead, () => clipboard.readText())
   ipcMain.handle(hostChannels.clipboardWrite, (_event, text: string) => clipboard.writeText(text))
+  ipcMain.handle(hostChannels.sessionActivity, (_event, id: number) => {
+    const session = sessions.get(id)
+    return session ? options.sessions.activity(session.pid) : undefined
+  })
   ipcMain.handle(hostChannels.sessionInspect, (_event, id: number) => {
     const session = sessions.get(id)
     return session ? options.sessions.snapshot(session.pid) : undefined

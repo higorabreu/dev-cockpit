@@ -1,4 +1,5 @@
 export const OPACITY = { min: 0.3, max: 1, step: 0.05, initial: 0.92 } as const
+export const PANEL_WIDTH = { min: 220, max: 420, initial: 300 } as const
 export const FONT_SIZE = { min: 10, max: 32, initial: 16 } as const
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -20,4 +21,8 @@ export function readPreference(
   const value = Number(raw)
   if (raw === null || raw.trim() === '' || !Number.isFinite(value)) return range.initial
   return value >= range.min && value <= range.max ? value : range.initial
+}
+
+export function clampPanelWidth(value: number): number {
+  return clamp(Math.round(value), PANEL_WIDTH.min, PANEL_WIDTH.max)
 }

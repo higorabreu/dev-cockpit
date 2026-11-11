@@ -1,6 +1,6 @@
 import type { Project } from './projects.ts'
 import type { PtyExit, Unsubscribe } from './pty.ts'
-import type { SessionSnapshot } from './session.ts'
+import type { SessionActivityInfo, SessionSnapshot } from './session.ts'
 
 export interface PtyCreateOptions {
   readonly cols: number
@@ -23,6 +23,8 @@ export interface HostApi {
     writeText(text: string): Promise<void>
   }
   readonly session: {
+    // Leve, sem git: serve para vigiar todas as abas
+    activity(ptyId: number): Promise<SessionActivityInfo | undefined>
     inspect(ptyId: number): Promise<SessionSnapshot | undefined>
   }
   readonly projects: {
@@ -45,6 +47,7 @@ export const hostChannels = {
   ptyExit: 'pty:exit',
   clipboardRead: 'clipboard:read',
   clipboardWrite: 'clipboard:write',
+  sessionActivity: 'session:activity',
   sessionInspect: 'session:inspect',
   projectsList: 'projects:list',
   projectsTouch: 'projects:touch',

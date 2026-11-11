@@ -24,9 +24,12 @@ export interface ProcessInspector {
 
 export type SessionActivity = 'idle' | 'claude' | 'busy'
 
-export interface SessionSnapshot {
+export interface SessionActivityInfo {
   readonly cwd: string
   readonly process: string
   readonly activity: SessionActivity
+}
+
+export interface SessionSnapshot extends SessionActivityInfo {
   readonly git?: GitStatus
 }

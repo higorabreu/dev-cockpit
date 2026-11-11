@@ -19,6 +19,11 @@ function setup() {
     ptyHost,
     clipboard,
     sessions: {
+      activity: async (pid: number) => ({
+        cwd: `/pid/${pid}`,
+        process: 'zsh',
+        activity: 'idle' as const,
+      }),
       snapshot: async (pid: number) => ({
         cwd: `/pid/${pid}`,
         process: 'zsh',
@@ -156,5 +161,18 @@ describe('registerHostBridge clipboard and window', () => {
     const { call } = setup()
 
     expect(await call(hostChannels.sessionInspect, 99)).toBeUndefined()
+  })
+
+  it('should return the light activity of the session when the interface asks for it', async () => {
+    const { call, ptyHost } = setup()
+    const id = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+
+    const info = await call(hostChannels.sessionActivity, id)
+
+    expect(info).toEqual({
+      cwd: `/pid/${ptyHost.sessions[0]?.pid}`,
+      process: 'zsh',
+      activity: 'idle',
+    })
   })
 })

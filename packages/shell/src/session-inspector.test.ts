@@ -34,4 +34,22 @@ describe('createSessionInspector', () => {
   it('should be undefined when the process is gone', async () => {
     expect(await inspector(undefined, status).snapshot(1)).toBeUndefined()
   })
+
+  it('should report the activity without asking git when only the activity is needed', async () => {
+    let asked = false
+    const light = createSessionInspector({
+      processes: { inspect: async () => ({ cwd: '/p/app', foreground: 'pnpm' }) },
+      git: {
+        status: async () => {
+          asked = true
+          return undefined
+        },
+      },
+    })
+
+    const info = await light.activity(1)
+
+    expect(info).toEqual({ cwd: '/p/app', process: 'pnpm', activity: 'busy' })
+    expect(asked).toBe(false)
+  })
 })

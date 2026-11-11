@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { FONT_SIZE, OPACITY, readPreference, stepFontSize, stepOpacity } from './preferences.ts'
+import {
+  clampPanelWidth,
+  FONT_SIZE,
+  OPACITY,
+  PANEL_WIDTH,
+  readPreference,
+  stepFontSize,
+  stepOpacity,
+} from './preferences.ts'
 
 describe('stepOpacity', () => {
   it('should raise by one step when stepping up', () => {
@@ -48,5 +56,20 @@ describe('readPreference', () => {
   it('should return the initial value when the stored number is out of range', () => {
     expect(readPreference('0.01', OPACITY)).toBe(0.92)
     expect(readPreference('99', FONT_SIZE)).toBe(16)
+  })
+})
+
+describe('clampPanelWidth', () => {
+  it('should keep the width when it is inside the range', () => {
+    expect(clampPanelWidth(300)).toBe(300)
+  })
+
+  it('should stop at the limits when the width goes past them', () => {
+    expect(clampPanelWidth(100)).toBe(PANEL_WIDTH.min)
+    expect(clampPanelWidth(900)).toBe(PANEL_WIDTH.max)
+  })
+
+  it('should round to whole pixels when the width is fractional', () => {
+    expect(clampPanelWidth(300.6)).toBe(301)
   })
 })

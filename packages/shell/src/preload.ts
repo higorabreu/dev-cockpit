@@ -24,6 +24,7 @@ const api: HostApi = {
     writeText: (text) => ipcRenderer.invoke(hostChannels.clipboardWrite, text),
   },
   session: {
+    activity: (ptyId) => ipcRenderer.invoke(hostChannels.sessionActivity, ptyId),
     inspect: (ptyId) => ipcRenderer.invoke(hostChannels.sessionInspect, ptyId),
   },
   projects: {
