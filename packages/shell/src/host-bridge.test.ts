@@ -31,6 +31,9 @@ function setup() {
         activity: 'idle' as const,
       }),
     },
+    environment: {
+      status: async (pid: number) => ({ kind: 'ok' as const, project: `p${pid}`, containers: [] }),
+    },
     notifier: { notify: (notification) => void notified.push(notification) },
     projects: {
       list: async () => [{ name: 'alpha', path: '/p/alpha' }],
@@ -201,5 +204,20 @@ describe('registerHostBridge clipboard and window', () => {
     call(hostChannels.notificationsShow, { title: 42 })
 
     expect(notified).toEqual([])
+  })
+
+  it('should read the environment of the session when the interface asks for it', async () => {
+    const { call, ptyHost } = setup()
+    const id = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+
+    const status = await call(hostChannels.environmentInspect, id)
+
+    expect(status).toEqual({ kind: 'ok', project: `p${ptyHost.sessions[0]?.pid}`, containers: [] })
+  })
+
+  it('should report none when the session does not exist and the environment is asked', async () => {
+    const { call } = setup()
+
+    expect(await call(hostChannels.environmentInspect, 99)).toEqual({ kind: 'none' })
   })
 })

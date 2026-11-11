@@ -1,5 +1,6 @@
 import {
   type Clipboard,
+  type ComposeStatus,
   hostChannels,
   type Logger,
   type Notifier,
@@ -29,6 +30,7 @@ export interface BridgeOptions {
   readonly clipboard: Clipboard
   readonly projects: ProjectCatalog
   readonly notifier: Notifier
+  readonly environment: { status(pid: number): Promise<ComposeStatus> }
   readonly sessions: {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
@@ -83,6 +85,13 @@ export function registerHostBridge(options: BridgeOptions) {
       options.notifier.notify(parsed.data)
     } else logger.warn('invalid notification request ignored')
   })
+  ipcMain.handle(
+    hostChannels.environmentInspect,
+    async (_event, id: number): Promise<ComposeStatus> => {
+      const session = sessions.get(id)
+      return session ? options.environment.status(session.pid) : { kind: 'none' }
+    },
+  )
   ipcMain.handle(hostChannels.sessionActivity, (_event, id: number) => {
     const session = sessions.get(id)
     return session ? options.sessions.activity(session.pid) : undefined

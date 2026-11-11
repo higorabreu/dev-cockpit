@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { createComposeInspector } from '@dck/adapter-docker-cli'
 import { createProcessInspector } from '@dck/adapter-linux-proc'
 import { createGitInspector } from '@dck/adapter-node-git'
 import { connectTo, defaultEndpoint } from '@dck/adapter-node-net'
@@ -27,6 +28,7 @@ import { createElectronNotifier } from './electron-notifier.ts'
 import { createElectronScreen } from './electron-screen.ts'
 import { createElectronShortcuts } from './electron-shortcuts.ts'
 import { createElectronStatusIcon } from './electron-status-icon.ts'
+import { createEnvironmentInspector } from './environment-inspector.ts'
 import { registerHostBridge } from './host-bridge.ts'
 import { createProjectCatalog } from './project-catalog.ts'
 import { createRecencyStore } from './recency-store.ts'
@@ -93,6 +95,10 @@ app.whenReady().then(() => {
     sessions: createSessionInspector({
       processes: createProcessInspector(),
       git: createGitInspector(),
+    }),
+    environment: createEnvironmentInspector({
+      processes: createProcessInspector(),
+      compose: createComposeInspector({ stopAt: homedir() }),
     }),
     notifier: createElectronNotifier(
       {
