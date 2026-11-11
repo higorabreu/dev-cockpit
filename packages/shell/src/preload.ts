@@ -23,6 +23,10 @@ const api: HostApi = {
     readText: () => ipcRenderer.invoke(hostChannels.clipboardRead),
     writeText: (text) => ipcRenderer.invoke(hostChannels.clipboardWrite, text),
   },
+  notifications: {
+    show: (notification) => ipcRenderer.send(hostChannels.notificationsShow, notification),
+    onClick: (listener) => subscribe<[string]>(hostChannels.notificationsClick, listener),
+  },
   session: {
     activity: (ptyId) => ipcRenderer.invoke(hostChannels.sessionActivity, ptyId),
     inspect: (ptyId) => ipcRenderer.invoke(hostChannels.sessionInspect, ptyId),

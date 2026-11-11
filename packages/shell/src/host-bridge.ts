@@ -2,6 +2,7 @@ import {
   type Clipboard,
   hostChannels,
   type Logger,
+  type Notifier,
   type ProjectCatalog,
   type PtyCreateOptions,
   type PtyHost,
@@ -9,6 +10,13 @@ import {
   type SessionActivityInfo,
   type SessionSnapshot,
 } from '@dck/core'
+import { z } from 'zod'
+
+const notificationSchema = z.object({
+  title: z.string().max(200),
+  body: z.string().max(500),
+  tabId: z.string().max(100),
+})
 
 export interface IpcMainApi {
   handle(channel: string, listener: (event: unknown, ...args: never[]) => unknown): void
@@ -20,6 +28,7 @@ export interface BridgeOptions {
   readonly ptyHost: PtyHost
   readonly clipboard: Clipboard
   readonly projects: ProjectCatalog
+  readonly notifier: Notifier
   readonly sessions: {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
@@ -67,6 +76,11 @@ export function registerHostBridge(options: BridgeOptions) {
   })
   ipcMain.handle(hostChannels.clipboardRead, () => clipboard.readText())
   ipcMain.handle(hostChannels.clipboardWrite, (_event, text: string) => clipboard.writeText(text))
+  ipcMain.on(hostChannels.notificationsShow, (_event, payload: unknown) => {
+    const parsed = notificationSchema.safeParse(payload)
+    if (parsed.success) options.notifier.notify(parsed.data)
+    else logger.warn('invalid notification request ignored')
+  })
   ipcMain.handle(hostChannels.sessionActivity, (_event, id: number) => {
     const session = sessions.get(id)
     return session ? options.sessions.activity(session.pid) : undefined

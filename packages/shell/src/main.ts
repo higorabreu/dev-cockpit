@@ -7,12 +7,22 @@ import { createGitInspector } from '@dck/adapter-node-git'
 import { connectTo, defaultEndpoint } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
 import { createDockController, createJsonLogger, hostChannels } from '@dck/core'
-import { app, BrowserWindow, clipboard, globalShortcut, ipcMain, Menu, screen } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  globalShortcut,
+  ipcMain,
+  Menu,
+  Notification,
+  screen,
+} from 'electron'
 import { launchDaemon } from './daemon-launcher.ts'
 import { startDaemonLink } from './daemon-link.ts'
 import { logDockWindow, logScreen } from './dock-log.ts'
 import { createElectronDockWindow } from './electron-dock-window.ts'
 import { createElectronIpc } from './electron-ipc.ts'
+import { createElectronNotifier } from './electron-notifier.ts'
 import { createElectronScreen } from './electron-screen.ts'
 import { createElectronShortcuts } from './electron-shortcuts.ts'
 import { registerHostBridge } from './host-bridge.ts'
@@ -78,6 +88,25 @@ app.whenReady().then(() => {
       processes: createProcessInspector(),
       git: createGitInspector(),
     }),
+    notifier: createElectronNotifier(
+      {
+        isSupported: () => Notification.isSupported(),
+        create(options) {
+          const notification = new Notification(options)
+          return {
+            on(event, listener) {
+              if (event === 'click') notification.on('click', listener)
+              else notification.on('close', listener)
+            },
+            show: () => notification.show(),
+          }
+        },
+      },
+      (tabId) => {
+        dock.show()
+        window.webContents.send(hostChannels.notificationsClick, tabId)
+      },
+    ),
     shell: process.env.SHELL ?? '/bin/bash',
     home: homedir(),
     logger,

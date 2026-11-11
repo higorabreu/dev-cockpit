@@ -1,4 +1,4 @@
-import { hostChannels, silentLogger } from '@dck/core'
+import { hostChannels, silentLogger, type TabNotification } from '@dck/core'
 import { FakePtyHost, MemoryClipboard } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
 import { type IpcMainApi, registerHostBridge } from './host-bridge.ts'
@@ -14,6 +14,7 @@ function setup() {
   const sent: Array<[string, ...unknown[]]> = []
   let fullHeightToggles = 0
   const touched: string[] = []
+  const notified: TabNotification[] = []
   const bridge = registerHostBridge({
     ipcMain,
     ptyHost,
@@ -30,6 +31,7 @@ function setup() {
         activity: 'idle' as const,
       }),
     },
+    notifier: { notify: (notification) => void notified.push(notification) },
     projects: {
       list: async () => [{ name: 'alpha', path: '/p/alpha' }],
       touch: async (path: string) => void touched.push(path),
@@ -44,7 +46,16 @@ function setup() {
   })
   const call = (channel: string, ...args: unknown[]) =>
     (handlers.get(channel) as (...a: unknown[]) => unknown)({}, ...args)
-  return { ptyHost, clipboard, sent, call, bridge, touched, fullHeights: () => fullHeightToggles }
+  return {
+    ptyHost,
+    clipboard,
+    sent,
+    call,
+    bridge,
+    touched,
+    notified,
+    fullHeights: () => fullHeightToggles,
+  }
 }
 
 describe('registerHostBridge pty', () => {
@@ -174,5 +185,21 @@ describe('registerHostBridge clipboard and window', () => {
       process: 'zsh',
       activity: 'idle',
     })
+  })
+
+  it('should pass a valid notification request to the notifier when the interface asks', () => {
+    const { call, notified } = setup()
+
+    call(hostChannels.notificationsShow, { title: 'Dev Cockpit', body: 'terminou', tabId: 'tab-2' })
+
+    expect(notified).toEqual([{ title: 'Dev Cockpit', body: 'terminou', tabId: 'tab-2' }])
+  })
+
+  it('should ignore a malformed notification request when the payload is not valid', () => {
+    const { call, notified } = setup()
+
+    call(hostChannels.notificationsShow, { title: 42 })
+
+    expect(notified).toEqual([])
   })
 })
