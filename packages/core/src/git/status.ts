@@ -114,16 +114,22 @@ export function ticketFromBranch(branch: string | undefined): string | undefined
   return branch ? TICKET.exec(branch)?.[0] : undefined
 }
 
-const UNITS: ReadonlyArray<readonly [number, string]> = [
+export type AgoUnit = 'now' | 'min' | 'h' | 'd'
+
+const UNITS: ReadonlyArray<readonly [number, Exclude<AgoUnit, 'now'>]> = [
   [86400, 'd'],
   [3600, 'h'],
   [60, 'min'],
 ]
 
-export function formatAgo(nowSeconds: number, thenSeconds: number): string {
+// Há quanto tempo, em partes, para quem exibe escolher a língua
+export function agoParts(
+  nowSeconds: number,
+  thenSeconds: number,
+): { unit: AgoUnit; value: number } {
   const elapsed = Math.max(0, nowSeconds - thenSeconds)
-  for (const [size, label] of UNITS) {
-    if (elapsed >= size) return `há ${Math.floor(elapsed / size)} ${label}`
+  for (const [size, unit] of UNITS) {
+    if (elapsed >= size) return { unit, value: Math.floor(elapsed / size) }
   }
-  return 'agora'
+  return { unit: 'now', value: 0 }
 }

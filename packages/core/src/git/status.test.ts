@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  agoParts,
   countDistinctFiles,
-  formatAgo,
   parseGitLog,
   parseGitStatus,
   parseSubmoduleList,
@@ -157,14 +157,14 @@ describe('ticketFromBranch', () => {
   })
 })
 
-describe('formatAgo', () => {
-  it('should use the largest fitting unit when formatting', () => {
-    expect(formatAgo(10_000, 10_000 - 7200)).toBe('há 2 h')
-    expect(formatAgo(200_000, 200_000 - 90_000)).toBe('há 1 d')
-    expect(formatAgo(1000, 1000 - 300)).toBe('há 5 min')
+describe('agoParts', () => {
+  it('should use the largest fitting unit when splitting', () => {
+    expect(agoParts(10_000, 10_000 - 7200)).toEqual({ unit: 'h', value: 2 })
+    expect(agoParts(200_000, 200_000 - 90_000)).toEqual({ unit: 'd', value: 1 })
+    expect(agoParts(1000, 1000 - 300)).toEqual({ unit: 'min', value: 5 })
   })
 
   it('should say now when it was moments ago', () => {
-    expect(formatAgo(1000, 990)).toBe('agora')
+    expect(agoParts(1000, 990)).toEqual({ unit: 'now', value: 0 })
   })
 })
