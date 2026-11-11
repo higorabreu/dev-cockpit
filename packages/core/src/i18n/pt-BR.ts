@@ -14,7 +14,7 @@ export const ptBR = {
   'sessions.new': 'novo',
 
   'git.label': 'Git',
-  'git.staged': 'Alterações em Stage',
+  'git.staged': 'Alterações preparadas',
   'git.changes': 'Alterações',
   'git.pull': 'Pull',
   'git.push': 'Push',
