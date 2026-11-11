@@ -6,6 +6,8 @@ export interface ShortcutActions {
   goToTab(index: number): void
   toggleTheme(): void
   searchProjects(): void
+  changeOpacity(direction: 1 | -1): void
+  changeFontSize(delta: number | 'reset'): void
 }
 
 // Ouvido na fase de captura: as teclas do app não chegam ao shell
@@ -25,11 +27,18 @@ export function bindShortcuts(actions: ShortcutActions): () => void {
       if (event.key === 'PageUp') return run(actions.previousTab)
     }
     if (event.ctrlKey && event.shiftKey && !event.altKey) {
+      if (event.key === 'ArrowUp') return run(() => actions.changeOpacity(1))
+      if (event.key === 'ArrowDown') return run(() => actions.changeOpacity(-1))
       const key = event.key.toLowerCase()
       if (key === 't') return run(actions.newTab)
       if (key === 'w') return run(actions.closeTab)
       if (key === 'l') return run(actions.toggleTheme)
       if (key === 'o') return run(actions.searchProjects)
+    }
+    if (event.ctrlKey && !event.altKey) {
+      if (event.key === '=' || event.key === '+') return run(() => actions.changeFontSize(1))
+      if (event.key === '-') return run(() => actions.changeFontSize(-1))
+      if (event.key === '0') return run(() => actions.changeFontSize('reset'))
     }
     if (event.altKey && !event.ctrlKey && /^[1-9]$/.test(event.key)) {
       return run(() => actions.goToTab(Number(event.key) - 1))

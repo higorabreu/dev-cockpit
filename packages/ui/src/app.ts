@@ -4,6 +4,7 @@ import {
   closeOtherTabs,
   closeTab,
   emptyTabs,
+  FONT_SIZE,
   type HostApi,
   type MenuCategory,
   openTab,
@@ -12,6 +13,8 @@ import {
   recentTabs,
   recordInteraction,
   reorderTabs,
+  stepFontSize,
+  stepOpacity,
   stepTab,
   type TabsState,
 } from '@dck/core'
@@ -19,6 +22,13 @@ import type { ThemeName } from '@dck/design'
 import { createHoldMenuController } from './hold-menu-controller.ts'
 import { setFullHeight } from './layout-mode.ts'
 import { createNotice } from './notice.ts'
+import {
+  applyOpacity,
+  loadFontSize,
+  loadOpacity,
+  saveFontSize,
+  saveOpacity,
+} from './preferences.ts'
 import { loadRecentProjects, saveRecentProjects } from './project-recency.ts'
 import { createProjectSearch } from './project-search.ts'
 import { bindShortcuts } from './shortcuts.ts'
@@ -57,6 +67,9 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
   let state: TabsState = emptyTabs
   let theme = initialTheme
   let counter = 0
+  let opacity = loadOpacity()
+  let fontSize = loadFontSize()
+  applyOpacity(opacity)
   let projects: readonly Project[] = []
   let recentProjects = loadRecentProjects()
 
@@ -122,6 +135,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
       host,
       api,
       theme,
+      fontSize,
       ...(options.cwd ? { cwd: options.cwd } : {}),
       onCopied: (text) => notice.copied(text),
       onExit: () => close(id),
@@ -178,6 +192,16 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     goToTab: (index: number) => update(activateTabAt(state, index)),
     toggleTheme,
     searchProjects,
+    changeOpacity(direction: 1 | -1) {
+      opacity = stepOpacity(opacity, direction)
+      saveOpacity(opacity)
+      applyOpacity(opacity)
+    },
+    changeFontSize(delta: number | 'reset') {
+      fontSize = delta === 'reset' ? FONT_SIZE.initial : stepFontSize(fontSize, delta)
+      saveFontSize(fontSize)
+      for (const session of sessions.values()) session.setFontSize(fontSize)
+    },
   }
   bindShortcuts(actions)
 

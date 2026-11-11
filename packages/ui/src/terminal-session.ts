@@ -11,6 +11,7 @@ export interface TerminalSession {
   write(data: string): void
   fit(): void
   setTheme(name: ThemeName): void
+  setFontSize(size: number): void
   dispose(): void
 }
 
@@ -18,6 +19,7 @@ export interface SessionOptions {
   readonly host: HTMLElement
   readonly api: HostApi
   readonly theme: ThemeName
+  readonly fontSize: number
   readonly cwd?: string
   onCopied(text: string): void
   onExit(): void
@@ -31,7 +33,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
 
   const terminal = new Terminal({
     fontFamily: tokens.font.mono,
-    fontSize: tokens.size.terminal,
+    fontSize: options.fontSize,
     cursorBlink: true,
     allowTransparency: true,
     theme: terminalTheme(options.theme),
@@ -94,6 +96,10 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     focus: () => terminal.focus(),
     write: (data) => api.pty.write(id, data),
     fit: () => fit.fit(),
+    setFontSize: (size) => {
+      terminal.options.fontSize = size
+      fit.fit()
+    },
     setTheme: (name) => {
       terminal.options.theme = terminalTheme(name)
     },
