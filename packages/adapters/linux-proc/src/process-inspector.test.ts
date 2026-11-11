@@ -2,7 +2,11 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createProcessInspector, parseForegroundGroup } from './process-inspector.ts'
+import {
+  createProcessInspector,
+  parseForegroundGroup,
+  parseStartTime,
+} from './process-inspector.ts'
 
 describe('parseForegroundGroup', () => {
   it('should read the foreground group when the stat line is regular', () => {
@@ -44,7 +48,7 @@ describe('createProcessInspector', () => {
 
     const info = await createProcessInspector(proc).inspect(10)
 
-    expect(info).toEqual({ cwd: '/work/project', foreground: 'claude' })
+    expect(info).toMatchObject({ cwd: '/work/project', foreground: 'claude', foregroundPid: 20 })
   })
 
   it('should be undefined when the process does not exist', async () => {
@@ -57,5 +61,21 @@ describe('createProcessInspector', () => {
     const info = await createProcessInspector(proc).inspect(10)
 
     expect(info?.foreground).toBe('desconhecido')
+  })
+})
+
+describe('parseStartTime', () => {
+  const stat = '10 (zsh) S 1 10 10 1 20 0 0 0 0 0 0 0 0 0 20 0 1 0 9383108 100 200'
+
+  it('should read the start time when the stat line is regular', () => {
+    expect(parseStartTime(stat)).toBe('9383108')
+  })
+
+  it('should survive a process name with parentheses when reading the start time', () => {
+    expect(parseStartTime(stat.replace('(zsh)', '(my (odd) one)'))).toBe('9383108')
+  })
+
+  it('should be undefined when the line is too short', () => {
+    expect(parseStartTime('10 (zsh) S 1')).toBeUndefined()
   })
 })

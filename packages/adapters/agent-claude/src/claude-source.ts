@@ -1,7 +1,8 @@
-import { open, readdir, stat } from 'node:fs/promises'
+import { open, readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { AgentProfile, AgentSession, AgentSource } from '@dck/core'
+import { z } from 'zod'
 import { normalizeStatusline } from './statusline.ts'
 import { summarizeTranscriptTail } from './transcript.ts'
 
@@ -20,23 +21,6 @@ export function projectDirectoryName(cwd: string): string {
   return cwd.replace(/[^A-Za-z0-9]/g, '-')
 }
 
-async function newestTranscript(directory: string): Promise<string | undefined> {
-  const names = await readdir(directory).catch(() => [] as string[])
-  const files = await Promise.all(
-    names
-      .filter((name) => name.endsWith('.jsonl'))
-      .map(async (name) => {
-        const path = join(directory, name)
-        const info = await stat(path).catch(() => undefined)
-        return info ? { path, modified: info.mtimeMs } : undefined
-      }),
-  )
-  const found = files.filter(
-    (file): file is { path: string; modified: number } => file !== undefined,
-  )
-  return found.sort((a, b) => b.modified - a.modified)[0]?.path
-}
-
 async function readTail(path: string, bytes: number): Promise<string> {
   const handle = await open(path, 'r')
   try {
@@ -53,22 +37,57 @@ async function readTail(path: string, bytes: number): Promise<string> {
 }
 
 export interface ClaudeSourceOptions {
-  readonly projectsRoot?: string
+  // Pasta de configuração do Claude Code, normalmente ~/.claude
+  readonly claudeDir?: string
+}
+
+// O Claude Code registra cada processo vivo em ~/.claude/sessions/<pid>.json
+const registryEntry = z.object({
+  sessionId: z.string().min(1),
+  cwd: z.string(),
+  procStart: z.string().optional(),
+})
+
+async function readRegistry(claudeDir: string, pid: number) {
+  const text = await readFile(join(claudeDir, 'sessions', `${pid}.json`), 'utf8').catch(
+    () => undefined,
+  )
+  if (text === undefined) return undefined
+  try {
+    const parsed = registryEntry.safeParse(JSON.parse(text))
+    return parsed.success ? parsed.data : undefined
+  } catch {
+    return undefined
+  }
 }
 
 export function createClaudeSource(options: ClaudeSourceOptions = {}): AgentSource {
-  const root = options.projectsRoot ?? join(homedir(), '.claude', 'projects')
+  const claudeDir = options.claudeDir ?? join(homedir(), '.claude')
 
   return {
     profile: claudeProfile,
     report: normalizeStatusline,
-    async read(cwd): Promise<AgentSession | undefined> {
-      const file = await newestTranscript(join(root, projectDirectoryName(cwd)))
-      if (!file) return undefined
+    async read(context): Promise<AgentSession | undefined> {
+      // Sem o processo exato não há como saber qual sessão é: melhor nada que a sessão errada
+      if (context.pid === undefined) return undefined
+      const entry = await readRegistry(claudeDir, context.pid)
+      if (!entry) return undefined
+      // O início do processo tem de bater, senão o registro é de um PID que foi reaproveitado
+      if (context.processStart && entry.procStart && entry.procStart !== context.processStart) {
+        return undefined
+      }
+
+      const file = join(
+        claudeDir,
+        'projects',
+        projectDirectoryName(entry.cwd),
+        `${entry.sessionId}.jsonl`,
+      )
       let summary = summarizeTranscriptTail('')
       for (const bytes of TAIL_STEPS) {
         const text = await readTail(file, bytes).catch(() => undefined)
-        if (text === undefined) return undefined
+        // A sessão ainda não gravou nada (antes da primeira mensagem o arquivo não existe)
+        if (text === undefined) break
         summary = summarizeTranscriptTail(text)
         if (summary.contextTokens !== undefined) break
       }

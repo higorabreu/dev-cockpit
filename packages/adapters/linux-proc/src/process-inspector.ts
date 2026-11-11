@@ -13,6 +13,15 @@ export function parseForegroundGroup(stat: string): number | undefined {
   return Number.isInteger(tpgid) && tpgid > 0 ? tpgid : undefined
 }
 
+// O campo 22 de /proc/<pid>/stat, o início do processo em ticks desde o boot
+export function parseStartTime(stat: string): string | undefined {
+  const rest = stat
+    .slice(stat.lastIndexOf(')') + 1)
+    .trim()
+    .split(/\s+/)
+  return rest[19] && /^\d+$/.test(rest[19]) ? rest[19] : undefined
+}
+
 export function createProcessInspector(procRoot = '/proc'): ProcessInspector {
   const text = (path: string) => readFile(path, 'utf8').catch(() => undefined)
 
@@ -24,7 +33,15 @@ export function createProcessInspector(procRoot = '/proc'): ProcessInspector {
       const group = stat === undefined ? undefined : parseForegroundGroup(stat)
       const name =
         group === undefined ? undefined : await text(join(procRoot, String(group), 'comm'))
-      return { cwd, foreground: name?.trim() || 'desconhecido' }
+      const groupStat =
+        group === undefined ? undefined : await text(join(procRoot, String(group), 'stat'))
+      const start = groupStat === undefined ? undefined : parseStartTime(groupStat)
+      return {
+        cwd,
+        foreground: name?.trim() || 'desconhecido',
+        ...(group !== undefined ? { foregroundPid: group } : {}),
+        ...(start !== undefined ? { foregroundStart: start } : {}),
+      }
     },
   }
 }
