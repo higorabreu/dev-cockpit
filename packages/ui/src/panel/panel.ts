@@ -84,17 +84,9 @@ export function createPanel(options: PanelOptions) {
 
   // Redesenhar troca os botões; quem usa o teclado não pode perder o foco por isso
   function keepFocus(redraw: () => void) {
-    const active = document.activeElement
-    const toggle = active?.getAttribute('data-toggle')
-    const section = active?.getAttribute('data-section')
+    const key = document.activeElement?.getAttribute('data-focus')
     redraw()
-    const selector = toggle
-      ? `[data-toggle="${toggle}"]`
-      : section
-        ? `[data-section="${section}"]`
-        : ''
-    if (selector)
-      document.querySelector<HTMLElement>(`#panel ${selector}, #rail ${selector}`)?.focus()
+    if (key) document.querySelector<HTMLElement>(`[data-focus="${key}"]`)?.focus()
   }
 
   function renderRail() {
@@ -106,8 +98,9 @@ export function createPanel(options: PanelOptions) {
           {
             type: 'button',
             'data-section': section.id,
+            'data-focus': `rail-${section.id}`,
             'aria-label': section.label,
-            title: section.label,
+            'data-tip': section.label,
             'aria-expanded': String(state.open && state.sections[section.id] === true),
           },
           icon(section.icon),
@@ -169,9 +162,13 @@ export function createPanel(options: PanelOptions) {
   // A seção que acabou de abrir nasce com o conteúdo fechado e cresce no quadro seguinte
   function settleEnter() {
     pendingEnter = undefined
-    const wrap = panel.querySelector('[data-state="enter"]')
-    if (!wrap) return
-    requestAnimationFrame(() => requestAnimationFrame(() => wrap.removeAttribute('data-state')))
+    const entering = panel.querySelectorAll('[data-state="enter"]')
+    if (entering.length === 0) return
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        for (const wrap of entering) wrap.removeAttribute('data-state')
+      }),
+    )
   }
 
   const sectionTops = () =>

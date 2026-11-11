@@ -3,6 +3,7 @@ import 'virtual:dck-tokens.css'
 import './styles.css'
 import { startApp } from './app.ts'
 import { applyTheme, currentTheme } from './theme.ts'
+import { installTooltips } from './tooltip.ts'
 
 const element = (id: string) => {
   const found = document.getElementById(id)
@@ -10,6 +11,7 @@ const element = (id: string) => {
   return found
 }
 
+installTooltips()
 const theme = currentTheme()
 applyTheme(theme)
 

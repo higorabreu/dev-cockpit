@@ -153,7 +153,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
         finishedCount: () => attention.unseenIds().length,
         select: (id) => update(activateTab(state, id)),
       }),
-      createGitSection({ snapshot: () => activeSnapshot }),
+      createGitSection({ snapshot: () => activeSnapshot, requestRender: () => panel.render() }),
     ],
     afterPointer: () => activeSession()?.focus(),
     title: () => {
