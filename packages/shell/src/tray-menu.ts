@@ -2,6 +2,7 @@ import type { Autostart, StatusMenuEntry, Translate } from '@dck/core'
 
 export interface TrayMenuDeps {
   toggleWindow(): void
+  openSettings(): void
   autostart: Autostart
   t: Translate
   quit(): void
@@ -13,6 +14,7 @@ export async function buildTrayMenu(deps: TrayMenuDeps): Promise<readonly Status
   const autostart = await deps.autostart.isEnabled()
   return [
     { type: 'action', label: deps.t('tray.toggle'), run: deps.toggleWindow },
+    { type: 'action', label: deps.t('tray.settings'), run: deps.openSettings },
     {
       type: 'toggle',
       label: deps.t('tray.autostart'),

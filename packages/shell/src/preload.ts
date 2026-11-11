@@ -52,6 +52,7 @@ const api: HostApi = {
   window: {
     toggleFullHeight: () => ipcRenderer.send(hostChannels.windowToggleFullHeight),
     onShown: (listener) => subscribe<[]>(hostChannels.windowShown, listener),
+    onOpenSettings: (listener) => subscribe<[]>(hostChannels.windowOpenSettings, listener),
     onFullHeightChange: (listener) => subscribe<[boolean]>(hostChannels.windowFullHeight, listener),
   },
 }

@@ -54,6 +54,8 @@ export interface HostApi {
   readonly window: {
     toggleFullHeight(): void
     onShown(listener: () => void): Unsubscribe
+    // O tray pede para abrir a tela de configurações dentro da janela
+    onOpenSettings(listener: () => void): Unsubscribe
     onFullHeightChange(listener: (fullHeight: boolean) => void): Unsubscribe
   }
 }
@@ -82,5 +84,6 @@ export const hostChannels = {
   projectsToggleFavorite: 'projects:toggle-favorite',
   windowToggleFullHeight: 'window:toggle-full-height',
   windowShown: 'window:shown',
+  windowOpenSettings: 'window:open-settings',
   windowFullHeight: 'window:full-height',
 } as const

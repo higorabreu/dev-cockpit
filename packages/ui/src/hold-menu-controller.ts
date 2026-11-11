@@ -15,6 +15,7 @@ import {
   stepSwitcher,
   type Translate,
 } from '@dck/core'
+import { inputGate } from './input-gate.ts'
 import { type MenuMarkup, switcherMarkup, wheelMarkup } from './menu-view.ts'
 
 export interface MenuTab {
@@ -128,6 +129,7 @@ export function createHoldMenuController(
   }
 
   function onKeyDown(event: KeyboardEvent) {
+    if (inputGate.blocked) return
     if (event.code === actions.triggerCode()) {
       if (!event.repeat) gesture.press()
       return

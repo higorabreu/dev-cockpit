@@ -33,6 +33,7 @@ import { applyOpacity } from './preferences.ts'
 import { createProjectSearch } from './project-search.ts'
 import { createSessionWatcher } from './sessions-watcher.ts'
 import type { SettingsClient } from './settings-client.ts'
+import { createSettingsView } from './settings-view.ts'
 import { bindShortcuts } from './shortcuts.ts'
 import { translateStatic } from './static-text.ts'
 import { createTabBar } from './tab-bar.ts'
@@ -57,6 +58,8 @@ export interface AppElements {
   readonly searchInput: HTMLInputElement
   readonly searchResults: HTMLElement
   readonly searchHint: HTMLElement
+  readonly settings: HTMLElement
+  readonly settingsBody: HTMLElement
 }
 
 interface OpenOptions {
@@ -116,6 +119,17 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     await refreshProjects()
     search.update(searchEntries())
   }
+
+  const settingsView = createSettingsView(
+    { overlay: elements.settings, body: elements.settingsBody },
+    {
+      settings,
+      api,
+      i18n,
+      onClose: () => activeSession()?.focus(),
+      previewOpacity: applyOpacity,
+    },
+  )
 
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
 
@@ -337,6 +351,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     previousTab: () => update(stepTab(state, -1)),
     goToTab: (index: number) => update(activateTabAt(state, index)),
     toggleTheme,
+    openSettings: () => settingsView.open(),
     searchProjects,
     togglePanel,
     toggleFullHeight: () => api.window.toggleFullHeight(),
@@ -367,6 +382,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     'agent:resume': () => activeSession()?.write('claude --resume\r'),
     'system:full-height': () => api.window.toggleFullHeight(),
     'system:theme': toggleTheme,
+    'system:settings': () => settingsView.open(),
     'system:panel': togglePanel,
     'project:search': searchProjects,
   }
@@ -424,6 +440,11 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         icon: 'sliders',
         items: [
           { id: 'system:full-height', label: i18n.t('menu.system.fullHeight'), shortcut: 'F11' },
+          {
+            id: 'system:settings',
+            label: i18n.t('menu.system.settings'),
+            shortcut: 'Ctrl+,',
+          },
           { id: 'system:panel', label: i18n.t('menu.system.panel'), shortcut: 'Ctrl+Shift+B' },
           { id: 'system:theme', label: i18n.t('menu.system.theme'), shortcut: 'Ctrl+Shift+L' },
         ],
@@ -475,6 +496,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   api.notifications.onClick((tabId) => {
     if (state.tabs.some((tab) => tab.id === tabId)) update(activateTab(state, tabId))
   })
+  api.window.onOpenSettings(() => settingsView.open())
   api.window.onShown(() => {
     setTimeout(markActiveSeen, 150)
     document.body.classList.remove('enter')

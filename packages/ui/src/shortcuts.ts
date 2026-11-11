@@ -1,3 +1,4 @@
+import { inputGate } from './input-gate.ts'
 export interface ShortcutActions {
   newTab(): void
   closeTab(): void
@@ -5,6 +6,7 @@ export interface ShortcutActions {
   previousTab(): void
   goToTab(index: number): void
   toggleTheme(): void
+  openSettings(): void
   searchProjects(): void
   togglePanel(): void
   toggleFullHeight(): void
@@ -16,6 +18,7 @@ export interface ShortcutActions {
 // Ouvido na fase de captura: as teclas do app não chegam ao shell
 export function bindShortcuts(actions: ShortcutActions): () => void {
   const handle = (event: KeyboardEvent) => {
+    if (inputGate.blocked) return
     const run = (action: () => void) => {
       action()
       event.preventDefault()
@@ -24,6 +27,9 @@ export function bindShortcuts(actions: ShortcutActions): () => void {
 
     if (event.key === 'F11' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
       return run(actions.toggleFullHeight)
+    }
+    if (event.ctrlKey && !event.shiftKey && !event.altKey && event.key === ',') {
+      return run(actions.openSettings)
     }
     if (event.ctrlKey && !event.altKey && event.key === 'Tab') {
       return run(event.shiftKey ? actions.previousTab : actions.nextTab)

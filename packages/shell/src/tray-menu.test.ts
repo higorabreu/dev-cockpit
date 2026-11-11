@@ -5,12 +5,16 @@ import { buildTrayMenu } from './tray-menu.ts'
 function setup(enabled = false, locale: 'pt-BR' | 'en' = 'pt-BR') {
   let state = enabled
   let toggles = 0
+  let opened = 0
   let quits = 0
   let changes = 0
   const deps = {
     t: createTranslator(locale).t,
     toggleWindow: () => {
       toggles += 1
+    },
+    openSettings: () => {
+      opened += 1
     },
     autostart: {
       isEnabled: async () => state,
@@ -25,7 +29,7 @@ function setup(enabled = false, locale: 'pt-BR' | 'en' = 'pt-BR') {
       changes += 1
     },
   }
-  return { deps, counts: () => ({ toggles, quits, changes }), state: () => state }
+  return { deps, counts: () => ({ toggles, quits, changes, opened }), state: () => state }
 }
 
 describe('buildTrayMenu', () => {
@@ -36,6 +40,7 @@ describe('buildTrayMenu', () => {
 
     expect(menu.map((entry) => (entry.type === 'separator' ? '-' : entry.label))).toEqual([
       'Mostrar ou ocultar',
+      'Configurações',
       'Iniciar com o sistema',
       '-',
       'Sair',
@@ -47,7 +52,7 @@ describe('buildTrayMenu', () => {
 
     const menu = await buildTrayMenu(deps)
 
-    expect(menu[1]).toMatchObject({ type: 'toggle', checked: true })
+    expect(menu[2]).toMatchObject({ type: 'toggle', checked: true })
   })
 
   it('should toggle the window when the first entry runs', async () => {
@@ -63,7 +68,7 @@ describe('buildTrayMenu', () => {
     const { deps, counts, state } = setup(false)
     const menu = await buildTrayMenu(deps)
 
-    if (menu[1]?.type === 'toggle') menu[1].run(true)
+    if (menu[2]?.type === 'toggle') menu[2].run(true)
     await Promise.resolve()
     await Promise.resolve()
 
@@ -75,7 +80,7 @@ describe('buildTrayMenu', () => {
     const { deps, counts } = setup()
     const menu = await buildTrayMenu(deps)
 
-    if (menu[3]?.type === 'action') menu[3].run()
+    if (menu[4]?.type === 'action') menu[4].run()
 
     expect(counts().quits).toBe(1)
   })
@@ -87,9 +92,19 @@ describe('buildTrayMenu', () => {
 
     expect(menu.map((entry) => (entry.type === 'separator' ? '-' : entry.label))).toEqual([
       'Show or hide',
+      'Settings',
       'Start with the system',
       '-',
       'Quit',
     ])
+  })
+
+  it('should open the settings when the settings entry runs', async () => {
+    const { deps, counts } = setup()
+    const menu = await buildTrayMenu(deps)
+
+    if (menu[1]?.type === 'action') menu[1].run()
+
+    expect(counts().opened).toBe(1)
   })
 })

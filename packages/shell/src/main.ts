@@ -305,6 +305,10 @@ app.whenReady().then(async () => {
     )
     const menuDeps = {
       toggleWindow: () => dock.toggle(),
+      openSettings: () => {
+        dock.show()
+        window.webContents.send(hostChannels.windowOpenSettings)
+      },
       autostart,
       t: createTranslator(
         loaded.settings.language === 'auto'
