@@ -105,6 +105,12 @@ plans/        contexto, roadmap, decisões e um plano por marco em andamento
   só a cor semântica chama atenção. Movimento mínimo.
 - A IA não é uma personagem: sem bolha de chat, ícone de faíscas, gradiente roxo ou avatar de robô.
   A IA aparece como resultado verificável (diff para aceitar ou recusar, sugestão com origem).
+- **Tooltip:** só o do DS (`src/tooltip.ts`), nunca o atributo `title` nativo. Todo texto cortado por
+  reticências mostra o conteúdo inteiro sozinho, sem marcação; `data-tip` mostra um texto sempre
+  (ícones, contadores, setas) e `data-tip-full` dá o texto completo quando o visível é só parte dele.
+  Ícone sem rótulo visível leva `data-tip` com o nome.
+- Termos de git e de ferramentas de desenvolvimento ficam no vocabulário que o dev já usa (Staged,
+  Changes, Incoming, Outgoing, Submodules, ahead, behind), não em tradução livre.
 - Fontes: Inter para texto, JetBrains Mono para chaves, branches e comandos.
 - Textos da interface em português do Brasil, diretos. Sem emoji.
 
