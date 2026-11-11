@@ -1,11 +1,14 @@
-import { searchItems } from '@dck/core'
+import { searchItems, type Translate } from '@dck/core'
 
 export interface SearchEntry {
   readonly path: string
   readonly label: string
+  readonly favorite?: boolean
 }
 
 const VISIBLE_ROWS = 9
+const PIN =
+  '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 6 3 3H7l3-3zM12 13v7"/></svg>'
 
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
 const escapeHtml = (text: string) => text.replace(/[&<>"]/g, (char) => ENTITIES[char] ?? char)
@@ -14,6 +17,7 @@ export interface SearchElements {
   readonly overlay: HTMLElement
   readonly input: HTMLInputElement
   readonly results: HTMLElement
+  readonly hint: HTMLElement
 }
 
 // Busca de projetos: digitar filtra, setas escolhem, Enter abre, Esc fecha
@@ -21,8 +25,11 @@ export function createProjectSearch(
   elements: SearchElements,
   onPick: (path: string) => void,
   onClose: () => void,
+  onToggleFavorite: (path: string) => void,
+  t: Translate,
 ) {
-  const { overlay, input, results } = elements
+  const { overlay, input, results, hint } = elements
+  hint.innerHTML = `<kbd>Ctrl+D</kbd> ${escapeHtml(t('projects.hint'))}`
   let entries: readonly SearchEntry[] = []
   let matches: readonly SearchEntry[] = []
   let selected = 0
@@ -42,7 +49,7 @@ export function createProjectSearch(
       .slice(start, start + VISIBLE_ROWS)
       .map((entry, offset) => {
         const index = start + offset
-        return `<button type="button" class="it${index === selected ? ' on' : ''}" role="option" aria-selected="${index === selected}" data-index="${index}"><span class="l">${escapeHtml(entry.label)}</span></button>`
+        return `<button type="button" class="it${index === selected ? ' on' : ''}" role="option" aria-selected="${index === selected}" data-index="${index}"><span class="l">${escapeHtml(entry.label)}</span>${entry.favorite ? `<span class="pin" data-tip="${escapeHtml(t('projects.pinned'))}">${PIN}</span>` : ''}</button>`
       })
       .join('')
   }
@@ -76,7 +83,10 @@ export function createProjectSearch(
     else if (event.key === 'Enter') pick()
     else if (event.key === 'ArrowDown') move(1)
     else if (event.key === 'ArrowUp') move(-1)
-    else return
+    else if (event.ctrlKey && event.key.toLowerCase() === 'd') {
+      const entry = matches[selected]
+      if (entry) onToggleFavorite(entry.path)
+    } else return
     event.preventDefault()
     event.stopPropagation()
   })
@@ -98,6 +108,15 @@ export function createProjectSearch(
       overlay.classList.add('open')
       filter()
       input.focus()
+    },
+    // Atualiza a lista mantendo o texto digitado e o item destacado, depois de fixar ou soltar
+    update(items: readonly SearchEntry[]) {
+      const current = matches[selected]?.path
+      entries = items
+      matches = searchItems(entries, input.value, (entry) => entry.label)
+      const kept = matches.findIndex((entry) => entry.path === current)
+      selected = kept === -1 ? 0 : kept
+      draw()
     },
   }
 }

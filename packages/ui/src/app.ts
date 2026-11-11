@@ -61,6 +61,7 @@ export interface AppElements {
   readonly search: HTMLElement
   readonly searchInput: HTMLInputElement
   readonly searchResults: HTMLElement
+  readonly searchHint: HTMLElement
 }
 
 interface OpenOptions {
@@ -75,6 +76,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
   const { bar, host } = elements
   const sessions = new Map<string, TerminalSession>()
   const projectTabs = new Map<string, string>()
+  const i18n = createTranslator(currentLocale())
   const notice = createNotice(elements.notice, bar)
   const menu = createTabMenu(elements.menu)
   let state: TabsState = emptyTabs
@@ -91,15 +93,33 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     })
 
   const search = createProjectSearch(
-    { overlay: elements.search, input: elements.searchInput, results: elements.searchResults },
+    {
+      overlay: elements.search,
+      input: elements.searchInput,
+      results: elements.searchResults,
+      hint: elements.searchHint,
+    },
     (path) => openProject(path),
     () => activeSession()?.focus(),
+    (path) => void toggleFavorite(path),
+    i18n.t,
   )
 
+  const searchEntries = () =>
+    projects.map((project) => ({
+      path: project.path,
+      label: projectLabel(project),
+      favorite: project.favorite === true,
+    }))
+
   function searchProjects() {
-    void refreshProjects().then(() => {
-      search.open(projects.map((project) => ({ path: project.path, label: projectLabel(project) })))
-    })
+    void refreshProjects().then(() => search.open(searchEntries()))
+  }
+
+  async function toggleFavorite(path: string) {
+    await api.projects.toggleFavorite(path)
+    await refreshProjects()
+    search.update(searchEntries())
   }
 
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
@@ -108,7 +128,6 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
   let environment: ComposeStatus | undefined
   let autoOpened = false
 
-  const i18n = createTranslator(currentLocale())
   const attention = createAttentionTracker({ clock: { now: () => Date.now() } })
 
   // Visto é a aba ativa numa janela com foco; fora disso o aviso fica pendente

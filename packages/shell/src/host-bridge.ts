@@ -104,6 +104,9 @@ export function registerHostBridge(options: BridgeOptions) {
     return session ? options.sessions.snapshot(session.pid) : undefined
   })
   ipcMain.handle(hostChannels.projectsList, () => options.projects.list())
+  ipcMain.handle(hostChannels.projectsToggleFavorite, (_event, path: string) =>
+    options.projects.toggleFavorite(path),
+  )
   ipcMain.on(hostChannels.projectsTouch, (_event, path: string) => {
     void options.projects.touch(path)
   })

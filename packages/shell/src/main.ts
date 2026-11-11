@@ -29,6 +29,7 @@ import { createElectronScreen } from './electron-screen.ts'
 import { createElectronShortcuts } from './electron-shortcuts.ts'
 import { createElectronStatusIcon } from './electron-status-icon.ts'
 import { createEnvironmentInspector } from './environment-inspector.ts'
+import { createFavoritesStore } from './favorites-store.ts'
 import { registerHostBridge } from './host-bridge.ts'
 import { createProjectCatalog } from './project-catalog.ts'
 import { createRecencyStore } from './recency-store.ts'
@@ -99,6 +100,7 @@ app.whenReady().then(() => {
     projects: createProjectCatalog(
       process.env.DCK_PROJECTS_ROOT ?? join(homedir(), 'projetos'),
       createRecencyStore(join(app.getPath('userData'), 'recent-projects.json'), logger),
+      createFavoritesStore(join(app.getPath('userData'), 'favorite-projects.json'), logger),
     ),
     sessions: createSessionInspector({
       processes: createProcessInspector(),

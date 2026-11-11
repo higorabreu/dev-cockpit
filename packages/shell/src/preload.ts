@@ -37,6 +37,7 @@ const api: HostApi = {
   projects: {
     list: () => ipcRenderer.invoke(hostChannels.projectsList),
     touch: (path) => ipcRenderer.send(hostChannels.projectsTouch, path),
+    toggleFavorite: (path) => ipcRenderer.invoke(hostChannels.projectsToggleFavorite, path),
   },
   window: {
     toggleFullHeight: () => ipcRenderer.send(hostChannels.windowToggleFullHeight),

@@ -100,6 +100,11 @@ export const en: Record<MessageKey, string> = {
   'cli.agent.unsupported': 'The current statusLine has an unknown format. Nothing was changed.',
   'cli.agent.reportInvalid': 'dck agent report: the input is not valid JSON.',
 
+  'projects.pin': 'Pin project',
+  'projects.unpin': 'Unpin project',
+  'projects.pinned': 'Pinned',
+  'projects.hint': 'pin or unpin',
+
   'ago.now': 'now',
   'ago.min': '{value} min ago',
   'ago.h': '{value} h ago',

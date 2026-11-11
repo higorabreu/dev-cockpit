@@ -39,6 +39,7 @@ export interface HostApi {
   readonly projects: {
     list(): Promise<readonly Project[]>
     touch(path: string): void
+    toggleFavorite(path: string): Promise<boolean>
   }
   readonly window: {
     toggleFullHeight(): void
@@ -63,6 +64,7 @@ export const hostChannels = {
   sessionInspect: 'session:inspect',
   projectsList: 'projects:list',
   projectsTouch: 'projects:touch',
+  projectsToggleFavorite: 'projects:toggle-favorite',
   windowToggleFullHeight: 'window:toggle-full-height',
   windowShown: 'window:shown',
   windowFullHeight: 'window:full-height',

@@ -29,6 +29,7 @@ await startApp(
     search: element('search'),
     searchInput: element('search-input') as HTMLInputElement,
     searchResults: element('search-results'),
+    searchHint: element('search-hint'),
     scrim: element('menu'),
     card: element('menu-card'),
     hint: element('menu-hint'),

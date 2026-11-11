@@ -99,6 +99,11 @@ export const ptBR = {
   'cli.agent.unsupported': 'O statusLine atual tem um formato desconhecido. Nada foi alterado.',
   'cli.agent.reportInvalid': 'dck agent report: a entrada não é um JSON válido.',
 
+  'projects.pin': 'Fixar projeto',
+  'projects.unpin': 'Soltar projeto',
+  'projects.pinned': 'Fixado',
+  'projects.hint': 'fixar ou soltar',
+
   'ago.now': 'agora',
   'ago.min': 'há {value} min',
   'ago.h': 'há {value} h',

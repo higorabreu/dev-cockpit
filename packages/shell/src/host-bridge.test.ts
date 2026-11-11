@@ -38,6 +38,7 @@ function setup() {
     projects: {
       list: async () => [{ name: 'alpha', path: '/p/alpha' }],
       touch: async (path: string) => void touched.push(path),
+      toggleFavorite: async (path: string) => !path.endsWith('/pinned'),
     },
     shell: '/bin/zsh',
     home: '/home/usuario',
@@ -229,5 +230,12 @@ describe('registerHostBridge clipboard and window', () => {
 
     expect(ptyHost.sessions[0]?.env.DCK_PTY_ID).toBe(String(first))
     expect(ptyHost.sessions[1]?.env.DCK_PTY_ID).toBe(String(second))
+  })
+
+  it('should return the new favorite state when the interface toggles a project', async () => {
+    const { call } = setup()
+
+    expect(await call(hostChannels.projectsToggleFavorite, '/p/alpha')).toBe(true)
+    expect(await call(hostChannels.projectsToggleFavorite, '/p/pinned')).toBe(false)
   })
 })

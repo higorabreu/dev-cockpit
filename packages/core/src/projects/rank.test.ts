@@ -40,4 +40,26 @@ describe('rankProjects', () => {
 
     expect(names(rankProjects(projects, ['/p/b']))).toEqual(['b', 'a'])
   })
+
+  it('should put the pinned projects first when ranking', () => {
+    const projects = [project('a', 9), project('b', 5), project('c', 1)]
+
+    expect(names(rankProjects(projects, ['/p/a'], ['/p/c']))).toEqual(['c', 'a', 'b'])
+  })
+
+  it('should order the pinned projects by recent use and then by name when ranking', () => {
+    const projects = [project('a'), project('b'), project('c')]
+
+    expect(names(rankProjects(projects, ['/p/c'], ['/p/a', '/p/c']))).toEqual(['c', 'a', 'b'])
+  })
+
+  it('should mark the pinned projects as favorites and only them when ranking', () => {
+    const ranked = rankProjects([project('a'), project('b')], [], ['/p/b'])
+
+    expect(ranked.map((entry) => entry.favorite === true)).toEqual([true, false])
+  })
+
+  it('should ignore a pinned path that no longer exists when ranking', () => {
+    expect(names(rankProjects([project('a')], [], ['/p/gone']))).toEqual(['a'])
+  })
 })
