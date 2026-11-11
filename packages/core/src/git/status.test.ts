@@ -62,26 +62,16 @@ describe('parseGitStatus', () => {
     expect(parsed.changes[0]?.path).toBe('my docs/read me.md')
   })
 
-  it('should list submodules apart from the files when an entry is a submodule', () => {
+  it('should leave submodule entries out of the files when an entry is a submodule', () => {
     const parsed = parseGitStatus(
       z(
         '1 .M SCMU 160000 160000 160000 a b backend',
-        '1 .M SC.. 160000 160000 160000 a b frontend',
         '1 .M N... 100644 100644 100644 a b Makefile',
       ),
     )
 
-    expect(parsed.submodules).toEqual([
-      { path: 'backend', pointerChanged: true },
-      { path: 'frontend', pointerChanged: true },
-    ])
     expect(parsed.changes).toEqual([{ status: 'M', path: 'Makefile' }])
-  })
-
-  it('should not flag the pointer when only the submodule content changed', () => {
-    const parsed = parseGitStatus(z('1 .M S.M. 160000 160000 160000 a b backend'))
-
-    expect(parsed.submodules).toEqual([{ path: 'backend', pointerChanged: false }])
+    expect(parsed.staged).toEqual([])
   })
 
   it('should read the upstream and how far the branch is from it when it has one', () => {

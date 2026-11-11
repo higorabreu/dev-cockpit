@@ -16,8 +16,6 @@ export interface GitCommit {
 
 export interface GitSubmodule {
   readonly path: string
-  // O commit do submódulo difere do ponteiro gravado no repositório pai
-  readonly pointerChanged: boolean
   readonly changed: number
   readonly ahead: number
   readonly behind: number

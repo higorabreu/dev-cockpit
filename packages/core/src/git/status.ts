@@ -1,10 +1,5 @@
 import type { GitCommit, GitFile, GitFileStatus } from '../ports/session.ts'
 
-export interface ParsedSubmoduleEntry {
-  readonly path: string
-  readonly pointerChanged: boolean
-}
-
 export interface ParsedGitStatus {
   readonly branch: string | undefined
   readonly upstream: string | undefined
@@ -12,7 +7,6 @@ export interface ParsedGitStatus {
   readonly behind: number
   readonly staged: readonly GitFile[]
   readonly changes: readonly GitFile[]
-  readonly submodules: readonly ParsedSubmoduleEntry[]
 }
 
 const LETTERS: Record<string, GitFileStatus> = {
@@ -39,7 +33,6 @@ export function parseGitStatus(output: string): ParsedGitStatus {
   let behind = 0
   const staged: GitFile[] = []
   const changes: GitFile[] = []
-  const submodules: ParsedSubmoduleEntry[] = []
 
   for (let index = 0; index < records.length; index++) {
     const record = records[index] ?? ''
@@ -61,11 +54,8 @@ export function parseGitStatus(output: string): ParsedGitStatus {
       const renamed = record.startsWith('2 ')
       const path = parts.slice(renamed ? 9 : 8).join(' ')
       if (renamed) index += 1
-      const submodule = parts[2] ?? ''
-      if (submodule.startsWith('S')) {
-        submodules.push({ path, pointerChanged: submodule[1] === 'C' })
-        continue
-      }
+      // Submódulos aparecem na própria seção, com o estado interno de cada um
+      if ((parts[2] ?? '').startsWith('S')) continue
       const xy = parts[1] ?? '..'
       const x = letter(xy[0])
       const y = letter(xy[1])
@@ -80,7 +70,6 @@ export function parseGitStatus(output: string): ParsedGitStatus {
     behind,
     staged: staged.sort(byPath),
     changes: changes.sort(byPath),
-    submodules,
   }
 }
 
