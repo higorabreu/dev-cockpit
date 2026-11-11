@@ -1,3 +1,4 @@
+import type { ComposeStatus } from './environment.ts'
 import type { TabNotification } from './notifier.ts'
 import type { Project } from './projects.ts'
 import type { PtyExit, Unsubscribe } from './pty.ts'
@@ -27,6 +28,9 @@ export interface HostApi {
     show(notification: TabNotification): void
     onClick(listener: (tabId: string) => void): Unsubscribe
   }
+  readonly environment: {
+    inspect(ptyId: number): Promise<ComposeStatus>
+  }
   readonly session: {
     // Leve, sem git: serve para vigiar todas as abas
     activity(ptyId: number): Promise<SessionActivityInfo | undefined>
@@ -54,6 +58,7 @@ export const hostChannels = {
   clipboardWrite: 'clipboard:write',
   notificationsShow: 'notifications:show',
   notificationsClick: 'notifications:click',
+  environmentInspect: 'environment:inspect',
   sessionActivity: 'session:activity',
   sessionInspect: 'session:inspect',
   projectsList: 'projects:list',

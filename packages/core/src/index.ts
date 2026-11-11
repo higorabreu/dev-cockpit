@@ -1,6 +1,7 @@
 export * from './attention/duration.ts'
 export * from './attention/tracker.ts'
 export * from './dock/dock-controller.ts'
+export * from './environment/compose.ts'
 export * from './errors.ts'
 export * from './git/status.ts'
 export * from './hold-menu/hold-gesture.ts'
