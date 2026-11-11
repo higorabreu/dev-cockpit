@@ -5,6 +5,7 @@ export interface ShortcutActions {
   previousTab(): void
   goToTab(index: number): void
   toggleTheme(): void
+  searchProjects(): void
 }
 
 // Ouvido na fase de captura: as teclas do app não chegam ao shell
@@ -28,6 +29,7 @@ export function bindShortcuts(actions: ShortcutActions): () => void {
       if (key === 't') return run(actions.newTab)
       if (key === 'w') return run(actions.closeTab)
       if (key === 'l') return run(actions.toggleTheme)
+      if (key === 'o') return run(actions.searchProjects)
     }
     if (event.altKey && !event.ctrlKey && /^[1-9]$/.test(event.key)) {
       return run(() => actions.goToTab(Number(event.key) - 1))

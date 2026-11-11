@@ -20,6 +20,7 @@ import { createHoldMenuController } from './hold-menu-controller.ts'
 import { setFullHeight } from './layout-mode.ts'
 import { createNotice } from './notice.ts'
 import { loadRecentProjects, saveRecentProjects } from './project-recency.ts'
+import { createProjectSearch } from './project-search.ts'
 import { bindShortcuts } from './shortcuts.ts'
 import { createTabBar } from './tab-bar.ts'
 import { createTabMenu } from './tab-menu.ts'
@@ -34,6 +35,9 @@ export interface AppElements {
   readonly scrim: HTMLElement
   readonly card: HTMLElement
   readonly hint: HTMLElement
+  readonly search: HTMLElement
+  readonly searchInput: HTMLInputElement
+  readonly searchResults: HTMLElement
 }
 
 interface OpenOptions {
@@ -42,7 +46,7 @@ interface OpenOptions {
   readonly project?: string
 }
 
-const PROJECT_PREFIX = 'project:'
+const PROJECT_PREFIX = 'open-project:'
 
 export async function startApp(elements: AppElements, api: HostApi, initialTheme: ThemeName) {
   const { bar, host } = elements
@@ -60,6 +64,20 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     api.projects.list().then((found) => {
       projects = found
     })
+
+  const search = createProjectSearch(
+    { overlay: elements.search, input: elements.searchInput, results: elements.searchResults },
+    (path) => openProject(path),
+    () => activeSession()?.focus(),
+  )
+
+  function searchProjects() {
+    void refreshProjects().then(() => {
+      const byPath = new Map(projects.map((project) => [project.path, projectLabel(project)]))
+      const ordered = orderByRecency([...byPath.keys()], recentProjects)
+      search.open(ordered.map((path) => ({ path, label: byPath.get(path) ?? path })))
+    })
+  }
 
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
 
@@ -159,6 +177,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     previousTab: () => update(stepTab(state, -1)),
     goToTab: (index: number) => update(activateTabAt(state, index)),
     toggleTheme,
+    searchProjects,
   }
   bindShortcuts(actions)
 
@@ -171,6 +190,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     'agent:resume': () => activeSession()?.write('claude --resume\r'),
     'system:full-height': () => api.window.toggleFullHeight(),
     'system:theme': toggleTheme,
+    'project:search': searchProjects,
   }
 
   // Nomes repetidos ganham a pasta pai para se distinguirem na lista
@@ -200,10 +220,13 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
         id: 'projects',
         label: 'Projetos',
         icon: 'folder',
-        items: ordered.map((path) => ({
-          id: `${PROJECT_PREFIX}${path}`,
-          label: byPath.get(path) ?? path,
-        })),
+        items: [
+          { id: 'project:search', label: 'Buscar projeto…', shortcut: 'Ctrl+Shift+O' },
+          ...ordered.map((path) => ({
+            id: `${PROJECT_PREFIX}${path}`,
+            label: byPath.get(path) ?? path,
+          })),
+        ],
       },
       {
         id: 'agent',

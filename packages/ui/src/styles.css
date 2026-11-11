@@ -407,3 +407,57 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   text-align: center;
   text-transform: uppercase;
 }
+
+#search {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 7vh;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) ease;
+}
+
+#search.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#search-box {
+  width: min(460px, calc(100% - 24px));
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-large);
+}
+
+#search-input {
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  outline: none;
+}
+
+#search-input::placeholder {
+  color: var(--muted);
+}
+
+#search-input:focus-visible {
+  border-bottom-color: var(--fg);
+}
+
+#search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
