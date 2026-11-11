@@ -3,6 +3,8 @@ const DURATION_MS = 190
 
 // FLIP: troca a ordem no layout e anima cada bloco da posição antiga para a nova
 export function setFullHeight(full: boolean, blocks: readonly HTMLElement[]) {
+  document.body.classList.add('shifting')
+  setTimeout(() => document.body.classList.remove('shifting'), DURATION_MS + 120)
   const before = blocks.map((block) => block.getBoundingClientRect().top)
   document.body.classList.toggle('full', full)
   if (reducedMotion.matches) return

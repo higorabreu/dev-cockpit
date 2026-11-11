@@ -73,6 +73,7 @@ body.full #host {
   position: absolute;
   inset: 0;
   padding: 8px 10px;
+  overflow: hidden;
   visibility: hidden;
 }
 
@@ -149,6 +150,33 @@ body.full #host {
 .xterm .xterm-viewport,
 .xterm .xterm-scrollable-element {
   background-color: transparent !important;
+}
+
+body.shifting .xterm .xterm-scrollable-element > .scrollbar {
+  display: none !important;
+}
+
+/* Scrollbar do xterm: sem setas, trilho fino e só o controle deslizante, que some sem rolagem */
+.xterm .xterm-scrollable-element > .scrollbar.vertical {
+  width: 8px !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar > .scra {
+  display: none !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar > .slider {
+  left: auto !important;
+  right: 2px;
+  width: 4px !important;
+  border-radius: var(--radius-medium);
+  background: var(--muted) !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar > .slider:hover,
+.xterm .xterm-scrollable-element > .scrollbar > .slider.active {
+  width: 6px !important;
+  background: var(--fg) !important;
 }
 
 @media (prefers-reduced-motion: no-preference) {

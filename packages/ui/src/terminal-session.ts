@@ -5,8 +5,6 @@ import { Terminal } from '@xterm/xterm'
 import { attachClipboard } from './clipboard-behavior.ts'
 import { terminalTheme } from './theme.ts'
 
-const FIT_DELAY_MS = 60
-
 export interface TerminalSession {
   readonly element: HTMLElement
   focus(): void
@@ -80,12 +78,13 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     options.onExit()
   })
 
-  let fitTimer: ReturnType<typeof setTimeout> | undefined
+  // Ajusta no próximo frame: esperar mais deixa o conteúdo transbordar e a scrollbar pisca
+  let fitFrame = 0
   const observer = new ResizeObserver(() => {
-    clearTimeout(fitTimer)
-    fitTimer = setTimeout(() => {
+    cancelAnimationFrame(fitFrame)
+    fitFrame = requestAnimationFrame(() => {
       if (element.offsetParent !== null) fit.fit()
-    }, FIT_DELAY_MS)
+    })
   })
   observer.observe(options.host)
 
