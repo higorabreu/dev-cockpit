@@ -23,6 +23,9 @@ const api: HostApi = {
     readText: () => ipcRenderer.invoke(hostChannels.clipboardRead),
     writeText: (text) => ipcRenderer.invoke(hostChannels.clipboardWrite, text),
   },
+  projects: {
+    list: () => ipcRenderer.invoke(hostChannels.projectsList),
+  },
   window: {
     toggleFullHeight: () => ipcRenderer.send(hostChannels.windowToggleFullHeight),
     onShown: (listener) => subscribe<[]>(hostChannels.windowShown, listener),

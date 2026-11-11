@@ -17,6 +17,7 @@ function setup() {
     ipcMain,
     ptyHost,
     clipboard,
+    projects: { list: async () => [{ name: 'alpha', path: '/p/alpha' }] },
     shell: '/bin/zsh',
     home: '/home/usuario',
     logger: silentLogger,
@@ -109,5 +110,13 @@ describe('registerHostBridge clipboard and window', () => {
     call(hostChannels.windowToggleFullHeight)
 
     expect(fullHeights()).toBe(1)
+  })
+
+  it('should return the catalog projects when the interface lists projects', async () => {
+    const { call } = setup()
+
+    const projects = await call(hostChannels.projectsList)
+
+    expect(projects).toEqual([{ name: 'alpha', path: '/p/alpha' }])
   })
 })

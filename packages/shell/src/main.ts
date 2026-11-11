@@ -14,6 +14,7 @@ import { createElectronIpc } from './electron-ipc.ts'
 import { createElectronScreen } from './electron-screen.ts'
 import { createElectronShortcuts } from './electron-shortcuts.ts'
 import { registerHostBridge } from './host-bridge.ts'
+import { createProjectScanner } from './project-scan.ts'
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
@@ -65,6 +66,7 @@ app.whenReady().then(() => {
       readText: async () => clipboard.readText(),
       writeText: async (text) => clipboard.writeText(text),
     },
+    projects: createProjectScanner(process.env.DCK_PROJECTS_ROOT ?? join(homedir(), 'projetos')),
     shell: process.env.SHELL ?? '/bin/bash',
     home: homedir(),
     logger,

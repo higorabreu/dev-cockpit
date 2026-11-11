@@ -2,6 +2,7 @@ import {
   type Clipboard,
   hostChannels,
   type Logger,
+  type ProjectCatalog,
   type PtyCreateOptions,
   type PtyHost,
   type PtySession,
@@ -16,6 +17,7 @@ export interface BridgeOptions {
   readonly ipcMain: IpcMainApi
   readonly ptyHost: PtyHost
   readonly clipboard: Clipboard
+  readonly projects: ProjectCatalog
   readonly shell: string
   readonly home: string
   readonly logger: Logger
@@ -59,6 +61,7 @@ export function registerHostBridge(options: BridgeOptions) {
   })
   ipcMain.handle(hostChannels.clipboardRead, () => clipboard.readText())
   ipcMain.handle(hostChannels.clipboardWrite, (_event, text: string) => clipboard.writeText(text))
+  ipcMain.handle(hostChannels.projectsList, () => options.projects.list())
   ipcMain.on(hostChannels.windowToggleFullHeight, () => options.toggleFullHeight())
 
   return {

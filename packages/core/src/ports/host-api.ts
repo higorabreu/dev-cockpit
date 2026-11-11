@@ -1,3 +1,4 @@
+import type { Project } from './projects.ts'
 import type { PtyExit, Unsubscribe } from './pty.ts'
 
 export interface PtyCreateOptions {
@@ -20,6 +21,9 @@ export interface HostApi {
     readText(): Promise<string>
     writeText(text: string): Promise<void>
   }
+  readonly projects: {
+    list(): Promise<readonly Project[]>
+  }
   readonly window: {
     toggleFullHeight(): void
     onShown(listener: () => void): Unsubscribe
@@ -36,6 +40,7 @@ export const hostChannels = {
   ptyExit: 'pty:exit',
   clipboardRead: 'clipboard:read',
   clipboardWrite: 'clipboard:write',
+  projectsList: 'projects:list',
   windowToggleFullHeight: 'window:toggle-full-height',
   windowShown: 'window:shown',
   windowFullHeight: 'window:full-height',
