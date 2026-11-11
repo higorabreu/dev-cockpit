@@ -1,5 +1,6 @@
 export * from './dock/dock-controller.ts'
 export * from './errors.ts'
+export * from './hold-menu/hold-gesture.ts'
 export * from './hold-menu/hold-menu.ts'
 export * from './ipc/index.ts'
 export * from './logging/json-logger.ts'

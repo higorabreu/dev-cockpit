@@ -13,6 +13,8 @@ export interface MenuCategory {
 
 export type Direction = 'left' | 'right' | 'up' | 'down'
 
+export const CENTER = -1
+
 export interface HoldMenuState {
   readonly categories: readonly MenuCategory[]
   readonly category: number
@@ -26,32 +28,49 @@ export type ReleaseResult =
 
 const wrap = (value: number, size: number) => ((value % size) + size) % size
 
-function assertValid(categories: readonly MenuCategory[]) {
-  if (categories.length === 0) throw new Error('hold menu needs at least one category')
-  if (categories.some((category) => category.items.length === 0)) {
-    throw new Error('every hold menu category needs at least one item')
+const VECTORS: Record<Direction, readonly [number, number]> = {
+  up: [0, -1],
+  right: [1, 0],
+  down: [0, 1],
+  left: [-1, 0],
+}
+
+// Os setores ficam em círculo a partir do topo, no sentido horário
+export function sectorAngle(index: number, count: number): number {
+  return -Math.PI / 2 + (index * 2 * Math.PI) / count
+}
+
+// Do centro, a seta escolhe o setor que está naquela direção
+export function sectorFor(direction: Direction, count: number): number {
+  const [dx, dy] = VECTORS[direction]
+  let best = 0
+  let bestScore = Number.NEGATIVE_INFINITY
+  for (let index = 0; index < count; index++) {
+    const angle = sectorAngle(index, count)
+    const score = Math.cos(angle) * dx + Math.sin(angle) * dy
+    if (score > bestScore + 1e-9) {
+      best = index
+      bestScore = score
+    }
   }
+  return best
 }
 
 export function createHoldMenu(categories: readonly MenuCategory[]): HoldMenuState {
-  assertValid(categories)
-  return { categories, category: 0, itemByCategory: categories.map(() => 0), touched: false }
+  if (categories.length === 0) throw new Error('hold menu needs at least one category')
+  return { categories, category: CENTER, itemByCategory: categories.map(() => 0), touched: false }
 }
 
-export function currentCategory(state: HoldMenuState): MenuCategory {
-  const category = state.categories[state.category]
-  if (!category) throw new Error('invariant: category index out of range')
-  return category
+export function currentCategory(state: HoldMenuState): MenuCategory | undefined {
+  return state.categories[state.category]
 }
 
 export function selectedIndex(state: HoldMenuState): number {
   return state.itemByCategory[state.category] ?? 0
 }
 
-export function currentItem(state: HoldMenuState): MenuItem {
-  const item = currentCategory(state).items[selectedIndex(state)]
-  if (!item) throw new Error('invariant: item index out of range')
-  return item
+export function currentItem(state: HoldMenuState): MenuItem | undefined {
+  return currentCategory(state)?.items[selectedIndex(state)]
 }
 
 function withItemIndex(state: HoldMenuState, category: number, index: number): HoldMenuState {
@@ -62,16 +81,17 @@ function withItemIndex(state: HoldMenuState, category: number, index: number): H
 }
 
 export function navigate(state: HoldMenuState, direction: Direction): HoldMenuState {
+  const count = state.categories.length
+  if (state.category === CENTER) {
+    return { ...state, touched: true, category: sectorFor(direction, count) }
+  }
   if (direction === 'left' || direction === 'right') {
     const step = direction === 'right' ? 1 : -1
-    return {
-      ...state,
-      touched: true,
-      category: wrap(state.category + step, state.categories.length),
-    }
+    return { ...state, touched: true, category: wrap(state.category + step, count) }
   }
+  const size = currentCategory(state)?.items.length ?? 0
+  if (size === 0) return { ...state, touched: true }
   const step = direction === 'down' ? 1 : -1
-  const size = currentCategory(state).items.length
   return {
     ...withItemIndex(state, state.category, wrap(selectedIndex(state) + step, size)),
     touched: true,
@@ -91,15 +111,17 @@ export function replaceItems(
   categoryId: string,
   items: readonly MenuItem[],
 ): HoldMenuState {
-  const categories = state.categories.map((category) =>
-    category.id === categoryId ? { ...category, items } : category,
+  const at = state.categories.findIndex((category) => category.id === categoryId)
+  if (at === -1) return state
+  const categories = state.categories.map((category, index) =>
+    index === at ? { ...category, items } : category,
   )
-  assertValid(categories)
-  const at = categories.findIndex((category) => category.id === categoryId)
-  return at === -1 ? state : withItemIndex({ ...state, categories }, at, 0)
+  return withItemIndex({ ...state, categories }, at, 0)
 }
 
 export function release(state: HoldMenuState): ReleaseResult {
-  if (!state.touched) return { type: 'cancel' }
-  return { type: 'execute', categoryId: currentCategory(state).id, item: currentItem(state) }
+  const category = currentCategory(state)
+  const item = currentItem(state)
+  if (!state.touched || !category || !item) return { type: 'cancel' }
+  return { type: 'execute', categoryId: category.id, item }
 }

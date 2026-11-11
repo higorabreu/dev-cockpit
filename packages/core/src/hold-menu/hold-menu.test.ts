@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CENTER,
   createHoldMenu,
+  currentCategory,
   currentItem,
   type MenuCategory,
   navigate,
   release,
   replaceItems,
+  sectorFor,
   select,
 } from './hold-menu.ts'
 
@@ -29,145 +32,136 @@ const categories: readonly MenuCategory[] = [
       { id: 'ops', label: 'ops' },
     ],
   },
+  { id: 'agent', label: 'Agente', icon: 'terminal', items: [{ id: 'claude', label: 'Claude' }] },
   { id: 'system', label: 'Sistema', icon: 'sliders', items: [{ id: 'theme', label: 'Tema' }] },
 ]
 
 describe('createHoldMenu', () => {
-  it('should start on the first item of the first category when the menu is created', () => {
+  it('should start at the center with no category and no item when the menu is created', () => {
     const menu = createHoldMenu(categories)
 
-    expect(currentItem(menu).id).toBe('new-tab')
+    expect(menu.category).toBe(CENTER)
+    expect(currentCategory(menu)).toBeUndefined()
+    expect(currentItem(menu)).toBeUndefined()
     expect(menu.touched).toBe(false)
   })
 
-  it('should reject the menu when a category has no items', () => {
-    const empty: MenuCategory = { id: 'empty', label: 'Vazio', icon: 'x', items: [] }
-
-    expect(() => createHoldMenu([empty])).toThrow()
-  })
-
-  it('should reject the menu when there are no categories', () => {
+  it('should reject a menu without categories when the menu is created', () => {
     expect(() => createHoldMenu([])).toThrow()
   })
 })
 
+describe('sectorFor', () => {
+  it('should pick the sector in that direction when the menu has four sectors', () => {
+    expect(sectorFor('up', 4)).toBe(0)
+    expect(sectorFor('right', 4)).toBe(1)
+    expect(sectorFor('down', 4)).toBe(2)
+    expect(sectorFor('left', 4)).toBe(3)
+  })
+})
+
 describe('navigate', () => {
-  it('should move to the next category when the user presses right', () => {
-    const menu = createHoldMenu(categories)
-
-    const result = navigate(menu, 'right')
-
-    expect(result.category).toBe(1)
-    expect(currentItem(result).id).toBe('backend')
-  })
-
-  it('should wrap to the last category when the user presses left on the first one', () => {
-    const menu = createHoldMenu(categories)
-
-    const result = navigate(menu, 'left')
-
-    expect(result.category).toBe(2)
-  })
-
-  it('should move to the next item when the user presses down', () => {
+  it('should enter the sector in the arrow direction when navigating from the center', () => {
     const menu = navigate(createHoldMenu(categories), 'right')
 
-    const result = navigate(menu, 'down')
-
-    expect(currentItem(result).id).toBe('frontend')
+    expect(currentCategory(menu)?.id).toBe('projects')
+    expect(menu.touched).toBe(true)
   })
 
-  it('should wrap to the last item when the user presses up on the first item', () => {
-    const menu = navigate(createHoldMenu(categories), 'right')
+  it('should move to the next category when navigating right from a sector', () => {
+    const menu = navigate(navigate(createHoldMenu(categories), 'up'), 'right')
 
-    const result = navigate(menu, 'up')
-
-    expect(currentItem(result).id).toBe('ops')
+    expect(currentCategory(menu)?.id).toBe('projects')
   })
 
-  it('should remember the item of each category when the user comes back to it', () => {
-    const onProjects = navigate(navigate(createHoldMenu(categories), 'right'), 'down')
+  it('should wrap to the last category when navigating left from the first one', () => {
+    const menu = navigate(navigate(createHoldMenu(categories), 'up'), 'left')
 
-    const back = navigate(navigate(navigate(onProjects, 'right'), 'right'), 'right')
-
-    expect(currentItem(back).id).toBe('frontend')
+    expect(currentCategory(menu)?.id).toBe('system')
   })
 
-  it('should mark the menu as touched when the user navigates', () => {
-    const menu = createHoldMenu(categories)
+  it('should move the item and wrap when navigating down inside a category', () => {
+    let menu = navigate(createHoldMenu(categories), 'right')
+    menu = navigate(menu, 'down')
+    expect(currentItem(menu)?.id).toBe('frontend')
 
-    const result = navigate(menu, 'down')
-
-    expect(result.touched).toBe(true)
+    menu = navigate(navigate(menu, 'down'), 'down')
+    expect(currentItem(menu)?.id).toBe('backend')
   })
 
-  it('should not mutate the previous state when navigating', () => {
-    const menu = createHoldMenu(categories)
+  it('should remember the item of each category when going back to it', () => {
+    let menu = navigate(createHoldMenu(categories), 'right')
+    menu = navigate(navigate(menu, 'down'), 'down')
 
-    navigate(menu, 'right')
+    menu = navigate(navigate(menu, 'right'), 'left')
 
-    expect(menu.category).toBe(0)
-    expect(menu.touched).toBe(false)
+    expect(currentItem(menu)?.id).toBe('ops')
+  })
+
+  it('should keep the category when navigating down in a category without items', () => {
+    const empty = replaceItems(createHoldMenu(categories), 'projects', [])
+    const menu = navigate(navigate(empty, 'right'), 'down')
+
+    expect(currentCategory(menu)?.id).toBe('projects')
+    expect(currentItem(menu)).toBeUndefined()
   })
 })
 
 describe('select', () => {
-  it('should select the category and item when the pointer hovers them', () => {
-    const menu = createHoldMenu(categories)
+  it('should jump to the category and item when selecting by pointer', () => {
+    const menu = select(createHoldMenu(categories), 1, 2)
 
-    const result = select(menu, 1, 2)
-
-    expect(currentItem(result).id).toBe('ops')
-    expect(result.touched).toBe(true)
+    expect(currentItem(menu)?.id).toBe('ops')
+    expect(menu.touched).toBe(true)
   })
 
-  it('should keep the state when the hovered category does not exist', () => {
+  it('should ignore an unknown category when selecting', () => {
     const menu = createHoldMenu(categories)
 
-    const result = select(menu, 9)
-
-    expect(result).toBe(menu)
-  })
-})
-
-describe('release', () => {
-  it('should cancel when the user releases without having navigated', () => {
-    const menu = createHoldMenu(categories)
-
-    const result = release(menu)
-
-    expect(result).toEqual({ type: 'cancel' })
-  })
-
-  it('should execute the highlighted item when the user releases after navigating', () => {
-    const menu = navigate(navigate(createHoldMenu(categories), 'right'), 'down')
-
-    const result = release(menu)
-
-    expect(result).toEqual({
-      type: 'execute',
-      categoryId: 'projects',
-      item: { id: 'frontend', label: 'frontend' },
-    })
+    expect(select(menu, 9)).toBe(menu)
   })
 })
 
 describe('replaceItems', () => {
-  it('should highlight the first item when the items of a category are replaced', () => {
-    const onOps = select(createHoldMenu(categories), 1, 2)
-    const recent = [
-      { id: 'ops', label: 'ops' },
-      { id: 'backend', label: 'backend' },
-    ]
+  it('should reset the item to the first one when the items of a category change', () => {
+    let menu = navigate(navigate(createHoldMenu(categories), 'right'), 'down')
 
-    const result = replaceItems(onOps, 'projects', recent)
+    menu = replaceItems(menu, 'projects', [{ id: 'x', label: 'x' }])
 
-    expect(currentItem(result).id).toBe('ops')
+    expect(currentItem(menu)?.id).toBe('x')
   })
 
-  it('should reject the replacement when the new list is empty', () => {
+  it('should keep the state when the category does not exist', () => {
     const menu = createHoldMenu(categories)
 
-    expect(() => replaceItems(menu, 'projects', [])).toThrow()
+    expect(replaceItems(menu, 'nope', [])).toBe(menu)
+  })
+})
+
+describe('release', () => {
+  it('should cancel when released without having navigated', () => {
+    expect(release(createHoldMenu(categories))).toEqual({ type: 'cancel' })
+  })
+
+  it('should cancel when released at the center after a pointer move', () => {
+    const menu = { ...createHoldMenu(categories), touched: true }
+
+    expect(release(menu)).toEqual({ type: 'cancel' })
+  })
+
+  it('should execute the highlighted item when released after navigating', () => {
+    const menu = navigate(createHoldMenu(categories), 'right')
+
+    expect(release(menu)).toEqual({
+      type: 'execute',
+      categoryId: 'projects',
+      item: { id: 'backend', label: 'backend' },
+    })
+  })
+
+  it('should cancel when the category has no items', () => {
+    const empty = replaceItems(createHoldMenu(categories), 'projects', [])
+
+    expect(release(navigate(empty, 'right'))).toEqual({ type: 'cancel' })
   })
 })
