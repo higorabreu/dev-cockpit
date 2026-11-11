@@ -48,6 +48,7 @@ export interface AppElements {
   readonly dock: HTMLElement
   readonly panel: HTMLElement
   readonly rail: HTMLElement
+  readonly settingsButton: HTMLElement
   readonly split: HTMLElement
   readonly notice: HTMLElement
   readonly menu: HTMLElement
@@ -496,6 +497,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   api.notifications.onClick((tabId) => {
     if (state.tabs.some((tab) => tab.id === tabId)) update(activateTab(state, tabId))
   })
+  elements.settingsButton.addEventListener('click', () => settingsView.toggle())
   api.window.onOpenSettings(() => settingsView.open())
   api.window.onShown(() => {
     setTimeout(markActiveSeen, 150)

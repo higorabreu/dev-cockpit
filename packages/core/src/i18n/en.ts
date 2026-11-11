@@ -161,7 +161,7 @@ export const en: Record<MessageKey, string> = {
   'tray.settings': 'Settings',
 
   'settings.title': 'Settings',
-  'settings.close': 'Esc closes',
+  'settings.close': 'Close',
   'settings.locked': 'Set by an environment variable',
   'settings.reset': 'Restore default',
   'settings.resetAll': 'Restore all defaults',

@@ -160,7 +160,7 @@ export const ptBR = {
   'tray.settings': 'Configurações',
 
   'settings.title': 'Configurações',
-  'settings.close': 'Esc fecha',
+  'settings.close': 'Fechar',
   'settings.locked': 'Definido por uma variável de ambiente',
   'settings.reset': 'Restaurar padrão',
   'settings.resetAll': 'Restaurar todos os padrões',

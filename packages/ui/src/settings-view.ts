@@ -9,7 +9,7 @@ import {
   type Translator,
 } from '@dck/core'
 import { inputGate } from './input-gate.ts'
-import { h } from './panel/dom.ts'
+import { h, icon } from './panel/dom.ts'
 import type { SettingsClient } from './settings-client.ts'
 
 type Child = Node | string | false | undefined
@@ -287,6 +287,22 @@ export function createSettingsView(
     render()
   }
 
+  function header(): HTMLElement {
+    const close = h(
+      'button',
+      {
+        type: 'button',
+        class: 'sclose',
+        'data-focus': 'set-close',
+        'data-tip': `${t('settings.close')} (Esc)`,
+        'aria-label': t('settings.close'),
+      },
+      icon('<path d="M6 6l12 12M18 6L6 18"/>', 14),
+    )
+    close.addEventListener('click', () => closeView())
+    return h('header', { class: 'shead2' }, h('h1', {}, t('settings.title')), close)
+  }
+
   const group = (title: string, ...rows: Child[]) =>
     h('section', { class: 'sgroup' }, h('h2', {}, title), ...rows)
 
@@ -312,12 +328,7 @@ export function createSettingsView(
     })
 
     body.replaceChildren(
-      h(
-        'header',
-        { class: 'shead2' },
-        h('h1', {}, t('settings.title')),
-        h('span', {}, t('settings.close')),
-      ),
+      header(),
       group(
         t('settings.language'),
         row(
@@ -440,7 +451,7 @@ export function createSettingsView(
     })
   }
 
-  function close() {
+  function closeView() {
     if (recording) stopRecording()
     overlay.classList.remove('open')
     deps.onClose()
@@ -450,11 +461,11 @@ export function createSettingsView(
     if (event.key === 'Escape' && !recording) {
       event.preventDefault()
       event.stopPropagation()
-      close()
+      closeView()
     }
   })
   overlay.addEventListener('mousedown', (event) => {
-    if (event.target === overlay) close()
+    if (event.target === overlay) closeView()
   })
 
   // Mudança vinda de fora (atalho de opacidade, outro lugar) atualiza a tela aberta
@@ -462,5 +473,5 @@ export function createSettingsView(
     if (isOpen() && local === 0) render()
   })
 
-  return { open, close, isOpen, toggle: () => (isOpen() ? close() : open()) }
+  return { open, close: closeView, isOpen, toggle: () => (isOpen() ? closeView() : open()) }
 }

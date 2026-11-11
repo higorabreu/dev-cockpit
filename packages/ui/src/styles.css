@@ -155,8 +155,15 @@ body.full #main {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: space-between;
   border-left: 1px solid var(--line);
+}
+
+#rail-sections {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 #dock[data-open="false"] #rail {
@@ -1224,7 +1231,7 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   top: 0;
   z-index: 1;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
   background: var(--surface);
@@ -1237,9 +1244,27 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   font-weight: 600;
 }
 
-.shead2 span {
+.sclose {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: none;
   color: var(--muted);
-  font-size: 11px;
+  cursor: pointer;
+}
+
+.sclose:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.sclose:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
 }
 
 .sgroup {

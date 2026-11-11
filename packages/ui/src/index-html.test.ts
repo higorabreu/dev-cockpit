@@ -9,7 +9,11 @@ const keysIn = (attribute: string) =>
 
 describe('index.html texts', () => {
   it('should only use catalog keys when an element asks for a translated label', () => {
-    const keys = [...keysIn('data-i18n-aria'), ...keysIn('data-i18n-placeholder')]
+    const keys = [
+      ...keysIn('data-i18n-aria'),
+      ...keysIn('data-i18n-tip'),
+      ...keysIn('data-i18n-placeholder'),
+    ]
 
     expect(keys.length).toBeGreaterThan(0)
     for (const key of keys) expect(Object.keys(catalogs['pt-BR']), key).toContain(key)
