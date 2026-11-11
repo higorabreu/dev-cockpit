@@ -21,6 +21,18 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2))
 
+  packages/adapters/linux-proc:
+    dependencies:
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../../core
+
+  packages/adapters/node-git:
+    dependencies:
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../../core
+
   packages/adapters/node-net:
     dependencies:
       '@dck/core':
@@ -67,6 +79,12 @@ importers:
 
   packages/shell:
     dependencies:
+      '@dck/adapter-linux-proc':
+        specifier: workspace:^
+        version: link:../adapters/linux-proc
+      '@dck/adapter-node-git':
+        specifier: workspace:^
+        version: link:../adapters/node-git
       '@dck/adapter-node-net':
         specifier: workspace:^
         version: link:../adapters/node-net
