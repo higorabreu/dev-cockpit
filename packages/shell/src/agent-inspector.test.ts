@@ -68,4 +68,27 @@ describe('createAgentInspector', () => {
     })
     expect(await inspector.session(1, 8)).toMatchObject({ contextTokens: 100 })
   })
+
+  it('should give the source the transcript the agent reported when it reported one', async () => {
+    const reads: Array<{ transcriptPath?: string }> = []
+    const inspector = createAgentInspector({
+      processes: {
+        inspect: async () => ({ cwd: '/p/app', foreground: 'fake-agent', foregroundPid: 9 }),
+      },
+      sources: [
+        {
+          profile,
+          read: async (context) => {
+            reads.push(context)
+            return undefined
+          },
+        },
+      ],
+      report: () => ({ transcriptPath: '/c/projects/x/s.jsonl' }),
+    })
+
+    await inspector.session(1, 7)
+
+    expect(reads[0]?.transcriptPath).toBe('/c/projects/x/s.jsonl')
+  })
 })

@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { appendFile, copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline/promises'
@@ -28,7 +28,9 @@ if (args[0] === 'daemon') {
   process.on('SIGINT', stopDaemon)
   process.on('SIGTERM', stopDaemon)
 } else {
-  const settingsPath = join(homedir(), '.claude', 'settings.json')
+  // DCK_CLAUDE_SETTINGS existe para ensaiar a instalação numa cópia, sem tocar no arquivo real
+  const settingsPath =
+    process.env.DCK_CLAUDE_SETTINGS ?? join(homedir(), '.claude', 'settings.json')
   const readStdin = async () => {
     const chunks: Buffer[] = []
     for await (const chunk of process.stdin) chunks.push(chunk as Buffer)
@@ -51,6 +53,18 @@ if (args[0] === 'daemon') {
           child.stdin?.end(input)
         }),
       settingsPath,
+      home: homedir(),
+      log: (line) => {
+        const file = join(
+          process.env.XDG_STATE_HOME || join(homedir(), '.local', 'state'),
+          'dck',
+          'agent-report.log',
+        )
+        // Falha ao gravar o log não pode atrapalhar o Claude: vai para stderr e segue
+        void mkdir(dirname(file), { recursive: true })
+          .then(() => appendFile(file, `${line}\n`))
+          .catch((error: unknown) => process.stderr.write(`dck: ${String(error)}\n`))
+      },
       readSettings: (path) => readFile(path, 'utf8').catch(() => undefined),
       // Escreve num arquivo ao lado e renomeia, para nunca deixar o settings.json pela metade
       writeSettings: async (path, text) => {

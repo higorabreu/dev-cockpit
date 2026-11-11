@@ -32,12 +32,15 @@ export function createAgentInspector({
       if (!agent) return undefined
       const source = sources.find((candidate) => candidate.profile.id === agent.id)
       // O agente roda mas a fonte ainda não tem dados dele: a tela mostra só o nome
+      const reported = report?.(ptyId, agent.id)
       const base = (await source?.read({
         cwd: info.cwd,
         ...(info.foregroundPid !== undefined ? { pid: info.foregroundPid } : {}),
         ...(info.foregroundStart !== undefined ? { processStart: info.foregroundStart } : {}),
+        // O que o agente diz que está na tela vale mais que o registro do processo
+        ...(reported?.transcriptPath ? { transcriptPath: reported.transcriptPath } : {}),
       })) ?? { agent, details: [] }
-      return mergeReport(base, report?.(ptyId, agent.id), now())
+      return mergeReport(base, reported, now())
     },
   }
 }

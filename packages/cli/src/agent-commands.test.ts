@@ -32,6 +32,7 @@ function setup(options: {
   const files = new Map<string, string>()
   if (options.settings !== undefined) files.set('/home/u/.claude/settings.json', options.settings)
   const forwarded: Array<{ command: string; input: string }> = []
+  const logged: string[] = []
   const deps: AgentDeps = {
     env: options.env ?? {},
     t: createTranslator('pt-BR').t,
@@ -41,6 +42,8 @@ function setup(options: {
       return 'LINHA DO USUARIO\n'
     },
     settingsPath: '/home/u/.claude/settings.json',
+    home: '/home/u',
+    log: (line) => void logged.push(line),
     readSettings: async (path) => files.get(path),
     writeSettings: async (path, text) => void files.set(path, text),
     backup: async (path) => {
@@ -56,7 +59,14 @@ function setup(options: {
     out: (text: string) => void out.push(text),
     err: (text: string) => void err.push(text),
   }
-  return { run: (args: string[]) => runAgentCommand(args, io, deps), out, err, files, forwarded }
+  return {
+    run: (args: string[]) => runAgentCommand(args, io, deps),
+    out,
+    err,
+    files,
+    forwarded,
+    logged,
+  }
 }
 
 async function subscriber(endpoint: string) {
@@ -123,6 +133,20 @@ describe('dck agent report', () => {
   })
 })
 
+describe('dck agent report failures', () => {
+  it('should write the reason to the log and stay quiet on screen when the daemon rejects the report', async () => {
+    const endpoint = await bootDaemon()
+    const { run, err, logged } = setup({ endpoint, stdin: '{"a":1}', env: { DCK_PTY_ID: '-5' } })
+
+    const code = await run(['report', '--agent', 'claude'])
+
+    expect(code).toBe(0)
+    expect(err).toEqual([])
+    expect(logged).toHaveLength(1)
+    expect(logged[0]).toContain('rejected')
+  })
+})
+
 describe('dck agent install', () => {
   const settings = JSON.stringify({ model: 'opus', hooks: {} })
 
@@ -131,7 +155,9 @@ describe('dck agent install', () => {
 
     await run(['install'])
 
-    expect(out.join('')).toContain('Depois:')
+    expect(out.join('')).toContain('Depois')
+    expect(out.join('')).toContain('~/.claude/settings.json')
+    expect(out.join('')).not.toContain('/n/node')
     expect(files.get('/home/u/.claude/settings.json')).toBe(settings)
   })
 
@@ -202,5 +228,28 @@ describe('dck agent usage', () => {
 
     expect(await run(['wat'])).toBe(64)
     expect(err.join('')).toContain('Uso')
+  })
+})
+
+describe('dck agent install output', () => {
+  it('should explain what happens next and how to undo it when the install is done', async () => {
+    const { run, out } = setup({ endpoint: '/x', settings: '{}', answer: true })
+
+    await run(['install'])
+
+    const text = out.join('')
+    expect(text).toContain('✓ Configurado.')
+    expect(text).toContain('Cópia do arquivo anterior: ~/.claude/settings.json.dck-backup')
+    expect(text).toContain('dck agent uninstall')
+  })
+
+  it('should show a short name for our command and mention the chained one when chaining', async () => {
+    const original = JSON.stringify({ statusLine: { type: 'command', command: '~/bar.sh' } })
+    const { run, out } = setup({ endpoint: '/x', settings: original, answer: true })
+
+    await run(['install'])
+
+    expect(out.join('')).toContain('dck agent report, encadeado com ~/bar.sh')
+    expect(out.join('')).toContain('continua funcionando')
   })
 })

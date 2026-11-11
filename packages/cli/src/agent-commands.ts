@@ -1,5 +1,7 @@
 import {
   type CommandParts,
+  forwardedCommand,
+  isOurCommand,
   planInstall,
   planUninstall,
   type Settings,
@@ -19,6 +21,10 @@ export interface AgentDeps {
   // Roda o statusLine que o usuário já tinha, com a mesma entrada, e devolve o que ele imprimiu
   forward(command: string, input: string): Promise<string>
   readonly settingsPath: string
+  // Pasta do usuário, para abreviar caminhos como ~/.claude
+  readonly home?: string
+  // Registro de falhas que não devem aparecer na tela do Claude
+  log(line: string): void
   readSettings(path: string): Promise<string | undefined>
   writeSettings(path: string, text: string): Promise<void>
   // Copia o arquivo antes de alterar e diz onde ficou a cópia
@@ -72,7 +78,20 @@ async function report(args: readonly string[], io: Io, deps: AgentDeps): Promise
   if (!connected.ok) return EXIT_OK
   const client = createClient(connected.value)
   try {
-    await client.request('agent.report', { agent, ptyId, payload })
+    const reply = await client.request('agent.report', { agent, ptyId, payload })
+    if (!reply.ok) {
+      // Fica num arquivo e não na tela: o Claude Code mostra o que o comando imprime
+      deps.log(
+        JSON.stringify({
+          time: new Date().toISOString(),
+          level: 'warn',
+          message: 'agent report rejected by the daemon',
+          code: reply.error.data?.code ?? reply.error.code,
+          agent,
+          ptyId,
+        }),
+      )
+    }
   } finally {
     client.close()
   }
@@ -106,22 +125,38 @@ async function change(
     return EXIT_OK
   }
 
-  const show = (setting: { command: string } | undefined) => setting?.command ?? t('cli.agent.none')
-  io.out(
-    `${t(action === 'install' ? 'cli.agent.willInstall' : 'cli.agent.willRemove', { path: deps.settingsPath })}\n`,
-  )
-  io.out(`  ${t('cli.agent.before', { value: show(plan.before) })}\n`)
-  io.out(`  ${t('cli.agent.after', { value: show(plan.after) })}\n`)
-  if (chained) io.out(`${t('cli.agent.chained', { command: chained })}\n`)
-
-  if (!args.includes('--yes') && !(await deps.confirm(t('cli.agent.confirm')))) {
-    io.out(`${t('cli.agent.cancelled')}\n`)
+  const tilde = (path: string) =>
+    deps.home && path.startsWith(deps.home) ? `~${path.slice(deps.home.length)}` : path
+  const describe = (setting: { command: string } | undefined) => {
+    if (!setting) return t('cli.agent.none')
+    if (!isOurCommand(setting.command)) return setting.command
+    const forwarded = forwardedCommand(setting.command)
+    return forwarded ? t('cli.agent.ours.chained', { command: forwarded }) : t('cli.agent.ours')
+  }
+  const rows: Array<[string, string]> = [
+    [t('cli.agent.file'), tilde(deps.settingsPath)],
+    [t('cli.agent.before'), describe(plan.before)],
+    [t('cli.agent.after'), describe(plan.after)],
+  ]
+  const width = Math.max(...rows.map(([label]) => label.length))
+  io.out(`\n${t('cli.agent.title')}\n\n`)
+  for (const [label, value] of rows) io.out(`  ${label.padEnd(width)}  ${value}\n`)
+  if (action === 'install') io.out(`\n${t('cli.agent.purpose')}\n`)
+  if (chained) io.out(`${t('cli.agent.chainedNote')}\n`)
+  const ask = !args.includes('--yes')
+  if (ask && !(await deps.confirm(`\n${t('cli.agent.confirm')}`))) {
+    io.out(`\n${t('cli.agent.cancelled')}\n`)
     return EXIT_OK
   }
-  if (text !== undefined)
-    io.out(`${t('cli.agent.backup', { path: await deps.backup(deps.settingsPath) })}\n`)
+  const copy = text !== undefined ? await deps.backup(deps.settingsPath) : undefined
   await deps.writeSettings(deps.settingsPath, `${JSON.stringify(plan.next, null, 2)}\n`)
-  io.out(`${t('cli.agent.done')}\n`)
+  io.out(
+    `${ask ? '\n' : ''}\u2713 ${t(action === 'install' ? 'cli.agent.installed' : 'cli.agent.removed')}\n`,
+  )
+  if (copy) io.out(`  ${t('cli.agent.backup', { path: tilde(copy) })}\n`)
+  if (action === 'install') {
+    io.out(`  ${t('cli.agent.nextInstall')}\n  ${t('cli.agent.undo')}\n`)
+  }
   return EXIT_OK
 }
 
