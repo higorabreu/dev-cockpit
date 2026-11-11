@@ -57,6 +57,8 @@ export function installTooltips() {
   }
 
   function show({ anchor, text }: Omit<Candidate, 'instant'>) {
+    // O elemento pode ter sido trocado durante o atraso: não há onde ancorar o tooltip
+    if (!anchor.isConnected) return
     tip.textContent = text
     tip.hidden = false
     const box = anchor.getBoundingClientRect()

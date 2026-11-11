@@ -90,7 +90,20 @@ export function createPanel(options: PanelOptions) {
     if (key) document.querySelector<HTMLElement>(`[data-focus="${key}"]`)?.focus()
   }
 
+  // Só troca os botões quando algo mudou: refazê-los a cada ciclo derruba o tooltip de quem está
+  // com o mouse em cima, que nem chega a aparecer
+  let railSignature = ''
+
   function renderRail() {
+    const signature = JSON.stringify(
+      options.sections.map((section) => [
+        section.id,
+        section.badge() ?? '',
+        state.open && state.sections[section.id] === true,
+      ]),
+    )
+    if (signature === railSignature) return
+    railSignature = signature
     rail.replaceChildren(
       ...options.sections.map((section) => {
         const badge = section.badge()
