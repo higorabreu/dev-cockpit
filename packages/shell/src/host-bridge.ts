@@ -62,6 +62,9 @@ export function registerHostBridge(options: BridgeOptions) {
   ipcMain.handle(hostChannels.clipboardRead, () => clipboard.readText())
   ipcMain.handle(hostChannels.clipboardWrite, (_event, text: string) => clipboard.writeText(text))
   ipcMain.handle(hostChannels.projectsList, () => options.projects.list())
+  ipcMain.on(hostChannels.projectsTouch, (_event, path: string) => {
+    void options.projects.touch(path)
+  })
   ipcMain.on(hostChannels.windowToggleFullHeight, () => options.toggleFullHeight())
 
   return {

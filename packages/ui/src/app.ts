@@ -8,10 +8,8 @@ import {
   type HostApi,
   type MenuCategory,
   openTab,
-  orderByRecency,
   type Project,
   recentTabs,
-  recordInteraction,
   reorderTabs,
   stepFontSize,
   stepOpacity,
@@ -29,7 +27,6 @@ import {
   saveFontSize,
   saveOpacity,
 } from './preferences.ts'
-import { loadRecentProjects, saveRecentProjects } from './project-recency.ts'
 import { createProjectSearch } from './project-search.ts'
 import { bindShortcuts } from './shortcuts.ts'
 import { createTabBar } from './tab-bar.ts'
@@ -71,7 +68,6 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
   let fontSize = loadFontSize()
   applyOpacity(opacity)
   let projects: readonly Project[] = []
-  let recentProjects = loadRecentProjects()
 
   const refreshProjects = () =>
     api.projects.list().then((found) => {
@@ -86,9 +82,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
 
   function searchProjects() {
     void refreshProjects().then(() => {
-      const byPath = new Map(projects.map((project) => [project.path, projectLabel(project)]))
-      const ordered = orderByRecency([...byPath.keys()], recentProjects)
-      search.open(ordered.map((path) => ({ path, label: byPath.get(path) ?? path })))
+      search.open(projects.map((project) => ({ path: project.path, label: projectLabel(project) })))
     })
   }
 
@@ -146,8 +140,10 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
   }
 
   function openProject(path: string) {
-    recentProjects = recordInteraction(recentProjects, path)
-    saveRecentProjects(recentProjects)
+    api.projects.touch(path)
+    // O host persiste a ordem; aqui sobe o projeto já, sem esperar a próxima leitura
+    const used = projects.find((project) => project.path === path)
+    if (used) projects = [used, ...projects.filter((project) => project !== used)]
     const existing = projectTabs.get(path)
     if (existing && state.tabs.some((tab) => tab.id === existing)) {
       update(activateTab(state, existing))
@@ -226,8 +222,6 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
   }
 
   function categories(): readonly MenuCategory[] {
-    const byPath = new Map(projects.map((project) => [project.path, projectLabel(project)]))
-    const ordered = orderByRecency([...byPath.keys()], recentProjects)
     return [
       {
         id: 'tabs',
@@ -246,9 +240,9 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
         icon: 'folder',
         items: [
           { id: 'project:search', label: 'Buscar projeto…', shortcut: 'Ctrl+Shift+O' },
-          ...ordered.map((path) => ({
-            id: `${PROJECT_PREFIX}${path}`,
-            label: byPath.get(path) ?? path,
+          ...projects.map((project) => ({
+            id: `${PROJECT_PREFIX}${project.path}`,
+            label: projectLabel(project),
           })),
         ],
       },

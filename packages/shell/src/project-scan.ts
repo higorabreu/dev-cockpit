@@ -1,18 +1,49 @@
-import { readdir, stat } from 'node:fs/promises'
+import { readdir, readFile, stat } from 'node:fs/promises'
 import { basename, join } from 'node:path'
-import type { Project, ProjectCatalog } from '@dck/core'
+import type { Project } from '@dck/core'
 
 const MAX_DEPTH = 2
+const SUBMODULE_PATH = /^\s*path\s*=\s*(.+?)\s*$/gm
 
-async function isRepository(directory: string): Promise<boolean> {
-  return stat(join(directory, '.git')).then(
+const exists = (path: string) =>
+  stat(path).then(
     () => true,
     () => false,
   )
+
+async function mtime(path: string): Promise<number | undefined> {
+  return stat(path).then(
+    (info) => info.mtimeMs,
+    () => undefined,
+  )
+}
+
+// O reflog do HEAD muda a cada commit ou troca de branch; sem ele vale o próprio marcador
+async function activityOf(directory: string): Promise<number | undefined> {
+  return (await mtime(join(directory, '.git', 'logs', 'HEAD'))) ?? mtime(join(directory, '.git'))
+}
+
+async function toProject(directory: string): Promise<Project> {
+  const activity = await activityOf(directory)
+  return { name: basename(directory), path: directory, ...(activity ? { activity } : {}) }
+}
+
+async function submodulesOf(directory: string): Promise<Project[]> {
+  const text = await readFile(join(directory, '.gitmodules'), 'utf8').catch(() => '')
+  const paths = [...text.matchAll(SUBMODULE_PATH)].flatMap((match) => match[1] ?? [])
+  const found = await Promise.all(
+    paths.map(async (relative) => {
+      const path = join(directory, relative)
+      return (await exists(join(path, '.git'))) ? [await toProject(path)] : []
+    }),
+  )
+  return found.flat()
 }
 
 async function scan(directory: string, depth: number): Promise<Project[]> {
-  if (await isRepository(directory)) return [{ name: basename(directory), path: directory }]
+  if (await exists(join(directory, '.git'))) {
+    return [await toProject(directory), ...(await submodulesOf(directory))]
+  }
   if (depth === 0) return []
   const entries = await readdir(directory, { withFileTypes: true }).catch(() => [])
   const children = entries
@@ -21,12 +52,7 @@ async function scan(directory: string, depth: number): Promise<Project[]> {
   return (await Promise.all(children)).flat()
 }
 
-// Um repositório é um projeto; não desce dentro dele, os submódulos entram na varredura do M1-T7
-export function createProjectScanner(root: string): ProjectCatalog {
-  return {
-    async list() {
-      const found = await scan(root, MAX_DEPTH)
-      return found.sort((a, b) => a.name.localeCompare(b.name))
-    },
-  }
+// Um repositório é um projeto, e cada submódulo declarado no .gitmodules também
+export async function scanProjects(root: string): Promise<readonly Project[]> {
+  return scan(root, MAX_DEPTH)
 }

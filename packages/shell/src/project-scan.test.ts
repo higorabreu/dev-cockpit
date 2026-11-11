@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createProjectScanner } from './project-scan.ts'
+import { scanProjects } from './project-scan.ts'
 
 let root = ''
 
@@ -18,15 +18,15 @@ describe('createProjectScanner', () => {
   it('should list a repository at the first level when scanning the root', async () => {
     await repo('alpha')
 
-    const projects = await createProjectScanner(root).list()
+    const projects = await scanProjects(root)
 
-    expect(projects).toEqual([{ name: 'alpha', path: join(root, 'alpha') }])
+    expect(projects).toMatchObject([{ name: 'alpha', path: join(root, 'alpha') }])
   })
 
   it('should find a repository one folder below a grouping folder when scanning', async () => {
     await repo('group', 'beta')
 
-    const projects = await createProjectScanner(root).list()
+    const projects = await scanProjects(root)
 
     expect(projects.map((project) => project.name)).toEqual(['beta'])
   })
@@ -35,7 +35,7 @@ describe('createProjectScanner', () => {
     await repo('alpha')
     await repo('alpha', 'vendor')
 
-    const projects = await createProjectScanner(root).list()
+    const projects = await scanProjects(root)
 
     expect(projects.map((project) => project.name)).toEqual(['alpha'])
   })
@@ -44,7 +44,7 @@ describe('createProjectScanner', () => {
     await mkdir(join(root, 'sub'))
     await writeFile(join(root, 'sub', '.git'), 'gitdir: ../.git/modules/sub')
 
-    const projects = await createProjectScanner(root).list()
+    const projects = await scanProjects(root)
 
     expect(projects.map((project) => project.name)).toEqual(['sub'])
   })
@@ -53,7 +53,7 @@ describe('createProjectScanner', () => {
     await repo('.hidden')
     await mkdir(join(root, 'plain'))
 
-    const projects = await createProjectScanner(root).list()
+    const projects = await scanProjects(root)
 
     expect(projects).toEqual([])
   })
@@ -62,14 +62,46 @@ describe('createProjectScanner', () => {
     await repo('zeta')
     await repo('alpha')
 
-    const projects = await createProjectScanner(root).list()
+    const projects = await scanProjects(root)
 
     expect(projects.map((project) => project.name)).toEqual(['alpha', 'zeta'])
   })
 
   it('should return nothing when the root does not exist', async () => {
-    const projects = await createProjectScanner(join(root, 'missing')).list()
+    const projects = await scanProjects(join(root, 'missing'))
 
     expect(projects).toEqual([])
+  })
+
+  it('should list the submodules declared in .gitmodules when a repository has them', async () => {
+    await repo('main')
+    await repo('main', 'backend')
+    await repo('main', 'frontend')
+    await writeFile(
+      join(root, 'main', '.gitmodules'),
+      '[submodule "backend"]\n\tpath = backend\n\turl = x\n[submodule "frontend"]\n\tpath = frontend\n\turl = y\n',
+    )
+
+    const projects = await scanProjects(root)
+
+    expect(projects.map((project) => project.name).sort()).toEqual(['backend', 'frontend', 'main'])
+  })
+
+  it('should skip a declared submodule that is not checked out when scanning', async () => {
+    await repo('main')
+    await writeFile(join(root, 'main', '.gitmodules'), '[submodule "gone"]\n\tpath = gone\n')
+
+    const projects = await scanProjects(root)
+
+    expect(projects.map((project) => project.name)).toEqual(['main'])
+  })
+
+  it('should report the repository activity when the reflog exists', async () => {
+    await mkdir(join(root, 'alpha', '.git', 'logs'), { recursive: true })
+    await writeFile(join(root, 'alpha', '.git', 'logs', 'HEAD'), 'x')
+
+    const [project] = await scanProjects(root)
+
+    expect(project?.activity).toBeGreaterThan(0)
   })
 })

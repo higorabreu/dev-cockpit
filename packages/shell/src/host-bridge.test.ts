@@ -13,11 +13,15 @@ function setup() {
   const clipboard = new MemoryClipboard('conteúdo')
   const sent: Array<[string, ...unknown[]]> = []
   let fullHeightToggles = 0
+  const touched: string[] = []
   const bridge = registerHostBridge({
     ipcMain,
     ptyHost,
     clipboard,
-    projects: { list: async () => [{ name: 'alpha', path: '/p/alpha' }] },
+    projects: {
+      list: async () => [{ name: 'alpha', path: '/p/alpha' }],
+      touch: async (path: string) => void touched.push(path),
+    },
     shell: '/bin/zsh',
     home: '/home/usuario',
     logger: silentLogger,
@@ -28,7 +32,7 @@ function setup() {
   })
   const call = (channel: string, ...args: unknown[]) =>
     (handlers.get(channel) as (...a: unknown[]) => unknown)({}, ...args)
-  return { ptyHost, clipboard, sent, call, bridge, fullHeights: () => fullHeightToggles }
+  return { ptyHost, clipboard, sent, call, bridge, touched, fullHeights: () => fullHeightToggles }
 }
 
 describe('registerHostBridge pty', () => {
@@ -118,5 +122,13 @@ describe('registerHostBridge clipboard and window', () => {
     const projects = await call(hostChannels.projectsList)
 
     expect(projects).toEqual([{ name: 'alpha', path: '/p/alpha' }])
+  })
+
+  it('should record the project as recently used when the interface touches it', () => {
+    const { call, touched } = setup()
+
+    call(hostChannels.projectsTouch, '/p/alpha')
+
+    expect(touched).toEqual(['/p/alpha'])
   })
 })
