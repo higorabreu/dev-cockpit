@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { connectTo } from '@dck/adapter-node-net'
-import { createClient, silentLogger } from '@dck/core'
+import { createClient, createTranslator, silentLogger } from '@dck/core'
 import { startDaemon } from '@dck/daemon'
 import { afterEach, describe, expect, it } from 'vitest'
 import { EXIT, exitCodeFor, runCli } from './cli.ts'
@@ -12,11 +12,12 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup()
 })
 
-function run(argv: string[], endpoint: string) {
+function run(argv: string[], endpoint: string, locale: 'pt-BR' | 'en' = 'pt-BR') {
   const out: string[] = []
   const err: string[] = []
   const code = runCli(argv, {
     endpoint,
+    t: createTranslator(locale).t,
     connect: (target) => connectTo(target, silentLogger),
     out: (text) => out.push(text),
     err: (text) => err.push(text),
@@ -102,5 +103,22 @@ describe('exitCodeFor', () => {
   it('should use the general failure code when the category has no specific mapping', () => {
     expect(exitCodeFor(error('not_found'))).toBe(EXIT.failed)
     expect(exitCodeFor({ code: -32000, message: 'x' })).toBe(EXIT.failed)
+  })
+
+  it('should print the usage in english when the translator is english', async () => {
+    const result = run([], '/x', 'en')
+
+    await result.code
+
+    expect(result.err.join('')).toContain('Usage: dck')
+  })
+
+  it('should say no window is connected in english when the translator is english', async () => {
+    const endpoint = await bootDaemon()
+
+    const result = run(['toggle'], endpoint, 'en')
+
+    expect(await result.code).toBe(EXIT.unavailable)
+    expect(result.err.join('')).toContain('No window is connected')
   })
 })

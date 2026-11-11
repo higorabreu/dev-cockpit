@@ -13,6 +13,7 @@ import {
   type SwitcherState,
   select,
   stepSwitcher,
+  type Translate,
 } from '@dck/core'
 import { type MenuMarkup, switcherMarkup, wheelMarkup } from './menu-view.ts'
 
@@ -64,6 +65,7 @@ export function createHoldMenuController(
   elements: HoldMenuElements,
   actions: HoldMenuActions,
   scheduler: Scheduler,
+  t: Translate,
 ) {
   let mode: Mode = { kind: 'closed' }
 
@@ -87,14 +89,14 @@ export function createHoldMenuController(
   }
 
   function draw() {
-    if (mode.kind === 'wheel') paint(wheelMarkup(mode.menu))
+    if (mode.kind === 'wheel') paint(wheelMarkup(mode.menu, t))
     if (mode.kind === 'switcher') {
       const { switcher, tabs } = mode
       const chips = switcher.order.map((id) => {
         const tab = tabs.find((entry) => entry.id === id)
-        return { label: tab?.label ?? id, note: tab?.current ? 'atual' : '' }
+        return { label: tab?.label ?? id, note: tab?.current ? t('menu.switcher.current') : '' }
       })
-      paint(switcherMarkup(chips, switcher.index))
+      paint(switcherMarkup(chips, switcher.index, t))
     }
   }
 

@@ -36,14 +36,23 @@ if (args[0] === 'daemon') {
     for await (const chunk of process.stdin) chunks.push(chunk as Buffer)
     return Buffer.concat(chunks).toString('utf8')
   }
+  const t = createTranslator(
+    pickLocale([
+      process.env.LC_ALL ?? '',
+      process.env.LC_MESSAGES ?? '',
+      process.env.LANG ?? '',
+      process.env.LANGUAGE ?? '',
+    ]),
+  ).t
   process.exitCode = await runCli(args, {
     endpoint,
+    t,
     connect: (target) => connectTo(target, silentLogger),
     out: (text) => process.stdout.write(text),
     err: (text) => process.stderr.write(text),
     agent: {
       env: process.env,
-      t: createTranslator(pickLocale([process.env.LANG ?? '', process.env.LANGUAGE ?? ''])).t,
+      t,
       readStdin,
       forward: (command, input) =>
         new Promise((resolve) => {

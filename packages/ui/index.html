@@ -10,26 +10,26 @@
   </head>
   <body>
     <div id="app">
-      <div id="bar" role="tablist" aria-label="Abas"></div>
+      <div id="bar" role="tablist" data-i18n-aria="a11y.tabs"></div>
       <div id="main">
         <div id="host"></div>
         <div id="dock" data-open="false">
-          <hr id="split" aria-orientation="vertical" aria-label="Largura do painel" aria-valuemin="220" aria-valuemax="420" aria-valuenow="300" tabindex="0" />
-          <aside id="panel" aria-label="Painel"></aside>
-          <nav id="rail" aria-label="Seções do painel"></nav>
+          <hr id="split" aria-orientation="vertical" data-i18n-aria="a11y.panelWidth" aria-valuemin="220" aria-valuemax="420" aria-valuenow="300" tabindex="0" />
+          <aside id="panel" data-i18n-aria="a11y.panel"></aside>
+          <nav id="rail" data-i18n-aria="a11y.rail"></nav>
         </div>
       </div>
       <div id="notice" role="status"></div>
       <div id="tab-menu" role="menu" hidden></div>
-      <div id="search" role="dialog" aria-label="Buscar projeto">
+      <div id="search" role="dialog" data-i18n-aria="projects.search">
         <div id="search-box">
-          <input id="search-input" type="text" placeholder="Buscar projeto" autocomplete="off" spellcheck="false" aria-label="Buscar projeto" />
+          <input id="search-input" type="text" data-i18n-placeholder="projects.search" autocomplete="off" spellcheck="false" data-i18n-aria="projects.search" />
           <div id="search-results" role="listbox"></div>
           <div id="search-hint"></div>
         </div>
       </div>
       <div id="menu">
-        <div id="menu-card" role="dialog" aria-label="Menu de atalhos"></div>
+        <div id="menu-card" role="dialog" data-i18n-aria="a11y.menu"></div>
         <div id="menu-hint"></div>
       </div>
     </div>

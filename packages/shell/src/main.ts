@@ -7,7 +7,13 @@ import { createProcessInspector, createProcessScanner } from '@dck/adapter-linux
 import { createGitInspector } from '@dck/adapter-node-git'
 import { connectTo, defaultEndpoint } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
-import { createDockController, createJsonLogger, hostChannels } from '@dck/core'
+import {
+  createDockController,
+  createJsonLogger,
+  createTranslator,
+  hostChannels,
+  pickLocale,
+} from '@dck/core'
 import {
   app,
   BrowserWindow,
@@ -254,6 +260,7 @@ app.whenReady().then(() => {
     const menuDeps = {
       toggleWindow: () => dock.toggle(),
       autostart,
+      t: createTranslator(pickLocale(app.getPreferredSystemLanguages())).t,
       quit: () => app.quit(),
       onChange: () => void refreshTrayMenu(),
     }

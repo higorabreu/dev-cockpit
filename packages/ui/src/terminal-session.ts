@@ -22,6 +22,7 @@ export interface SessionOptions {
   readonly theme: ThemeName
   readonly fontSize: number
   readonly cwd?: string
+  readonly exitedText: string
   onCopied(text: string): void
   onExit(): void
 }
@@ -74,7 +75,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   })
   const stopExit = api.pty.onExit((sessionId) => {
     if (sessionId !== id) return
-    terminal.write('\r\n[processo encerrado]\r\n')
+    terminal.write(`\r\n${options.exitedText}\r\n`)
     options.onExit()
   })
 

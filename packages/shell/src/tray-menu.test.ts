@@ -1,12 +1,14 @@
+import { createTranslator } from '@dck/core'
 import { describe, expect, it } from 'vitest'
 import { buildTrayMenu } from './tray-menu.ts'
 
-function setup(enabled = false) {
+function setup(enabled = false, locale: 'pt-BR' | 'en' = 'pt-BR') {
   let state = enabled
   let toggles = 0
   let quits = 0
   let changes = 0
   const deps = {
+    t: createTranslator(locale).t,
     toggleWindow: () => {
       toggles += 1
     },
@@ -76,5 +78,18 @@ describe('buildTrayMenu', () => {
     if (menu[3]?.type === 'action') menu[3].run()
 
     expect(counts().quits).toBe(1)
+  })
+
+  it('should use the language of the translator when building the labels', async () => {
+    const { deps } = setup(false, 'en')
+
+    const menu = await buildTrayMenu(deps)
+
+    expect(menu.map((entry) => (entry.type === 'separator' ? '-' : entry.label))).toEqual([
+      'Show or hide',
+      'Start with the system',
+      '-',
+      'Quit',
+    ])
   })
 })

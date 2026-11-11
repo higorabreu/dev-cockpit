@@ -40,6 +40,7 @@ import {
 import { createProjectSearch } from './project-search.ts'
 import { createSessionWatcher } from './sessions-watcher.ts'
 import { bindShortcuts } from './shortcuts.ts'
+import { translateStatic } from './static-text.ts'
 import { createTabBar } from './tab-bar.ts'
 import { createTabMenu } from './tab-menu.ts'
 import { createTerminalSession, type TerminalSession } from './terminal-session.ts'
@@ -77,7 +78,8 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
   const sessions = new Map<string, TerminalSession>()
   const projectTabs = new Map<string, string>()
   const i18n = createTranslator(currentLocale())
-  const notice = createNotice(elements.notice, bar)
+  translateStatic(i18n)
+  const notice = createNotice(elements.notice, bar, i18n)
   const menu = createTabMenu(elements.menu)
   let state: TabsState = emptyTabs
   let theme = initialTheme
@@ -261,12 +263,13 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
       theme,
       fontSize,
       ...(options.cwd ? { cwd: options.cwd } : {}),
+      exitedText: i18n.t('terminal.exited'),
       onCopied: (text) => notice.copied(text),
       onExit: () => close(id),
     })
     sessions.set(id, session)
     if (options.project) projectTabs.set(options.project, id)
-    update(openTab(state, { id, label: options.label ?? `shell ${counter}` }))
+    update(openTab(state, { id, label: options.label ?? i18n.t('tabs.default', { n: counter }) }))
   }
 
   function openProject(path: string) {
@@ -289,26 +292,30 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     for (const session of sessions.values()) session.setTheme(theme)
   }
 
-  const tabBar = createTabBar(bar, {
-    activate: (id) => update(activateTab(state, id)),
-    reorder: (ids) => {
-      state = reorderTabs(state, ids)
-      render()
+  const tabBar = createTabBar(
+    bar,
+    {
+      activate: (id) => update(activateTab(state, id)),
+      reorder: (ids) => {
+        state = reorderTabs(state, ids)
+        render()
+      },
+      contextMenu(id, x, y) {
+        const several = state.tabs.length > 1
+        menu.open(
+          [
+            { label: i18n.t('tabs.close'), enabled: several, run: () => close(id) },
+            { label: i18n.t('tabs.closeOthers'), enabled: several, run: () => closeOthers(id) },
+            { label: i18n.t('tabs.duplicate'), enabled: true, run: () => void open() },
+          ],
+          x,
+          y,
+          !document.body.classList.contains('full'),
+        )
+      },
     },
-    contextMenu(id, x, y) {
-      const several = state.tabs.length > 1
-      menu.open(
-        [
-          { label: 'Fechar aba', enabled: several, run: () => close(id) },
-          { label: 'Fechar as outras', enabled: several, run: () => closeOthers(id) },
-          { label: 'Duplicar aba', enabled: true, run: () => void open() },
-        ],
-        x,
-        y,
-        !document.body.classList.contains('full'),
-      )
-    },
-  })
+    i18n.t('tabs.finished'),
+  )
 
   const actions = {
     newTab: () => void open(),
@@ -363,22 +370,26 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     return [
       {
         id: 'tabs',
-        label: 'Abas',
+        label: i18n.t('menu.cat.tabs'),
         icon: 'window',
         items: [
-          { id: 'tab:new', label: 'Nova aba', shortcut: 'Ctrl+Shift+T' },
-          { id: 'tab:close', label: 'Fechar aba', shortcut: 'Ctrl+Shift+W' },
-          { id: 'tab:next', label: 'Próxima aba', shortcut: 'Ctrl+Tab' },
-          { id: 'tab:previous', label: 'Aba anterior', shortcut: 'Ctrl+Shift+Tab' },
-          { id: 'tab:finished', label: 'Próxima que terminou', shortcut: 'Ctrl+Shift+J' },
+          { id: 'tab:new', label: i18n.t('tabs.new'), shortcut: 'Ctrl+Shift+T' },
+          { id: 'tab:close', label: i18n.t('tabs.close'), shortcut: 'Ctrl+Shift+W' },
+          { id: 'tab:next', label: i18n.t('tabs.next'), shortcut: 'Ctrl+Tab' },
+          { id: 'tab:previous', label: i18n.t('tabs.previous'), shortcut: 'Ctrl+Shift+Tab' },
+          { id: 'tab:finished', label: i18n.t('tabs.nextFinished'), shortcut: 'Ctrl+Shift+J' },
         ],
       },
       {
         id: 'projects',
-        label: 'Projetos',
+        label: i18n.t('menu.cat.projects'),
         icon: 'folder',
         items: [
-          { id: 'project:search', label: 'Buscar projeto…', shortcut: 'Ctrl+Shift+O' },
+          {
+            id: 'project:search',
+            label: `${i18n.t('projects.search')}…`,
+            shortcut: 'Ctrl+Shift+O',
+          },
           ...projects.map((project) => ({
             id: `${PROJECT_PREFIX}${project.path}`,
             label: projectLabel(project),
@@ -387,21 +398,21 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
       },
       {
         id: 'agent',
-        label: 'Agente',
+        label: i18n.t('menu.cat.agent'),
         icon: 'terminal',
         items: [
-          { id: 'agent:claude', label: 'Iniciar Claude' },
-          { id: 'agent:resume', label: 'Retomar conversa' },
+          { id: 'agent:claude', label: i18n.t('menu.agent.start') },
+          { id: 'agent:resume', label: i18n.t('menu.agent.resume') },
         ],
       },
       {
         id: 'system',
-        label: 'Sistema',
+        label: i18n.t('menu.cat.system'),
         icon: 'sliders',
         items: [
-          { id: 'system:full-height', label: 'Altura total', shortcut: 'F11' },
-          { id: 'system:panel', label: 'Painel lateral', shortcut: 'Ctrl+Shift+B' },
-          { id: 'system:theme', label: 'Tema claro ou escuro', shortcut: 'Ctrl+Shift+L' },
+          { id: 'system:full-height', label: i18n.t('menu.system.fullHeight'), shortcut: 'F11' },
+          { id: 'system:panel', label: i18n.t('menu.system.panel'), shortcut: 'Ctrl+Shift+B' },
+          { id: 'system:theme', label: i18n.t('menu.system.theme'), shortcut: 'Ctrl+Shift+L' },
         ],
       },
     ]
@@ -432,6 +443,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
         return () => clearTimeout(timer)
       },
     },
+    i18n.t,
   )
 
   api.window.onFullHeightChange((full) => {

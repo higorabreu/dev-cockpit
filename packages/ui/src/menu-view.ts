@@ -1,4 +1,11 @@
-import { CENTER, currentCategory, type HoldMenuState, sectorAngle, selectedIndex } from '@dck/core'
+import {
+  CENTER,
+  currentCategory,
+  type HoldMenuState,
+  sectorAngle,
+  selectedIndex,
+  type Translate,
+} from '@dck/core'
 
 const PATHS: Record<string, string> = {
   window: 'M4 6h16v12H4zM4 10h16',
@@ -74,7 +81,7 @@ export interface MenuMarkup {
   readonly hint: string
 }
 
-export function wheelMarkup(state: HoldMenuState): MenuMarkup {
+export function wheelMarkup(state: HoldMenuState, t: Translate): MenuMarkup {
   const count = state.categories.length
   const category = currentCategory(state)
   const sectors = state.categories
@@ -85,8 +92,8 @@ export function wheelMarkup(state: HoldMenuState): MenuMarkup {
     })
     .join('')
   const hub = category
-    ? `<svg x="-9" y="-16" width="18" height="18" ${ICON_ATTRS} style="color:var(--fg)"><path d="${PATHS[category.icon] ?? ''}"/></svg><text class="hubt" y="14">${selectedIndex(state) + 1} de ${category.items.length}</text>`
-    : '<text class="hubt" y="-2">Use as</text><text class="hubt" y="12">setas</text>'
+    ? `<svg x="-9" y="-16" width="18" height="18" ${ICON_ATTRS} style="color:var(--fg)"><path d="${PATHS[category.icon] ?? ''}"/></svg><text class="hubt" y="14">${escapeHtml(t('menu.hub.count', { index: selectedIndex(state) + 1, total: category.items.length }))}</text>`
+    : `<text class="hubt" y="-2">${escapeHtml(t('menu.hub.line1'))}</text><text class="hubt" y="12">${escapeHtml(t('menu.hub.line2'))}</text>`
   const rows = category?.items.length
     ? visibleWindow(category.items.length, selectedIndex(state), maxRows(state.category, count))
         .map((index) => {
@@ -95,7 +102,7 @@ export function wheelMarkup(state: HoldMenuState): MenuMarkup {
           return `<button type="button" class="it${index === selectedIndex(state) ? ' on' : ''}" data-item="${index}"><span class="l">${escapeHtml(item.label)}</span><span class="k">${escapeHtml(item.shortcut ?? '')}</span></button>`
         })
         .join('')
-    : '<div class="empty">Nada por aqui</div>'
+    : `<div class="empty">${escapeHtml(t('menu.empty'))}</div>`
   const list =
     state.category === CENTER
       ? ''
@@ -103,7 +110,7 @@ export function wheelMarkup(state: HoldMenuState): MenuMarkup {
   return {
     mode: 'wheel-mode',
     card: `<svg class="wheel" width="${WHEEL_SIZE}" height="${WHEEL_SIZE}" viewBox="-98 -98 196 196"><circle class="backdrop" r="98"/>${sectors}${hub}</svg>${list}`,
-    hint: `<span>${kbd(['←', '→', '↑', '↓'])} navegar</span><span>soltar executa</span><span>${kbd(['Esc'])} cancela</span>`,
+    hint: `<span>${kbd(['←', '→', '↑', '↓'])} ${escapeHtml(t('menu.hint.navigate'))}</span><span>${escapeHtml(t('menu.hint.release'))}</span><span>${kbd(['Esc'])} ${escapeHtml(t('menu.hint.cancel'))}</span>`,
   }
 }
 
@@ -112,7 +119,11 @@ export interface SwitcherChip {
   readonly note: string
 }
 
-export function switcherMarkup(chips: readonly SwitcherChip[], index: number): MenuMarkup {
+export function switcherMarkup(
+  chips: readonly SwitcherChip[],
+  index: number,
+  t: Translate,
+): MenuMarkup {
   const strip = chips
     .map(
       (chip, at) =>
@@ -121,7 +132,7 @@ export function switcherMarkup(chips: readonly SwitcherChip[], index: number): M
     .join('')
   return {
     mode: 'switch-mode',
-    card: `<div class="ttl">Abas, mais recente primeiro</div><div class="strip">${strip}</div>`,
-    hint: `<span>${kbd(['Espaço'])} próxima</span><span>${kbd(['Shift', 'Espaço'])} anterior</span><span>soltar troca</span>`,
+    card: `<div class="ttl">${escapeHtml(t('menu.switcher.title'))}</div><div class="strip">${strip}</div>`,
+    hint: `<span>${kbd([t('menu.key.space')])} ${escapeHtml(t('menu.switcher.next'))}</span><span>${kbd(['Shift', t('menu.key.space')])} ${escapeHtml(t('menu.switcher.previous'))}</span><span>${escapeHtml(t('menu.switcher.release'))}</span>`,
   }
 }

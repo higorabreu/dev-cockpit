@@ -38,7 +38,7 @@ export function createProjectSearch(
 
   function draw() {
     if (matches.length === 0) {
-      results.innerHTML = '<div class="empty">Nenhum projeto encontrado</div>'
+      results.innerHTML = `<div class="empty">${escapeHtml(t('projects.none'))}</div>`
       return
     }
     const start = Math.min(

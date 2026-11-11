@@ -1,4 +1,11 @@
-import { createClient, type ErrorBody, type Result, type Transport } from '@dck/core'
+import {
+  createClient,
+  createTranslator,
+  type ErrorBody,
+  type Result,
+  type Translate,
+  type Transport,
+} from '@dck/core'
 import { type AgentDeps, runAgentCommand } from './agent-commands.ts'
 
 export interface CliDeps {
@@ -6,18 +13,10 @@ export interface CliDeps {
   connect(endpoint: string): Promise<Result<Transport, ErrorBody>>
   out(text: string): void
   err(text: string): void
+  readonly t?: Translate
   // Presente quando o comando `agent` está disponível
   readonly agent?: AgentDeps
 }
-
-const USAGE = `Uso: dck <comando>
-
-Comandos:
-  toggle   Mostra ou esconde a janela
-  ping     Confere se o daemon está respondendo
-  daemon   Roda o daemon em primeiro plano
-  agent    Liga um agente de código ao cockpit (report, install, uninstall)
-`
 
 // Códigos de saída do sysexits.h, a convenção BSD para ferramentas de linha de comando
 export const EXIT = { ok: 0, failed: 1, usage: 64, unavailable: 69, software: 70 } as const
@@ -36,18 +35,19 @@ export function exitCodeFor(error: ErrorBody): number {
 }
 
 export async function runCli(argv: readonly string[], deps: CliDeps): Promise<number> {
+  const t = deps.t ?? createTranslator('pt-BR').t
   const [command, ...rest] = argv
   if (command === 'agent' && deps.agent) {
     return runAgentCommand(rest, deps, deps.agent)
   }
   if (command !== 'toggle' && command !== 'ping') {
-    deps.err(USAGE)
+    deps.err(t('cli.usage'))
     return command === undefined || command === '--help' ? EXIT.ok : EXIT.usage
   }
 
   const connected = await deps.connect(deps.endpoint)
   if (!connected.ok) {
-    deps.err(`${connected.error.message}\nInicie o daemon com: dck daemon\n`)
+    deps.err(`${connected.error.message}\n${t('cli.startDaemon')}\n`)
     return exitCodeFor(connected.error)
   }
 
@@ -64,7 +64,7 @@ export async function runCli(argv: readonly string[], deps: CliDeps): Promise<nu
     }
     const delivered = (reply.value as { delivered?: number } | null)?.delivered ?? 0
     if (delivered === 0) {
-      deps.err('Nenhuma janela está conectada ao daemon.\n')
+      deps.err(`${t('cli.noWindow')}\n`)
       return EXIT.unavailable
     }
     return EXIT.ok
