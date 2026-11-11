@@ -108,7 +108,7 @@ function body(i18n: Translator, session: AgentSession): HTMLElement {
     session.costUsd !== undefined &&
       row(
         i18n.t('agent.cost'),
-        `US$ ${session.costUsd.toFixed(2)}${session.costEstimated ? ` (${i18n.t('agent.costEstimated')})` : ''}`,
+        `US$ ${new Intl.NumberFormat(i18n.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(session.costUsd)}${session.costEstimated ? ` (${i18n.t('agent.costEstimated')})` : ''}`,
       ),
     ...(session.limits ?? []).map((limit) => limitBlock(i18n, limit, nowSeconds * 1000)),
     session.lastResponseAt !== undefined &&
