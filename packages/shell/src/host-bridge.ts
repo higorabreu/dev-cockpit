@@ -78,8 +78,10 @@ export function registerHostBridge(options: BridgeOptions) {
   ipcMain.handle(hostChannels.clipboardWrite, (_event, text: string) => clipboard.writeText(text))
   ipcMain.on(hostChannels.notificationsShow, (_event, payload: unknown) => {
     const parsed = notificationSchema.safeParse(payload)
-    if (parsed.success) options.notifier.notify(parsed.data)
-    else logger.warn('invalid notification request ignored')
+    if (parsed.success) {
+      logger.info('notification requested', { tabId: parsed.data.tabId })
+      options.notifier.notify(parsed.data)
+    } else logger.warn('invalid notification request ignored')
   })
   ipcMain.handle(hostChannels.sessionActivity, (_event, id: number) => {
     const session = sessions.get(id)

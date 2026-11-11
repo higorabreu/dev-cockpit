@@ -73,6 +73,8 @@ app.whenReady().then(() => {
     heightRatio,
   })
 
+  logger.info('notifications available', { supported: Notification.isSupported() })
+
   const bridge = registerHostBridge({
     ipcMain: createElectronIpc(ipcMain),
     ptyHost: createNodePtyHost(),
@@ -172,7 +174,7 @@ app.whenReady().then(() => {
       await sleep(3000)
       if (evalScript) {
         const run = window.webContents.executeJavaScript(readFileSync(evalScript, 'utf8'))
-        await Promise.race([run, sleep(20000)])
+        await Promise.race([run, sleep(Number(process.env.DCK_EVAL_TIMEOUT_MS) || 20000)])
         const result = await window.webContents.executeJavaScript(
           'JSON.stringify(window.__out ?? null)',
         )
