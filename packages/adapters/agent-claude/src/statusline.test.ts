@@ -4,6 +4,7 @@ import { normalizeStatusline } from './statusline.ts'
 // Exemplo da documentação oficial do statusLine do Claude Code
 const payload = {
   session_id: 'abc123',
+  transcript_path: '/home/u/.claude/projects/-p-app/abc123.jsonl',
   model: { id: 'claude-opus-4-1', display_name: 'Opus' },
   cost: { total_cost_usd: 0.01234, total_duration_ms: 45000 },
   context_window: {
@@ -28,6 +29,7 @@ describe('normalizeStatusline', () => {
     const data = normalizeStatusline(payload)
 
     expect(data).toEqual({
+      transcriptPath: '/home/u/.claude/projects/-p-app/abc123.jsonl',
       model: 'claude-opus-4-1',
       contextTokens: 15_500,
       contextWindow: 200_000,

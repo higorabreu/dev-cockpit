@@ -1,7 +1,7 @@
 import { open, readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
-import type { AgentProfile, AgentSession, AgentSource } from '@dck/core'
+import { join, resolve, sep } from 'node:path'
+import type { AgentContext, AgentProfile, AgentSession, AgentSource } from '@dck/core'
 import { z } from 'zod'
 import { normalizeStatusline } from './statusline.ts'
 import { summarizeTranscriptTail } from './transcript.ts'
@@ -61,6 +61,33 @@ async function readRegistry(claudeDir: string, pid: number) {
   }
 }
 
+// Só lê arquivos de sessão que estão dentro da pasta de projetos do Claude: o caminho vem de um
+// processo externo e não pode apontar para qualquer arquivo
+function insideProjects(claudeDir: string, path: string): boolean {
+  const root = `${resolve(claudeDir, 'projects')}${sep}`
+  const resolved = resolve(path)
+  return resolved.startsWith(root) && resolved.endsWith('.jsonl')
+}
+
+// O que o próprio Claude informou (statusLine) vale mais; sem isso, o registro do processo
+async function transcriptFor(
+  claudeDir: string,
+  context: AgentContext,
+): Promise<string | undefined> {
+  if (context.transcriptPath && insideProjects(claudeDir, context.transcriptPath)) {
+    return resolve(context.transcriptPath)
+  }
+  // Sem o processo exato não há como saber qual sessão é: melhor nada que a sessão errada
+  if (context.pid === undefined) return undefined
+  const entry = await readRegistry(claudeDir, context.pid)
+  if (!entry) return undefined
+  // O início do processo tem de bater, senão o registro é de um PID que foi reaproveitado
+  if (context.processStart && entry.procStart && entry.procStart !== context.processStart) {
+    return undefined
+  }
+  return join(claudeDir, 'projects', projectDirectoryName(entry.cwd), `${entry.sessionId}.jsonl`)
+}
+
 export function createClaudeSource(options: ClaudeSourceOptions = {}): AgentSource {
   const claudeDir = options.claudeDir ?? join(homedir(), '.claude')
 
@@ -68,21 +95,8 @@ export function createClaudeSource(options: ClaudeSourceOptions = {}): AgentSour
     profile: claudeProfile,
     report: normalizeStatusline,
     async read(context): Promise<AgentSession | undefined> {
-      // Sem o processo exato não há como saber qual sessão é: melhor nada que a sessão errada
-      if (context.pid === undefined) return undefined
-      const entry = await readRegistry(claudeDir, context.pid)
-      if (!entry) return undefined
-      // O início do processo tem de bater, senão o registro é de um PID que foi reaproveitado
-      if (context.processStart && entry.procStart && entry.procStart !== context.processStart) {
-        return undefined
-      }
-
-      const file = join(
-        claudeDir,
-        'projects',
-        projectDirectoryName(entry.cwd),
-        `${entry.sessionId}.jsonl`,
-      )
+      const file = await transcriptFor(claudeDir, context)
+      if (!file) return undefined
       let summary = summarizeTranscriptTail('')
       for (const bytes of TAIL_STEPS) {
         const text = await readTail(file, bytes).catch(() => undefined)

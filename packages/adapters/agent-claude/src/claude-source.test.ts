@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import type { AgentContext } from '@dck/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createClaudeSource, projectDirectoryName } from './claude-source.ts'
 
@@ -36,8 +37,7 @@ async function transcript(cwd: string, sessionId: string, lines: string[]) {
   await writeFile(join(directory, `${sessionId}.jsonl`), `${lines.join('\n')}\n`)
 }
 
-const read = (context: { cwd: string; pid?: number; processStart?: string }) =>
-  createClaudeSource({ claudeDir }).read(context)
+const read = (context: AgentContext) => createClaudeSource({ claudeDir }).read(context)
 
 describe('projectDirectoryName', () => {
   it('should replace every character that is not a letter or digit with a hyphen', () => {
@@ -128,5 +128,53 @@ describe('createClaudeSource', () => {
     const session = await read({ cwd: '/p/app', pid: 10, processStart: '100' })
 
     expect(session?.details).toEqual([{ id: 'permissionMode', value: 'plan' }])
+  })
+
+  it('should read the transcript the agent reported when it is inside the projects folder', async () => {
+    await transcript('/p/other', 'shown', [response(444)])
+    const path = join(claudeDir, 'projects', projectDirectoryName('/p/other'), 'shown.jsonl')
+
+    const session = await read({ cwd: '/p/app', transcriptPath: path })
+
+    expect(session?.contextTokens).toBe(444)
+  })
+
+  it('should prefer the reported transcript to the one of the process registry', async () => {
+    await registry(10, 'registered', '/p/app')
+    await transcript('/p/app', 'registered', [response(111)])
+    await transcript('/p/app/sub', 'shown', [response(777)])
+    const path = join(claudeDir, 'projects', projectDirectoryName('/p/app/sub'), 'shown.jsonl')
+
+    const session = await read({
+      cwd: '/p/app',
+      pid: 10,
+      processStart: '100',
+      transcriptPath: path,
+    })
+
+    expect(session?.contextTokens).toBe(777)
+  })
+
+  it('should ignore a reported path outside the projects folder and use the registry instead', async () => {
+    await registry(10, 'registered', '/p/app')
+    await transcript('/p/app', 'registered', [response(111)])
+    const outside = join(claudeDir, 'settings.json')
+    await writeFile(outside, response(999))
+
+    const session = await read({
+      cwd: '/p/app',
+      pid: 10,
+      processStart: '100',
+      transcriptPath: outside,
+    })
+
+    expect(session?.contextTokens).toBe(111)
+  })
+
+  it('should ignore a reported path that tries to climb out of the projects folder', async () => {
+    const sneaky = join(claudeDir, 'projects', '..', 'secret.jsonl')
+    await writeFile(join(claudeDir, 'secret.jsonl'), response(555))
+
+    expect(await read({ cwd: '/p/app', transcriptPath: sneaky })).toBeUndefined()
   })
 })

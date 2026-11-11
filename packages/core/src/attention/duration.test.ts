@@ -21,4 +21,9 @@ describe('formatDuration', () => {
   it('should round to the nearest second when the value has milliseconds', () => {
     expect(formatDuration(1499)).toBe('1 s')
   })
+
+  it('should show days and hours when it is a day or more', () => {
+    expect(formatDuration(400_000_000)).toBe('4 d 15 h')
+    expect(formatDuration(172_800_000)).toBe('2 d')
+  })
 })

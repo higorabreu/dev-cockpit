@@ -5,6 +5,7 @@ const number = z.number().nullish()
 
 // Só o que a tela usa do JSON que o Claude Code manda ao statusLine; o resto é ignorado
 const statusline = z.object({
+  transcript_path: z.string().nullish(),
   model: z.object({ id: z.string().nullish() }).nullish(),
   cost: z.object({ total_cost_usd: number }).nullish(),
   context_window: z
@@ -32,7 +33,13 @@ const LIMIT_IDS = { five_hour: 'fiveHour', seven_day: 'sevenDay' } as const
 export function normalizeStatusline(payload: unknown): AgentReportData | undefined {
   const parsed = statusline.safeParse(payload)
   if (!parsed.success) return undefined
-  const { model, cost, context_window: window, rate_limits: rates } = parsed.data
+  const {
+    model,
+    cost,
+    context_window: window,
+    rate_limits: rates,
+    transcript_path: transcript,
+  } = parsed.data
 
   const usage = window?.current_usage
   // Mesma conta do Claude Code: só entrada, cache criado e cache lido; a saída não conta
@@ -55,6 +62,7 @@ export function normalizeStatusline(payload: unknown): AgentReportData | undefin
   }
 
   return {
+    ...(transcript ? { transcriptPath: transcript } : {}),
     ...(model?.id ? { model: model.id } : {}),
     ...(contextTokens !== undefined ? { contextTokens } : {}),
     ...(window?.context_window_size ? { contextWindow: window.context_window_size } : {}),
