@@ -40,4 +40,22 @@ describe('placeTooltip', () => {
     expect(placement.side).toBe('below')
     expect(placement.y).toBe(8)
   })
+
+  it('should sit to the left of the element and centered on it when the left side is preferred', () => {
+    const placement = placeTooltip({ x: 900, y: 100, width: 30, height: 30 }, tip, viewport, 'left')
+
+    expect(placement).toEqual({ x: 900 - 6 - 120, y: 100 + (30 - 28) / 2, side: 'left' })
+  })
+
+  it('should fall back to below the element when there is no room on the left', () => {
+    const placement = placeTooltip({ x: 40, y: 100, width: 30, height: 30 }, tip, viewport, 'left')
+
+    expect(placement.side).toBe('below')
+  })
+
+  it('should stay inside the window vertically when the element is near the bottom', () => {
+    const placement = placeTooltip({ x: 900, y: 590, width: 30, height: 30 }, tip, viewport, 'left')
+
+    expect(placement.y + 28).toBeLessThanOrEqual(600 - 8)
+  })
 })
