@@ -7,6 +7,7 @@ export interface ShortcutActions {
   toggleTheme(): void
   searchProjects(): void
   togglePanel(): void
+  toggleFullHeight(): void
   changeOpacity(direction: 1 | -1): void
   changeFontSize(delta: number | 'reset'): void
 }
@@ -20,6 +21,9 @@ export function bindShortcuts(actions: ShortcutActions): () => void {
       event.stopPropagation()
     }
 
+    if (event.key === 'F11' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+      return run(actions.toggleFullHeight)
+    }
     if (event.ctrlKey && !event.altKey && event.key === 'Tab') {
       return run(event.shiftKey ? actions.previousTab : actions.nextTab)
     }

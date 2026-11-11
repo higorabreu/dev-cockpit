@@ -25,6 +25,8 @@ export interface PanelOptions {
   readonly elements: PanelElements
   readonly sections: readonly PanelSection[]
   title(): string
+  // Chamado depois de um clique de mouse, para o terminal voltar a receber as teclas
+  afterPointer?(): void
   // Carrega os dados das seções abertas; só roda com o painel visível
   refresh(expanded: readonly string[]): Promise<void>
 }
@@ -78,6 +80,21 @@ export function createPanel(options: PanelOptions) {
     } catch {
       // sem armazenamento, o estado vale só nesta execução
     }
+  }
+
+  // Redesenhar troca os botões; quem usa o teclado não pode perder o foco por isso
+  function keepFocus(redraw: () => void) {
+    const active = document.activeElement
+    const toggle = active?.getAttribute('data-toggle')
+    const section = active?.getAttribute('data-section')
+    redraw()
+    const selector = toggle
+      ? `[data-toggle="${toggle}"]`
+      : section
+        ? `[data-section="${section}"]`
+        : ''
+    if (selector)
+      document.querySelector<HTMLElement>(`#panel ${selector}, #rail ${selector}`)?.focus()
   }
 
   function renderRail() {
@@ -204,8 +221,10 @@ export function createPanel(options: PanelOptions) {
     dock.dataset.open = String(state.open)
     panel.style.setProperty('--panel-width', `${state.width}px`)
     split.setAttribute('aria-valuenow', String(state.width))
-    renderRail()
-    if (state.open) renderPanel()
+    keepFocus(() => {
+      renderRail()
+      if (state.open) renderPanel()
+    })
   }
 
   async function refresh() {
@@ -247,12 +266,16 @@ export function createPanel(options: PanelOptions) {
 
   rail.addEventListener('click', (event) => {
     const button = (event.target as Element).closest<HTMLElement>('[data-section]')
-    if (button?.dataset.section) toggleFromRail(button.dataset.section)
+    if (!button?.dataset.section) return
+    toggleFromRail(button.dataset.section)
+    if (event.detail > 0) options.afterPointer?.()
   })
 
   panel.addEventListener('click', (event) => {
     const header = (event.target as Element).closest<HTMLElement>('[data-toggle]')
-    if (header?.dataset.toggle) toggleSection(header.dataset.toggle)
+    if (!header?.dataset.toggle) return
+    toggleSection(header.dataset.toggle)
+    if (event.detail > 0) options.afterPointer?.()
   })
 
   function resize(width: number) {

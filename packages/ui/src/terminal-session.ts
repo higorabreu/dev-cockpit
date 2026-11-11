@@ -44,13 +44,9 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   terminal.open(element)
 
   const clipboard = attachClipboard(terminal, element, api.clipboard, options.onCopied)
-  // Teclas que o xterm não deve enviar ao shell: F11 muda a altura e Ctrl+Shift+C e V copiam e colam
+  // Teclas que o xterm não deve enviar ao shell: Ctrl+Shift+C e V copiam e colam
   terminal.attachCustomKeyEventHandler((event) => {
     if (event.type !== 'keydown') return true
-    if (event.key === 'F11') {
-      api.window.toggleFullHeight()
-      return false
-    }
     if (!event.ctrlKey || !event.shiftKey) return true
     const key = event.key.toLowerCase()
     if (key === 'c' && terminal.hasSelection()) {

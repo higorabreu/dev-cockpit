@@ -121,6 +121,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
       }),
       createGitSection({ snapshot: () => activeSnapshot }),
     ],
+    afterPointer: () => activeSession()?.focus(),
     title: () => {
       const cwd = state.activeId ? watcher.get(state.activeId)?.cwd : undefined
       return cwd ? cwd.replace(/^\/(?:home|Users)\/[^/]+/, '~') : ''
@@ -241,6 +242,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     toggleTheme,
     searchProjects,
     togglePanel,
+    toggleFullHeight: () => api.window.toggleFullHeight(),
     changeOpacity(direction: 1 | -1) {
       opacity = stepOpacity(opacity, direction)
       saveOpacity(opacity)
