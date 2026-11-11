@@ -1,10 +1,12 @@
-import { writeFileSync } from 'node:fs'
+import { spawn } from 'node:child_process'
+import { mkdirSync, openSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { connectTo, defaultEndpoint } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
 import { createDockController, createJsonLogger, hostChannels } from '@dck/core'
 import { app, BrowserWindow, clipboard, globalShortcut, ipcMain, Menu, screen } from 'electron'
+import { launchDaemon } from './daemon-launcher.ts'
 import { startDaemonLink } from './daemon-link.ts'
 import { createElectronDockWindow } from './electron-dock-window.ts'
 import { createElectronIpc } from './electron-ipc.ts'
@@ -81,6 +83,24 @@ app.whenReady().then(() => {
       },
     },
     logger,
+    onUnavailable: () => {
+      mkdirSync(dirname(endpoint), { recursive: true, mode: 0o700 })
+      launchDaemon(
+        {
+          spawn: (command, args, options) =>
+            spawn(command, [...args], {
+              detached: options.detached,
+              stdio: [...options.stdio],
+              env: options.env,
+            }),
+          execPath: process.execPath,
+          script: join(__dirname, 'daemon.cjs'),
+          env: process.env,
+          logFd: openSync(join(dirname(endpoint), 'daemon.log'), 'a'),
+        },
+        logger,
+      )
+    },
     onToggle: () => {
       logger.info('toggle requested by the daemon')
       dock.toggle()

@@ -38,6 +38,11 @@ await build({
   entryPoints: [join(root, 'src/preload.ts')],
   outfile: join(dist, 'preload.cjs'),
 })
+await build({
+  ...common,
+  entryPoints: [join(root, '..', 'daemon', 'src', 'main.ts')],
+  outfile: join(dist, 'daemon.cjs'),
+})
 
 cpSync(join(root, '..', 'ui', 'dist'), join(dist, 'ui'), { recursive: true })
 

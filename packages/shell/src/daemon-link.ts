@@ -14,6 +14,8 @@ export interface DaemonLinkOptions {
   readonly scheduler: Scheduler
   readonly logger: Logger
   onToggle(): void
+  // Chamado na primeira falha de conexão, para quem quiser subir o daemon
+  onUnavailable?(): void
   readonly retryMs?: number
 }
 
@@ -24,6 +26,7 @@ export function startDaemonLink(options: DaemonLinkOptions): { stop(): void } {
   const { connect, scheduler, logger, onToggle } = options
   const retryMs = options.retryMs ?? 2000
   let stopped = false
+  let reportedUnavailable = false
   let cancelRetry: Cancel | undefined
   let closeCurrent: (() => void) | undefined
 
@@ -39,6 +42,10 @@ export function startDaemonLink(options: DaemonLinkOptions): { stop(): void } {
     }
     if (!connected.ok) {
       logger.warn('daemon unavailable, retrying', { reason: connected.error.message })
+      if (!reportedUnavailable) {
+        reportedUnavailable = true
+        options.onUnavailable?.()
+      }
       retry()
       return
     }

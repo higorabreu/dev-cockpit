@@ -109,4 +109,29 @@ describe('startDaemonLink', () => {
 
     expect(calls()).toBe(1)
   })
+
+  it('should report the daemon as unavailable only once when several attempts fail', async () => {
+    const hub = createHub({}, silentLogger)
+    const scheduler = new FakeScheduler()
+    let reports = 0
+    const link = startDaemonLink({
+      connect: async () => fail(errorBody('DCK-DMN-002')),
+      scheduler,
+      logger: silentLogger,
+      onToggle: () => {},
+      onUnavailable: () => {
+        reports += 1
+      },
+      retryMs: 2000,
+    })
+    await tick()
+    scheduler.advance(2000)
+    await tick()
+    scheduler.advance(2000)
+    await tick()
+
+    expect(reports).toBe(1)
+    expect(hub).toBeDefined()
+    link.stop()
+  })
 })
