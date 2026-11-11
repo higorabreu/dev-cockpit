@@ -1,3 +1,4 @@
+import type { AgentSession } from './agent.ts'
 import type { ComposeStatus } from './environment.ts'
 import type { TabNotification } from './notifier.ts'
 import type { Project } from './projects.ts'
@@ -27,6 +28,9 @@ export interface HostApi {
   readonly notifications: {
     show(notification: TabNotification): void
     onClick(listener: (tabId: string) => void): Unsubscribe
+  }
+  readonly agent: {
+    inspect(ptyId: number): Promise<AgentSession | undefined>
   }
   readonly environment: {
     inspect(ptyId: number): Promise<ComposeStatus>
@@ -58,6 +62,7 @@ export const hostChannels = {
   clipboardWrite: 'clipboard:write',
   notificationsShow: 'notifications:show',
   notificationsClick: 'notifications:click',
+  agentInspect: 'agent:inspect',
   environmentInspect: 'environment:inspect',
   sessionActivity: 'session:activity',
   sessionInspect: 'session:inspect',

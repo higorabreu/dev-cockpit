@@ -14,7 +14,7 @@ function setup() {
 
 const busy = { activity: 'busy' as const, process: 'pnpm' }
 const idle = { activity: 'idle' as const, process: 'zsh' }
-const claude = { activity: 'claude' as const, process: 'claude' }
+const agent = { activity: 'agent' as const, process: 'claude' }
 
 describe('createAttentionTracker', () => {
   it('should report a finished command when it ends out of sight after running a while', () => {
@@ -63,9 +63,9 @@ describe('createAttentionTracker', () => {
     expect(tracker.update('a', idle, false)?.process).toBe('pnpm')
   })
 
-  it('should report the end of a claude session when the claude process exits', () => {
+  it('should report the end of an agent session when the agent process exits', () => {
     const { tracker, advance } = setup()
-    tracker.update('a', claude, false)
+    tracker.update('a', agent, false)
     advance(10_000)
 
     expect(tracker.update('a', idle, false)?.process).toBe('claude')

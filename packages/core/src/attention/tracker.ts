@@ -42,8 +42,8 @@ export function createAttentionTracker(options: AttentionOptions) {
       seen: boolean,
     ): FinishedEvent | undefined {
       const state = tabs.get(tabId) ?? {}
-      const wasRunning = state.activity === 'busy' || state.activity === 'claude'
-      const isRunning = current.activity === 'busy' || current.activity === 'claude'
+      const wasRunning = state.activity === 'busy' || state.activity === 'agent'
+      const isRunning = current.activity === 'busy' || current.activity === 'agent'
       let event: FinishedEvent | undefined
 
       if (isRunning && !wasRunning) {

@@ -1,3 +1,5 @@
+import type { AgentProfile } from './agent.ts'
+
 // Letra do estado de um arquivo, como no Source Control: M alterado, A novo no índice, D removido,
 // R renomeado, U não rastreado, ! em conflito
 export type GitFileStatus = 'M' | 'A' | 'D' | 'R' | 'U' | '!'
@@ -55,12 +57,14 @@ export interface ProcessInspector {
   inspect(pid: number): Promise<ProcessInfo | undefined>
 }
 
-export type SessionActivity = 'idle' | 'claude' | 'busy'
+export type SessionActivity = 'idle' | 'agent' | 'busy'
 
 export interface SessionActivityInfo {
   readonly cwd: string
   readonly process: string
   readonly activity: SessionActivity
+  // Presente quando o que roda em primeiro plano é um agente conhecido
+  readonly agent?: AgentProfile
 }
 
 export interface SessionSnapshot extends SessionActivityInfo {

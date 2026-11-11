@@ -1,3 +1,4 @@
+export * from './agent.ts'
 export * from './autostart.ts'
 export * from './clipboard.ts'
 export * from './clock.ts'
