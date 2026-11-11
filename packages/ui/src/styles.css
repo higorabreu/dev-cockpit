@@ -152,6 +152,15 @@ body.full #host {
   background-color: transparent !important;
 }
 
+/* A rolagem nativa do viewport continua, só a barra do sistema some */
+.xterm .xterm-viewport {
+  scrollbar-width: none;
+}
+
+.xterm .xterm-viewport::-webkit-scrollbar {
+  display: none;
+}
+
 body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   display: none !important;
 }
