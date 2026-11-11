@@ -16,6 +16,7 @@ import {
   Menu,
   Notification,
   screen,
+  Tray,
 } from 'electron'
 import { launchDaemon } from './daemon-launcher.ts'
 import { startDaemonLink } from './daemon-link.ts'
@@ -25,10 +26,13 @@ import { createElectronIpc } from './electron-ipc.ts'
 import { createElectronNotifier } from './electron-notifier.ts'
 import { createElectronScreen } from './electron-screen.ts'
 import { createElectronShortcuts } from './electron-shortcuts.ts'
+import { createElectronStatusIcon } from './electron-status-icon.ts'
 import { registerHostBridge } from './host-bridge.ts'
 import { createProjectCatalog } from './project-catalog.ts'
 import { createRecencyStore } from './recency-store.ts'
 import { createSessionInspector } from './session-inspector.ts'
+import { buildTrayMenu } from './tray-menu.ts'
+import { createXdgAutostart, defaultAutostartDirectory } from './xdg-autostart.ts'
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
@@ -184,6 +188,36 @@ app.whenReady().then(() => {
         writeFileSync(screenshotPath, (await window.webContents.capturePage()).toPNG())
       app.quit()
     })
+  }
+
+  // DCK_NO_TRAY existe para os testes automáticos não piscarem ícones na barra do usuário
+  if (!process.env.DCK_NO_TRAY) {
+    const autostart = createXdgAutostart({
+      directory: process.env.DCK_AUTOSTART_DIR ?? defaultAutostartDirectory(process.env, homedir()),
+      name: 'Dev Cockpit',
+      command: app.isPackaged
+        ? [process.execPath, '--no-sandbox']
+        : [process.execPath, app.getAppPath(), '--no-sandbox'],
+      env: { DCK_START_HIDDEN: '1' },
+    })
+    const statusIcons = createElectronStatusIcon(
+      {
+        createTray: (iconPath) => new Tray(iconPath),
+        buildMenu: (template) => Menu.buildFromTemplate(template),
+      },
+      join(__dirname, 'assets', 'icon.png'),
+    )
+    const menuDeps = {
+      toggleWindow: () => dock.toggle(),
+      autostart,
+      quit: () => app.quit(),
+      onChange: () => void refreshTrayMenu(),
+    }
+    const trayIcon = statusIcons.create({ tooltip: 'Dev Cockpit', menu: [] })
+    const refreshTrayMenu = async () => trayIcon.setMenu(await buildTrayMenu(menuDeps))
+    void refreshTrayMenu()
+    app.on('before-quit', () => trayIcon.dispose())
+    logger.info('tray icon created')
   }
 
   app.on('before-quit', () => {
