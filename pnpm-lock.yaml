@@ -21,6 +21,12 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2))
 
+  packages/adapters/docker-cli:
+    dependencies:
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../../core
+
   packages/adapters/linux-proc:
     dependencies:
       '@dck/core':
@@ -79,6 +85,9 @@ importers:
 
   packages/shell:
     dependencies:
+      '@dck/adapter-docker-cli':
+        specifier: workspace:^
+        version: link:../adapters/docker-cli
       '@dck/adapter-linux-proc':
         specifier: workspace:^
         version: link:../adapters/linux-proc
