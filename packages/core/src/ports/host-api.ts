@@ -23,6 +23,7 @@ export interface HostApi {
   }
   readonly projects: {
     list(): Promise<readonly Project[]>
+    touch(path: string): void
   }
   readonly window: {
     toggleFullHeight(): void
@@ -41,6 +42,7 @@ export const hostChannels = {
   clipboardRead: 'clipboard:read',
   clipboardWrite: 'clipboard:write',
   projectsList: 'projects:list',
+  projectsTouch: 'projects:touch',
   windowToggleFullHeight: 'window:toggle-full-height',
   windowShown: 'window:shown',
   windowFullHeight: 'window:full-height',
