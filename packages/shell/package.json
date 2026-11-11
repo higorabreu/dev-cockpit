@@ -10,7 +10,6 @@
     "start": "electron . --no-sandbox"
   },
   "dependencies": {
-    "@dck/adapter-agent-claude": "workspace:^",
     "@dck/adapter-docker-cli": "workspace:^",
     "@dck/adapter-linux-proc": "workspace:^",
     "@dck/adapter-node-git": "workspace:^",

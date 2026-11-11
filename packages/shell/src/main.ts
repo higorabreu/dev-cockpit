@@ -2,7 +2,6 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { createClaudeSource } from '@dck/adapter-agent-claude'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
 import { createProcessInspector, createProcessScanner } from '@dck/adapter-linux-proc'
 import { createGitInspector } from '@dck/adapter-node-git'
@@ -20,8 +19,6 @@ import {
   screen,
   Tray,
 } from 'electron'
-import { createAgentInspector } from './agent-inspector.ts'
-import { createAgentReports } from './agent-reports.ts'
 import { launchDaemon } from './daemon-launcher.ts'
 import { startDaemonLink } from './daemon-link.ts'
 import { logDockWindow, logScreen } from './dock-log.ts'
@@ -90,10 +87,6 @@ app.whenReady().then(() => {
     heightRatio,
   })
 
-  // Para aceitar outro agente basta acrescentar a fonte dele aqui
-  const agentSources = [createClaudeSource()]
-  const agentReports = createAgentReports(agentSources)
-
   logger.info('notifications available', { supported: Notification.isSupported() })
 
   const bridge = registerHostBridge({
@@ -110,13 +103,8 @@ app.whenReady().then(() => {
     sessions: createSessionInspector({
       processes: createProcessInspector(),
       git: createGitInspector(),
-      agents: agentSources.map((source) => source.profile),
     }),
-    agents: createAgentInspector({
-      processes: createProcessInspector(),
-      sources: agentSources,
-      report: (ptyId, agentId) => agentReports.latest(ptyId, agentId),
-    }),
+
     environment: createEnvironmentInspector({
       processes: createProcessInspector(),
       compose: createComposeInspector({ stopAt: homedir() }),
@@ -210,11 +198,6 @@ app.whenReady().then(() => {
       }
       await new Promise((resolve) => setTimeout(resolve, 400))
       startDaemonProcess()
-    },
-    onAgentReport: (message) => {
-      const summary = agentReports.accept(message)
-      if (summary) logger.info('agent report received', { ...summary })
-      else logger.warn('agent report ignored')
     },
     onToggle: () => {
       logger.info('toggle requested by the daemon')

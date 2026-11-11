@@ -100,9 +100,6 @@ importers:
 
   packages/shell:
     dependencies:
-      '@dck/adapter-agent-claude':
-        specifier: workspace:^
-        version: link:../adapters/agent-claude
       '@dck/adapter-docker-cli':
         specifier: workspace:^
         version: link:../adapters/docker-cli

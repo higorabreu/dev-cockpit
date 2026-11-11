@@ -1,5 +1,4 @@
 import {
-  type AgentSession,
   type Clipboard,
   type ComposeStatus,
   hostChannels,
@@ -31,7 +30,6 @@ export interface BridgeOptions {
   readonly clipboard: Clipboard
   readonly projects: ProjectCatalog
   readonly notifier: Notifier
-  readonly agents: { session(pid: number, ptyId: number): Promise<AgentSession | undefined> }
   readonly environment: { status(pid: number): Promise<ComposeStatus> }
   readonly sessions: {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
@@ -96,10 +94,7 @@ export function registerHostBridge(options: BridgeOptions) {
       return session ? options.environment.status(session.pid) : { kind: 'none' }
     },
   )
-  ipcMain.handle(hostChannels.agentInspect, (_event, id: number) => {
-    const session = sessions.get(id)
-    return session ? options.agents.session(session.pid, id) : undefined
-  })
+
   ipcMain.handle(hostChannels.sessionActivity, (_event, id: number) => {
     const session = sessions.get(id)
     return session ? options.sessions.activity(session.pid) : undefined
