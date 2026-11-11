@@ -1,6 +1,6 @@
 import { defaultEndpoint } from '@dck/adapter-node-net'
+import { createJsonLogger } from '@dck/core'
 import { startDaemon } from './daemon.ts'
-import { createJsonLogger } from './logger.ts'
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()

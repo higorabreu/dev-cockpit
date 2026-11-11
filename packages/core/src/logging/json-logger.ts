@@ -1,4 +1,4 @@
-import type { LogContext, Logger } from '@dck/core'
+import type { LogContext, Logger } from '../ports/logger.ts'
 
 export function createJsonLogger(write: (line: string) => void): Logger {
   const log = (level: string) => (message: string, context?: LogContext) =>

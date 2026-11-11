@@ -1,6 +1,6 @@
 import { connectTo, defaultEndpoint } from '@dck/adapter-node-net'
-import { silentLogger } from '@dck/core'
-import { createJsonLogger, startDaemon } from '@dck/daemon'
+import { createJsonLogger, silentLogger } from '@dck/core'
+import { startDaemon } from '@dck/daemon'
 import { runCli } from './cli.ts'
 
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
