@@ -18,6 +18,13 @@ function setup() {
     ipcMain,
     ptyHost,
     clipboard,
+    sessions: {
+      snapshot: async (pid: number) => ({
+        cwd: `/pid/${pid}`,
+        process: 'zsh',
+        activity: 'idle' as const,
+      }),
+    },
     projects: {
       list: async () => [{ name: 'alpha', path: '/p/alpha' }],
       touch: async (path: string) => void touched.push(path),
@@ -130,5 +137,24 @@ describe('registerHostBridge clipboard and window', () => {
     call(hostChannels.projectsTouch, '/p/alpha')
 
     expect(touched).toEqual(['/p/alpha'])
+  })
+
+  it('should inspect the process of the session when the interface asks for it', async () => {
+    const { call, ptyHost } = setup()
+    const id = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+
+    const snapshot = await call(hostChannels.sessionInspect, id)
+
+    expect(snapshot).toEqual({
+      cwd: `/pid/${ptyHost.sessions[0]?.pid}`,
+      process: 'zsh',
+      activity: 'idle',
+    })
+  })
+
+  it('should return nothing when the session does not exist', async () => {
+    const { call } = setup()
+
+    expect(await call(hostChannels.sessionInspect, 99)).toBeUndefined()
   })
 })

@@ -2,6 +2,8 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { createProcessInspector } from '@dck/adapter-linux-proc'
+import { createGitInspector } from '@dck/adapter-node-git'
 import { connectTo, defaultEndpoint } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
 import { createDockController, createJsonLogger, hostChannels } from '@dck/core'
@@ -16,6 +18,7 @@ import { createElectronShortcuts } from './electron-shortcuts.ts'
 import { registerHostBridge } from './host-bridge.ts'
 import { createProjectCatalog } from './project-catalog.ts'
 import { createRecencyStore } from './recency-store.ts'
+import { createSessionInspector } from './session-inspector.ts'
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
@@ -71,6 +74,10 @@ app.whenReady().then(() => {
       process.env.DCK_PROJECTS_ROOT ?? join(homedir(), 'projetos'),
       createRecencyStore(join(app.getPath('userData'), 'recent-projects.json'), logger),
     ),
+    sessions: createSessionInspector({
+      processes: createProcessInspector(),
+      git: createGitInspector(),
+    }),
     shell: process.env.SHELL ?? '/bin/bash',
     home: homedir(),
     logger,

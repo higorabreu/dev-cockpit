@@ -23,6 +23,9 @@ const api: HostApi = {
     readText: () => ipcRenderer.invoke(hostChannels.clipboardRead),
     writeText: (text) => ipcRenderer.invoke(hostChannels.clipboardWrite, text),
   },
+  session: {
+    inspect: (ptyId) => ipcRenderer.invoke(hostChannels.sessionInspect, ptyId),
+  },
   projects: {
     list: () => ipcRenderer.invoke(hostChannels.projectsList),
     touch: (path) => ipcRenderer.send(hostChannels.projectsTouch, path),

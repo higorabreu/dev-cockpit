@@ -10,6 +10,8 @@
     "start": "electron . --no-sandbox"
   },
   "dependencies": {
+    "@dck/adapter-linux-proc": "workspace:^",
+    "@dck/adapter-node-git": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
     "@dck/adapter-node-pty": "workspace:^",
     "@dck/core": "workspace:^",
