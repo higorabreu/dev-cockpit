@@ -1,3 +1,5 @@
+export * from './dock/dock-controller.ts'
 export * from './hold-menu/hold-menu.ts'
+export * from './ports/index.ts'
 export * from './recency/recency.ts'
 export * from './tab-switcher/tab-switcher.ts'
