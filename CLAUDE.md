@@ -108,6 +108,19 @@ plans/        contexto, roadmap, decisões e um plano por marco em andamento
 - Fontes: Inter para texto, JetBrains Mono para chaves, branches e comandos.
 - Textos da interface em português do Brasil, diretos. Sem emoji.
 
+## Acessibilidade
+
+- Padrão do projeto: WCAG 2.2 nível AA, nos temas escuro e claro.
+- Contraste de texto de pelo menos 4,5:1 (3:1 para texto grande) e de ícones, bordas e indicadores
+  de estado de pelo menos 3:1, medidos contra o fundo real do elemento. Não usar `opacity` para
+  esmaecer texto ou ícone: o contraste vira imprevisível; usar um token de cor sólido.
+- O contraste é verificado por teste sobre os tokens de `packages/design`; token novo ou par de
+  cores novo entra com a verificação.
+- Estado nunca só por cor: seleção e foco também mudam forma, contorno ou peso.
+- Tudo é operável por teclado, com foco visível, e o movimento respeita `prefers-reduced-motion`.
+- Com a janela transparente a garantia de contraste vale para a opacidade padrão (0,92); abaixo
+  disso o fundo real do desktop passa a contar.
+
 ## Processo
 
 - **Este projeto não usa o fluxo acme/SDD.** Vale acima da regra global do autor. O planejamento
