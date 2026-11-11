@@ -24,9 +24,3 @@ export function activityGlyph(activity: GlyphKind): SVGSVGElement {
   svg.innerHTML = SHAPES[activity]
   return svg
 }
-
-export const ACTIVITY_LABEL: Record<SessionActivity, string> = {
-  claude: 'Claude em execução',
-  idle: 'Aguardando comando',
-  busy: 'Executando',
-}

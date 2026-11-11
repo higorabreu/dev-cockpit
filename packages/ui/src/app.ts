@@ -4,6 +4,7 @@ import {
   closeOtherTabs,
   closeTab,
   createAttentionTracker,
+  createTranslator,
   emptyTabs,
   FONT_SIZE,
   formatDuration,
@@ -22,6 +23,7 @@ import {
 import type { ThemeName } from '@dck/design'
 import { createHoldMenuController } from './hold-menu-controller.ts'
 import { setFullHeight } from './layout-mode.ts'
+import { currentLocale } from './locale.ts'
 import { createNotice } from './notice.ts'
 import { createGitSection } from './panel/git-section.ts'
 import { createPanel } from './panel/panel.ts'
@@ -103,6 +105,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
   let activeSnapshot: SessionSnapshot | undefined
   let autoOpened = false
 
+  const i18n = createTranslator(currentLocale())
   const attention = createAttentionTracker({ clock: { now: () => Date.now() } })
 
   // Visto é a aba ativa numa janela com foco; fora disso o aviso fica pendente
@@ -126,8 +129,12 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
         const finished = attention.update(tab.id, info, isSeen(tab.id))
         if (finished?.notify) {
           api.notifications.show({
-            title: 'Dev Cockpit',
-            body: `${tab.label}: ${finished.process} terminou em ${formatDuration(finished.durationMs)}`,
+            title: i18n.t('notify.title'),
+            body: i18n.t('notify.finished', {
+              tab: tab.label,
+              process: finished.process,
+              duration: formatDuration(finished.durationMs),
+            }),
             tabId: tab.id,
           })
         }
@@ -145,17 +152,24 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
       split: elements.split,
     },
     sections: [
-      createSessionsSection({
-        tabs: () => state.tabs,
-        activeId: () => state.activeId,
-        info: (id) => watcher.get(id),
-        finished: (id) => attention.finished(id),
-        finishedCount: () => attention.unseenIds().length,
-        select: (id) => update(activateTab(state, id)),
-      }),
-      createGitSection({ snapshot: () => activeSnapshot, requestRender: () => panel.render() }),
+      createSessionsSection(
+        {
+          tabs: () => state.tabs,
+          activeId: () => state.activeId,
+          info: (id) => watcher.get(id),
+          finished: (id) => attention.finished(id),
+          finishedCount: () => attention.unseenIds().length,
+          select: (id) => update(activateTab(state, id)),
+        },
+        i18n,
+      ),
+      createGitSection(
+        { snapshot: () => activeSnapshot, requestRender: () => panel.render() },
+        i18n,
+      ),
     ],
     afterPointer: () => activeSession()?.focus(),
+    t: i18n.t,
     title: () => {
       const cwd = state.activeId ? watcher.get(state.activeId)?.cwd : undefined
       return cwd ? cwd.replace(/^\/(?:home|Users)\/[^/]+/, '~') : ''

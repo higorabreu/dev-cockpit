@@ -1,14 +1,15 @@
 import {
-  formatAgo,
   type GitCommit,
   type GitFile,
   type GitStatus,
   type GitSubmodule,
   type SessionSnapshot,
+  type Translator,
   ticketFromBranch,
 } from '@dck/core'
 import { collapseThen } from './collapse.ts'
 import { h, icon } from './dom.ts'
+import { agoText } from './format.ts'
 import type { PanelSection } from './panel.ts'
 
 export interface GitSource {
@@ -33,12 +34,12 @@ function loadGroups(): Record<GroupId, boolean> {
   }
 }
 
-function sync(ahead: number, behind: number) {
+function sync(i18n: Translator, ahead: number, behind: number) {
   const part = (arrow: string, value: number) =>
     h('span', { class: value > 0 ? 'on' : undefined }, `${arrow}${value}`)
   return h(
     'span',
-    { class: 'syncs', 'data-tip': `${ahead} ahead, ${behind} behind` },
+    { class: 'syncs', 'data-tip': i18n.t('git.sync', { behind, ahead }) },
     part('↑', ahead),
     part('↓', behind),
   )
@@ -64,27 +65,35 @@ function fileRow(file: GitFile) {
   )
 }
 
-function commitRow(commit: GitCommit, nowSeconds: number) {
+function commitRow(i18n: Translator, commit: GitCommit, nowSeconds: number) {
   return h(
     'div',
     { class: 'frow' },
     h('span', { class: 'fname', 'data-tip-full': commit.subject }, commit.subject),
-    h('span', { class: 'fs hash', 'data-tip': formatAgo(nowSeconds, commit.time) }, commit.hash),
+    h(
+      'span',
+      { class: 'fs hash', 'data-tip': agoText(i18n, nowSeconds, commit.time) },
+      commit.hash,
+    ),
   )
 }
 
-function submoduleRow(module: GitSubmodule) {
+function submoduleRow(i18n: Translator, module: GitSubmodule) {
   return h(
     'div',
     { class: 'frow' },
     h('span', { class: 'fname' }, module.path),
     module.changed > 0 &&
-      h('span', { class: 'pill', 'data-tip': `${module.changed} changed` }, String(module.changed)),
-    (module.ahead > 0 || module.behind > 0) && sync(module.ahead, module.behind),
+      h(
+        'span',
+        { class: 'pill', 'data-tip': i18n.plural('git.moduleChanges', module.changed) },
+        String(module.changed),
+      ),
+    (module.ahead > 0 || module.behind > 0) && sync(i18n, module.ahead, module.behind),
   )
 }
 
-export function createGitSection(source: GitSource): PanelSection {
+export function createGitSection(source: GitSource, i18n: Translator): PanelSection {
   const groups = loadGroups()
   const entering = new Set<GroupId>()
   const expandedLists = new Set<GroupId>()
@@ -108,7 +117,13 @@ export function createGitSection(source: GitSource): PanelSection {
     else apply()
   }
 
-  function group(id: GroupId, label: string, count: number, rows: () => (HTMLElement | false)[]) {
+  function group(
+    id: GroupId,
+    label: string,
+    count: number,
+    rows: () => (HTMLElement | false)[],
+    tip?: string,
+  ) {
     const open = groups[id]
     const wrap = h(
       'div',
@@ -118,7 +133,13 @@ export function createGitSection(source: GitSource): PanelSection {
     entering.delete(id)
     const head = h(
       'button',
-      { type: 'button', class: 'gh', 'data-focus': `git-${id}`, 'aria-expanded': String(open) },
+      {
+        type: 'button',
+        class: 'gh',
+        'data-focus': `git-${id}`,
+        'data-tip': tip,
+        'aria-expanded': String(open),
+      },
       icon('<path d="M9 6l6 6-6 6"/>', 10, 'gchev'),
       label,
       h('span', { class: 'pill' }, String(count)),
@@ -145,7 +166,9 @@ export function createGitSection(source: GitSource): PanelSection {
         const toggle = h(
           'button',
           { type: 'button', class: 'more', 'data-focus': `git-more-${id}` },
-          open ? 'Show less' : `Show ${items.length - VISIBLE_ROWS} more ${noun}`,
+          open
+            ? i18n.t('git.showLess')
+            : i18n.t('git.showMore', { count: items.length - VISIBLE_ROWS, noun }),
         )
         toggle.addEventListener('click', () => {
           if (open) expandedLists.delete(id)
@@ -172,57 +195,75 @@ export function createGitSection(source: GitSource): PanelSection {
           'div',
           { class: 'brow' },
           icon(BRANCH_ICON, 14, 'branch-icon'),
-          h('b', { class: 'branch' }, git.branch ?? 'HEAD detached'),
-          sync(git.ahead, git.behind),
+          h('b', { class: 'branch' }, git.branch ?? i18n.t('git.detached')),
+          sync(i18n, git.ahead, git.behind),
         ),
         (ticket || git.upstream) &&
           h(
             'div',
             { class: 'lrow' },
-            ticket && h('span', { class: 'chip', 'data-tip': 'Ticket extraído da branch' }, ticket),
+            ticket && h('span', { class: 'chip', 'data-tip': i18n.t('git.ticketTip') }, ticket),
             git.upstream && h('span', { class: 'upstream' }, git.upstream),
           ),
       ),
-      clean && h('p', { class: 'muted' }, 'Working tree clean'),
+      clean && h('p', { class: 'muted' }, i18n.t('git.clean')),
       git.staged.length > 0 &&
-        group('staged', 'Staged', git.staged.length, () =>
-          limited('staged', git.staged, 'files', fileRow),
+        group('staged', i18n.t('git.staged'), git.staged.length, () =>
+          limited('staged', git.staged, i18n.t('git.files'), fileRow),
         ),
       git.changes.length > 0 &&
-        group('changes', 'Changes', git.changes.length, () =>
-          limited('changes', git.changes, 'files', fileRow),
+        group('changes', i18n.t('git.changes'), git.changes.length, () =>
+          limited('changes', git.changes, i18n.t('git.files'), fileRow),
         ),
       git.incoming.length > 0 &&
-        group('incoming', 'Incoming', git.behind, () =>
-          limited('incoming', git.incoming, 'commits', (c) => commitRow(c, nowSeconds)),
+        group(
+          'incoming',
+          i18n.t('git.pull'),
+          git.behind,
+          () =>
+            limited('incoming', git.incoming, i18n.t('git.commits'), (c) =>
+              commitRow(i18n, c, nowSeconds),
+            ),
+          i18n.t('git.pullTip', { upstream: git.upstream ?? 'origin' }),
         ),
       git.outgoing.length > 0 &&
-        group('outgoing', 'Outgoing', git.ahead, () =>
-          limited('outgoing', git.outgoing, 'commits', (c) => commitRow(c, nowSeconds)),
+        group(
+          'outgoing',
+          i18n.t('git.push'),
+          git.ahead,
+          () =>
+            limited('outgoing', git.outgoing, i18n.t('git.commits'), (c) =>
+              commitRow(i18n, c, nowSeconds),
+            ),
+          i18n.t('git.pushTip', { upstream: git.upstream ?? 'origin' }),
         ),
       git.submodules.length > 0 &&
-        group('submodules', 'Submodules', git.submodules.length, () => [
-          ...git.submodules.map(submoduleRow),
+        group('submodules', i18n.t('git.submodules'), git.submodules.length, () => [
+          ...git.submodules.map((module) => submoduleRow(i18n, module)),
           git.submodulesClean > 0 &&
-            h('p', { class: 'muted small' }, `${git.submodulesClean} up to date`),
+            h(
+              'p',
+              { class: 'muted small' },
+              i18n.t('git.modulesClean', { count: git.submodulesClean }),
+            ),
         ]),
     )
   }
 
   return {
     id: 'git',
-    label: 'Git',
+    label: i18n.t('git.label'),
     icon: BRANCH_ICON,
     expandedByDefault: true,
     summary() {
       const git = source.snapshot()?.git
-      return git ? `${git.changed} changes` : ''
+      return git ? i18n.plural('git.summary', git.changed) : ''
     },
     badge: () => undefined,
     body() {
       const snapshot = source.snapshot()
-      if (!snapshot) return h('p', { class: 'muted' }, 'Sem informação')
-      if (!snapshot.git) return h('p', { class: 'muted' }, 'Not a git repository')
+      if (!snapshot) return h('p', { class: 'muted' }, i18n.t('sessions.noInfo'))
+      if (!snapshot.git) return h('p', { class: 'muted' }, i18n.t('git.notRepository'))
       return body(snapshot.git)
     },
   }

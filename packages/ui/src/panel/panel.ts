@@ -1,4 +1,4 @@
-import { clampPanelWidth, PANEL_WIDTH, readPreference } from '@dck/core'
+import { clampPanelWidth, PANEL_WIDTH, readPreference, type Translate } from '@dck/core'
 import { h, icon } from './dom.ts'
 
 export interface PanelSection {
@@ -25,6 +25,7 @@ export interface PanelOptions {
   readonly elements: PanelElements
   readonly sections: readonly PanelSection[]
   title(): string
+  t: Translate
   // Chamado depois de um clique de mouse, para o terminal voltar a receber as teclas
   afterPointer?(): void
   // Carrega os dados das seções abertas; só roda com o painel visível
@@ -142,7 +143,12 @@ export function createPanel(options: PanelOptions) {
     const content = h(
       'div',
       { class: 'pinner' },
-      h('div', { class: 'phead' }, h('b', {}, 'Painel'), h('span', {}, options.title())),
+      h(
+        'div',
+        { class: 'phead' },
+        h('b', {}, options.t('panel.title')),
+        h('span', {}, options.title()),
+      ),
       open.length > 0 && h('div', { class: 'stack' }, ...open.map(sectionBlock)),
       // Recolhidas ficam no fim da coluna, abaixo das abertas; sem nenhuma aberta, alinham no topo
       closed.length > 0 &&
