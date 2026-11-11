@@ -1,0 +1,14 @@
+{
+  "name": "@dck/design",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.json": "./tokens.json"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build:css": "node src/build.ts"
+  }
+}
