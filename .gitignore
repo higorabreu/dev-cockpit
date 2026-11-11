@@ -1,0 +1,16 @@
+node_modules/
+dist/
+out/
+coverage/
+.vite/
+*.log
+pnpm-debug.log*
+.DS_Store
+
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Dados baixados pelos spikes nunca entram no repositório
+spikes/**/data/
