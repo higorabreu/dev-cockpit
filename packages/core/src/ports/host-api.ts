@@ -23,6 +23,7 @@ export interface HostApi {
   readonly window: {
     toggleFullHeight(): void
     onShown(listener: () => void): Unsubscribe
+    onFullHeightChange(listener: (fullHeight: boolean) => void): Unsubscribe
   }
 }
 
@@ -37,4 +38,5 @@ export const hostChannels = {
   clipboardWrite: 'clipboard:write',
   windowToggleFullHeight: 'window:toggle-full-height',
   windowShown: 'window:shown',
+  windowFullHeight: 'window:full-height',
 } as const

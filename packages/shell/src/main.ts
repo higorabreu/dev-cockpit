@@ -64,7 +64,10 @@ app.whenReady().then(() => {
     home: homedir(),
     logger,
     send: (channel, ...args) => window.webContents.send(channel, ...args),
-    toggleFullHeight: () => dock.toggleFullHeight(),
+    toggleFullHeight: () => {
+      dock.toggleFullHeight()
+      window.webContents.send(hostChannels.windowFullHeight, dock.isFullHeight())
+    },
   })
 
   const shortcuts = createElectronShortcuts(globalShortcut)
