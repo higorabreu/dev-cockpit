@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { mkdirSync, openSync, writeFileSync } from 'node:fs'
+import { mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { connectTo, defaultEndpoint } from '@dck/adapter-node-net'
@@ -116,15 +116,25 @@ app.whenReady().then(() => {
     logger.info('window ready', { endpoint })
   })
 
-  // Só para conferir a interface sem olhar a tela: grava uma captura e sai
+  // Só para conferir a interface sem olhar a tela: roda um script na página, grava uma captura e sai
+  const evalScript = process.env.DCK_EVAL
   const screenshotPath = process.env.DCK_SCREENSHOT
-  if (screenshotPath) {
-    window.webContents.once('did-finish-load', () =>
-      setTimeout(async () => {
+  if (evalScript || screenshotPath) {
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+    window.webContents.once('did-finish-load', async () => {
+      await sleep(3000)
+      if (evalScript) {
+        const run = window.webContents.executeJavaScript(readFileSync(evalScript, 'utf8'))
+        await Promise.race([run, sleep(20000)])
+        const result = await window.webContents.executeJavaScript(
+          'JSON.stringify(window.__out ?? null)',
+        )
+        logger.info('eval result', { result: JSON.parse(result) })
+      }
+      if (screenshotPath)
         writeFileSync(screenshotPath, (await window.webContents.capturePage()).toPNG())
-        app.quit()
-      }, 2500),
-    )
+      app.quit()
+    })
   }
 
   app.on('before-quit', () => {
