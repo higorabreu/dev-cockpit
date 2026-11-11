@@ -12,6 +12,7 @@
     "skipLibCheck": true,
     "declaration": true,
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["node"]
   }
 }
