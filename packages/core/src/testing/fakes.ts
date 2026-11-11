@@ -146,12 +146,14 @@ export class FakePtySession implements PtySession {
   readonly pid = 1
   readonly written: string[] = []
   size: { cols: number; rows: number }
+  readonly env: Readonly<Record<string, string>>
   killed = false
   private readonly dataListeners = new Set<(data: string) => void>()
   private readonly exitListeners = new Set<(exit: PtyExit) => void>()
 
   constructor(options: PtyOptions) {
     this.size = { cols: options.cols, rows: options.rows }
+    this.env = options.env ?? {}
   }
 
   write(data: string) {

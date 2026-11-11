@@ -51,6 +51,9 @@ export interface ProcessInfo {
   readonly cwd: string
   // Nome do processo em primeiro plano no terminal da sessão
   readonly foreground: string
+  // Identificação exata desse processo; o início distingue um PID reaproveitado
+  readonly foregroundPid?: number
+  readonly foregroundStart?: string
 }
 
 export interface ProcessInspector {

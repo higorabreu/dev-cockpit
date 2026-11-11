@@ -49,10 +49,18 @@ export interface AgentSession {
   readonly details: readonly AgentDetail[]
 }
 
+// Onde o agente roda: o diretório da aba e, quando se sabe, o processo exato em primeiro plano
+export interface AgentContext {
+  readonly cwd: string
+  readonly pid?: number
+  // Início do processo (starttime do /proc), para não confundir com um PID reaproveitado
+  readonly processStart?: string
+}
+
 // Uma fonte de dados de um agente: sabe reconhecê-lo e ler a sessão dele a partir do diretório
 export interface AgentSource {
   readonly profile: AgentProfile
-  read(cwd: string): Promise<AgentSession | undefined>
+  read(context: AgentContext): Promise<AgentSession | undefined>
   // Traduz o dado que o próprio agente empurra para o modelo neutro; indefinido se não reconhece
   report?(payload: unknown): AgentReportData | undefined
 }
