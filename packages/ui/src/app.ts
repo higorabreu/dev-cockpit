@@ -6,8 +6,8 @@ import {
   closeTab,
   createAttentionTracker,
   createTranslator,
+  defaultSettings,
   emptyTabs,
-  FONT_SIZE,
   formatDuration,
   type HostApi,
   type MenuCategory,
@@ -21,30 +21,24 @@ import {
   stepTab,
   type TabsState,
 } from '@dck/core'
-import type { ThemeName } from '@dck/design'
 import { createHoldMenuController } from './hold-menu-controller.ts'
 import { setFullHeight } from './layout-mode.ts'
-import { currentLocale } from './locale.ts'
+import { localeFor } from './locale.ts'
 import { createNotice } from './notice.ts'
 import { createEnvironmentSection } from './panel/environment-section.ts'
 import { createGitSection } from './panel/git-section.ts'
 import { createPanel } from './panel/panel.ts'
 import { createSessionsSection } from './panel/sessions-section.ts'
-import {
-  applyOpacity,
-  loadFontSize,
-  loadOpacity,
-  saveFontSize,
-  saveOpacity,
-} from './preferences.ts'
+import { applyOpacity } from './preferences.ts'
 import { createProjectSearch } from './project-search.ts'
 import { createSessionWatcher } from './sessions-watcher.ts'
+import type { SettingsClient } from './settings-client.ts'
 import { bindShortcuts } from './shortcuts.ts'
 import { translateStatic } from './static-text.ts'
 import { createTabBar } from './tab-bar.ts'
 import { createTabMenu } from './tab-menu.ts'
 import { createTerminalSession, type TerminalSession } from './terminal-session.ts'
-import { applyTheme } from './theme.ts'
+import { applyTheme, themeFor, watchSystemTheme } from './theme.ts'
 
 export interface AppElements {
   readonly bar: HTMLElement
@@ -73,20 +67,19 @@ interface OpenOptions {
 
 const PROJECT_PREFIX = 'open-project:'
 
-export async function startApp(elements: AppElements, api: HostApi, initialTheme: ThemeName) {
+export async function startApp(elements: AppElements, api: HostApi, settings: SettingsClient) {
   const { bar, host } = elements
   const sessions = new Map<string, TerminalSession>()
   const projectTabs = new Map<string, string>()
-  const i18n = createTranslator(currentLocale())
+  const i18n = createTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
   const notice = createNotice(elements.notice, bar, i18n)
   const menu = createTabMenu(elements.menu)
   let state: TabsState = emptyTabs
-  let theme = initialTheme
+  let theme = themeFor(settings.current().theme)
   let counter = 0
-  let opacity = loadOpacity()
-  let fontSize = loadFontSize()
-  applyOpacity(opacity)
+  applyTheme(theme)
+  applyOpacity(settings.current().opacity)
   let projects: readonly Project[] = []
 
   const refreshProjects = () =>
@@ -130,7 +123,10 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
   let environment: ComposeStatus | undefined
   let autoOpened = false
 
-  const attention = createAttentionTracker({ clock: { now: () => Date.now() } })
+  const attention = createAttentionTracker({
+    clock: { now: () => Date.now() },
+    notifyAfterMs: () => settings.current().system.notifyAfterSeconds * 1000,
+  })
 
   // Visto é a aba ativa numa janela com foco; fora disso o aviso fica pendente
   const isSeen = (tabId: string) => tabId === state.activeId && document.hasFocus()
@@ -261,7 +257,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
       host,
       api,
       theme,
-      fontSize,
+      fontSize: settings.current().fontSize,
       ...(options.cwd ? { cwd: options.cwd } : {}),
       exitedText: i18n.t('terminal.exited'),
       onCopied: (text) => notice.copied(text),
@@ -286,11 +282,28 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     void open({ cwd: path, project: path, ...(name ? { label: name } : {}) })
   }
 
+  // Atalho e menu alternam entre claro e escuro: viram a escolha explícita, não mais "do sistema"
   function toggleTheme() {
-    theme = theme === 'dark' ? 'light' : 'dark'
+    void settings.update({ theme: theme === 'dark' ? 'light' : 'dark' })
+  }
+
+  function showTheme() {
+    theme = themeFor(settings.current().theme)
     applyTheme(theme)
     for (const session of sessions.values()) session.setTheme(theme)
   }
+
+  settings.onChange((next, changed) => {
+    if (changed.includes('theme')) showTheme()
+    if (changed.includes('opacity')) applyOpacity(next.opacity)
+    if (changed.includes('fontSize')) {
+      for (const session of sessions.values()) session.setFontSize(next.fontSize)
+    }
+  })
+  // No modo "do sistema" o desktop pode trocar de tema com o cockpit aberto
+  watchSystemTheme(() => {
+    if (settings.current().theme === 'system') showTheme()
+  })
 
   const tabBar = createTabBar(
     bar,
@@ -332,14 +345,14 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
       if (id) update(activateTab(state, id))
     },
     changeOpacity(direction: 1 | -1) {
-      opacity = stepOpacity(opacity, direction)
-      saveOpacity(opacity)
-      applyOpacity(opacity)
+      void settings.update({ opacity: stepOpacity(settings.current().opacity, direction) })
     },
     changeFontSize(delta: number | 'reset') {
-      fontSize = delta === 'reset' ? FONT_SIZE.initial : stepFontSize(fontSize, delta)
-      saveFontSize(fontSize)
-      for (const session of sessions.values()) session.setFontSize(fontSize)
+      const size =
+        delta === 'reset'
+          ? defaultSettings.fontSize
+          : stepFontSize(settings.current().fontSize, delta)
+      void settings.update({ fontSize: size })
     },
   }
   bindShortcuts(actions)
@@ -436,6 +449,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
         else commands[item.id]?.()
       },
       switchTo: (id) => update(activateTab(state, id)),
+      triggerCode: () => settings.current().shortcuts.holdTrigger,
     },
     {
       after(milliseconds, task) {
@@ -449,7 +463,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
   api.window.onFullHeightChange((full) => {
     setFullHeight(full, [bar, elements.main])
     // Em altura total sobra espaço: o painel abre sozinho e volta ao que era ao sair
-    if (full && !panel.isOpen()) {
+    if (full && settings.current().window.panelOnFullHeight && !panel.isOpen()) {
       panel.open()
       autoOpened = true
     } else if (!full && autoOpened) {

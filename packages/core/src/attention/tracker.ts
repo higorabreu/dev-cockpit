@@ -15,7 +15,8 @@ export interface FinishedEvent extends FinishedCommand {
 export interface AttentionOptions {
   readonly clock: Clock
   readonly markAfterMs?: number
-  readonly notifyAfterMs?: number
+  // Uma função permite mudar o limiar nas configurações com o app aberto
+  readonly notifyAfterMs?: number | (() => number)
 }
 
 interface TabState {
@@ -30,7 +31,10 @@ const DEFAULT_NOTIFY_AFTER_MS = 30_000
 // Reconhece quando algo que rodava na aba termina fora da vista do usuário
 export function createAttentionTracker(options: AttentionOptions) {
   const markAfter = options.markAfterMs ?? DEFAULT_MARK_AFTER_MS
-  const notifyAfter = options.notifyAfterMs ?? DEFAULT_NOTIFY_AFTER_MS
+  const notifyAfter = () => {
+    const value = options.notifyAfterMs
+    return typeof value === 'function' ? value() : (value ?? DEFAULT_NOTIFY_AFTER_MS)
+  }
   const tabs = new Map<string, TabState>()
   // Em ordem de chegada: a mais antiga primeiro
   const unseen = new Map<string, FinishedCommand>()
@@ -56,7 +60,7 @@ export function createAttentionTracker(options: AttentionOptions) {
         if (!seen && durationMs >= markAfter) {
           unseen.delete(tabId)
           unseen.set(tabId, { process, durationMs })
-          event = { tabId, process, durationMs, notify: durationMs >= notifyAfter }
+          event = { tabId, process, durationMs, notify: durationMs >= notifyAfter() }
         }
         state.startedAt = undefined
         state.process = undefined

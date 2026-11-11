@@ -1,14 +1,26 @@
 import { buildTerminalTheme, type ThemeName, tokens } from '@dck/design'
 
-const storageKey = 'dck-theme'
+export type ThemeSetting = ThemeName | 'system'
 
-export function currentTheme(): ThemeName {
-  const stored = localStorage.getItem(storageKey)
-  return stored === 'light' ? 'light' : 'dark'
+// "Do sistema" segue a preferência do desktop; as outras duas são fixas
+export function resolveTheme(setting: ThemeSetting, prefersDark: boolean): ThemeName {
+  if (setting === 'system') return prefersDark ? 'dark' : 'light'
+  return setting
+}
+
+const darkQuery = () => matchMedia('(prefers-color-scheme: dark)')
+
+export const themeFor = (setting: ThemeSetting): ThemeName =>
+  resolveTheme(setting, darkQuery().matches)
+
+// Avisa quando o desktop troca entre claro e escuro; quem chama decide se isso importa
+export function watchSystemTheme(onChange: () => void): () => void {
+  const query = darkQuery()
+  query.addEventListener('change', onChange)
+  return () => query.removeEventListener('change', onChange)
 }
 
 export function applyTheme(name: ThemeName) {
-  localStorage.setItem(storageKey, name)
   document.documentElement.dataset.theme = name
 }
 

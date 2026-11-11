@@ -29,6 +29,8 @@ export interface HoldMenuActions {
   tabs(): readonly MenuTab[]
   run(categoryId: string, item: MenuItem): void
   switchTo(tabId: string): void
+  // Tecla que abre o menu ao ser segurada; vem das configurações e pode mudar com o app aberto
+  triggerCode(): string
 }
 
 export interface HoldMenuElements {
@@ -37,8 +39,6 @@ export interface HoldMenuElements {
   readonly hint: HTMLElement
   readonly bar: HTMLElement
 }
-
-const TRIGGER_CODE = 'ControlRight'
 
 const ARROWS: Record<string, Direction> = {
   ArrowUp: 'up',
@@ -128,7 +128,7 @@ export function createHoldMenuController(
   }
 
   function onKeyDown(event: KeyboardEvent) {
-    if (event.code === TRIGGER_CODE) {
+    if (event.code === actions.triggerCode()) {
       if (!event.repeat) gesture.press()
       return
     }
@@ -160,7 +160,7 @@ export function createHoldMenuController(
   }
 
   function onKeyUp(event: KeyboardEvent) {
-    if (event.code !== TRIGGER_CODE) return
+    if (event.code !== actions.triggerCode()) return
     if (gesture.release()) commit()
     else close()
   }

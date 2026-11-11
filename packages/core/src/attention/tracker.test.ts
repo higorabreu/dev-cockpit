@@ -112,4 +112,18 @@ describe('createAttentionTracker', () => {
 
     expect(tracker.update('a', idle, false)).toBeUndefined()
   })
+
+  it('should follow a threshold that changes while running when it is given as a function', () => {
+    let now = 0
+    let threshold = 60_000
+    const tracker = createAttentionTracker({
+      clock: { now: () => now },
+      notifyAfterMs: () => threshold,
+    })
+    tracker.update('a', busy, false)
+    now += 40_000
+    threshold = 30_000
+
+    expect(tracker.update('a', idle, false)?.notify).toBe(true)
+  })
 })

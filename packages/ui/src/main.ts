@@ -2,7 +2,7 @@ import '@xterm/xterm/css/xterm.css'
 import 'virtual:dck-tokens.css'
 import './styles.css'
 import { startApp } from './app.ts'
-import { applyTheme, currentTheme } from './theme.ts'
+import { createSettingsClient } from './settings-client.ts'
 import { installTooltips } from './tooltip.ts'
 
 const element = (id: string) => {
@@ -12,8 +12,7 @@ const element = (id: string) => {
 }
 
 installTooltips()
-const theme = currentTheme()
-applyTheme(theme)
+const settings = await createSettingsClient(window.dck)
 
 await startApp(
   {
@@ -35,5 +34,5 @@ await startApp(
     hint: element('menu-hint'),
   },
   window.dck,
-  theme,
+  settings,
 )
