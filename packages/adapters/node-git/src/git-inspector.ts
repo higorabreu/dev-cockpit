@@ -83,14 +83,12 @@ export function createGitInspector(options: GitInspectorOptions = {}): GitInspec
         git(top, ['submodule', 'status']),
       ])
 
-      const pointers = new Map(parsed.submodules.map((entry) => [entry.path, entry.pointerChanged]))
       const initialized = parseSubmoduleList(listing ?? '').filter((entry) => entry.initialized)
       const inspected = await Promise.all(
         initialized.map(async (entry): Promise<GitSubmodule> => {
           const own = await ownStatus(join(top, entry.path))
           return {
             path: entry.path,
-            pointerChanged: pointers.get(entry.path) ?? false,
             changed: own?.changed ?? 0,
             ahead: own?.ahead ?? 0,
             behind: own?.behind ?? 0,
@@ -98,8 +96,7 @@ export function createGitInspector(options: GitInspectorOptions = {}): GitInspec
         }),
       )
       const pending = inspected.filter(
-        (module) =>
-          module.pointerChanged || module.changed > 0 || module.ahead > 0 || module.behind > 0,
+        (module) => module.changed > 0 || module.ahead > 0 || module.behind > 0,
       )
 
       return {

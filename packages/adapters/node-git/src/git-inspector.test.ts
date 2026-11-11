@@ -82,22 +82,21 @@ describe('createGitInspector', () => {
     expect(status?.outgoing.map((commit) => commit.subject)).toEqual(['second change'])
   })
 
-  it('should list only the submodules with something pending when a submodule has a new commit', async () => {
+  it('should list only the submodules with unpushed commits when one is ahead of its upstream', async () => {
     const one = await repo('one')
     const two = await repo('two')
     const parent = await repo('parent')
     run(parent, 'submodule', 'add', one, 'one')
     run(parent, 'submodule', 'add', two, 'two')
     run(parent, 'commit', '-m', 'add submodules')
+    run(join(parent, 'one'), 'checkout', 'main')
     await writeFile(join(parent, 'one', 'extra.txt'), 'x')
     run(join(parent, 'one'), 'add', '.')
     run(join(parent, 'one'), 'commit', '-m', 'inside one')
 
     const status = await inspector().status(parent)
 
-    expect(status?.submodules.map((module) => [module.path, module.pointerChanged])).toEqual([
-      ['one', true],
-    ])
+    expect(status?.submodules.map((module) => [module.path, module.ahead])).toEqual([['one', 1]])
     expect(status?.submodulesClean).toBe(1)
     expect(status?.changes).toEqual([])
   })
@@ -111,6 +110,6 @@ describe('createGitInspector', () => {
 
     const status = await inspector().status(parent)
 
-    expect(status?.submodules[0]).toMatchObject({ path: 'one', changed: 1, pointerChanged: false })
+    expect(status?.submodules[0]).toMatchObject({ path: 'one', changed: 1 })
   })
 })
