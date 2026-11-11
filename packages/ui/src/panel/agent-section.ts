@@ -1,4 +1,11 @@
-import { type AgentSession, contextPercentage, type Translator, tokenScale } from '@dck/core'
+import {
+  type AgentLimit,
+  type AgentSession,
+  contextPercentage,
+  formatDuration,
+  type Translator,
+  tokenScale,
+} from '@dck/core'
 import { h } from './dom.ts'
 import { agoText } from './format.ts'
 import type { PanelSection } from './panel.ts'
@@ -17,6 +24,42 @@ function tokensText(i18n: Translator, count: number): string {
 
 function detailLabel(i18n: Translator, id: string): string {
   return id === 'permissionMode' ? i18n.t('agent.detail.permissionMode') : id
+}
+
+const meter = (percentage: number) =>
+  h(
+    'div',
+    { class: 'meter', role: 'img', 'aria-label': `${percentage}%` },
+    h('i', { style: `width:${Math.min(100, Math.max(0, percentage))}%` }),
+  )
+
+function limitLabel(i18n: Translator, id: string): string {
+  if (id === 'fiveHour') return i18n.t('agent.limit.fiveHour')
+  if (id === 'sevenDay') return i18n.t('agent.limit.sevenDay')
+  return id
+}
+
+function limitBlock(i18n: Translator, limit: AgentLimit, nowMs: number) {
+  const used = Math.round(limit.usedPercentage)
+  const remaining = limit.resetsAt - nowMs
+  return h(
+    'div',
+    { class: 'group' },
+    h(
+      'div',
+      { class: 'kvrow' },
+      h('span', { class: 'klabel' }, limitLabel(i18n, limit.id)),
+      h('span', { class: 'kvalue' }, `${used}%`),
+    ),
+    meter(used),
+    h(
+      'span',
+      { class: 'esub' },
+      remaining > 0
+        ? i18n.t('agent.limit.resets', { time: formatDuration(remaining) })
+        : i18n.t('agent.limit.resetsNow'),
+    ),
+  )
 }
 
 const row = (label: string, value: string, tip?: string) =>
@@ -54,12 +97,7 @@ function body(i18n: Translator, session: AgentSession): HTMLElement {
           h('span', { class: 'klabel' }, i18n.t('agent.context')),
           h('span', { class: 'kvalue' }, tokensText(i18n, session.contextTokens)),
         ),
-        percentage !== undefined &&
-          h(
-            'div',
-            { class: 'meter', role: 'img', 'aria-label': `${percentage}%` },
-            h('i', { style: `width:${percentage}%` }),
-          ),
+        percentage !== undefined && meter(percentage),
         session.contextWindow !== undefined &&
           h(
             'span',
@@ -72,6 +110,7 @@ function body(i18n: Translator, session: AgentSession): HTMLElement {
         i18n.t('agent.cost'),
         `US$ ${session.costUsd.toFixed(2)}${session.costEstimated ? ` (${i18n.t('agent.costEstimated')})` : ''}`,
       ),
+    ...(session.limits ?? []).map((limit) => limitBlock(i18n, limit, nowSeconds * 1000)),
     session.lastResponseAt !== undefined &&
       row(i18n.t('agent.lastResponse'), agoText(i18n, nowSeconds, session.lastResponseAt / 1000)),
     session.title && row(i18n.t('agent.session'), session.title),
