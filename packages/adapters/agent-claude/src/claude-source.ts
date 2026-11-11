@@ -2,6 +2,7 @@ import { open, readdir, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { AgentProfile, AgentSession, AgentSource } from '@dck/core'
+import { normalizeStatusline } from './statusline.ts'
 import { summarizeTranscriptTail } from './transcript.ts'
 
 export const claudeProfile: AgentProfile = {
@@ -60,6 +61,7 @@ export function createClaudeSource(options: ClaudeSourceOptions = {}): AgentSour
 
   return {
     profile: claudeProfile,
+    report: normalizeStatusline,
     async read(cwd): Promise<AgentSession | undefined> {
       const file = await newestTranscript(join(root, projectDirectoryName(cwd)))
       if (!file) return undefined
