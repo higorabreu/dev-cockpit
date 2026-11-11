@@ -1,6 +1,7 @@
 import {
   activateTab,
   activateTabAt,
+  type ComposeStatus,
   closeOtherTabs,
   closeTab,
   createAttentionTracker,
@@ -25,6 +26,7 @@ import { createHoldMenuController } from './hold-menu-controller.ts'
 import { setFullHeight } from './layout-mode.ts'
 import { currentLocale } from './locale.ts'
 import { createNotice } from './notice.ts'
+import { createEnvironmentSection } from './panel/environment-section.ts'
 import { createGitSection } from './panel/git-section.ts'
 import { createPanel } from './panel/panel.ts'
 import { createSessionsSection } from './panel/sessions-section.ts'
@@ -103,6 +105,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
 
   let activeSnapshot: SessionSnapshot | undefined
+  let environment: ComposeStatus | undefined
   let autoOpened = false
 
   const i18n = createTranslator(currentLocale())
@@ -167,6 +170,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
         { snapshot: () => activeSnapshot, requestRender: () => panel.render() },
         i18n,
       ),
+      createEnvironmentSection({ status: () => environment }, i18n),
     ],
     afterPointer: () => activeSession()?.focus(),
     t: i18n.t,
@@ -174,9 +178,15 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
       const cwd = state.activeId ? watcher.get(state.activeId)?.cwd : undefined
       return cwd ? cwd.replace(/^\/(?:home|Users)\/[^/]+/, '~') : ''
     },
-    refresh: async () => {
+    refresh: async (expanded) => {
       const id = activeSession()?.ptyId
-      activeSnapshot = id === undefined ? undefined : await api.session.inspect(id)
+      // O Docker só é consultado com a seção aberta: é a leitura mais pesada do painel
+      const [snapshot, containers] = await Promise.all([
+        id === undefined ? undefined : api.session.inspect(id),
+        id !== undefined && expanded.includes('env') ? api.environment.inspect(id) : undefined,
+      ])
+      activeSnapshot = snapshot
+      if (containers) environment = containers
       await watcher.poll()
     },
   })

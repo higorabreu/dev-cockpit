@@ -1031,3 +1031,80 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 #tooltip[hidden] {
   display: none;
 }
+
+.ehead {
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ehead-icon {
+  flex: none;
+}
+
+.elist {
+  display: flex;
+  flex-direction: column;
+}
+
+.erow {
+  margin-inline: -8px;
+  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: var(--radius-medium);
+}
+
+.erow:hover {
+  background: var(--hover);
+}
+
+.etext {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.ename {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.erow[data-state="stopped"] .ename,
+.erow[data-state="paused"] .ename {
+  color: var(--muted);
+}
+
+.esub {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eright {
+  flex: none;
+  max-width: 45%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.estate {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.glyph-running,
+.glyph-stopped,
+.glyph-paused {
+  color: var(--muted);
+}
