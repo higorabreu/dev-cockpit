@@ -69,8 +69,12 @@ plans/        contexto, roadmap, decisões e um plano por marco em andamento
 ## Padrões de código
 
 - TypeScript estrito, sem `any`. Aspas simples, sem ponto e vírgula (Biome).
-- Nomes bons no lugar de comentários. Comentar só o porquê (workaround, armadilha, restrição
-  externa), em uma linha seca. Nunca descrever o que a linha seguinte já diz.
+- Código limpo e desacoplado. Módulos dependem de portas e de contratos pequenos, nunca da
+  implementação de outro módulo; dependências entram por parâmetro, não por import de singleton;
+  uma responsabilidade por módulo e por função.
+- Nomes bons no lugar de comentários. Comentar só o essencial: o porquê de uma decisão não óbvia,
+  um workaround, uma armadilha ou uma restrição externa, em uma linha seca. Sem comentário que
+  descreva o que o código já diz, sem docblock em função trivial, sem exagero.
 - Falhas esperadas retornam `Result`; exceção só para bug. Nunca silenciar com catch vazio.
 - Códigos de erro `DCK-{DOMÍNIO}-{SEQ}` em `error-codes.json`. Código sem uso é removido, nunca
   marcado como obsoleto.
