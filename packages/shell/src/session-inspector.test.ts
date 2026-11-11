@@ -2,7 +2,20 @@ import type { GitStatus } from '@dck/core'
 import { describe, expect, it } from 'vitest'
 import { createSessionInspector } from './session-inspector.ts'
 
-const status: GitStatus = { root: '/p/app', branch: 'main', changed: 2, ahead: 1, behind: 0 }
+const status: GitStatus = {
+  root: '/p/app',
+  branch: 'main',
+  upstream: 'origin/main',
+  changed: 2,
+  staged: [],
+  changes: [],
+  ahead: 1,
+  behind: 0,
+  outgoing: [],
+  incoming: [],
+  submodules: [],
+  submodulesClean: 0,
+}
 
 const inspector = (foreground: string | undefined, git: GitStatus | undefined) =>
   createSessionInspector({
