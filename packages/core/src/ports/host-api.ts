@@ -1,3 +1,4 @@
+import type { TabNotification } from './notifier.ts'
 import type { Project } from './projects.ts'
 import type { PtyExit, Unsubscribe } from './pty.ts'
 import type { SessionActivityInfo, SessionSnapshot } from './session.ts'
@@ -21,6 +22,10 @@ export interface HostApi {
   readonly clipboard: {
     readText(): Promise<string>
     writeText(text: string): Promise<void>
+  }
+  readonly notifications: {
+    show(notification: TabNotification): void
+    onClick(listener: (tabId: string) => void): Unsubscribe
   }
   readonly session: {
     // Leve, sem git: serve para vigiar todas as abas
@@ -47,6 +52,8 @@ export const hostChannels = {
   ptyExit: 'pty:exit',
   clipboardRead: 'clipboard:read',
   clipboardWrite: 'clipboard:write',
+  notificationsShow: 'notifications:show',
+  notificationsClick: 'notifications:click',
   sessionActivity: 'session:activity',
   sessionInspect: 'session:inspect',
   projectsList: 'projects:list',
