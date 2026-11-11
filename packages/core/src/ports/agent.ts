@@ -12,6 +12,25 @@ export interface AgentDetail {
   readonly value: string
 }
 
+// Um limite de uso da conta, como a janela de 5 horas
+export interface AgentLimit {
+  // Identificador conhecido (`fiveHour`, `sevenDay`) que a interface sabe traduzir
+  readonly id: string
+  readonly usedPercentage: number
+  // Quando o limite renova, em milissegundos desde 1970
+  readonly resetsAt: number
+}
+
+// O que o agente empurra durante a sessão (por exemplo pelo statusLine do Claude Code)
+export interface AgentReportData {
+  readonly model?: string
+  readonly contextTokens?: number
+  readonly contextWindow?: number
+  readonly costUsd?: number
+  readonly costEstimated?: boolean
+  readonly limits?: readonly AgentLimit[]
+}
+
 // O que se sabe de uma sessão de agente. Tudo é opcional: cada fonte informa só o que tem,
 // e a interface mostra apenas o que chegou
 export interface AgentSession {
@@ -26,6 +45,7 @@ export interface AgentSession {
   // Instante da última resposta, em milissegundos desde 1970
   readonly lastResponseAt?: number
   readonly title?: string
+  readonly limits?: readonly AgentLimit[]
   readonly details: readonly AgentDetail[]
 }
 
@@ -33,4 +53,6 @@ export interface AgentSession {
 export interface AgentSource {
   readonly profile: AgentProfile
   read(cwd: string): Promise<AgentSession | undefined>
+  // Traduz o dado que o próprio agente empurra para o modelo neutro; indefinido se não reconhece
+  report?(payload: unknown): AgentReportData | undefined
 }
