@@ -20,6 +20,7 @@ type Attempt = () => Result<Transport, ErrorBody>
 function start(
   attempts: Attempt[],
   replaceDaemon?: (shutdown: () => Promise<boolean>) => Promise<void>,
+  onAgentReport?: (message: unknown) => void,
 ) {
   const scheduler = new FakeScheduler()
   const toggles: number[] = []
@@ -36,7 +37,11 @@ function start(
     scheduler,
     logger: silentLogger,
     onToggle: () => toggles.push(1),
-    onAgentReport: (message) => reports.push(message),
+    onAgentReport:
+      onAgentReport ??
+      ((message) => {
+        reports.push(message)
+      }),
     replaceDaemon,
     retryMs: 2000,
   })
@@ -218,5 +223,20 @@ describe('startDaemonLink', () => {
       expect(replaced).toBe(2)
       link.stop()
     })
+  })
+
+  it('should keep the link working when the agent report handler throws', async () => {
+    const hub = createHub({}, silentLogger)
+    const { toggles, link } = start([() => ok(connectLoopback(hub))], undefined, () => {
+      throw new Error('boom')
+    })
+    await tick()
+
+    hub.publish('agent', { agent: 'claude', ptyId: 1, payload: {} })
+    hub.publish('window', { action: 'toggle' })
+    await tick()
+
+    expect(toggles).toHaveLength(1)
+    link.stop()
   })
 })

@@ -35,16 +35,22 @@ describe('createAgentReports', () => {
 
     const accepted = reports.accept({ agent: 'fake', ptyId: 2, payload: { tokens: 500 } })
 
-    expect(accepted).toBe(true)
+    expect(accepted).toMatchObject({
+      agent: 'fake',
+      ptyId: 2,
+      context: true,
+      cost: false,
+      limits: 0,
+    })
     expect(reports.latest(2, 'fake')).toEqual({ contextTokens: 500 })
   })
 
   it('should refuse a report when the agent is unknown or the message is malformed', () => {
     const { reports } = setup()
 
-    expect(reports.accept({ agent: 'other', ptyId: 2, payload: {} })).toBe(false)
-    expect(reports.accept({ agent: 'fake', ptyId: 'x' })).toBe(false)
-    expect(reports.accept('nope')).toBe(false)
+    expect(reports.accept({ agent: 'other', ptyId: 2, payload: {} })).toBeUndefined()
+    expect(reports.accept({ agent: 'fake', ptyId: 'x' })).toBeUndefined()
+    expect(reports.accept('nope')).toBeUndefined()
   })
 
   it('should share the account limits with every terminal of the agent when one reports them', () => {
@@ -78,5 +84,26 @@ describe('createAgentReports', () => {
     reports.forget(1)
 
     expect(reports.latest(1, 'fake')).toBeUndefined()
+  })
+
+  it('should describe what a report carried without exposing the values when accepting', () => {
+    const { reports } = setup()
+
+    const summary = reports.accept({
+      agent: 'fake',
+      ptyId: 1,
+      payload: { tokens: 123456, limit: 40 },
+    })
+
+    expect(summary).toEqual({
+      agent: 'fake',
+      ptyId: 1,
+      context: true,
+      window: false,
+      cost: false,
+      limits: 1,
+      transcript: false,
+    })
+    expect(JSON.stringify(summary)).not.toContain('123456')
   })
 })

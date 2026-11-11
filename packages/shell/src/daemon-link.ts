@@ -75,11 +75,19 @@ export function startDaemonLink(options: DaemonLinkOptions): { stop(): void } {
       client.close()
       return
     }
+    // Um erro num tratador não pode subir até o processo principal: registra e segue
+    const guard = (name: string, handler: () => void) => {
+      try {
+        handler()
+      } catch (error) {
+        logger.error('daemon event handler failed', { event: name, error: String(error) })
+      }
+    }
     const subscribed = await client.subscribe('window', (data) => {
-      if (windowEvent.safeParse(data).success) onToggle()
+      if (windowEvent.safeParse(data).success) guard('window', onToggle)
     })
     if (subscribed.ok) logger.info('daemon connected')
-    await client.subscribe('agent', (data) => options.onAgentReport?.(data))
+    await client.subscribe('agent', (data) => guard('agent', () => options.onAgentReport?.(data)))
   }
 
   void attempt()

@@ -44,6 +44,14 @@ const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
 const shortcutKey = process.env.DCK_KEY ?? 'F12'
 const heightRatio = Number(process.env.DCK_HEIGHT) || 0.5
 
+// Sem isto o Electron abre um diálogo atrás da janela translúcida; aqui o erro vai para o log
+process.on('uncaughtException', (error) => {
+  logger.error('uncaught exception in main', { error: String(error), stack: error.stack })
+})
+process.on('unhandledRejection', (reason) => {
+  logger.error('unhandled rejection in main', { reason: String(reason) })
+})
+
 if (!app.requestSingleInstanceLock()) app.quit()
 
 app.whenReady().then(() => {
@@ -190,14 +198,23 @@ app.whenReady().then(() => {
           endpoint: process.env.DCK_ENDPOINT,
           exclude: process.pid,
         })
-        for (const pid of pids) process.kill(pid, 'SIGTERM')
+        for (const pid of pids) {
+          try {
+            process.kill(pid, 'SIGTERM')
+          } catch (error) {
+            // O processo pode já ter saído entre achar e matar
+            logger.warn('could not stop stale daemon', { pid, error: String(error) })
+          }
+        }
         logger.warn('stale daemon stopped', { pids })
       }
       await new Promise((resolve) => setTimeout(resolve, 400))
       startDaemonProcess()
     },
     onAgentReport: (message) => {
-      if (!agentReports.accept(message)) logger.warn('agent report ignored')
+      const summary = agentReports.accept(message)
+      if (summary) logger.info('agent report received', { ...summary })
+      else logger.warn('agent report ignored')
     },
     onToggle: () => {
       logger.info('toggle requested by the daemon')
