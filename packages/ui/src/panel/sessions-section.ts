@@ -18,13 +18,16 @@ export interface SessionsSource {
   select(id: string): void
 }
 
-const RANK = { claude: 0, busy: 1, idle: 2 } as const
+const RANK = { agent: 0, busy: 1, idle: 2 } as const
 const folder = (path: string) => path.split('/').filter(Boolean).at(-1) ?? path
 
 function describe(i18n: Translator, info: SessionActivityInfo | undefined) {
   if (!info) return i18n.t('sessions.noInfo')
   if (info.activity === 'busy') return i18n.t('sessions.busy', { process: info.process })
-  return i18n.t(info.activity === 'claude' ? 'sessions.claude' : 'sessions.idle')
+  if (info.activity === 'agent') {
+    return i18n.t('sessions.agent', { agent: info.agent?.name ?? info.process })
+  }
+  return i18n.t('sessions.idle')
 }
 
 export function createSessionsSection(source: SessionsSource, i18n: Translator): PanelSection {

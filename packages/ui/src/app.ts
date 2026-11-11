@@ -1,4 +1,5 @@
 import {
+  type AgentSession,
   activateTab,
   activateTabAt,
   type ComposeStatus,
@@ -26,6 +27,7 @@ import { createHoldMenuController } from './hold-menu-controller.ts'
 import { setFullHeight } from './layout-mode.ts'
 import { currentLocale } from './locale.ts'
 import { createNotice } from './notice.ts'
+import { createAgentSection } from './panel/agent-section.ts'
 import { createEnvironmentSection } from './panel/environment-section.ts'
 import { createGitSection } from './panel/git-section.ts'
 import { createPanel } from './panel/panel.ts'
@@ -106,6 +108,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
 
   let activeSnapshot: SessionSnapshot | undefined
   let environment: ComposeStatus | undefined
+  let agentState: { session: AgentSession | undefined } | undefined
   let autoOpened = false
 
   const i18n = createTranslator(currentLocale())
@@ -170,6 +173,7 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
         { snapshot: () => activeSnapshot, requestRender: () => panel.render() },
         i18n,
       ),
+      createAgentSection({ state: () => agentState }, i18n),
       createEnvironmentSection({ status: () => environment }, i18n),
     ],
     afterPointer: () => activeSession()?.focus(),
@@ -181,12 +185,16 @@ export async function startApp(elements: AppElements, api: HostApi, initialTheme
     refresh: async (expanded) => {
       const id = activeSession()?.ptyId
       // O Docker só é consultado com a seção aberta: é a leitura mais pesada do painel
-      const [snapshot, containers] = await Promise.all([
+      const [snapshot, containers, agent] = await Promise.all([
         id === undefined ? undefined : api.session.inspect(id),
         id !== undefined && expanded.includes('env') ? api.environment.inspect(id) : undefined,
+        id !== undefined && expanded.includes('agent')
+          ? api.agent.inspect(id).then((session) => ({ session }))
+          : undefined,
       ])
       activeSnapshot = snapshot
       if (containers) environment = containers
+      if (agent) agentState = agent
       await watcher.poll()
     },
   })

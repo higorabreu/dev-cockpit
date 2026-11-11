@@ -6,7 +6,7 @@ const SVG = 'http://www.w3.org/2000/svg'
 export type GlyphKind = SessionActivity | 'done' | ContainerState
 
 const SHAPES: Record<GlyphKind, string> = {
-  claude: '<circle cx="8" cy="8" r="5.2" fill="currentColor" stroke="none"/>',
+  agent: '<circle cx="8" cy="8" r="5.2" fill="currentColor" stroke="none"/>',
   idle: '<circle cx="8" cy="8" r="5"/>',
   busy: '<path d="M8 3a5 5 0 1 1-5 5"/>',
   done: '<circle cx="8" cy="8" r="6"/><path d="M5.2 8.2l2 2 3.6-4"/>',

@@ -1108,3 +1108,58 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 .glyph-paused {
   color: var(--muted);
 }
+
+.abody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ahead {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.amodel {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font: 11.5px var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kvrow {
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.klabel {
+  flex: none;
+  color: var(--muted);
+}
+
+.kvalue {
+  min-width: 0;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meter {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--tab-active);
+  overflow: hidden;
+}
+
+.meter i {
+  display: block;
+  height: 100%;
+  background: var(--fg);
+}
