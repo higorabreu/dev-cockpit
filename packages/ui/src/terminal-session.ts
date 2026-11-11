@@ -7,20 +7,41 @@ import { terminalTheme } from './theme.ts'
 
 const FIT_DELAY_MS = 60
 
-export async function openTerminal(host: HTMLElement, api: HostApi, theme: ThemeName) {
+export interface TerminalSession {
+  readonly element: HTMLElement
+  focus(): void
+  fit(): void
+  setTheme(name: ThemeName): void
+  dispose(): void
+}
+
+export interface SessionOptions {
+  readonly host: HTMLElement
+  readonly api: HostApi
+  readonly theme: ThemeName
+  readonly cwd?: string
+  onCopied(text: string): void
+  onExit(): void
+}
+
+export async function createTerminalSession(options: SessionOptions): Promise<TerminalSession> {
+  const { api } = options
+  const element = document.createElement('div')
+  element.className = 'session'
+  options.host.appendChild(element)
+
   const terminal = new Terminal({
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.terminal,
     cursorBlink: true,
     allowTransparency: true,
-    theme: terminalTheme(theme),
+    theme: terminalTheme(options.theme),
   })
   const fit = new FitAddon()
   terminal.loadAddon(fit)
-  terminal.open(host)
-  fit.fit()
+  terminal.open(element)
 
-  const clipboard = attachClipboard(terminal, host, api.clipboard)
+  const clipboard = attachClipboard(terminal, element, api.clipboard, options.onCopied)
   // Teclas que o xterm não deve enviar ao shell: F11 muda a altura e Ctrl+Shift+C e V copiam e colam
   terminal.attachCustomKeyEventHandler((event) => {
     if (event.type !== 'keydown') return true
@@ -41,22 +62,47 @@ export async function openTerminal(host: HTMLElement, api: HostApi, theme: Theme
     return true
   })
 
-  const id = await api.pty.create({ cols: terminal.cols, rows: terminal.rows })
+  // A aba precisa estar visível para o xterm medir as colunas; quem chama mostra antes de criar
+  fit.fit()
+  const id = await api.pty.create({
+    cols: terminal.cols,
+    rows: terminal.rows,
+    ...(options.cwd ? { cwd: options.cwd } : {}),
+  })
   terminal.onData((data) => api.pty.write(id, data))
   terminal.onResize(({ cols, rows }) => api.pty.resize(id, cols, rows))
-  api.pty.onData((sessionId, data) => {
+  const stopData = api.pty.onData((sessionId, data) => {
     if (sessionId === id) terminal.write(data)
   })
-  api.pty.onExit((sessionId) => {
-    if (sessionId === id) terminal.write('\r\n[processo encerrado]\r\n')
+  const stopExit = api.pty.onExit((sessionId) => {
+    if (sessionId !== id) return
+    terminal.write('\r\n[processo encerrado]\r\n')
+    options.onExit()
   })
 
   let fitTimer: ReturnType<typeof setTimeout> | undefined
-  new ResizeObserver(() => {
+  const observer = new ResizeObserver(() => {
     clearTimeout(fitTimer)
-    fitTimer = setTimeout(() => fit.fit(), FIT_DELAY_MS)
-  }).observe(host)
+    fitTimer = setTimeout(() => {
+      if (element.offsetParent !== null) fit.fit()
+    }, FIT_DELAY_MS)
+  })
+  observer.observe(options.host)
 
-  terminal.focus()
-  return { terminal, setTheme: (name: ThemeName) => (terminal.options.theme = terminalTheme(name)) }
+  return {
+    element,
+    focus: () => terminal.focus(),
+    fit: () => fit.fit(),
+    setTheme: (name) => {
+      terminal.options.theme = terminalTheme(name)
+    },
+    dispose() {
+      stopData()
+      stopExit()
+      observer.disconnect()
+      api.pty.kill(id)
+      terminal.dispose()
+      element.remove()
+    },
+  }
 }

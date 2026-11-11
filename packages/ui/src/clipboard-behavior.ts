@@ -8,9 +8,12 @@ export function attachClipboard(
   terminal: Terminal,
   element: HTMLElement,
   clipboard: HostApi['clipboard'],
+  onCopied: (text: string) => void,
 ) {
   const copySelection = () => {
-    if (terminal.hasSelection()) void clipboard.writeText(terminal.getSelection())
+    if (!terminal.hasSelection()) return
+    const text = terminal.getSelection()
+    void clipboard.writeText(text).then(() => onCopied(text))
   }
   const paste = async () => terminal.paste(await clipboard.readText())
 
