@@ -117,6 +117,8 @@ function body(i18n: Translator, session: AgentSession): HTMLElement {
     ...session.details.map((detail) => row(detailLabel(i18n, detail.id), detail.value)),
     session.contextTokens === undefined &&
       session.lastResponseAt === undefined &&
+      session.costUsd === undefined &&
+      !session.limits &&
       !session.title &&
       h('p', { class: 'muted' }, i18n.t('agent.noInfo')),
   )

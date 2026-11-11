@@ -65,6 +65,7 @@ export function installTooltips() {
       { x: box.x, y: box.y, width: box.width, height: box.height },
       { width: size.width, height: size.height },
       { width: window.innerWidth, height: window.innerHeight },
+      anchor.dataset.tipSide === 'left' ? 'left' : 'below',
     )
     tip.style.left = `${Math.round(placement.x)}px`
     tip.style.top = `${Math.round(placement.y)}px`
