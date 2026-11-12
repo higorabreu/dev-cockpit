@@ -362,7 +362,10 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   pendingButton.addEventListener('click', () => {
     onlyPending = !onlyPending
     refilter()
-    input.focus()
+  })
+  // As teclas são ouvidas no campo: depois de clicar em qualquer botão o foco volta para ele, senão os atalhos param
+  box.addEventListener('click', () => {
+    if (isOpen()) input.focus()
   })
   overlay.addEventListener('mousedown', (event) => {
     if (event.target === overlay) close()
