@@ -131,7 +131,6 @@ describe('createStandardsDeps', () => {
     ])
     expect(err().trimEnd().split('\n')).toEqual([
       expect.stringMatching(/^Commit messages: Start with .* a type from feat, fix, /),
-      'AGENTS.md is out of date with the standards. Refresh it with: dck init',
     ])
     expect(shared.startsWith(`${handwritten}\n<!-- dck:start -->\n`)).toBe(true)
     expect(shared).toContain('- Commit messages: ')

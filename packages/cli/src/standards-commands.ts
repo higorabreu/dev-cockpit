@@ -35,9 +35,6 @@ function usage(io: Io, key: MessageKey, args: readonly string[]): number {
   return args.includes('--help') ? EXIT.ok : EXIT.usage
 }
 
-const staleLine = (loaded: LoadedStandards, t: Translate, relative: (path: string) => string) =>
-  t('cli.standards.stale', { file: printable(relative(loaded.agents.file)) })
-
 export function formatStandardsList(
   loaded: LoadedStandards,
   t: Translate,
@@ -59,7 +56,9 @@ export function formatStandardsList(
     ...align(rows),
     ...(invalid.length === 0 ? [] : ['', t('cli.standards.invalid')]),
     ...align(invalid).map((line) => `  ${line}`),
-    ...(loaded.agents.stale ? ['', staleLine(loaded, t, relative)] : []),
+    ...(loaded.agents.stale
+      ? ['', t('cli.standards.stale', { file: printable(relative(loaded.agents.file)) })]
+      : []),
   ]
 }
 
@@ -143,7 +142,6 @@ async function report(
     const note = kind === 'timeout' ? ` (${io.t('cli.check.timeout')})` : ''
     io.err(`${printable(`${title}: ${message}`)}${note}\n`)
   }
-  if (loaded.agents.stale) io.err(`${staleLine(loaded, io.t, deps.relative)}\n`)
   return failures.length === 0 ? EXIT.ok : EXIT.failed
 }
 

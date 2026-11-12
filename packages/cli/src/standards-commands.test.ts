@@ -496,26 +496,19 @@ describe('dck check', () => {
     },
   )
 
-  it.each([
-    ['feat/add-login', EXIT.ok, 1],
-    ['Feature/Add_Login', EXIT.failed, 2],
-  ])(
-    'should mention an out of date agents file without changing the exit code when the branch is %s',
-    async (branch, exit, count) => {
-      const { run, err, workspace } = setup({ branch })
-      await run('standards', 'enable', 'branch-format')
-      await workspace.shareWithAgents(true)
-      await workspace.setEnabled('commit-message', true, 'repository')
+  it('should print nothing when the branch passes and the block of AGENTS.md is out of date (C3)', async () => {
+    const { run, err, out, workspace } = setup({ branch: 'feat/add-login' })
+    await run('standards', 'enable', 'branch-format')
+    await workspace.shareWithAgents(true)
+    await workspace.setEnabled('commit-message', true, 'repository')
+    const printed = out().length
 
-      const code = await run('check', 'branch')
+    const code = await run('check', 'branch')
 
-      expect(code).toBe(exit)
-      expect(lines(err())).toHaveLength(count)
-      expect(lines(err()).at(-1)).toBe(
-        'AGENTS.md is out of date with the standards. Refresh it with: dck init',
-      )
-    },
-  )
+    expect(code).toBe(EXIT.ok)
+    expect(err()).toBe('')
+    expect(out().length).toBe(printed)
+  })
 
   it.each([
     [['check'], EXIT.usage],

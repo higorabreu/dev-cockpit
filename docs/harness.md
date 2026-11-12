@@ -135,8 +135,6 @@ $ echo $?
 - Passing prints nothing and exits with 0. Failing prints one line per failed rule on the error stream, with
   the title of the standard and the message of the rule, and exits with 1.
 - A file that cannot be read exits with 64.
-- When the block in `AGENTS.md` is out of date, one line says so on the error stream. It never changes the
-  exit code.
 
 The command is there for a hook or a script of your own, for example `.git/hooks/commit-msg`:
 
@@ -284,7 +282,7 @@ does not exist):
   text around it as it was.
 - The block is **out of date** when the lines between its markers no longer say what the standards say, for
   example after a standard file was edited by hand. The text around the block and its line endings do not
-  count. `dck standards` and `dck check` say so; `dck init` and `dck standards enable` or
+  count. `dck standards` and the Standards page say so; `dck init` and `dck standards enable` or
   `disable` refresh it.
 
 Claude Code reads `AGENTS.md` by itself when the repository has no `CLAUDE.md`. When there is a `CLAUDE.md`,
