@@ -225,11 +225,11 @@ scanning and search, and system notifications.
 
 Phase 0, the foundation:
 
-- [ ] EXT-T1. `core`: the manifest schema (v1, zod) with `apiVersion` and `engines`, the contribution point
+- [x] EXT-T1. `core`: the manifest schema (v1, zod) with `apiVersion` and `engines`, the contribution point
   registry (register a point, load manifests, hand the validated declarations to the consumer with their
   source), the refusal rules, and source precedence with shadowing. A new error domain `EXT` with its
   catalog entries (invalid manifest, unsupported contribution, incompatible version). Tests for every
-  refusal and for precedence. (F1, F2)
+  refusal and for precedence. (F1, F2) Done as pure functions in `core/src/extensions/` (`loadExtensions`, `contributionsFor`) instead of a stateful registry: the caller passes the known contribution points and the candidates, and gets a report.
 - [ ] EXT-T2. Ports and adapters: an `ExtensionSource` port in the core and a files adapter that reads the
   extensions folder, the global folder and `.dck/`, with the directory access passed in, plus the
   `extensions.disabled` setting through the existing settings model. (F2)
