@@ -8,14 +8,14 @@ export interface FinishedCommand {
 
 export interface FinishedEvent extends FinishedCommand {
   readonly tabId: string
-  // Longo o bastante para valer uma notificação do sistema
+  // Long enough to deserve a system notification
   readonly notify: boolean
 }
 
 export interface AttentionOptions {
   readonly clock: Clock
   readonly markAfterMs?: number
-  // Uma função permite mudar o limiar nas configurações com o app aberto
+  // A function lets the threshold change from settings while the app is open
   readonly notifyAfterMs?: number | (() => number)
 }
 
@@ -28,7 +28,7 @@ interface TabState {
 const DEFAULT_MARK_AFTER_MS = 3000
 const DEFAULT_NOTIFY_AFTER_MS = 30_000
 
-// Reconhece quando algo que rodava na aba termina fora da vista do usuário
+// Detects when something that was running in a tab finishes out of the user's sight
 export function createAttentionTracker(options: AttentionOptions) {
   const markAfter = options.markAfterMs ?? DEFAULT_MARK_AFTER_MS
   const notifyAfter = () => {

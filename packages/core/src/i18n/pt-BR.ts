@@ -1,5 +1,5 @@
-// Catálogo de referência: as chaves daqui definem o tipo das outras línguas.
-// Plural usa o par `chave.one` e `chave.other`, e `{nome}` marca um parâmetro.
+// Reference catalog: the keys here define the type of the other languages.
+// Plural uses the `key.one` and `key.other` pair, and `{name}` marks a parameter.
 export const ptBR = {
   'panel.title': 'Painel',
 

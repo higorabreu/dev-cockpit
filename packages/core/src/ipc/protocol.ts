@@ -74,7 +74,7 @@ function parseLine(line: string): Result<Message, ErrorBody> {
   return parsed.success ? ok(parsed.data) : fail(errorBody('DCK-IPC-004'))
 }
 
-// Mensagens são JSON em linhas; um pedaço pode chegar partido no meio de uma linha
+// Messages are line-delimited JSON; a chunk may arrive split in the middle of a line
 export class LineDecoder {
   private buffer = ''
 

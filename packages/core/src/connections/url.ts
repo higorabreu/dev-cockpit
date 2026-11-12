@@ -1,4 +1,4 @@
-// Aceita o endereço com ou sem /api/v4 e com barra no fim
+// Accepts the address with or without /api/v4 and with a trailing slash
 export function normalizeBaseUrl(input: string): string {
   return input
     .trim()
@@ -8,8 +8,8 @@ export function normalizeBaseUrl(input: string): string {
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
 
-// Devolve o endereço normalizado, ou undefined quando não serve: o token viaja nele, então só https
-// (http apenas na própria máquina) e sem usuário, consulta ou fragmento
+// Returns the normalized address, or undefined when unusable: the token travels with it, so https only
+// (http only on the local machine) and no user, query or fragment
 export function parseServerUrl(input: string): string | undefined {
   const normalized = normalizeBaseUrl(input)
   let url: URL

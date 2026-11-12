@@ -16,7 +16,7 @@ export const mergeRequestSummarySchema = z.object({
   pipeline: z.enum(['success', 'failed', 'running', 'pending', 'canceled', 'none', 'unknown']),
 })
 
-// O que o daemon publica e a interface recebe; validado na borda de cada processo
+// What the daemon publishes and the UI receives; validated at the edge of each process
 export const viewSnapshotSchema = z.object({
   view: z.enum(['review', 'mine']),
   items: z.array(mergeRequestSummarySchema),

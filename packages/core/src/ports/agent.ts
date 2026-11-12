@@ -1,29 +1,29 @@
-// Como reconhecer um agente de código (Claude Code, Codex, Aider...) rodando num terminal
+// How to recognize a coding agent (Claude Code, Codex, Aider...) running in a terminal
 export interface AgentProfile {
   readonly id: string
   readonly name: string
-  // Nomes do processo em primeiro plano que indicam esse agente
+  // Foreground process names that indicate this agent
   readonly processes: readonly string[]
 }
 
 export interface AgentDetail {
-  // Identificador conhecido (como `permissionMode`) que a interface sabe traduzir
+  // Known identifier (like `permissionMode`) that the UI knows how to translate
   readonly id: string
   readonly value: string
 }
 
 // Um limite de uso da conta, como a janela de 5 horas
 export interface AgentLimit {
-  // Identificador conhecido (`fiveHour`, `sevenDay`) que a interface sabe traduzir
+  // Known identifier (`fiveHour`, `sevenDay`) that the UI knows how to translate
   readonly id: string
   readonly usedPercentage: number
-  // Quando o limite renova, em milissegundos desde 1970
+  // When the limit renews, in milliseconds since 1970
   readonly resetsAt: number
 }
 
-// O que o agente empurra durante a sessão (por exemplo pelo statusLine do Claude Code)
+// What the agent pushes during the session (for example through Claude Code's statusLine)
 export interface AgentReportData {
-  // Arquivo da sessão que está na tela, como o agente informa; vale mais que qualquer palpite
+  // Session file on screen, as reported by the agent; beats any guess
   readonly transcriptPath?: string
   readonly model?: string
   readonly contextTokens?: number
@@ -33,38 +33,38 @@ export interface AgentReportData {
   readonly limits?: readonly AgentLimit[]
 }
 
-// O que se sabe de uma sessão de agente. Tudo é opcional: cada fonte informa só o que tem,
-// e a interface mostra apenas o que chegou
+// What is known about an agent session. Everything is optional: each source reports only what it has,
+// and the UI shows only what arrived
 export interface AgentSession {
   readonly agent: AgentProfile
   readonly model?: string
-  // Tokens no contexto na última chamada ao modelo
+  // Tokens in the context at the last model call
   readonly contextTokens?: number
   readonly contextWindow?: number
   readonly costUsd?: number
-  // Quando verdadeiro, o custo é uma estimativa e a interface deve dizer isso
+  // When true, the cost is an estimate and the UI must say so
   readonly costEstimated?: boolean
-  // Instante da última resposta, em milissegundos desde 1970
+  // Time of the last response, in milliseconds since 1970
   readonly lastResponseAt?: number
   readonly title?: string
   readonly limits?: readonly AgentLimit[]
   readonly details: readonly AgentDetail[]
 }
 
-// Onde o agente roda: o diretório da aba e, quando se sabe, o processo exato em primeiro plano
+// Where the agent runs: the tab directory and, when known, the exact foreground process
 export interface AgentContext {
   readonly cwd: string
   readonly pid?: number
-  // Início do processo (starttime do /proc), para não confundir com um PID reaproveitado
+  // Process start (starttime from /proc), to avoid confusing it with a reused PID
   readonly processStart?: string
-  // Arquivo da sessão informado pelo próprio agente, quando ele o empurrou
+  // Session file reported by the agent itself, when it pushed one
   readonly transcriptPath?: string
 }
 
-// Uma fonte de dados de um agente: sabe reconhecê-lo e ler a sessão dele a partir do diretório
+// A data source for an agent: knows how to recognize it and read its session from the directory
 export interface AgentSource {
   readonly profile: AgentProfile
   read(context: AgentContext): Promise<AgentSession | undefined>
-  // Traduz o dado que o próprio agente empurra para o modelo neutro; indefinido se não reconhece
+  // Translates what the agent pushes into the neutral model; undefined if it is not recognized
   report?(payload: unknown): AgentReportData | undefined
 }

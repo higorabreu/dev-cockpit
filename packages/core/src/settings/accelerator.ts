@@ -29,14 +29,14 @@ const isFunctionKey = (key: string) => /^F([1-9]|1\d|2[0-4])$/.test(key)
 
 export type AcceleratorResult =
   | { readonly type: 'accelerator'; readonly value: string }
-  // Ainda só modificadores: continuar esperando
+  // Still only modifiers: keep waiting
   | { readonly type: 'pending' }
   | { readonly type: 'cancel' }
-  // Tecla que não serve como atalho global, com o motivo
+  // Key that cannot serve as a global shortcut, with the reason
   | { readonly type: 'invalid'; readonly reason: 'needsModifier' | 'unsupported' }
 
-// Converte o que o usuário digitou no formato de atalho global do Electron, como "Ctrl+Alt+Space".
-// Letras, números e símbolos exigem um modificador, para não tomar a digitação normal
+// Converts what the user typed into Electron's global shortcut format, like "Ctrl+Alt+Space".
+// Letters, digits and symbols require a modifier, so normal typing is not taken over
 export function acceleratorFromEvent(event: KeyInput): AcceleratorResult {
   if (MODIFIER_KEYS.has(event.key)) return { type: 'pending' }
   if (event.key === 'Escape') return { type: 'cancel' }

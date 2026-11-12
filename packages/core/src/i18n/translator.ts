@@ -4,7 +4,7 @@ import { type MessageKey, ptBR } from './pt-BR.ts'
 export type Locale = 'pt-BR' | 'en'
 export type Params = Readonly<Record<string, string | number>>
 export type Translate = (key: MessageKey, params?: Params) => string
-// Chaves que existem no plural: `chave.one` e `chave.other`
+// Keys that exist in the plural: `key.one` and `key.other`
 export type PluralKey = MessageKey extends infer K
   ? K extends `${infer B}.other`
     ? B
@@ -41,7 +41,7 @@ export function createTranslator(locale: Locale): Translator {
 }
 
 export interface LiveTranslator extends Translator {
-  // Troca a língua: quem guardou `t` ou `plural` passa a traduzir na nova, sem recriar nada
+  // Switches the language: whoever kept `t` or `plural` now translates in the new one, with nothing to recreate
   setLocale(locale: Locale): void
 }
 
@@ -59,7 +59,7 @@ export function createLiveTranslator(initial: Locale): LiveTranslator {
   }
 }
 
-// Língua do sistema, com o português como padrão quando não há correspondência
+// System language, falling back to Portuguese when nothing matches
 export function pickLocale(languages: readonly string[]): Locale {
   for (const language of languages) {
     const lower = language.toLowerCase()

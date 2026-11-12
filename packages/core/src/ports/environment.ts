@@ -5,7 +5,7 @@ export interface ComposeContainer {
   readonly name: string
   readonly state: ContainerState
   readonly health: 'healthy' | 'unhealthy' | undefined
-  // Texto original do Docker, como "Up 17 hours (healthy)", para o tooltip
+  // Original Docker text, like "Up 17 hours (healthy)", for the tooltip
   readonly status: string
 }
 
@@ -19,6 +19,6 @@ export type ComposeStatus =
     }
 
 export interface ComposeInspector {
-  // Procura o arquivo compose a partir do diretório e lê o estado dos containers dele
+  // Finds the compose file starting from the directory and reads the state of its containers
   status(cwd: string): Promise<ComposeStatus>
 }

@@ -1,7 +1,7 @@
 export interface TabNotification {
   readonly title: string
   readonly body: string
-  // Aba para a qual o clique na notificação leva
+  // Tab the notification click leads to
   readonly tabId: string
 }
 

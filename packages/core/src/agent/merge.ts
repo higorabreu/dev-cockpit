@@ -1,6 +1,6 @@
 import type { AgentLimit, AgentReportData, AgentSession } from '../ports/agent.ts'
 
-// Limites que já renovaram deixam de valer: a janela seguinte ainda não tem número
+// Limits that already renewed no longer apply: the next window has no number yet
 export function activeLimits(
   limits: readonly AgentLimit[] | undefined,
   nowMs: number,
@@ -8,7 +8,7 @@ export function activeLimits(
   return (limits ?? []).filter((limit) => limit.resetsAt > nowMs)
 }
 
-// O que o agente empurra é mais completo que o arquivo de sessão e vale por cima dele
+// What the agent pushes is more complete than the session file and takes precedence over it
 export function mergeReport(
   base: AgentSession,
   report: AgentReportData | undefined,

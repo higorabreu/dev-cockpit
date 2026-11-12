@@ -13,7 +13,7 @@ export function stepFontSize(current: number, delta: number): number {
   return clamp(Math.round(current + delta), FONT_SIZE.min, FONT_SIZE.max)
 }
 
-// Valor guardado fora do intervalo ou ilegível volta ao padrão, nunca quebra a janela
+// A stored value that is out of range or unreadable goes back to the default, never breaks the window
 export function readPreference(
   raw: string | null,
   range: { readonly min: number; readonly max: number; readonly initial: number },

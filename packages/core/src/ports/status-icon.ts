@@ -9,12 +9,12 @@ export type StatusMenuEntry =
   | { readonly type: 'separator' }
 
 export interface StatusIcon {
-  // Refaz o menu, por exemplo depois de uma opção mudar de estado
+  // Rebuilds the menu, for example after an option changes state
   setMenu(entries: readonly StatusMenuEntry[]): void
   dispose(): void
 }
 
-// Ícone na bandeja ou barra de status do sistema, com um menu
+// Icon in the system tray or status bar, with a menu
 export interface StatusIconHost {
   create(options: {
     readonly tooltip: string

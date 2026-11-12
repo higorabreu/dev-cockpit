@@ -8,7 +8,7 @@ export interface Classification {
   readonly agent?: AgentProfile
 }
 
-// Classifica o que está em primeiro plano: o prompt do shell, um agente conhecido ou outro comando
+// Classifies what is in the foreground: the shell prompt, a known agent or another command
 export function classifyActivity(
   foreground: string,
   agents: readonly AgentProfile[] = [],

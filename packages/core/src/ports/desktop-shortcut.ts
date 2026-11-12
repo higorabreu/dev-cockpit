@@ -1,5 +1,5 @@
-// Tecla registrada no próprio sistema, que a restaura a cada login
+// Key registered in the system itself, which restores it on every login
 export interface DesktopShortcut {
-  // Falso quando a tecla é inválida, já está em uso ou o sistema recusou
+  // False when the key is invalid, already in use or the system refused it
   bind(accelerator: string): Promise<boolean>
 }

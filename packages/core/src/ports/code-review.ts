@@ -7,7 +7,7 @@ export interface ReviewUser {
   readonly name: string
 }
 
-// `none`: a MR não tem pipeline. `unknown`: não deu para consultar.
+// `none`: the MR has no pipeline. `unknown`: it could not be queried.
 export type PipelineState =
   | 'success'
   | 'failed'

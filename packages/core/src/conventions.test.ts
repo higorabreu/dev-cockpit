@@ -27,7 +27,7 @@ const offenders = (
   skip: (path: string) => boolean = () => false,
 ) => files.filter((file) => !skip(file.path) && pattern.test(file.text)).map((file) => file.path)
 
-// Cada teste aqui é a versão verificável de uma regra do CLAUDE.md que já foi quebrada ou pode ser
+// Each test here is the checkable version of a CLAUDE.md rule that was already broken or could be
 describe('project conventions', () => {
   it('should return ErrorBody as the failure of every Result when listing the sources', () => {
     const found = offenders(sources, /Result<[^;]{0,200}?,\s*(ErrorCode|string|Error)\s*>/)

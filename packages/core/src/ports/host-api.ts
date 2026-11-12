@@ -14,7 +14,7 @@ export interface PtyCreateOptions {
   readonly cwd?: string
 }
 
-// O que a interface pode pedir ao processo principal; o preload expõe isto como window.dck
+// What the UI can ask the main process; the preload exposes this as window.dck
 export interface HostApi {
   readonly pty: {
     create(options: PtyCreateOptions): Promise<number>
@@ -48,14 +48,14 @@ export interface HostApi {
     }
   }
   readonly views: {
-    // Indefinido quando o daemon não responde
+    // Undefined when the daemon does not answer
     snapshot(view: MergeRequestView): Promise<ViewSnapshot | undefined>
-    // Com idade máxima, só busca no servidor se o que está guardado for mais velho
+    // With a max age, only fetches from the server if what is stored is older
     refresh(view: MergeRequestView, maxAgeMs?: number): Promise<ViewSnapshot | undefined>
     onChange(listener: (snapshot: ViewSnapshot) => void): Unsubscribe
   }
   readonly external: {
-    // Só abre endereços da origem do GitLab conectado; qualquer outro é ignorado
+    // Only opens addresses from the connected GitLab's origin; any other is ignored
     open(url: string): void
   }
   readonly autostart: {
@@ -63,7 +63,7 @@ export interface HostApi {
     set(enabled: boolean): Promise<boolean>
   }
   readonly session: {
-    // Leve, sem git: serve para vigiar todas as abas
+    // Lightweight, no git: used to watch every tab
     activity(ptyId: number): Promise<SessionActivityInfo | undefined>
     inspect(ptyId: number): Promise<SessionSnapshot | undefined>
   }
@@ -75,7 +75,7 @@ export interface HostApi {
   readonly window: {
     toggleFullHeight(): void
     onShown(listener: () => void): Unsubscribe
-    // O tray pede para abrir a tela de configurações dentro da janela
+    // The tray asks to open the settings screen inside the window
     onOpenSettings(listener: () => void): Unsubscribe
     onFullHeightChange(listener: (fullHeight: boolean) => void): Unsubscribe
   }

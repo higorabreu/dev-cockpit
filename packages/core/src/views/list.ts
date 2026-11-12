@@ -1,7 +1,7 @@
 import type { MergeRequestSummary } from '../ports/code-review.ts'
 import { searchItems } from '../search/fuzzy.ts'
 
-// Pendência é o que o autor precisa resolver: pipeline falho, conflito ou discussão aberta
+// Pending is what the author needs to resolve: failed pipeline, conflict or open discussion
 export const hasPending = (item: MergeRequestSummary): boolean =>
   item.pipeline === 'failed' || item.hasConflicts || item.openDiscussions
 
@@ -22,11 +22,11 @@ export interface RangeInput {
   readonly viewportHeight: number
   readonly rowHeight: number
   readonly count: number
-  // Linhas extras fora da janela, para a rolagem rápida não mostrar vazio
+  // Extra rows outside the window, so fast scrolling does not show blanks
   readonly overscan: number
 }
 
-// Faixa de linhas a desenhar [start, end); com 1000 itens só algumas dezenas existem no DOM
+// Range of rows to draw [start, end); with 1000 items only a few dozen exist in the DOM
 export function visibleRange(input: RangeInput): { start: number; end: number } {
   const { scrollTop, viewportHeight, rowHeight, count, overscan } = input
   const first = Math.floor(Math.max(0, scrollTop) / rowHeight)

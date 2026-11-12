@@ -1,3 +1,3 @@
-// Sobe quando o daemon ganha ou muda um método. O shell compara com o do daemon que encontra:
-// um daemon mais velho que sobreviveu a uma atualização é substituído, em vez de recusar chamadas
+// Bumps when the daemon gains or changes a method. The shell compares it with the daemon it finds:
+// an older daemon that survived an update is replaced instead of rejecting calls
 export const DAEMON_PROTOCOL = 3

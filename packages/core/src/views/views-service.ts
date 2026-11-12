@@ -6,7 +6,7 @@ import type { Unsubscribe } from '../ports/pty.ts'
 import type { CachedView, ViewCache, ViewSnapshot } from '../ports/views.ts'
 
 export interface ViewsServiceOptions {
-  // Indefinida quando não há token para a conta
+  // Undefined when there is no token for the account
   source(scope: string): Promise<CodeReviewSource | undefined>
   readonly cache: ViewCache
   readonly clock: Clock
@@ -14,12 +14,12 @@ export interface ViewsServiceOptions {
 }
 
 export interface ViewsService {
-  // Devolve o que há guardado na hora, sem esperar a rede
+  // Returns what is stored right now, without waiting for the network
   snapshot(view: MergeRequestView): Promise<ViewSnapshot>
-  // Busca no servidor; chamadas simultâneas da mesma visão dividem a mesma busca
+  // Fetches from the server; simultaneous calls for the same view share one fetch
   refresh(view: MergeRequestView): Promise<void>
   refreshIfStale(view: MergeRequestView, maxAgeMs: number): Promise<void>
-  // Troca a conta: com outro escopo, o que estava guardado é descartado
+  // Switches the account: with another scope, what was stored is discarded
   configure(scope: string | undefined): Promise<void>
   onChange(listener: (snapshot: ViewSnapshot) => void): Unsubscribe
 }
@@ -63,7 +63,7 @@ export function createViewsService(options: ViewsServiceOptions): ViewsService {
     await cache.save({ scope, views })
   }
 
-  // O arquivo só vale para a conta atual; lê uma vez por escopo
+  // The file only applies to the current account; reads once per scope
   function load(): Promise<void> {
     loaded ??= (async () => {
       const data = await cache.load()
@@ -90,7 +90,7 @@ export function createViewsService(options: ViewsServiceOptions): ViewsService {
     state.state = 'refreshing'
     emit(view)
     const result = await source.mergeRequests(view)
-    // A conta mudou durante a busca: o resultado é de outra conta e não entra
+    // The account changed during the fetch: the result belongs to another account and is dropped
     if (scope !== startedScope) return
     if (result.ok) {
       state.items = result.value

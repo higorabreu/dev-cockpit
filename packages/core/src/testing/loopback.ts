@@ -2,7 +2,7 @@ import type { Transport } from '../ipc/client.ts'
 import type { Hub } from '../ipc/hub.ts'
 import type { Message } from '../ipc/protocol.ts'
 
-// Liga um cliente a um hub na memória, sem socket, para testar o protocolo
+// Connects a client to an in-memory hub, with no socket, to test the protocol
 export function connectLoopback(hub: Hub): Transport {
   const messageListeners = new Set<(message: Message) => void>()
   const closeListeners = new Set<() => void>()

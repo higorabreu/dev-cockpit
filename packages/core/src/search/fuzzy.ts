@@ -2,7 +2,7 @@ const normalize = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '')
 
 const WORD_START = /[\s/_.-]/
 
-// Pontua o texto contra a consulta; indefinido quando as letras não aparecem na ordem
+// Scores the text against the query; undefined when the letters do not appear in order
 export function fuzzyScore(query: string, text: string): number | undefined {
   const needle = normalize(query).replace(/\s+/g, '')
   const haystack = normalize(text)
@@ -23,7 +23,7 @@ export function fuzzyScore(query: string, text: string): number | undefined {
   return score
 }
 
-// Sem consulta mantém a ordem dada (a recência); com consulta ordena pela pontuação, e empata pela ordem
+// Without a query keeps the given order (recency); with a query sorts by score, breaking ties by the given order
 export function searchItems<T>(
   items: readonly T[],
   query: string,

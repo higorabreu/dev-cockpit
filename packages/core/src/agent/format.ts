@@ -1,6 +1,6 @@
 export type TokenScale = { readonly unit: 'raw' | 'thousand' | 'million'; readonly value: number }
 
-// 639726 vira 640 mil; 1.2 milhão fica com uma casa decimal
+// 639726 becomes 640k; 1.2M keeps one decimal place
 export function tokenScale(count: number): TokenScale {
   if (count < 1000) return { unit: 'raw', value: count }
   if (count < 1_000_000) return { unit: 'thousand', value: Math.round(count / 1000) }

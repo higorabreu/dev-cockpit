@@ -1,14 +1,14 @@
 export interface Project {
   readonly name: string
   readonly path: string
-  // Instante da última atividade do repositório, para ordenar o que nunca foi aberto
+  // Time of the repository's last activity, to sort what was never opened
   readonly activity?: number
-  // Fixado pelo usuário: vai sempre para o topo da lista
+  // Pinned by the user: always goes to the top of the list
   readonly favorite?: boolean
 }
 
 export interface ProjectCatalog {
-  // Já ordenado: fixados, depois os abertos recentemente, depois os mais ativos
+  // Already sorted: pinned, then recently opened, then most active
   list(): Promise<readonly Project[]>
   touch(path: string): Promise<void>
   // Fixa ou solta o projeto e devolve o novo estado

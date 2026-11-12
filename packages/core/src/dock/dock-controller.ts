@@ -4,7 +4,7 @@ export interface DockOptions {
   readonly screen: Screen
   readonly window: DockWindow
   readonly scheduler: Scheduler
-  // Proporção da altura útil; uma função permite mudar com a janela aberta
+  // Fraction of the usable height; a function lets it change while the window is open
   readonly heightRatio?: number | (() => number)
 }
 
@@ -13,7 +13,7 @@ export interface DockController {
   show(point?: Point): void
   hide(): void
   toggleFullHeight(): void
-  // Reaplica a posição e o tamanho atuais, por exemplo depois de mudar a altura nas configurações
+  // Reapplies the current position and size, for example after the height changes in settings
   refresh(): void
   isFullHeight(): boolean
 }
@@ -41,7 +41,7 @@ export function createDockController(options: DockOptions): DockController {
   }
   let fullHeight = false
   let cancelReapply: Cancel | undefined
-  // Monitor onde a janela foi mostrada; ler a posição da janela é pouco confiável no X11 com vários monitores
+  // Monitor where the window was shown; reading the window position is unreliable on X11 with several monitors
   let anchor: Point | undefined
 
   const boundsAt = (point: Point) =>
@@ -54,7 +54,7 @@ export function createDockController(options: DockOptions): DockController {
     const bounds = boundsAt(point)
     window.setBounds(bounds)
     window.show()
-    // O gerenciador de janelas ignora a posição pedida antes de mostrar quando ela é a origem (0,0)
+    // The window manager ignores the requested position before showing when it is the origin (0,0)
     window.setBounds(bounds)
     window.focus()
     cancelReapply = scheduler.after(REAPPLY_DELAY_MS, () => window.setBounds(bounds))
@@ -67,7 +67,7 @@ export function createDockController(options: DockOptions): DockController {
       anchor ?? { x: current.x + current.width / 2, y: current.y + current.height / 2 },
     )
     window.setBounds(bounds)
-    // O gerenciador de janelas pode mover a janela depois, como ao mostrar
+    // The window manager may move the window afterwards, such as on show
     cancelReapply = scheduler.after(REAPPLY_DELAY_MS, () => window.setBounds(bounds))
   }
 

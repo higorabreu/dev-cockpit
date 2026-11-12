@@ -11,10 +11,10 @@ export interface HoldGesture {
   isOpen(): boolean
   press(): void
   otherKey(): void
-  // Verdadeiro quando a seta pertence ao menu; antes de abrir ela segue para o terminal
+  // True when the arrow belongs to the menu; before it opens the arrow goes on to the terminal
   arrow(): boolean
   openNow(): void
-  // Verdadeiro quando o menu estava aberto, ou seja, quem chamou deve confirmar a escolha
+  // True when the menu was open, meaning the caller must confirm the choice
   release(): boolean
   cancel(): void
 }

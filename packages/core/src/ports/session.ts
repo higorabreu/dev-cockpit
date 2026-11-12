@@ -1,7 +1,7 @@
 import type { AgentProfile } from './agent.ts'
 
-// Letra do estado de um arquivo, como no Source Control: M alterado, A novo no índice, D removido,
-// R renomeado, U não rastreado, ! em conflito
+// File state letter, as in Source Control: M modified, A new in the index, D deleted,
+// R renamed, U untracked, ! conflicted
 export type GitFileStatus = 'M' | 'A' | 'D' | 'R' | 'U' | '!'
 
 export interface GitFile {
@@ -25,33 +25,33 @@ export interface GitSubmodule {
 
 export interface GitStatus {
   readonly root: string
-  // Indefinido com a HEAD solta
+  // Undefined with a detached HEAD
   readonly branch: string | undefined
   readonly upstream: string | undefined
-  // Arquivos distintos, sem contar submódulos
+  // Distinct files, not counting submodules
   readonly changed: number
   readonly staged: readonly GitFile[]
   readonly changes: readonly GitFile[]
   readonly ahead: number
   readonly behind: number
-  // Commits ainda não enviados e commits do remoto ainda não trazidos, os mais recentes primeiro
+  // Commits not yet pushed and remote commits not yet pulled, most recent first
   readonly outgoing: readonly GitCommit[]
   readonly incoming: readonly GitCommit[]
-  // Só os submódulos com pendência
+  // Only submodules with pending changes
   readonly submodules: readonly GitSubmodule[]
   readonly submodulesClean: number
 }
 
 export interface GitInspector {
-  // Indefinido quando o diretório não está em um repositório
+  // Undefined when the directory is not inside a repository
   status(cwd: string): Promise<GitStatus | undefined>
 }
 
 export interface ProcessInfo {
   readonly cwd: string
-  // Nome do processo em primeiro plano no terminal da sessão
+  // Name of the foreground process in the session terminal
   readonly foreground: string
-  // Identificação exata desse processo; o início distingue um PID reaproveitado
+  // Exact identity of that process; the start time tells apart a reused PID
   readonly foregroundPid?: number
   readonly foregroundStart?: string
 }
@@ -66,7 +66,7 @@ export interface SessionActivityInfo {
   readonly cwd: string
   readonly process: string
   readonly activity: SessionActivity
-  // Presente quando o que roda em primeiro plano é um agente conhecido
+  // Present when what runs in the foreground is a known agent
   readonly agent?: AgentProfile
 }
 

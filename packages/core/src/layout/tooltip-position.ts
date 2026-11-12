@@ -21,8 +21,8 @@ export interface TooltipPlacement {
 const GAP = 6
 const MARGIN = 8
 
-// Abaixo do elemento por padrão; acima quando embaixo não cabe e em cima há mais espaço.
-// Na horizontal alinha à esquerda do elemento e nunca sai da janela
+// Below the element by default; above when it does not fit below and there is more room above.
+// Horizontally aligned to the element's left edge and never leaves the window
 export function placeTooltip(
   anchor: Box,
   tip: Size,
@@ -31,7 +31,7 @@ export function placeTooltip(
 ): TooltipPlacement {
   if (prefer === 'left') {
     const x = anchor.x - GAP - tip.width
-    // Ao lado, centralizado no elemento; sem espaço à esquerda, cai para o posicionamento normal
+    // Beside it, centered on the element; with no room on the left, falls back to normal placement
     if (x >= MARGIN) {
       const centered = anchor.y + (anchor.height - tip.height) / 2
       const y = Math.min(

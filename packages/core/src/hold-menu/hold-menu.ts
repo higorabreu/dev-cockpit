@@ -35,12 +35,12 @@ const VECTORS: Record<Direction, readonly [number, number]> = {
   left: [-1, 0],
 }
 
-// Os setores ficam em círculo a partir do topo, no sentido horário
+// Sectors are laid out in a circle from the top, clockwise
 export function sectorAngle(index: number, count: number): number {
   return -Math.PI / 2 + (index * 2 * Math.PI) / count
 }
 
-// Do centro, a seta escolhe o setor que está naquela direção
+// From the center, the arrow picks the sector in that direction
 export function sectorFor(direction: Direction, count: number): number {
   const [dx, dy] = VECTORS[direction]
   let best = 0

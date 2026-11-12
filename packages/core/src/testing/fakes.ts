@@ -103,7 +103,7 @@ export class FakeScreen implements Screen {
   }
 }
 
-// Imita o gerenciador de janelas do X11 que ignora a posição pedida antes de mostrar quando ela é (0,0)
+// Mimics the X11 window manager, which ignores the requested position before showing when it is (0,0)
 export class FakeDockWindow implements DockWindow {
   private visible = false
   private focused = false
@@ -195,7 +195,7 @@ export class FakePtyHost implements PtyHost {
   }
 }
 
-// Serviço de visões sem rede nem arquivo: toda busca devolve uma lista vazia
+// Views service with no network or file: every fetch returns an empty list
 export function createFakeViews() {
   return createViewsService({
     source: async () => ({

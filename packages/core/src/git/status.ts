@@ -23,8 +23,8 @@ const letter = (code: string | undefined): GitFileStatus | undefined =>
 
 const byPath = (a: GitFile, b: GitFile) => a.path.localeCompare(b.path)
 
-// Lê `git status --porcelain=v2 -z --branch`; com -z os caminhos vêm sem aspas e os registros
-// terminam em NUL, e o caminho de origem de um renomeado vem como registro seguinte
+// Reads `git status --porcelain=v2 -z --branch`; with -z paths come unquoted and records end in NUL,
+// and a renamed entry's original path arrives as the next record
 export function parseGitStatus(output: string): ParsedGitStatus {
   const records = output.split('\0')
   let branch: string | undefined
@@ -54,7 +54,7 @@ export function parseGitStatus(output: string): ParsedGitStatus {
       const renamed = record.startsWith('2 ')
       const path = parts.slice(renamed ? 9 : 8).join(' ')
       if (renamed) index += 1
-      // Submódulos aparecem na própria seção, com o estado interno de cada um
+      // Submodules appear in their own section, each with its inner state
       if ((parts[2] ?? '').startsWith('S')) continue
       const xy = parts[1] ?? '..'
       const x = letter(xy[0])
@@ -96,7 +96,7 @@ export interface SubmoduleListing {
   readonly initialized: boolean
 }
 
-// Lê `git submodule status`: o primeiro caractere é espaço, +, - ou U, depois o hash e o caminho
+// Reads `git submodule status`: the first character is a space, +, - or U, then the hash and the path
 export function parseSubmoduleList(output: string): readonly SubmoduleListing[] {
   return output
     .split('\n')
@@ -122,7 +122,7 @@ const UNITS: ReadonlyArray<readonly [number, Exclude<AgoUnit, 'now'>]> = [
   [60, 'min'],
 ]
 
-// Há quanto tempo, em partes, para quem exibe escolher a língua
+// How long ago, in parts, so the renderer picks the language
 export function agoParts(
   nowSeconds: number,
   thenSeconds: number,

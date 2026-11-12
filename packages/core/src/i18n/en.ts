@@ -1,6 +1,6 @@
 import type { MessageKey } from './pt-BR.ts'
 
-// O tipo obriga a ter todas as chaves do catálogo de referência
+// The type requires every key of the reference catalog
 export const en: Record<MessageKey, string> = {
   'panel.title': 'Panel',
 

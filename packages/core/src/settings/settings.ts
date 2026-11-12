@@ -15,7 +15,7 @@ export const LIMITS = {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
-// Valor fora do intervalo é cortado no limite; tipo errado volta ao padrão
+// A value out of range is clamped to the limit; a wrong type goes back to the default
 const bounded = (min: number, max: number, fallback: number, whole = false) =>
   z
     .number()
@@ -44,13 +44,13 @@ export const settingsSchema = z.preprocess(
       holdTrigger: z.enum(HOLD_TRIGGERS).catch('ControlRight'),
     }),
     projects: section({
-      // Indefinida: usa a pasta `projetos` da home
+      // Undefined: uses the `projetos` folder in the home directory
       root: z.string().trim().min(1).max(1024).nullable().catch(null),
       depth: bounded(LIMITS.depth.min, LIMITS.depth.max, 2, true),
     }),
     connections: section({
       gitlab: section({
-        // Sem padrão: é o endereço do ambiente do usuário. Valor que não é um endereço seguro vira nulo.
+        // No default: it is the address of the user's environment. A value that is not a safe address becomes null.
         url: z
           .preprocess(
             (value) => (typeof value === 'string' ? (parseServerUrl(value) ?? null) : null),
@@ -78,7 +78,7 @@ export type DeepPartial<T> = {
 
 export type SettingsPatch = DeepPartial<Settings>
 
-// Lê qualquer coisa (arquivo velho, editado à mão, corrompido) e devolve configurações válidas
+// Reads anything (old, hand-edited or corrupted file) and returns valid settings
 export function parseSettings(raw: unknown): Settings {
   return settingsSchema.parse(raw)
 }
@@ -99,7 +99,7 @@ export function mergeSettings(current: Settings, patch: SettingsPatch): Settings
   return parseSettings(deepMerge(current, patch))
 }
 
-// Chaves (com ponto) que mudaram entre duas configurações, para reagir só ao que importa
+// Keys (dotted) that changed between two settings, to react only to what matters
 export function changedKeys(before: Settings, after: Settings): readonly string[] {
   const keys: string[] = []
   const walk = (a: unknown, b: unknown, path: string) => {
@@ -114,15 +114,15 @@ export function changedKeys(before: Settings, after: Settings): readonly string[
 }
 
 export interface SettingsView {
-  // Já com as variáveis de ambiente por cima: é o que o app usa
+  // With environment variables already applied on top: this is what the app uses
   readonly settings: Settings
-  // Chaves (com ponto) fixadas por uma variável de ambiente
+  // Keys (dotted) pinned by an environment variable
   readonly locked: readonly string[]
-  // Não havia arquivo: primeira execução, quando vale trazer as preferências antigas
+  // There was no file: first run, when it is worth importing the old preferences
   readonly fresh: boolean
 }
 
 export interface SettingsUpdate extends SettingsView {
-  // Chaves cuja mudança foi recusada, por exemplo um atalho que outro programa já usa
+  // Keys whose change was refused, for example a shortcut another program already uses
   readonly rejected: readonly string[]
 }

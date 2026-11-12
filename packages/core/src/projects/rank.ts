@@ -1,7 +1,7 @@
 import type { Project } from '../ports/projects.ts'
 
-// Fixados primeiro (entre si, na ordem de uso recente e depois por nome), depois os abertos
-// recentemente, depois o resto pela atividade do repositório
+// Pinned first (among themselves, by recent use and then by name), then the recently
+// opened ones, then the rest by repository activity
 export function rankProjects(
   projects: readonly Project[],
   recent: readonly string[],

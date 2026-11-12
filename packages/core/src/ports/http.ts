@@ -9,12 +9,12 @@ export interface HttpRequest {
 
 export interface HttpResponse {
   readonly status: number
-  // Nomes em minúsculas
+  // Lowercase names
   readonly headers: Readonly<Record<string, string>>
   readonly body: string
 }
 
-// Só falha quando não há resposta (rede, DNS, tempo esgotado); status de erro é uma resposta
+// Only fails when there is no response (network, DNS, timeout); an error status is a response
 export interface HttpClient {
   get(request: HttpRequest): Promise<Result<HttpResponse, ErrorBody>>
 }

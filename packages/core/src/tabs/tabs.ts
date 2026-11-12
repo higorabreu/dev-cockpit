@@ -28,7 +28,7 @@ export function activateTab(state: TabsState, id: string): TabsState {
   return has(state, id) ? activate(state, id) : state
 }
 
-// A última aba nunca fecha: a janela sempre tem um terminal
+// The last tab never closes: the window always has a terminal
 export function closeTab(state: TabsState, id: string): TabsState {
   if (!has(state, id) || state.tabs.length <= 1) return state
   const tabs = state.tabs.filter((tab) => tab.id !== id)
@@ -57,7 +57,7 @@ export function activateTabAt(state: TabsState, index: number): TabsState {
   return tab ? activate(state, tab.id) : state
 }
 
-// Aceita só uma permutação das abas atuais, para o arrastar da barra não perder nem inventar abas
+// Accepts only a permutation of the current tabs, so dragging in the bar never loses or invents tabs
 export function reorderTabs(state: TabsState, ids: readonly string[]): TabsState {
   const sameSet =
     ids.length === state.tabs.length && state.tabs.every((tab) => ids.includes(tab.id))
@@ -67,14 +67,14 @@ export function reorderTabs(state: TabsState, ids: readonly string[]): TabsState
   return { ...state, tabs }
 }
 
-// Da mais recente para a mais antiga, com as abas nunca usadas no fim
+// Most recent to oldest, with never-used tabs at the end
 export function recentTabs(state: TabsState): readonly TabInfo[] {
   const byId = new Map(state.tabs.map((tab) => [tab.id, tab]))
   const used = state.recent.flatMap((id) => byId.get(id) ?? [])
   return [...used, ...state.tabs.filter((tab) => !state.recent.includes(tab.id))]
 }
 
-// Duplicata mantém o nome e ganha o menor índice livre: dev-cockpit(2), dev-cockpit(3)
+// A duplicate keeps the name and gets the lowest free index: dev-cockpit(2), dev-cockpit(3)
 export function duplicateLabel(labels: readonly string[], label: string): string {
   const base = label.replace(/\(\d+\)$/, '')
   let index = 2

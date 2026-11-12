@@ -23,7 +23,7 @@ function toContainer(entry: unknown): ComposeContainer | undefined {
   }
 }
 
-// `docker compose ps --format json` imprime um objeto por linha; versões antigas, uma lista só
+// `docker compose ps --format json` prints one object per line; older versions print a single list
 export function parseComposePs(output: string): readonly ComposeContainer[] {
   const trimmed = output.trim()
   if (trimmed === '') return []
@@ -56,7 +56,7 @@ const UNIT_OF: Record<string, UptimeUnit> = {
   month: 'mo',
 }
 
-// "Up 17 hours (healthy)" vira 17 horas; "Up About an hour" vira 1 hora; sem tempo, indefinido
+// "Up 17 hours (healthy)" becomes 17 hours; "Up About an hour" becomes 1 hour; with no time, undefined
 export function uptimeParts(status: string): { unit: UptimeUnit; value: number } | undefined {
   const match =
     /^Up\s+(?:(About an?|Less than a|\d+)\s+)?(second|minute|hour|day|week|month)s?/i.exec(status)
