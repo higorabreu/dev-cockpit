@@ -1,0 +1,167 @@
+// Monta o pacote .deb do Dev Cockpit a partir do `dist` já construído (`pnpm --filter @dck/shell build`):
+// copia o Electron que o projeto já usa, põe o app em resources/app, empacota o CLI `dck` e chama o
+// dpkg-deb do sistema. Sem ferramenta de empacotamento extra e sem rede.
+import { execFileSync } from 'node:child_process'
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { build } from 'esbuild'
+
+const shell = join(dirname(fileURLToPath(import.meta.url)), '..')
+const repository = join(shell, '..', '..')
+const require = createRequire(import.meta.url)
+const dist = join(shell, 'dist')
+const release = join(repository, 'release')
+
+const { version } = JSON.parse(readFileSync(join(shell, 'package.json'), 'utf8'))
+const architecture = { x64: 'amd64', arm64: 'arm64' }[process.arch]
+if (!architecture) throw new Error(`arquitetura sem suporte: ${process.arch}`)
+if (!existsSync(join(dist, 'main.cjs'))) {
+  throw new Error('rode `pnpm --filter @dck/shell build` antes (o dist não existe)')
+}
+
+const NAME = 'dev-cockpit'
+const INSTALL = `opt/${NAME}`
+const stage = join(release, 'stage')
+const root = join(stage, INSTALL)
+
+rmSync(stage, { recursive: true, force: true })
+mkdirSync(root, { recursive: true })
+
+// 1. O Electron já instalado no projeto, com o binário renomeado e só as línguas usadas
+const electronDist = join(dirname(require.resolve('electron/package.json')), 'dist')
+cpSync(electronDist, root, { recursive: true, dereference: true })
+renameSync(join(root, 'electron'), join(root, NAME))
+rmSync(join(root, 'resources', 'default_app.asar'), { force: true })
+for (const file of readdirSync(join(root, 'locales'))) {
+  if (!['en-US.pak', 'pt-BR.pak'].includes(file)) rmSync(join(root, 'locales', file))
+}
+
+// 2. O app: o dist sem mapas de código, com o package.json que o Electron lê ao abrir
+const app = join(root, 'resources', 'app')
+cpSync(dist, app, {
+  recursive: true,
+  dereference: true,
+  // O package.json do dist é só do build; o do node-pty e o das dependências dele ficam
+  filter: (source) => !source.endsWith('.map') && source !== join(dist, 'package.json'),
+})
+writeFileSync(
+  join(app, 'package.json'),
+  `${JSON.stringify(
+    {
+      name: NAME,
+      productName: 'Dev Cockpit',
+      version,
+      description: 'Terminal estilo Guake com painel de projetos',
+      main: 'main.cjs',
+    },
+    null,
+    2,
+  )}\n`,
+)
+
+// 3. O CLI `dck` empacotado, para rodar dentro do próprio Electron (sem o Node do nvm)
+await build({
+  entryPoints: [join(repository, 'packages', 'cli', 'src', 'main.ts')],
+  outfile: join(root, 'resources', 'dck.mjs'),
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  logLevel: 'warning',
+  banner: {
+    js: "import { createRequire as __dckRequire } from 'node:module'; const require = __dckRequire(import.meta.url);",
+  },
+})
+
+// 4. Arquivos do sistema: comando, entrada no menu, ícones e scripts do dpkg
+const write = (path, content, mode = 0o644) => {
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, content)
+  chmodSync(path, mode)
+}
+
+write(
+  join(stage, 'usr', 'bin', 'dck'),
+  `#!/bin/sh
+# Roda o CLI dentro do Electron empacotado: não depende do Node do usuário
+exec env ELECTRON_RUN_AS_NODE=1 DCK_PACKAGED=1 /${INSTALL}/${NAME} /${INSTALL}/resources/dck.mjs "$@"
+`,
+  0o755,
+)
+
+write(
+  join(stage, 'usr', 'share', 'applications', `${NAME}.desktop`),
+  `[Desktop Entry]
+Type=Application
+Name=Dev Cockpit
+Comment=Terminal estilo Guake com painel de projetos
+Exec=/${INSTALL}/${NAME} --no-sandbox
+Icon=${NAME}
+Terminal=false
+Categories=System;TerminalEmulator;Development;
+StartupWMClass=${NAME}
+Actions=Toggle;
+
+[Desktop Action Toggle]
+Name=Mostrar ou ocultar
+Exec=/usr/bin/dck toggle
+`,
+)
+
+for (const size of [48, 128, 256, 512]) {
+  const target = join(stage, 'usr', 'share', 'icons', 'hicolor', `${size}x${size}`, 'apps')
+  mkdirSync(target, { recursive: true })
+  cpSync(join(shell, 'assets', `app-${size}.png`), join(target, `${NAME}.png`))
+}
+
+const refresh = `#!/bin/sh
+set -e
+if command -v update-desktop-database >/dev/null 2>&1; then update-desktop-database -q /usr/share/applications || true; fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true; fi
+exit 0
+`
+write(join(stage, 'DEBIAN', 'postinst'), refresh, 0o755)
+write(join(stage, 'DEBIAN', 'postrm'), refresh, 0o755)
+
+const sizeKb = Math.ceil(
+  Number(execFileSync('du', ['-sk', stage], { encoding: 'utf8' }).split('\t')[0]),
+)
+write(
+  join(stage, 'DEBIAN', 'control'),
+  `Package: ${NAME}
+Version: ${version}
+Section: devel
+Priority: optional
+Architecture: ${architecture}
+Installed-Size: ${sizeKb}
+Maintainer: Dev Cockpit <noreply@localhost>
+Depends: libgtk-3-0t64 | libgtk-3-0, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0t64 | libatspi2.0-0, libuuid1
+Description: Terminal estilo Guake com painel de projetos
+ Janela de terminal que abre com uma tecla global, com abas, busca de projetos,
+ painel de sessões, git e containers, e o comando dck para controlá-la.
+`,
+)
+
+// O umask de quem monta não pode vazar para o pacote: nada fica gravável por grupo ou outros
+execFileSync('chmod', ['-R', 'go-w', stage])
+
+// 5. O pacote
+mkdirSync(release, { recursive: true })
+const output = join(release, `${NAME}_${version}_${architecture}.deb`)
+rmSync(output, { force: true })
+execFileSync('dpkg-deb', ['-Zxz', '-z6', '--root-owner-group', '--build', stage, output], {
+  stdio: 'inherit',
+})
+console.log(`pacote: ${output} (${(statSync(output).size / 1024 / 1024).toFixed(0)} MB)`)

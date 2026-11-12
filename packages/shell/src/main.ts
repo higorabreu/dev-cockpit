@@ -139,6 +139,9 @@ app.whenReady().then(async () => {
     heightRatio: () => settingsStore.get().settings.window.heightRatio,
   })
 
+  // Abrir o app de novo pelo menu de aplicativos mostra a janela do que já está rodando
+  app.on('second-instance', () => dock.show())
+
   logger.info('notifications available', { supported: Notification.isSupported() })
 
   const bridge = registerHostBridge({
