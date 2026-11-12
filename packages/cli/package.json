@@ -13,9 +13,14 @@
   "dependencies": {
     "@dck/adapter-agent-claude": "workspace:^",
     "@dck/adapter-extension-files": "workspace:^",
+    "@dck/adapter-node-git": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
+    "@dck/adapter-node-vm": "workspace:^",
     "@dck/core": "workspace:^",
     "@dck/daemon": "workspace:^"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.1"
   },
   "bin": {
     "dck": "./src/main.ts"

@@ -98,5 +98,35 @@
     "category": "invalid_argument",
     "retryable": false,
     "rpc": -32016
+  },
+  "DCK-RUL-001": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32017
+  },
+  "DCK-RUL-002": {
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32018
+  },
+  "DCK-RUL-003": {
+    "category": "not_found",
+    "retryable": false,
+    "rpc": -32019
+  },
+  "DCK-RUL-004": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32020
+  },
+  "DCK-RUL-005": {
+    "category": "not_found",
+    "retryable": false,
+    "rpc": -32021
+  },
+  "DCK-RUL-006": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32022
   }
 }

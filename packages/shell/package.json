@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@dck/adapter-docker-cli": "workspace:^",
+    "@dck/adapter-extension-files": "workspace:^",
     "@dck/adapter-gitlab": "workspace:^",
     "@dck/adapter-gnome-shortcuts": "workspace:^",
     "@dck/adapter-linux-proc": "workspace:^",
@@ -18,6 +19,7 @@
     "@dck/adapter-node-git": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
     "@dck/adapter-node-pty": "workspace:^",
+    "@dck/adapter-node-vm": "workspace:^",
     "@dck/adapter-secret-tool": "workspace:^",
     "@dck/core": "workspace:^",
     "node-pty": "^1.1.0",

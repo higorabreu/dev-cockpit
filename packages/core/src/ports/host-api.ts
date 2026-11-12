@@ -5,6 +5,7 @@ import type { ComposeStatus } from './environment.ts'
 import type { TabNotification } from './notifier.ts'
 import type { Project } from './projects.ts'
 import type { PtyExit, Unsubscribe } from './pty.ts'
+import type { RulesChange, RulesView } from './rules.ts'
 import type { SessionActivityInfo, SessionSnapshot } from './session.ts'
 import type { ViewSnapshot } from './views.ts'
 
@@ -67,6 +68,23 @@ export interface HostApi {
     activity(ptyId: number): Promise<SessionActivityInfo | undefined>
     inspect(ptyId: number): Promise<SessionSnapshot | undefined>
   }
+  // The rules of the repository the tab is in; every change is written in that repository
+  readonly rules: {
+    // Undefined when the tab is not inside a git repository
+    get(ptyId: number): Promise<RulesView | undefined>
+    // `root` is the repository the page shows: a change is refused when the tab is in another one
+    setEnabled(ptyId: number, root: string, id: string, enabled: boolean): Promise<RulesChange>
+    setField(
+      ptyId: number,
+      root: string,
+      id: string,
+      check: number,
+      name: string,
+      value: string | number,
+    ): Promise<RulesChange>
+    shareWithAgents(ptyId: number, root: string, on: boolean): Promise<RulesChange>
+    addClaudeImport(ptyId: number, root: string): Promise<RulesChange>
+  }
   readonly projects: {
     list(): Promise<readonly Project[]>
     touch(path: string): void
@@ -107,6 +125,11 @@ export const hostChannels = {
   autostartSet: 'autostart:set',
   sessionActivity: 'session:activity',
   sessionInspect: 'session:inspect',
+  rulesGet: 'rules:get',
+  rulesSetEnabled: 'rules:set-enabled',
+  rulesSetField: 'rules:set-field',
+  rulesShareWithAgents: 'rules:share-with-agents',
+  rulesAddClaudeImport: 'rules:add-claude-import',
   projectsList: 'projects:list',
   projectsTouch: 'projects:touch',
   projectsToggleFavorite: 'projects:toggle-favorite',

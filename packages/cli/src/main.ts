@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process'
 import { appendFile, copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { createInterface } from 'node:readline/promises'
+import { createInterface, type Interface } from 'node:readline/promises'
 import { fileURLToPath } from 'node:url'
 import { findRepositoryRoot } from '@dck/adapter-extension-files'
 import {
@@ -16,6 +16,7 @@ import { createGitLabViews, startDaemon } from '@dck/daemon'
 import packageJson from '../package.json' with { type: 'json' }
 import { runCli } from './cli.ts'
 import { createExtDeps } from './ext-deps.ts'
+import { createRulesDeps } from './rules-deps.ts'
 
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
 const args = process.argv.slice(2)
@@ -62,19 +63,33 @@ if (args[0] === 'daemon') {
       process.env.LANGUAGE ?? '',
     ]),
   ).t
+  const repositoryRoot = await findRepositoryRoot(process.cwd())
+  const extensions = {
+    configDir: process.env.DCK_CONFIG_DIR ?? defaultConfigDir(),
+    repositoryRoot: repositoryRoot ?? process.cwd(),
+    inRepository: repositoryRoot !== undefined,
+    appVersion: packageJson.version,
+    logger: silentLogger,
+    readFile: (path: string) => readFile(path, 'utf8').catch(() => undefined),
+  }
+  // One reader for every question: a new one each time loses the lines a pipe already delivered
+  let answers: Interface | undefined
+  let lines: AsyncIterator<string> | undefined
+  const ask = async (question: string) => {
+    answers ??= createInterface({ input: process.stdin })
+    lines ??= answers[Symbol.asyncIterator]()
+    process.stdout.write(question)
+    const line = await lines.next()
+    return line.done ? '' : line.value
+  }
   process.exitCode = await runCli(args, {
     endpoint,
     t,
     connect: (target) => connectTo(target, silentLogger),
     out: (text) => process.stdout.write(text),
     err: (text) => process.stderr.write(text),
-    ext: createExtDeps({
-      configDir: process.env.DCK_CONFIG_DIR ?? defaultConfigDir(),
-      repositoryRoot: (await findRepositoryRoot(process.cwd())) ?? process.cwd(),
-      appVersion: packageJson.version,
-      logger: silentLogger,
-      readFile: (path) => readFile(path, 'utf8').catch(() => undefined),
-    }),
+    ext: createExtDeps(extensions),
+    rules: createRulesDeps({ ...extensions, readStdin, ask }),
     // In the package the CLI runs inside Electron: the command `install` would write would not work
     agent:
       process.env.DCK_PACKAGED === '1'
@@ -125,4 +140,6 @@ if (args[0] === 'daemon') {
             commandParts: { node: process.execPath, script: fileURLToPath(import.meta.url) },
           },
   })
+  // An open reader would keep the process waiting for the terminal
+  answers?.close()
 }
