@@ -16,3 +16,7 @@ pnpm-debug.log*
 
 # Personal planning notes, kept out of the repository
 plans/local/
+
+# Personal Claude Code files
+CLAUDE.local.md
+.claude/settings.local.json
