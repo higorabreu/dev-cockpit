@@ -213,6 +213,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   function drawNotice() {
     const snapshot = snapshotOf(current)
     notice.replaceChildren()
+    notice.classList.remove('setup')
     notice.hidden = true
     const show = (...children: (Node | string)[]) => {
       notice.hidden = false
@@ -224,7 +225,12 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
         close()
         deps.openSettings()
       })
-      return show(t('views.unconfigured'), open)
+      notice.classList.add('setup')
+      return show(
+        h('strong', {}, t('views.unconfigured.title')),
+        h('span', {}, t('views.unconfigured.text')),
+        open,
+      )
     }
     if (snapshot.state === 'error' && snapshot.error) {
       return show(t('views.error', { reason: t(connectionErrorKey(snapshot.error)) }))

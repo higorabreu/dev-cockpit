@@ -433,6 +433,17 @@ export function createSettingsView(
         undefined,
         false,
       ),
+      ...(connected
+        ? [
+            row(
+              'connections.views',
+              t('connections.views'),
+              viewsButton(),
+              t('connections.views.hint'),
+              false,
+            ),
+          ]
+        : []),
     ]
   }
 
@@ -688,9 +699,9 @@ export function createSettingsView(
     if (focused) body.querySelector<HTMLElement>(`[data-focus="${focused}"]`)?.focus()
   }
 
-  function open() {
+  function open(tab: TabId = TABS[0].id) {
     confirmingReset = false
-    activeTab = TABS[0].id
+    activeTab = tab
     errors.clear()
     overlay.classList.add('open')
     render()

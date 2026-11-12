@@ -1698,6 +1698,25 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   font-size: 12px;
 }
 
+.vnotice.setup {
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.vnotice.setup strong {
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.vnotice.setup span {
+  max-width: 340px;
+}
+
 .vnotice[hidden] {
   display: none;
 }

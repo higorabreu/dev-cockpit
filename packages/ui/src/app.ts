@@ -140,7 +140,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     api,
     i18n,
     onClose: () => activeSession()?.focus(),
-    openSettings: () => settingsView.open(),
+    openSettings: () => settingsView.open('connections'),
     onReviewCount: showReviewCount,
   })
 
