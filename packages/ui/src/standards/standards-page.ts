@@ -69,6 +69,8 @@ export function createStandardsPage(deps: StandardsPageDeps) {
     key: string,
     change: (ptyId: number) => Promise<StandardsChange>,
     focusAfter?: string,
+    // Shown in place of the failure detail, which for a field quotes the regular expression
+    refusal?: string,
   ) {
     const id = deps.ptyId()
     if (id === undefined) return
@@ -77,7 +79,7 @@ export function createStandardsPage(deps: StandardsPageDeps) {
       view = result.value
       errors.delete(key)
       drafts.delete(key)
-    } else errors.set(key, failureText(result.error))
+    } else errors.set(key, refusal ?? failureText(result.error))
     deps.requestRender()
     if (focusAfter) focus(focusAfter)
   }
@@ -141,8 +143,12 @@ export function createStandardsPage(deps: StandardsPageDeps) {
     input.addEventListener('change', () => {
       const text = input.value.trim()
       drafts.set(key, text)
-      void act(key, (ptyId) =>
-        api.setField(ptyId, standard.id, field.rule, field.name, isNumber ? Number(text) : text),
+      void act(
+        key,
+        (ptyId) =>
+          api.setField(ptyId, standard.id, field.rule, field.name, isNumber ? Number(text) : text),
+        undefined,
+        t('standards.field.refused'),
       )
     })
     return h(
@@ -183,16 +189,17 @@ export function createStandardsPage(deps: StandardsPageDeps) {
       confirmingShare = false
       void act(SHARE, (ptyId) => api.shareWithAgents(ptyId, on), SHARE)
     }
-    const toggle = checkbox(SHARE, agents.shared || confirmingShare, (checked) => {
+    // The box only shows checked once the block is written, so a pending confirmation does not look done
+    const toggle = checkbox(SHARE, agents.shared, (checked) => {
       if (agents.shared) return share(false)
-      confirmingShare = checked
+      // A second click on the box gives up the pending confirmation
+      confirmingShare = checked && !confirmingShare
       deps.requestRender()
-      if (checked) focus(`${SHARE}-confirm`)
+      if (confirmingShare) focus(`${SHARE}-confirm`)
     })
     const confirm = confirmingShare
-      ? button(`${SHARE}-confirm`, t('standards.share.confirm'), 'sreset-all')
+      ? button(`${SHARE}-confirm`, t('standards.share.confirm'))
       : undefined
-    confirm?.setAttribute('data-confirming', 'true')
     confirm?.addEventListener('click', () => share(true))
     const hint = confirmingShare
       ? t('standards.share.confirmHint', { file: shortPath(agents.file, root) })

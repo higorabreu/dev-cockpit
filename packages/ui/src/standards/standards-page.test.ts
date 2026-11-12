@@ -287,7 +287,9 @@ describe('createStandardsPage changes', () => {
 
     const input = control('std-commit-message-0-types')
     const alert = host.querySelector('[role="alert"]')
-    expect(alert?.textContent).toBe('Invalid standard: check.0.pattern: Unterminated group')
+    expect(alert?.textContent).toBe(
+      'This value does not work in the rule. The previous one was kept.',
+    )
     expect(alert?.className).toContain('serror')
     expect(input?.closest('.srow2')?.nextElementSibling).toBe(alert)
     expect(input?.value).toBe('feat|fix(')
@@ -324,7 +326,7 @@ describe('createStandardsPage agents', () => {
     const confirm = control<HTMLButtonElement>('std-share-confirm')
     expect(calls).toEqual([])
     expect(confirm?.textContent).toBe('Confirm')
-    expect(confirm?.dataset.confirming).toBe('true')
+    expect(control('std-share')?.checked).toBe(false)
     expect(document.activeElement).toBe(confirm)
     expect(host.textContent).toContain('This writes a block into AGENTS.md of this repository.')
   })
@@ -341,7 +343,7 @@ describe('createStandardsPage agents', () => {
     expect(document.activeElement).toBe(control('std-share'))
   })
 
-  it('should write nothing when the box is unchecked instead of confirming', async () => {
+  it('should write nothing when the box is clicked again instead of confirming', async () => {
     const { calls, toggle, control } = await open(viewOf())
     await toggle('std-share')
 

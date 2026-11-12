@@ -276,6 +276,7 @@ export const ptBR = {
   'settings.group.standards': 'Padrões',
   'standards.repository': 'Repositório',
   'standards.notRepository': 'A aba ativa não está em um repositório git.',
+  'standards.field.refused': 'Este valor não funciona na regra. O anterior foi mantido.',
   'standards.empty': 'Nenhum padrão encontrado.',
   'standards.group.agents': 'Agentes',
   'standards.share': 'Compartilhar com agentes',

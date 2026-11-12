@@ -277,6 +277,7 @@ export const en: Record<MessageKey, string> = {
   'settings.group.standards': 'Standards',
   'standards.repository': 'Repository',
   'standards.notRepository': 'The active tab is not inside a git repository.',
+  'standards.field.refused': 'This value does not work in the rule. The previous one was kept.',
   'standards.empty': 'No standard found.',
   'standards.group.agents': 'Agents',
   'standards.share': 'Share with agents',
