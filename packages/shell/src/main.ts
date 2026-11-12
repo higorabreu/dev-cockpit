@@ -43,6 +43,7 @@ import { createRecencyStore } from './recency-store.ts'
 import { createSessionInspector } from './session-inspector.ts'
 import { createSettingsStore } from './settings-store.ts'
 import { buildTrayMenu } from './tray-menu.ts'
+import { createGtkWorkareas } from './x11-workareas.ts'
 import { createXdgAutostart, defaultAutostartDirectory } from './xdg-autostart.ts'
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
@@ -121,7 +122,10 @@ app.whenReady().then(async () => {
   })
   window.setVisibleOnAllWorkspaces(true)
 
-  const electronScreen = createElectronScreen(screen)
+  const electronScreen = createElectronScreen(
+    screen,
+    process.platform === 'linux' ? createGtkWorkareas() : undefined,
+  )
   const dockWindow = createElectronDockWindow(window, {
     onShown: () => window.webContents.send(hostChannels.windowShown),
   })

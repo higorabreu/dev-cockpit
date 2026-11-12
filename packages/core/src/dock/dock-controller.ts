@@ -41,6 +41,8 @@ export function createDockController(options: DockOptions): DockController {
   }
   let fullHeight = false
   let cancelReapply: Cancel | undefined
+  // Monitor onde a janela foi mostrada; ler a posição da janela é pouco confiável no X11 com vários monitores
+  let anchor: Point | undefined
 
   const boundsAt = (point: Point) =>
     dockBounds(screen.displayNearest(point).workArea, ratio(), fullHeight)
@@ -48,6 +50,7 @@ export function createDockController(options: DockOptions): DockController {
   function show(point: Point = screen.cursorPoint()) {
     cancelReapply?.()
     if (window.isVisible()) window.hide()
+    anchor = point
     const bounds = boundsAt(point)
     window.setBounds(bounds)
     window.show()
@@ -58,10 +61,14 @@ export function createDockController(options: DockOptions): DockController {
   }
 
   function placeInPlace() {
+    cancelReapply?.()
     const current = window.bounds()
-    window.setBounds(
-      boundsAt({ x: current.x + current.width / 2, y: current.y + current.height / 2 }),
+    const bounds = boundsAt(
+      anchor ?? { x: current.x + current.width / 2, y: current.y + current.height / 2 },
     )
+    window.setBounds(bounds)
+    // O gerenciador de janelas pode mover a janela depois, como ao mostrar
+    cancelReapply = scheduler.after(REAPPLY_DELAY_MS, () => window.setBounds(bounds))
   }
 
   function hide() {

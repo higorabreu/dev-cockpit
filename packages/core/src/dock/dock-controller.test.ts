@@ -142,6 +142,28 @@ describe('toggleFullHeight', () => {
     expect(dock.isFullHeight()).toBe(false)
   })
 
+  it('should stay on the display where it was shown when the reported window position is wrong', () => {
+    const { dock, window, scheduler } = setup({ x: 300, y: 300 })
+    dock.show()
+    window.setBounds({ x: 3900, y: 0, width: 1920, height: 540 })
+
+    dock.toggleFullHeight()
+    scheduler.advance(250)
+
+    expect(window.bounds()).toEqual({ x: 0, y: 0, width: 1920, height: 1080 })
+  })
+
+  it('should reapply the bounds shortly after toggling when the window manager moved the window late', () => {
+    const { dock, window, scheduler } = setup({ x: 300, y: 300 })
+    dock.show()
+    dock.toggleFullHeight()
+    window.setBounds({ x: 3840, y: 0, width: 1920, height: 1080 })
+
+    scheduler.advance(250)
+
+    expect(window.bounds()).toEqual({ x: 0, y: 0, width: 1920, height: 1080 })
+  })
+
   it('should keep full height when the window is shown again on another display', () => {
     const { dock, window, screen } = setup({ x: 2220, y: 300 })
     dock.show()

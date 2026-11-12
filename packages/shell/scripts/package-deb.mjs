@@ -148,6 +148,7 @@ Architecture: ${architecture}
 Installed-Size: ${sizeKb}
 Maintainer: Dev Cockpit <noreply@localhost>
 Depends: libgtk-3-0t64 | libgtk-3-0, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0t64 | libatspi2.0-0, libuuid1
+Recommends: x11-utils
 Description: Terminal estilo Guake com painel de projetos
  Janela de terminal que abre com uma tecla global, com abas, busca de projetos,
  painel de sessões, git e containers, e o comando dck para controlá-la.
