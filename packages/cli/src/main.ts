@@ -18,6 +18,7 @@ if (args[0] === 'daemon') {
   const views = createGitLabViews({
     stateDir: process.env.DCK_STATE_DIR ?? defaultStateDir(),
     logger,
+    profile: process.env.DCK_PROFILE,
   })
   const started = await startDaemon({
     endpoint,

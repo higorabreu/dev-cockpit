@@ -8,7 +8,7 @@ async function main() {
   const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
   const stateDir = process.env.DCK_STATE_DIR ?? defaultStateDir()
 
-  const views = createGitLabViews({ stateDir, logger })
+  const views = createGitLabViews({ stateDir, logger, profile: process.env.DCK_PROFILE })
 
   let stopDaemon = async () => process.exit(0)
   const started = await startDaemon({

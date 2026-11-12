@@ -2,17 +2,23 @@ import { join } from 'node:path'
 import { createGitLabClient } from '@dck/adapter-gitlab'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import { createSecretToolStore } from '@dck/adapter-secret-tool'
-import { createViewsService, type Logger, type ViewsService } from '@dck/core'
+import { createViewsService, gitlabTokenKey, type Logger, type ViewsService } from '@dck/core'
 import { createFileViewCache } from './file-view-cache.ts'
 
 // O token vem do cofre a cada busca, nunca fica guardado no processo
-export function createGitLabViews(options: { stateDir: string; logger: Logger }): ViewsService {
+export function createGitLabViews(options: {
+  stateDir: string
+  logger: Logger
+  // Mesmo perfil do shell, para os dois lerem a mesma chave do cofre
+  profile?: string
+}): ViewsService {
   const { stateDir, logger } = options
+  const tokenKey = gitlabTokenKey(options.profile)
   const secrets = createSecretToolStore()
   const http = createFetchHttpClient()
   return createViewsService({
     source: async (url) => {
-      const token = await secrets.get('gitlab.token')
+      const token = await secrets.get(tokenKey)
       if (!token.ok) {
         logger.warn('could not read the gitlab token', { code: token.error.data?.code })
         return undefined

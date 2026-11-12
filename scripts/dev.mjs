@@ -12,6 +12,8 @@ const environment = {
   DCK_ENDPOINT: process.env.DCK_ENDPOINT ?? join(runtime, 'dck-dev', 'daemon.sock'),
   DCK_KEY: process.env.DCK_KEY ?? 'F9',
   DCK_NO_TRAY: '1',
+  // O cofre do sistema é um só: o dev usa chaves próprias e nunca toca o token do app instalado
+  DCK_PROFILE: process.env.DCK_PROFILE ?? 'dev',
 }
 
 const mode = process.argv[2]

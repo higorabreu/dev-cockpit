@@ -16,6 +16,7 @@ import {
   createTranslator,
   errorBody,
   fail,
+  gitlabTokenKey,
   hostChannels,
   pickLocale,
   type Translate,
@@ -159,6 +160,7 @@ app.whenReady().then(async () => {
   const http = createFetchHttpClient()
   const gitlab = createGitLabConnection({
     secrets: createSecretToolStore(),
+    tokenKey: gitlabTokenKey(process.env.DCK_PROFILE),
     createSource: (url, token) => createGitLabClient({ http, baseUrl: url, token }),
     address: {
       get: () => settingsStore.get().settings.connections.gitlab.url,

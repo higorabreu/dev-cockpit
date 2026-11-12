@@ -9,10 +9,10 @@ import {
   type SecretStore,
 } from '@dck/core'
 
-const TOKEN_KEY = 'gitlab.token'
-
 export interface GitLabConnectionDeps {
   readonly secrets: SecretStore
+  // Chave do token no cofre; vem do perfil, para o modo dev não mexer no token do app instalado
+  readonly tokenKey: string
   readonly createSource: (url: string, token: string) => CodeReviewSource
   readonly address: {
     get(): string | null
@@ -46,7 +46,7 @@ export function createGitLabConnection(deps: GitLabConnectionDeps): GitLabConnec
   }
 
   const forgetToken = async () => {
-    const removed = await secrets.delete(TOKEN_KEY)
+    const removed = await secrets.delete(deps.tokenKey)
     if (!removed.ok)
       logger.warn('could not remove the gitlab token', { code: errorCodeOf(removed.error) })
   }
@@ -55,7 +55,7 @@ export function createGitLabConnection(deps: GitLabConnectionDeps): GitLabConnec
     async status() {
       const url = address.get()
       if (!url) return { kind: 'none' }
-      const token = await secrets.get(TOKEN_KEY)
+      const token = await secrets.get(deps.tokenKey)
       if (!token.ok) return failed(url, token.error)
       if (token.value === undefined) return { kind: 'none' }
       return check(url, token.value)
@@ -69,7 +69,7 @@ export function createGitLabConnection(deps: GitLabConnectionDeps): GitLabConnec
       }
       const status = await check(url, token)
       if (status.kind !== 'connected') return status
-      const stored = await secrets.set(TOKEN_KEY, token)
+      const stored = await secrets.set(deps.tokenKey, token)
       if (!stored.ok) return failed(url, stored.error)
       await address.set(url)
       logger.info('gitlab connected', { url, user: status.user.username })

@@ -11,6 +11,7 @@ function setup(options: { valid?: boolean; url?: string | null } = {}) {
   const seen: { url: string; token: string }[] = []
   const connection = createGitLabConnection({
     secrets,
+    tokenKey: 'gitlab.token',
     logger: silentLogger,
     address: {
       get: () => url,
@@ -110,5 +111,27 @@ describe('disconnect', () => {
     expect(status).toEqual({ kind: 'none' })
     expect(await secrets.get('gitlab.token')).toEqual({ ok: true, value: undefined })
     expect(address()).toBeNull()
+  })
+})
+
+describe('profiles sharing one vault', () => {
+  it('should not remove the token of another profile when disconnecting', async () => {
+    const secrets = new MemorySecretStore()
+    const make = (tokenKey: string) =>
+      createGitLabConnection({
+        secrets,
+        tokenKey,
+        logger: silentLogger,
+        address: { get: () => null, set: async () => undefined },
+        createSource: () => ({
+          currentUser: async () => ok(user),
+          mergeRequests: async () => ok([]),
+        }),
+      })
+    await secrets.set('gitlab.token', 'token-do-app-instalado')
+
+    await make('dev:gitlab.token').disconnect()
+
+    expect(await secrets.get('gitlab.token')).toEqual({ ok: true, value: 'token-do-app-instalado' })
   })
 })
