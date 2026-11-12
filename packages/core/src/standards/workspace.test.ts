@@ -218,6 +218,21 @@ describe('createStandardsWorkspace, changes', () => {
     expect(files.texts.get(`${FOLDERS.repository}/branches.md`)).toContain('enabled: true')
   })
 
+  it('should name the file a change is written to when asked before the change', async () => {
+    const { workspace, put } = arrange()
+    put('repository', { id: 'branch-format', title: 'Our branches' }, 'branches')
+    const { standards } = await workspace.load()
+
+    const files = standards.map((standard) => workspace.fileFor(standard, 'repository'))
+    const global = standards.map((standard) => workspace.fileFor(standard, 'global'))
+
+    expect(files.slice(0, 2)).toEqual([
+      `${FOLDERS.repository}/branches.md`,
+      `${FOLDERS.repository}/commit-message.md`,
+    ])
+    expect(global[0]).toBe(`${FOLDERS.global}/branch-format.md`)
+  })
+
   it.each([
     ['the standard does not exist', 'no-such-standard', 0, 'types', 'feat'],
     ['the field does not exist', 'branch-format', 0, 'ticket', 'feat'],

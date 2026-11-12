@@ -14,7 +14,12 @@ import { builtInStandardFiles } from './examples.ts'
 import { withRuleField } from './fields.ts'
 import { formatStandardFile } from './format.ts'
 import { renderBlock } from './guide.ts'
-import { type ResolvedStandards, resolveStandards, type StandardFile } from './resolve.ts'
+import {
+  type ResolvedStandard,
+  type ResolvedStandards,
+  resolveStandards,
+  type StandardFile,
+} from './resolve.ts'
 import type { Standard } from './standard.ts'
 
 export interface StandardsWorkspaceDeps {
@@ -80,6 +85,11 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
     return resolveStandards(found)
   }
 
+  // A file of the target folder that already holds this id is rewritten, whatever its name
+  const fileFor = (standard: Pick<ResolvedStandard, 'id' | 'layers'>, target: StandardsTarget) =>
+    standard.layers.findLast((layer) => layer.source === target)?.path ??
+    join(folders[target], `${standard.id}.md`)
+
   // Writes the complete standard, so the folder says all that applies and does not depend on the app version
   async function change(
     id: string,
@@ -90,14 +100,14 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
     if (standard === undefined) return fail(errorBody('DCK-STD-001', `${id}: no such standard`))
     const edited = edit(standard)
     if (!edited.ok) return edited
-    // A file of the target folder that already holds this id is rewritten, whatever its name
-    const existing = standard.layers.findLast((layer) => layer.source === target)
-    const path = existing?.path ?? join(folders[target], `${id}.md`)
-    await files.writeText(path, formatStandardFile(edited.value))
+    await files.writeText(fileFor(standard, target), formatStandardFile(edited.value))
     return ok(undefined)
   }
 
   return {
+    // Where a change to the standard is written, so a caller can say it before it asks
+    fileFor,
+
     async load(): Promise<LoadedStandards> {
       const resolved = await resolve()
       const text = (await files.readText(agentsFile)) ?? ''
