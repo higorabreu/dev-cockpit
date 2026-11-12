@@ -184,9 +184,8 @@ export const ptBR = {
   'views.empty.review': 'Nenhuma MR esperando a sua review.',
   'views.empty.mine': 'Você não tem MRs abertas.',
   'views.empty.filtered': 'Nada encontrado.',
-  'views.unconfigured.title': 'GitLab não conectado',
-  'views.unconfigured.text':
-    'Conecte a sua conta para ver as MRs atribuídas a você e as que você criou.',
+  'views.unconfigured.title': 'Conta não conectada',
+  'views.unconfigured.text': 'Conecte o GitLab para acompanhar o seu trabalho.',
   'views.openSettings': 'Conectar GitLab',
   'views.error': 'Não foi possível atualizar. {reason} Mostrando o que estava guardado.',
   'views.hint.navigate': 'navegar',

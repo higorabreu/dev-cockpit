@@ -185,9 +185,8 @@ export const en: Record<MessageKey, string> = {
   'views.empty.review': 'No merge requests waiting for your review.',
   'views.empty.mine': 'You have no open merge requests.',
   'views.empty.filtered': 'Nothing found.',
-  'views.unconfigured.title': 'GitLab not connected',
-  'views.unconfigured.text':
-    'Connect your account to see the merge requests assigned to you and the ones you created.',
+  'views.unconfigured.title': 'Account not connected',
+  'views.unconfigured.text': 'Connect GitLab to follow your work.',
   'views.openSettings': 'Connect GitLab',
   'views.error': 'Could not refresh. {reason} Showing what was stored.',
   'views.hint.navigate': 'navigate',
