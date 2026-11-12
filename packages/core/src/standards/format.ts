@@ -6,6 +6,9 @@ export type StandardDraft = Pick<Standard, 'id'> & Partial<Standard>
 // YAML single quotes take a backslash literally, which keeps a regular expression readable
 const quote = (text: string) => (/['\r\n]/.test(text) ? JSON.stringify(text) : `'${text}'`)
 
+// YAML reads a bare null, true or false key as that value, not as the name of a variable
+const key = (name: string) => (/^(null|true|false)$/i.test(name) ? quote(name) : name)
+
 function field(name: string, value: string | number | boolean | readonly string[] | undefined) {
   if (value === undefined) return []
   if (typeof value === 'string') return [`${name}: ${quote(value)}`]
@@ -19,7 +22,7 @@ function ruleLines(rule: StandardRule): string[] {
   const fields = [
     ...RULE_KINDS.flatMap((kind) => field(kind, rule[kind])),
     ...(variables.length > 0 ? ['variables:'] : []),
-    ...variables.map(([name, value]) => `  ${name}: ${quote(value)}`),
+    ...variables.map(([name, value]) => `  ${key(name)}: ${quote(value)}`),
     ...field('scope', rule.scope),
     ...field('message', rule.message),
   ]

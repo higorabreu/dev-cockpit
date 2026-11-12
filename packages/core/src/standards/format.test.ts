@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { parse } from 'yaml'
 import { formatStandardFile, splitStandardFile } from './format.ts'
 import type { Standard } from './standard.ts'
 
@@ -68,6 +69,18 @@ The ticket key comes first.
 })
 
 describe('splitStandardFile', () => {
+  it('should quote a variable name YAML would read as a value when it writes the rule', () => {
+    const variables = { null: 'a', True: 'b', types: 'feat|fix' }
+    const standard = {
+      ...full,
+      check: [{ pattern: '{null}{True}{types}', variables, message: 'M' }],
+    }
+
+    const { yaml } = splitStandardFile(formatStandardFile(standard))
+
+    expect(parse(yaml ?? '').check[0].variables).toEqual(variables)
+  })
+
   it('should separate the front matter from the body when the file starts with a fenced block', () => {
     const parts = splitStandardFile(
       '---\nid: a\nenabled: true\n---\nThe body.\n\n--- not a fence\n',
