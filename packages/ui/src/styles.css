@@ -811,10 +811,22 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   border-radius: var(--radius-large);
 }
 
+.prow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.prow:focus-within {
+  border-bottom-color: var(--fg);
+}
+
 #search-input {
+  flex: 1;
+  min-width: 0;
   padding: 8px 10px;
   border: 0;
-  border-bottom: 1px solid var(--line);
   background: none;
   color: var(--fg);
   font: inherit;
@@ -823,10 +835,6 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 
 #search-input::placeholder {
   color: var(--muted);
-}
-
-#search-input:focus-visible {
-  border-bottom-color: var(--fg);
 }
 
 #search-results {
