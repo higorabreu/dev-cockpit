@@ -10,6 +10,7 @@ import {
 } from '@dck/core'
 import { h, icon } from './panel/dom.ts'
 import { agoText } from './panel/format.ts'
+import { closeButton, hintBar, keyHint } from './panel-frame.ts'
 
 const ROW_HEIGHT = 46
 const OVERSCAN = 4
@@ -21,7 +22,6 @@ const VIEWS: readonly MergeRequestView[] = ['review', 'mine']
 
 // Ícones SVG e não caracteres: a fonte de reserva dos símbolos desalinha o chip
 const GLYPHS = {
-  check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
   cross: '<path d="M6 6l12 12M18 6L6 18"/>',
   dot: '<circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>',
   ring: '<circle cx="12" cy="12" r="5.5"/>',
@@ -90,11 +90,11 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const list = h('div', { class: 'vlist', id: 'views-list', role: 'listbox', tabindex: '-1' })
   const inner = h('div', { class: 'vinner' })
   list.append(inner)
-  const hint = h('div', { class: 'vhint' })
+  const hint = hintBar()
   const box = h(
     'div',
     { id: 'views-box' },
-    h('div', { class: 'vhead' }, tabs, status, refreshButton),
+    h('div', { class: 'vhead' }, tabs, status, refreshButton, closeButton(t, close)),
     h('div', { class: 'vbar' }, input, pendingButton),
     notice,
     list,
@@ -102,19 +102,17 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   )
   overlay.replaceChildren(box)
 
-  const kbd = (keys: string, label: string) =>
-    h('span', { class: 'vkey' }, h('kbd', { class: 'vk' }, keys), ` ${label}`)
-
   function drawStatic() {
     overlay.setAttribute('aria-label', t('views.title'))
-    refreshButton.replaceChildren(t('views.refresh'), h('kbd', { class: 'vk' }, 'Ctrl+R'))
-    pendingButton.replaceChildren(t('views.pending'), h('kbd', { class: 'vk' }, 'Alt+P'))
+    refreshButton.textContent = t('views.refresh')
+    refreshButton.dataset.tip = `${t('views.refresh')} (Ctrl+R)`
+    pendingButton.textContent = t('views.pending')
+    pendingButton.dataset.tip = `${t('views.pending')} (Alt+P)`
     input.placeholder = t('views.filter.placeholder')
     hint.replaceChildren(
-      kbd('↑↓', t('views.hint.navigate')),
-      kbd('Enter', t('views.hint.open')),
-      kbd('←→', t('views.hint.switch')),
-      kbd('Esc', t('views.hint.close')),
+      keyHint('↑↓', t('views.hint.navigate')),
+      keyHint('Enter', t('views.hint.open')),
+      keyHint('←→', t('views.hint.switch')),
     )
   }
 
@@ -142,13 +140,17 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
 
   function flags(item: MergeRequestSummary): HTMLElement[] {
     const chip = (kind: string, glyph: keyof typeof GLYPHS, text: string) =>
-      h('span', { class: 'vflag', 'data-kind': kind }, icon(GLYPHS[glyph], 11), h('span', {}, text))
+      h(
+        'span',
+        { class: 'vflag', 'data-kind': kind },
+        icon(GLYPHS[glyph], 11),
+        h('span', { class: 'vflag-text' }, text),
+      )
     const out: HTMLElement[] = []
     if (item.draft) out.push(chip('muted', 'ring', t('views.flag.draft')))
     if (item.hasConflicts) out.push(chip('critical', 'cross', t('views.flag.conflict')))
     if (item.openDiscussions) out.push(chip('warning', 'dot', t('views.flag.discussions')))
     const pipeline = {
-      success: ['muted', 'check', 'views.flag.pipeline.success'],
       failed: ['critical', 'cross', 'views.flag.pipeline.failed'],
       running: ['warning', 'dot', 'views.flag.pipeline.running'],
       pending: ['warning', 'ring', 'views.flag.pipeline.pending'],

@@ -1,4 +1,6 @@
 import { searchItems, type Translate } from '@dck/core'
+import { h } from './panel/dom.ts'
+import { closeButton, keyHint } from './panel-frame.ts'
 
 export interface SearchEntry {
   readonly path: string
@@ -30,9 +32,15 @@ export function createProjectSearch(
 ) {
   const { overlay, input, results, hint } = elements
   const drawHint = () => {
-    hint.innerHTML = `<kbd>Ctrl+D</kbd> ${escapeHtml(t('projects.hint'))}`
+    hint.replaceChildren(keyHint('Ctrl+D', t('projects.hint')))
   }
   drawHint()
+  const row = h('div', { class: 'prow' })
+  input.replaceWith(row)
+  row.append(
+    input,
+    closeButton(t, () => close()),
+  )
   let entries: readonly SearchEntry[] = []
   let matches: readonly SearchEntry[] = []
   let selected = 0

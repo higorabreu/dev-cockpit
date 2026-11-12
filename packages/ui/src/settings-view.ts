@@ -11,7 +11,8 @@ import {
   type Translator,
 } from '@dck/core'
 import { inputGate } from './input-gate.ts'
-import { h, icon } from './panel/dom.ts'
+import { h } from './panel/dom.ts'
+import { closeButton } from './panel-frame.ts'
 import type { SettingsClient } from './settings-client.ts'
 
 type Child = Node | string | false | undefined
@@ -423,19 +424,12 @@ export function createSettingsView(
   }
 
   function header(): HTMLElement {
-    const close = h(
-      'button',
-      {
-        type: 'button',
-        class: 'sclose',
-        'data-focus': 'set-close',
-        'data-tip': `${t('settings.close')} (Esc)`,
-        'aria-label': t('settings.close'),
-      },
-      icon('<path d="M6 6l12 12M18 6L6 18"/>', 14),
+    return h(
+      'header',
+      { class: 'shead2' },
+      h('h1', {}, t('settings.title')),
+      closeButton(t, closeView, 'set-close'),
     )
-    close.addEventListener('click', () => closeView())
-    return h('header', { class: 'shead2' }, h('h1', {}, t('settings.title')), close)
   }
 
   function selectTab(id: TabId, focus = false) {
