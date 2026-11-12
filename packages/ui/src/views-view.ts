@@ -10,7 +10,7 @@ import {
 } from '@dck/core'
 import { h, icon } from './panel/dom.ts'
 import { agoText } from './panel/format.ts'
-import { closeButton, hintBar, keyHint } from './panel-frame.ts'
+import { actionHint, closeButton, hintBar, keyHint } from './panel-frame.ts'
 
 const ROW_HEIGHT = 46
 const OVERSCAN = 4
@@ -80,11 +80,6 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     'aria-label': t('views.title'),
   })
   const status = h('span', { class: 'vstatus', role: 'status' })
-  const refreshButton = h('button', {
-    type: 'button',
-    class: 'vbtn',
-    'data-focus': 'views-refresh',
-  })
   const pendingButton = h('button', { type: 'button', class: 'vbtn', 'aria-pressed': 'false' })
   const notice = h('div', { class: 'vnotice' })
   const list = h('div', { class: 'vlist', id: 'views-list', role: 'listbox', tabindex: '-1' })
@@ -94,7 +89,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const box = h(
     'div',
     { id: 'views-box' },
-    h('div', { class: 'vhead' }, tabs, status, refreshButton, closeButton(t, close)),
+    h('div', { class: 'vhead' }, tabs, status, closeButton(t, close)),
     h('div', { class: 'vbar' }, input, pendingButton),
     notice,
     list,
@@ -102,11 +97,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   )
   overlay.replaceChildren(box)
 
+  const refreshButton = () => {
+    const button = actionHint('Ctrl+R', t('views.refresh'))
+    button.addEventListener('click', refresh)
+    return button
+  }
+
   function drawStatic() {
     overlay.setAttribute('aria-label', t('views.title'))
-    refreshButton.textContent = t('views.refresh')
-    refreshButton.dataset.tip = t('views.refresh')
-    refreshButton.dataset.tipKey = 'Ctrl+R'
     pendingButton.textContent = t('views.pending')
     pendingButton.dataset.tip = t('views.pending')
     pendingButton.dataset.tipKey = 'Alt+P'
@@ -115,6 +113,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       keyHint('↑↓', t('views.hint.navigate')),
       keyHint('Enter', t('views.hint.open')),
       keyHint('←→', t('views.hint.switch')),
+      refreshButton(),
     )
   }
 
@@ -355,7 +354,6 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     event.stopPropagation()
   })
   list.addEventListener('scroll', schedule, { passive: true })
-  refreshButton.addEventListener('click', refresh)
   pendingButton.addEventListener('click', () => {
     onlyPending = !onlyPending
     refilter()

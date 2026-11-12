@@ -27,3 +27,7 @@ export const keyHint = (keys: string, label: string): HTMLElement =>
 
 export const hintBar = (...hints: HTMLElement[]): HTMLElement =>
   h('div', { class: 'phint' }, ...hints)
+
+// Ação clicável na barra de atalhos, empurrada para a direita
+export const actionHint = (keys: string, label: string): HTMLButtonElement =>
+  h('button', { type: 'button', class: 'pact' }, h('kbd', { class: 'pk' }, keys), ` ${label}`)

@@ -1841,3 +1841,22 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   color: var(--muted);
   font: 10.5px var(--font-mono);
 }
+
+.pact {
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pact:hover {
+  color: var(--fg);
+}
+
+.pact:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
