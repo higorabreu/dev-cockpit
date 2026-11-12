@@ -34,16 +34,19 @@ export function renderGuide(standards: readonly Standard[], application: string)
   }
 }
 
-const INDEX_INTRO = 'Before an action listed below, run its command and follow what it prints.'
+const BLOCK_HEADING = '## Standards to follow in this repository'
 
-const sentence = (text: string) => (/[.!?]$/.test(text) ? text : `${text}.`)
+// A body longer than this is not repeated in the block: the line points to `dck guide` instead
+export const LONG_BODY_LINES = 5
 
-// The short block for an AGENTS.md: the guides stay out of the context until the agent asks for one
-export function renderIndex(standards: readonly Standard[]): string {
+// The block for an AGENTS.md: each rule is stated here, so an agent follows it without running anything
+export function renderBlock(standards: readonly Standard[]): string {
   const enabled = standards.filter((standard) => standard.enabled)
   if (enabled.length === 0) return ''
-  const lines = enabled.map(
-    ({ title, why, applies }) => `- ${title}: ${sentence(why)} Run \`dck guide ${applies}\`.`,
-  )
-  return [INDEX_INTRO, '', ...lines].join('\n')
+  const lines = enabled.flatMap(({ title, why, applies, check, body }) => {
+    const rule = check.map((item) => item.message).join('; ') || why
+    const isLong = body.split('\n').length > LONG_BODY_LINES
+    return [`- ${title}: ${rule}`, ...(isLong ? [`  Details: \`dck guide ${applies}\``] : [])]
+  })
+  return [BLOCK_HEADING, '', ...lines].join('\n')
 }

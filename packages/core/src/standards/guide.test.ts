@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { renderGuide, renderIndex } from './guide.ts'
+import { LONG_BODY_LINES, renderBlock, renderGuide } from './guide.ts'
 import type { Standard } from './standard.ts'
 
 const branch: Standard = {
@@ -86,25 +86,45 @@ describe('renderGuide', () => {
   })
 })
 
-describe('renderIndex', () => {
-  it('should list each enabled standard with its reason and its command when some are enabled', () => {
+describe('renderBlock', () => {
+  it('should state the rule messages of each enabled standard when it has rules', () => {
     const disabled = { ...review, id: 'commit-message', applies: 'commit', enabled: false }
 
-    const index = renderIndex([branch, review, disabled])
+    const block = renderBlock([branch, disabled])
 
-    expect(index).toBe(
+    expect(block).toBe(
       [
-        'Before an action listed below, run its command and follow what it prints.',
+        '## Standards to follow in this repository',
         '',
-        '- Branch names: Work is traceable from the branch name. Run `dck guide branch`.',
-        '- Review rubric: Reviews stay comparable. Run `dck guide review`.',
+        '- Branch names: Start with feat/ or fix/; At most 60 characters',
       ].join('\n'),
     )
   })
 
-  it('should return an empty string when nothing is enabled', () => {
-    const index = renderIndex([{ ...branch, enabled: false }])
+  it('should state the reason when a standard has no rule', () => {
+    const block = renderBlock([review])
 
-    expect(index).toBe('')
+    expect(block).toContain('- Review rubric: Reviews stay comparable.')
+    expect(block).not.toContain('Details:')
+  })
+
+  it('should point to the guide command only when the body is longer than the limit', () => {
+    const body = (lines: number) => Array.from({ length: lines }, () => 'A line.').join('\n')
+    const short = { ...branch, body: body(LONG_BODY_LINES) }
+    const long = { ...review, body: body(LONG_BODY_LINES + 1) }
+
+    const block = renderBlock([short, long])
+
+    expect(block.split('\n').slice(2)).toEqual([
+      '- Branch names: Start with feat/ or fix/; At most 60 characters',
+      '- Review rubric: Reviews stay comparable.',
+      '  Details: `dck guide review`',
+    ])
+  })
+
+  it('should return an empty string when nothing is enabled', () => {
+    const block = renderBlock([{ ...branch, enabled: false }])
+
+    expect(block).toBe('')
   })
 })
