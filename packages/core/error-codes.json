@@ -40,5 +40,17 @@
     "category": "unavailable",
     "retryable": true,
     "rpc": -32003
+  },
+  "DCK-SEC-001": {
+    "message": "Cofre de segredos indisponível",
+    "category": "unavailable",
+    "retryable": false,
+    "rpc": -32004
+  },
+  "DCK-SEC-002": {
+    "message": "O cofre de segredos recusou a operação",
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32005
   }
 }

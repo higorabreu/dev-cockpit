@@ -14,6 +14,7 @@ import type {
   Screen,
   SecretStore,
 } from '../ports/index.ts'
+import { ok } from '../result.ts'
 
 export class FakeClock implements Clock {
   constructor(public time = 0) {}
@@ -55,13 +56,15 @@ export class MemoryClipboard implements Clipboard {
 export class MemorySecretStore implements SecretStore {
   private readonly entries = new Map<string, string>()
   async get(key: string) {
-    return this.entries.get(key)
+    return ok(this.entries.get(key))
   }
   async set(key: string, value: string) {
     this.entries.set(key, value)
+    return ok(undefined)
   }
   async delete(key: string) {
     this.entries.delete(key)
+    return ok(undefined)
   }
 }
 

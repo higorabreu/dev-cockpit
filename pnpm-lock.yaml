@@ -63,6 +63,12 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
 
+  packages/adapters/secret-tool:
+    dependencies:
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../../core
+
   packages/cli:
     dependencies:
       '@dck/adapter-agent-claude':
