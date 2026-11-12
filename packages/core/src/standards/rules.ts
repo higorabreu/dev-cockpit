@@ -16,9 +16,26 @@ const EXPRESSION_KINDS = ['pattern', 'required', 'forbid'] as const
 // A name starts with a letter, so a quantifier like {1,72} is left alone
 const VARIABLE = /\{([A-Za-z][A-Za-z0-9]*)\}/g
 
+// A list of alternatives reads better as "feat, fix" than as "feat|fix"
+const ALTERNATIVES = /^[\w-]+(\|[\w-]+)+$/
+
+// A message may name the rule's own fields, so it stays true after one of them is edited
+export function ruleMessage(rule: StandardRule): string {
+  const fields: Record<string, string | number | undefined> = {
+    ...rule.variables,
+    maxLength: rule.maxLength,
+  }
+  return rule.message.replace(VARIABLE, (whole, name: string) => {
+    const value = Object.hasOwn(fields, name) ? fields[name] : undefined
+    if (value === undefined) return whole
+    const text = String(value)
+    return ALTERNATIVES.test(text) ? text.replaceAll('|', ', ') : text
+  })
+}
+
 // `where` is the file and rule the failure detail points to
 export function compileRule(rule: StandardRule, where: string): Result<CompiledRule, ErrorBody> {
-  const common = { message: rule.message, scope: rule.scope ?? 'text' }
+  const common = { message: ruleMessage(rule), scope: rule.scope ?? 'text' }
   if (rule.maxLength !== undefined) return ok({ ...common, kind: 'maxLength', max: rule.maxLength })
 
   const kind = EXPRESSION_KINDS.find((candidate) => rule[candidate] !== undefined)

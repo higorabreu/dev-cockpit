@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compileRule } from './rules.ts'
+import { compileRule, ruleMessage } from './rules.ts'
 
 const WHERE = '/home/ana/acme/backend/.dck/standards/branch.md: check.0'
 
@@ -74,5 +74,24 @@ describe('compileRule', () => {
     const compiled = compileRule({ message: 'Nothing to check' }, WHERE)
 
     expect(compiled).toMatchObject({ ok: false, error: { data: { code: 'DCK-STD-001' } } })
+  })
+})
+
+describe('ruleMessage', () => {
+  it('should name the current values when the message refers to the rule fields', () => {
+    const rule = {
+      pattern: '^({types}): .+$',
+      variables: { types: 'feat|fix' },
+      message: 'Start with one of {types}',
+    }
+
+    expect(ruleMessage(rule)).toBe('Start with one of feat, fix')
+    expect(ruleMessage({ maxLength: 50, message: 'At most {maxLength} characters' })).toBe(
+      'At most 50 characters',
+    )
+  })
+
+  it('should leave the braces alone when they name no field of the rule', () => {
+    expect(ruleMessage({ maxLength: 50, message: 'Use {ticket} first' })).toBe('Use {ticket} first')
   })
 })

@@ -1,3 +1,4 @@
+import { ruleMessage } from './rules.ts'
 import { enabledFor, type Standard } from './standard.ts'
 
 // The text here is written into repository files that agents read, so it is fixed English and not i18n:
@@ -12,7 +13,10 @@ export interface Guide {
 }
 
 function section(standard: Standard): string {
-  const checked = ['Checked automatically:', ...standard.check.map((rule) => `- ${rule.message}`)]
+  const checked = [
+    'Checked automatically:',
+    ...standard.check.map((rule) => `- ${ruleMessage(rule)}`),
+  ]
   return [
     `## ${standard.title}`,
     standard.body,
@@ -44,7 +48,7 @@ export function renderBlock(standards: readonly Standard[]): string {
   const enabled = standards.filter((standard) => standard.enabled)
   if (enabled.length === 0) return ''
   const lines = enabled.flatMap(({ title, why, applies, check, body }) => {
-    const rule = check.map((item) => item.message).join('; ') || why
+    const rule = check.map(ruleMessage).join('; ') || why
     const isLong = body.split('\n').length > LONG_BODY_LINES
     return [`- ${title}: ${rule}`, ...(isLong ? [`  Details: \`dck guide ${applies}\``] : [])]
   })

@@ -1,6 +1,6 @@
 import { type ErrorBody, errorBody } from '../ipc/protocol.ts'
 import { fail, ok, type Result } from '../result.ts'
-import { compileRule } from './rules.ts'
+import { compileRule, ruleMessage } from './rules.ts'
 import { ruleSchema, type Standard, type StandardRule } from './standard.ts'
 
 // What a screen edits in a rule without showing its expression: each variable and the length limit
@@ -18,7 +18,7 @@ const MAX_LENGTH = 'maxLength'
 
 export function ruleFields(standard: Pick<Standard, 'check'>): RuleField[] {
   return standard.check.flatMap((rule, index) => {
-    const common = { rule: index, message: rule.message }
+    const common = { rule: index, message: ruleMessage(rule) }
     const fields: RuleField[] = Object.entries(rule.variables ?? {}).map(([name, value]) => ({
       ...common,
       name,

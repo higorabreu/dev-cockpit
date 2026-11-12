@@ -262,8 +262,8 @@ describe('createStandardsWorkspace, agents', () => {
 <!-- dck:start -->
 ## Standards to follow in this repository
 
-- Branch names: Use <type>/<short-slug> in lowercase, for example feat/add-login
-- Commit messages: Start with <type>(<optional scope>): <summary>, for example fix(cli): handle empty input; Keep the first line within 72 characters
+- Branch names: Use <type>/<short-slug> in lowercase with a type from feat, fix, docs, refactor, test, chore, ci, for example feat/add-login
+- Commit messages: Start with <type>(<optional scope>): <summary> with a type from feat, fix, docs, refactor, test, chore, ci, for example fix(cli): handle empty input; Keep the first line within 72 characters
 <!-- dck:end -->
 `,
     )

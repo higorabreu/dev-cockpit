@@ -23,12 +23,12 @@ const branchFormat: Standard = {
     {
       pattern: '^({main}|({types})/[a-z0-9][a-z0-9-]*)$',
       variables: { main: MAIN_BRANCHES, types: TYPES },
-      message: 'Use <type>/<short-slug> in lowercase, for example feat/add-login',
+      message:
+        'Use <type>/<short-slug> in lowercase with a type from {types}, for example feat/add-login',
     },
   ],
   body: `Name a branch \`<type>/<short-slug>\`, in lowercase with hyphens, for example \`feat/add-login\`.
-The type is one of feat, fix, docs, refactor, test, chore or ci. The long-lived branches main, master
-and develop keep their names.
+The rule below lists the types. The long-lived branches, such as main, keep their names.
 
 To accept other types or other long-lived branches, change the fields \`types\` and \`main\` of the rule.`,
 }
@@ -47,17 +47,17 @@ const commitMessage: Standard = {
       variables: { types: TYPES },
       scope: 'first-line',
       message:
-        'Start with <type>(<optional scope>): <summary>, for example fix(cli): handle empty input',
+        'Start with <type>(<optional scope>): <summary> with a type from {types}, for example fix(cli): handle empty input',
     },
     {
       maxLength: 72,
       scope: 'first-line',
-      message: 'Keep the first line within 72 characters',
+      message: 'Keep the first line within {maxLength} characters',
     },
   ],
-  body: `Write the first line as \`<type>(<optional scope>): <summary>\`, in the imperative and within 72
-characters, for example \`fix(cli): handle empty input\`. The type is one of feat, fix, docs, refactor,
-test, chore or ci. When the reason is not obvious, explain it in the body after a blank line.
+  body: `Write the first line as \`<type>(<optional scope>): <summary>\`, short and in the imperative, for
+example \`fix(cli): handle empty input\`. The rules below list the types and the length. When the reason
+is not obvious, explain it in the body after a blank line.
 
 To accept other types or another length, change the fields \`types\` and \`maxLength\` of the rules.`,
 }
