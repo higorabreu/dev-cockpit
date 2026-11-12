@@ -85,6 +85,38 @@ describe('createSettingsStore update', () => {
     expect(JSON.parse(await readFile(file, 'utf8')).shortcuts.toggleWindow).toBe('F12')
   })
 
+  it('should keep a value another program wrote to the file when updating something else', async () => {
+    const store = make()
+    await store.load()
+    await store.update({ fontSize: 20 })
+    const edited = {
+      ...JSON.parse(await readFile(file, 'utf8')),
+      extensions: { disabled: ['acme.commits'] },
+    }
+    await writeFile(file, JSON.stringify(edited))
+
+    const result = await store.update({ theme: 'light' })
+
+    expect(result.settings.extensions.disabled).toEqual(['acme.commits'])
+    expect(JSON.parse(await readFile(file, 'utf8'))).toMatchObject({
+      theme: 'light',
+      fontSize: 20,
+      extensions: { disabled: ['acme.commits'] },
+    })
+  })
+
+  it('should keep what it had in memory when the file became invalid before an update', async () => {
+    const store = make()
+    await store.load()
+    await store.update({ fontSize: 20 })
+    await writeFile(file, '{ broken')
+
+    const result = await store.update({ theme: 'light' })
+
+    expect(result.settings.fontSize).toBe(20)
+    expect(JSON.parse(await readFile(file, 'utf8'))).toMatchObject({ theme: 'light', fontSize: 20 })
+  })
+
   it('should tell the listeners what changed when a value changes', async () => {
     const store = make()
     await store.load()
