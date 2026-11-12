@@ -11,6 +11,7 @@ import {
   type Translator,
 } from '@dck/core'
 import { createHarnessPage } from '../harness/harness-page.ts'
+import { createFocusKeeper } from '../kit/focus-keeper.ts'
 import { closeButton } from '../kit/panel-frame.ts'
 import { h } from '../panel/dom.ts'
 import { inputGate } from '../platform/input-gate.ts'
@@ -100,6 +101,7 @@ export function createSettingsView(
   let local = 0
 
   const isOpen = () => overlay.classList.contains('open')
+  const keeper = createFocusKeeper(body)
 
   const harness = createHarnessPage({
     api: api.rules,
@@ -507,7 +509,10 @@ export function createSettingsView(
     h('section', { class: 'sgroup' }, title && h('h2', {}, title), ...rows)
 
   function render() {
-    const focused = document.activeElement?.getAttribute('data-focus')
+    keeper.redraw(draw)
+  }
+
+  function draw() {
     const value = settings.current()
     const holdOptions = HOLD_TRIGGERS.map(
       (id) => [id, t(`settings.holdTrigger.${id}` as const)] as const,
@@ -680,7 +685,6 @@ export function createSettingsView(
       ),
     )
     void value
-    if (focused) body.querySelector<HTMLElement>(`[data-focus="${focused}"]`)?.focus()
   }
 
   function open(tab: TabId = TABS[0].id) {
