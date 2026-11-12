@@ -13,3 +13,6 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
+
+# Personal planning notes, kept out of the repository
+plans/local/
