@@ -93,5 +93,10 @@
     "category": "invalid_argument",
     "retryable": false,
     "rpc": -32015
+  },
+  "DCK-EXT-003": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32016
   }
 }
