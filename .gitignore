@@ -8,7 +8,7 @@ coverage/
 pnpm-debug.log*
 .DS_Store
 
-# Segredos
+# Secrets
 .env
 .env.*
 !.env.example
