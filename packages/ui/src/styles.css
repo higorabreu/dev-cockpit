@@ -1792,14 +1792,21 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 }
 
 .vflag {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 1px 6px;
+  height: 20px;
+  padding: 0 7px;
   border: 1px solid var(--line);
   border-radius: var(--radius-small);
   font-size: 11px;
+  line-height: 1;
   white-space: nowrap;
+}
+
+.vflag svg {
+  flex: none;
+  stroke-width: 2.6;
 }
 
 .vflag[data-kind="muted"] {

@@ -8,7 +8,7 @@ import {
   type ViewSnapshot,
   visibleRange,
 } from '@dck/core'
-import { h } from './panel/dom.ts'
+import { h, icon } from './panel/dom.ts'
 import { agoText } from './panel/format.ts'
 
 const ROW_HEIGHT = 46
@@ -16,6 +16,14 @@ const OVERSCAN = 4
 // Dado mais velho que isso é buscado de novo ao abrir
 const STALE_MS = 60_000
 const VIEWS: readonly MergeRequestView[] = ['review', 'mine']
+
+// Ícones SVG e não caracteres: a fonte de reserva dos símbolos desalinha o chip
+const GLYPHS = {
+  check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
+  cross: '<path d="M6 6l12 12M18 6L6 18"/>',
+  dot: '<circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>',
+  ring: '<circle cx="12" cy="12" r="5.5"/>',
+} as const
 
 export interface ViewsViewDeps {
   readonly api: HostApi
@@ -125,23 +133,18 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   }
 
   function flags(item: MergeRequestSummary): HTMLElement[] {
-    const chip = (kind: string, glyph: string, text: string) =>
-      h(
-        'span',
-        { class: 'vflag', 'data-kind': kind },
-        h('span', { 'aria-hidden': 'true' }, glyph),
-        text,
-      )
+    const chip = (kind: string, glyph: keyof typeof GLYPHS, text: string) =>
+      h('span', { class: 'vflag', 'data-kind': kind }, icon(GLYPHS[glyph], 11), h('span', {}, text))
     const out: HTMLElement[] = []
-    if (item.draft) out.push(chip('muted', '○', t('views.flag.draft')))
-    if (item.hasConflicts) out.push(chip('critical', '✕', t('views.flag.conflict')))
-    if (item.openDiscussions) out.push(chip('warning', '●', t('views.flag.discussions')))
+    if (item.draft) out.push(chip('muted', 'ring', t('views.flag.draft')))
+    if (item.hasConflicts) out.push(chip('critical', 'cross', t('views.flag.conflict')))
+    if (item.openDiscussions) out.push(chip('warning', 'dot', t('views.flag.discussions')))
     const pipeline = {
-      success: ['muted', '✓', 'views.flag.pipeline.success'],
-      failed: ['critical', '✕', 'views.flag.pipeline.failed'],
-      running: ['warning', '●', 'views.flag.pipeline.running'],
-      pending: ['warning', '○', 'views.flag.pipeline.pending'],
-      canceled: ['muted', '○', 'views.flag.pipeline.canceled'],
+      success: ['muted', 'check', 'views.flag.pipeline.success'],
+      failed: ['critical', 'cross', 'views.flag.pipeline.failed'],
+      running: ['warning', 'dot', 'views.flag.pipeline.running'],
+      pending: ['warning', 'ring', 'views.flag.pipeline.pending'],
+      canceled: ['muted', 'ring', 'views.flag.pipeline.canceled'],
     } as const
     if (item.pipeline in pipeline) {
       const [kind, glyph, key] = pipeline[item.pipeline as keyof typeof pipeline]
