@@ -11,6 +11,7 @@ export const ptBR = {
   'sessions.agent': '{agent} em execução',
   'sessions.busy': 'Executando {process}',
   'sessions.finished': 'Terminou, {process} em {duration}',
+  'sessions.needsYou': 'O agente precisa de você',
   'sessions.new': 'novo',
 
   'git.label': 'Git',
@@ -64,6 +65,7 @@ export const ptBR = {
   'tabs.previous': 'Aba anterior',
   'tabs.nextFinished': 'Próxima que terminou',
   'tabs.finished': 'terminou',
+  'tabs.needsYou': 'precisa de você',
   'tabs.all': 'Todas as abas',
   'tabs.search': 'Buscar aba',
   'tabs.none': 'Nenhuma aba',
@@ -242,6 +244,7 @@ export const ptBR = {
 
   'notify.title': 'Dev Cockpit',
   'notify.finished': '{tab}: {process} terminou em {duration}',
+  'notify.needsYou': '{tab}: o agente precisa de você',
 
   'error.DCK-IPC-001': 'Método desconhecido',
   'error.DCK-IPC-002': 'O método falhou',

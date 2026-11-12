@@ -98,7 +98,7 @@ body.full #bar {
   outline-offset: 1px;
 }
 
-#tabs-all[data-attention="true"]::after {
+#tabs-all[data-attention]::after {
   content: "";
   position: absolute;
   top: 3px;
@@ -107,6 +107,16 @@ body.full #bar {
   height: 6px;
   border-radius: 50%;
   background: var(--fg);
+}
+
+#tabs-all[data-attention="needs-you"]::after {
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 0;
+  background: var(--warning);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
 }
 
 .tab {

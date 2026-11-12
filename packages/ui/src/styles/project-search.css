@@ -63,14 +63,6 @@
   overflow-y: auto;
 }
 
-.tab .pip {
-  flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--fg);
-}
-
 .new {
   padding: 0 5px;
   border: 1px solid var(--muted);

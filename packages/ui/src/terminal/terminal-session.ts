@@ -8,6 +8,8 @@ import { attachClipboard } from './clipboard-behavior.ts'
 export interface TerminalSession {
   readonly element: HTMLElement
   readonly ptyId: number
+  // When the terminal last wrote anything, in milliseconds since 1970
+  lastOutputAt(): number
   focus(): void
   write(data: string): void
   fit(): void
@@ -25,6 +27,8 @@ export interface SessionOptions {
   readonly exitedText: string
   onCopied(text: string): void
   onExit(): void
+  // A key the user typed, not the replies xterm sends by itself (focus and cursor reports)
+  onInput?(): void
 }
 
 export async function createTerminalSession(options: SessionOptions): Promise<TerminalSession> {
@@ -69,9 +73,13 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     ...(options.cwd ? { cwd: options.cwd } : {}),
   })
   terminal.onData((data) => api.pty.write(id, data))
+  terminal.onKey(() => options.onInput?.())
   terminal.onResize(({ cols, rows }) => api.pty.resize(id, cols, rows))
+  let lastOutputAt = Date.now()
   const stopData = api.pty.onData((sessionId, data) => {
-    if (sessionId === id) terminal.write(data)
+    if (sessionId !== id) return
+    lastOutputAt = Date.now()
+    terminal.write(data)
   })
   const stopExit = api.pty.onExit((sessionId) => {
     if (sessionId !== id) return
@@ -92,6 +100,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   return {
     element,
     ptyId: id,
+    lastOutputAt: () => lastOutputAt,
     focus: () => terminal.focus(),
     write: (data) => api.pty.write(id, data),
     fit: () => fit.fit(),

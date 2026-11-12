@@ -12,6 +12,7 @@ export const en: Record<MessageKey, string> = {
   'sessions.agent': '{agent} running',
   'sessions.busy': 'Running {process}',
   'sessions.finished': 'Finished, {process} in {duration}',
+  'sessions.needsYou': 'The agent needs you',
   'sessions.new': 'new',
 
   'git.label': 'Git',
@@ -65,6 +66,7 @@ export const en: Record<MessageKey, string> = {
   'tabs.previous': 'Previous tab',
   'tabs.nextFinished': 'Next finished',
   'tabs.finished': 'finished',
+  'tabs.needsYou': 'needs you',
   'tabs.all': 'All tabs',
   'tabs.search': 'Search tabs',
   'tabs.none': 'No tabs',
@@ -243,6 +245,7 @@ export const en: Record<MessageKey, string> = {
 
   'notify.title': 'Dev Cockpit',
   'notify.finished': '{tab}: {process} finished in {duration}',
+  'notify.needsYou': '{tab}: the agent needs you',
 
   'error.DCK-IPC-001': 'Unknown method',
   'error.DCK-IPC-002': 'The method failed',

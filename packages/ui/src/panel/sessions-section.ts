@@ -14,6 +14,8 @@ export interface SessionsSource {
   info(id: string): SessionActivityInfo | undefined
   // Something finished out of sight and the user has not seen it yet
   finished(id: string): FinishedCommand | undefined
+  // An agent stopped to ask and the user has not seen it yet
+  needsYou(id: string): boolean
   finishedCount(): number
   select(id: string): void
 }
@@ -48,14 +50,16 @@ export function createSessionsSection(source: SessionsSource, i18n: Translator):
           order,
           info: source.info(tab.id),
           done: source.finished(tab.id),
+          asks: source.needsYou(tab.id),
         }))
         .sort(
           (a, b) =>
+            Number(b.asks) - Number(a.asks) ||
             Number(Boolean(b.done)) - Number(Boolean(a.done)) ||
             RANK[a.info?.activity ?? 'idle'] - RANK[b.info?.activity ?? 'idle'] ||
             a.order - b.order,
         )
-        .map(({ tab, info, done }) => {
+        .map(({ tab, info, done, asks }) => {
           const row = h(
             'button',
             {
@@ -63,11 +67,13 @@ export function createSessionsSection(source: SessionsSource, i18n: Translator):
               class: 'srow',
               'aria-current': tab.id === source.activeId() ? 'true' : undefined,
             },
-            done
-              ? activityGlyph('done')
-              : info
-                ? activityGlyph(info.activity)
-                : h('span', { class: 'glyph' }),
+            asks
+              ? activityGlyph('needs-you')
+              : done
+                ? activityGlyph('done')
+                : info
+                  ? activityGlyph(info.activity)
+                  : h('span', { class: 'glyph' }),
             h(
               'span',
               { class: 'stext' },
@@ -75,15 +81,17 @@ export function createSessionsSection(source: SessionsSource, i18n: Translator):
               h(
                 'span',
                 { class: 'sstate' },
-                done
-                  ? i18n.t('sessions.finished', {
-                      process: done.process,
-                      duration: formatDuration(done.durationMs),
-                    })
-                  : describe(i18n, info),
+                asks
+                  ? i18n.t('sessions.needsYou')
+                  : done
+                    ? i18n.t('sessions.finished', {
+                        process: done.process,
+                        duration: formatDuration(done.durationMs),
+                      })
+                    : describe(i18n, info),
               ),
             ),
-            done
+            asks || done
               ? h('span', { class: 'new' }, i18n.t('sessions.new'))
               : info && h('span', { class: 'smeta' }, folder(info.cwd)),
           )

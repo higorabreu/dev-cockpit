@@ -182,6 +182,8 @@ export function createAttentionTracker(options: AttentionOptions) {
       return entry?.kind === 'finished' ? entry.command : undefined
     },
     attention: (tabId: string): AttentionKind | undefined => unseen.get(tabId)?.kind,
+    marks: (): ReadonlyMap<string, AttentionKind> =>
+      new Map([...unseen].map(([tabId, entry]) => [tabId, entry.kind])),
     unseenIds: () => [...unseen.keys()],
     // Tabs that need the user come first: the agent is blocked until they answer
     nextUnseen(): string | undefined {

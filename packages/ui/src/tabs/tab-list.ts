@@ -1,11 +1,12 @@
-import { searchItems, type Translate } from '@dck/core'
+import { type AttentionKind, searchItems, type Translate } from '@dck/core'
 import { h, icon } from '../panel/dom.ts'
+import { attentionMark } from './attention-mark.ts'
 
 export interface TabListEntry {
   readonly id: string
   readonly label: string
   readonly current: boolean
-  readonly finished: boolean
+  readonly mark?: AttentionKind
 }
 
 export interface TabListDeps {
@@ -38,6 +39,16 @@ export function createTabList(panel: HTMLElement, button: HTMLElement, deps: Tab
 
   const isOpen = () => !panel.hidden
 
+  function flag(kind: AttentionKind) {
+    const mark = attentionMark(kind, t)
+    return h(
+      'span',
+      { class: 'tl-flag' },
+      h('i', { class: mark.className, 'aria-hidden': 'true' }),
+      mark.label,
+    )
+  }
+
   function draw() {
     if (matches.length === 0) {
       list.replaceChildren(h('div', { class: 'empty' }, t('tabs.none')))
@@ -56,8 +67,7 @@ export function createTabList(panel: HTMLElement, button: HTMLElement, deps: Tab
             'data-index': String(index),
           },
           h('span', { class: 'tl-label' }, entry.label),
-          entry.finished &&
-            h('span', { class: 'tl-flag' }, h('i', { class: 'pip' }), t('tabs.finished')),
+          entry.mark && flag(entry.mark),
           entry.current && icon(CHECK, 13),
         ),
       ),

@@ -1,0 +1,20 @@
+/* Unseen tab marks: a dot when something finished, a warning diamond when an agent needs the user */
+.pip {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fg);
+}
+
+.pip.needs-you {
+  width: 8px;
+  height: 8px;
+  border-radius: 0;
+  background: var(--warning);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.glyph-needs-you {
+  color: var(--warning);
+}

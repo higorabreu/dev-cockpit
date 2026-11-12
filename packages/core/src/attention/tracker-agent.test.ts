@@ -201,8 +201,12 @@ describe('createAttentionTracker with agent signals', () => {
     tracker.signal('b', 'needs-you', false)
 
     expect(tracker.unseenIds()).toEqual(['a', 'b'])
-    expect(tracker.attention('a')).toBe('finished')
-    expect(tracker.attention('b')).toBe('needs-you')
+    expect(tracker.marks()).toEqual(
+      new Map([
+        ['a', 'finished'],
+        ['b', 'needs-you'],
+      ]),
+    )
   })
 
   it('should visit a tab that needs the user first when several are unseen', () => {

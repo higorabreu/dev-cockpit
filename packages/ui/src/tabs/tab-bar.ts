@@ -1,33 +1,31 @@
-import type { TabsState } from '@dck/core'
+import type { AttentionKind, TabsState, Translate } from '@dck/core'
+import { attentionMark, strongestMark } from './attention-mark.ts'
 
 export interface TabBarCallbacks {
   activate(id: string): void
   contextMenu(id: string, x: number, y: number): void
   reorder(ids: readonly string[]): void
-  // A tab finished outside the visible area of the bar
-  hiddenAttention(hidden: boolean): void
+  // The strongest mark among tabs outside the visible area of the bar
+  hiddenAttention(kind: AttentionKind | undefined): void
 }
 
 const FADE_PX = 24
 
-export function createTabBar(
-  container: HTMLElement,
-  callbacks: TabBarCallbacks,
-  finishedLabel: () => string,
-) {
+export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks, t: Translate) {
   let dragging: HTMLElement | undefined
   let lastActive: string | undefined
-  let hiddenAttention = false
+  let hiddenAttention: AttentionKind | undefined
 
   const idOf = (button: Element) => (button as HTMLElement).dataset.id ?? ''
   const currentOrder = () => [...container.children].map(idOf)
 
-  function hasHiddenAttention(): boolean {
+  function hiddenMark(): AttentionKind | undefined {
     const view = container.getBoundingClientRect()
-    return [...container.querySelectorAll('.pip')].some((pip) => {
+    const hidden = [...container.querySelectorAll<HTMLElement>('.pip')].filter((pip) => {
       const box = pip.getBoundingClientRect()
       return box.right > view.right + 1 || box.left < view.left - 1
     })
+    return strongestMark(hidden.map((pip) => pip.dataset.kind as AttentionKind))
   }
 
   // Faded only on the edge that has more tabs, and the notice for a tab that finished out of sight
@@ -38,7 +36,7 @@ export function createTabBar(
     else if (start) container.dataset.fade = 'start'
     else if (end) container.dataset.fade = 'end'
     else delete container.dataset.fade
-    const hidden = hasHiddenAttention()
+    const hidden = hiddenMark()
     if (hidden === hiddenAttention) return
     hiddenAttention = hidden
     callbacks.hiddenAttention(hidden)
@@ -59,7 +57,7 @@ export function createTabBar(
   )
 
   return {
-    render(state: TabsState, unseen: ReadonlySet<string> = new Set()) {
+    render(state: TabsState, marks: ReadonlyMap<string, AttentionKind> = new Map()) {
       // Replacing the children resets the scroll; without saving, the watcher's redraw undoes the user's scroll
       const scrolled = container.scrollLeft
       container.replaceChildren(
@@ -75,11 +73,15 @@ export function createTabBar(
           label.className = 'tab-label'
           label.textContent = tab.label
           button.append(label)
-          if (unseen.has(tab.id)) {
+          const kind = marks.get(tab.id)
+          if (kind) {
+            const mark = attentionMark(kind, t)
             const pip = document.createElement('span')
-            pip.className = 'pip'
+            pip.className = mark.className
+            pip.dataset.kind = kind
+            pip.dataset.tip = mark.label
             pip.setAttribute('role', 'img')
-            pip.setAttribute('aria-label', finishedLabel())
+            pip.setAttribute('aria-label', mark.label)
             button.append(pip)
           }
           button.addEventListener('click', () => callbacks.activate(tab.id))
