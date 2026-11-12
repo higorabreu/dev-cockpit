@@ -12,11 +12,13 @@ import {
   type Result,
 } from '@dck/core'
 import type { z } from 'zod'
-import { mergeRequestsSchema, userSchema } from './schemas.ts'
+import { mergeRequestDetailSchema, mergeRequestsSchema, userSchema } from './schemas.ts'
 
 const PAGE_SIZE = 100
 // Teto de segurança: 1000 itens por consulta bastam para uma visão do dia a dia
 const MAX_PAGES = 10
+// Consultas de pipeline em paralelo: poucas, para não pesar no servidor
+const DETAIL_CONCURRENCY = 5
 
 export interface GitLabOptions {
   readonly http: HttpClient
@@ -62,6 +64,19 @@ function parseBody<S extends z.ZodType>(schema: S, body: string): Result<z.outpu
   return parsed.success ? ok(parsed.data) : fail(errorBody('DCK-GLB-006'))
 }
 
+async function mapLimit<T, R>(items: readonly T[], limit: number, task: (item: T) => Promise<R>) {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next++
+      results[index] = await task(items[index] as T)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
+}
+
 export function createGitLabClient(options: GitLabOptions): CodeReviewSource {
   const base = normalizeBaseUrl(options.baseUrl)
   const headers = { 'private-token': options.token, accept: 'application/json' }
@@ -91,7 +106,7 @@ export function createGitLabClient(options: GitLabOptions): CodeReviewSource {
     })
     params.set(view === 'review' ? 'reviewer_id' : 'author_id', user.value.id)
 
-    const summaries: MergeRequestSummary[] = []
+    const found: { summary: MergeRequestSummary; projectId: number }[] = []
     for (let page = 1; page <= MAX_PAGES; page++) {
       params.set('page', String(page))
       const response = await fetchPage('/merge_requests', params)
@@ -102,25 +117,43 @@ export function createGitLabClient(options: GitLabOptions): CodeReviewSource {
       if (!items.ok) return items
       for (const item of items.value) {
         const { full } = item.references
-        summaries.push({
-          id: full,
-          number: item.iid,
-          title: item.title,
-          url: item.web_url,
-          project: full.slice(0, full.lastIndexOf('!')),
-          author: item.author.username,
-          sourceBranch: item.source_branch,
-          targetBranch: item.target_branch,
-          draft: item.draft,
-          updatedAt: item.updated_at,
-          hasConflicts: item.has_conflicts,
-          openDiscussions: !item.blocking_discussions_resolved,
-          pipeline: pipelineState(item.head_pipeline?.status),
+        found.push({
+          projectId: item.project_id,
+          summary: {
+            id: full,
+            number: item.iid,
+            title: item.title,
+            url: item.web_url,
+            project: full.slice(0, full.lastIndexOf('!')),
+            author: item.author.username,
+            sourceBranch: item.source_branch,
+            targetBranch: item.target_branch,
+            draft: item.draft,
+            updatedAt: item.updated_at,
+            hasConflicts: item.has_conflicts,
+            openDiscussions: !item.blocking_discussions_resolved,
+            pipeline: 'unknown',
+          },
         })
       }
       if (!response.value.headers['x-next-page']) break
     }
+    const summaries = await mapLimit(found, DETAIL_CONCURRENCY, async ({ summary, projectId }) => ({
+      ...summary,
+      pipeline: await pipelineOf(projectId, summary.number),
+    }))
     return ok(summaries)
+  }
+
+  // Falha ao consultar uma MR não derruba a lista: o pipeline dela fica `unknown`
+  async function pipelineOf(projectId: number, number: number): Promise<PipelineState> {
+    const response = await fetchPage(
+      `/projects/${projectId}/merge_requests/${number}`,
+      new URLSearchParams(),
+    )
+    if (!response.ok || failureOf(response.value)) return 'unknown'
+    const detail = parseBody(mergeRequestDetailSchema, response.value.body)
+    return detail.ok ? pipelineState(detail.value.head_pipeline?.status) : 'unknown'
   }
 
   return { currentUser, mergeRequests }

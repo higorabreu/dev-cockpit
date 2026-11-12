@@ -41,6 +41,7 @@ const codeOf = (result: Result<unknown, { data?: { code?: string } }>) =>
 const user = { id: 7, username: 'higor', name: 'Higor' }
 const mr = (iid: number, extra: Record<string, unknown> = {}) => ({
   iid,
+  project_id: 11,
   title: `MR ${iid}`,
   web_url: `https://gl.test/grupo/app/-/merge_requests/${iid}`,
   references: { full: `grupo/app!${iid}` },
@@ -51,7 +52,6 @@ const mr = (iid: number, extra: Record<string, unknown> = {}) => ({
   updated_at: '2026-11-11T10:00:00Z',
   has_conflicts: false,
   blocking_discussions_resolved: true,
-  head_pipeline: { status: 'success' },
   ...extra,
 })
 
@@ -125,9 +125,9 @@ describe('mergeRequests', () => {
           draft: true,
           has_conflicts: true,
           blocking_discussions_resolved: false,
-          head_pipeline: { status: 'failed' },
         }),
       ]),
+      json({ head_pipeline: { status: 'failed' } }),
     ])
 
     const result = await source.mergeRequests('mine')
@@ -155,7 +155,7 @@ describe('mergeRequests', () => {
   })
 
   it('should report no pipeline when the merge request has none', async () => {
-    const { source } = client([json(user), json([mr(1, { head_pipeline: null })])])
+    const { source } = client([json(user), json([mr(1)]), json({ head_pipeline: null })])
 
     const result = await source.mergeRequests('mine')
 
@@ -167,12 +167,40 @@ describe('mergeRequests', () => {
       json(user),
       json([mr(1)], { 'x-next-page': '2' }),
       json([mr(2)], { 'x-next-page': '' }),
+      json({ head_pipeline: { status: 'success' } }),
+      json({ head_pipeline: { status: 'running' } }),
     ])
 
     const result = await source.mergeRequests('mine')
 
     expect(result.ok && result.value.map((item) => item.number)).toEqual([1, 2])
     expect(requests[2]?.url).toContain('page=2')
+  })
+
+  it('should read the pipeline of each merge request from its own endpoint when listing', async () => {
+    const { source, requests } = client([
+      json(user),
+      json([mr(1)]),
+      json({ head_pipeline: { status: 'success' } }),
+    ])
+
+    const result = await source.mergeRequests('mine')
+
+    expect(requests[2]?.url).toBe('https://gl.test/api/v4/projects/11/merge_requests/1?')
+    expect(result.ok && result.value[0]?.pipeline).toBe('success')
+  })
+
+  it('should keep the list and mark the pipeline unknown when one lookup fails', async () => {
+    const { source } = client([
+      json(user),
+      json([mr(1), mr(2)]),
+      'network',
+      json({ head_pipeline: { status: 'failed' } }),
+    ])
+
+    const result = await source.mergeRequests('mine')
+
+    expect(result.ok && result.value.map((item) => item.pipeline)).toEqual(['unknown', 'failed'])
   })
 
   it('should stop and fail when a later page is rate limited', async () => {

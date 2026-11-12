@@ -7,7 +7,15 @@ export interface ReviewUser {
   readonly name: string
 }
 
-export type PipelineState = 'success' | 'failed' | 'running' | 'pending' | 'canceled' | 'none'
+// `none`: a MR não tem pipeline. `unknown`: não deu para consultar.
+export type PipelineState =
+  | 'success'
+  | 'failed'
+  | 'running'
+  | 'pending'
+  | 'canceled'
+  | 'none'
+  | 'unknown'
 
 export interface MergeRequestSummary {
   readonly id: string

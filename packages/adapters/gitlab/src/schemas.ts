@@ -10,6 +10,7 @@ const pipelineSchema = z.object({ status: z.string() }).nullish()
 
 export const mergeRequestSchema = z.object({
   iid: z.number(),
+  project_id: z.number(),
   title: z.string(),
   web_url: z.string(),
   references: z.object({ full: z.string() }),
@@ -20,7 +21,9 @@ export const mergeRequestSchema = z.object({
   updated_at: z.string(),
   has_conflicts: z.boolean().catch(false),
   blocking_discussions_resolved: z.boolean().catch(true),
-  head_pipeline: pipelineSchema,
 })
+
+// A listagem não traz o pipeline; só a consulta de uma MR traz o `head_pipeline`
+export const mergeRequestDetailSchema = z.object({ head_pipeline: pipelineSchema })
 
 export const mergeRequestsSchema = z.array(mergeRequestSchema)
