@@ -199,7 +199,8 @@ export function createHarnessPage(deps: HarnessPageDeps) {
     })
     return h(
       'div',
-      { class: 'srow2 sfield' },
+      // A text value can be long, so its input takes the whole width under the label and the hint
+      { class: isNumber ? 'srow2 sfield' : 'srow2 sfield sstack' },
       h(
         'div',
         { class: 'slabel' },
@@ -208,7 +209,7 @@ export function createHarnessPage(deps: HarnessPageDeps) {
         isExpression && hint(expressionId, t('harness.field.expression')),
         failure(key),
       ),
-      h('div', { class: isNumber ? 'scontrol' : 'scontrol swide' }, input),
+      h('div', { class: 'scontrol' }, input),
     )
   }
 

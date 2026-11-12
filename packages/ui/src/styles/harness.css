@@ -28,20 +28,27 @@
   flex: none;
 }
 
-/* A text field takes the room its value needs and gives way first in a narrow window */
+/* A number sits beside its label like the other settings; a text value stacks under its label */
 .sfield {
   align-items: flex-start;
 }
 
 .sfield .slabel {
-  min-width: min(170px, 50%);
-  flex: 1 1 0;
   padding-top: 6px;
 }
 
-.sfield .scontrol.swide {
+.sfield.sstack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.sfield.sstack .slabel {
+  padding-top: 0;
+}
+
+.sfield.sstack .scontrol {
   max-width: none;
-  flex: 0 1 340px;
 }
 
 .sfield input[type="text"] {
