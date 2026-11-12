@@ -72,16 +72,18 @@ export interface HostApi {
   readonly rules: {
     // Undefined when the tab is not inside a git repository
     get(ptyId: number): Promise<RulesView | undefined>
-    setEnabled(ptyId: number, id: string, enabled: boolean): Promise<RulesChange>
+    // `root` is the repository the page shows: a change is refused when the tab is in another one
+    setEnabled(ptyId: number, root: string, id: string, enabled: boolean): Promise<RulesChange>
     setField(
       ptyId: number,
+      root: string,
       id: string,
       check: number,
       name: string,
       value: string | number,
     ): Promise<RulesChange>
-    shareWithAgents(ptyId: number, on: boolean): Promise<RulesChange>
-    addClaudeImport(ptyId: number): Promise<RulesChange>
+    shareWithAgents(ptyId: number, root: string, on: boolean): Promise<RulesChange>
+    addClaudeImport(ptyId: number, root: string): Promise<RulesChange>
   }
   readonly projects: {
     list(): Promise<readonly Project[]>

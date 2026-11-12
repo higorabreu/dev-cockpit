@@ -278,8 +278,12 @@ export const en: Record<MessageKey, string> = {
   'harness.summary':
     "The rules of this repository that guide and check the work, yours and your agents'.",
   'harness.repository': 'Repository',
+  'harness.repository.hint':
+    'Saved in .dck/rules of this repository, to share with the team. The Git section marks what is outside a rule; nothing is blocked.',
   'harness.notRepository': 'The active tab is not inside a git repository.',
   'harness.field.maxLength': 'Maximum length',
+  'harness.field.expression': 'A regular expression, used as written.',
+  'harness.guidance': 'Guidance for agents only: nothing is checked.',
   'harness.field.refused': 'This value does not work in the rule. The previous one was kept.',
   'harness.empty': 'No rule found.',
   'harness.group.agents': 'Agents',
@@ -367,4 +371,5 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-RUL-003': 'Not inside a git repository',
   'error.DCK-RUL-004': 'Nothing to share: no rule of the repository is on',
   'error.DCK-RUL-005': 'No rule has this id',
+  'error.DCK-RUL-006': 'The tab is in another repository now; nothing was written',
 }

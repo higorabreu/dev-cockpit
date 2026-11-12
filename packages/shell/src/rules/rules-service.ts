@@ -70,6 +70,7 @@ function toView(root: string, loaded: LoadedRules): RulesView {
       why: rule.why,
       enabled: rule.enabled,
       source: rule.layers.at(-1)?.source ?? 'built-in',
+      checks: rule.checks.map((check) => check.message),
       fields: ruleFields(rule),
     })),
     invalid: loaded.invalid.map(({ path, error }) => ({
@@ -129,19 +130,35 @@ export function createRulesService(options: RulesServiceOptions) {
     return { loaded, entry }
   }
 
+  // `shown` is the repository the page showed: the tab may have moved to another one since
   async function change(
     cwd: string,
+    shown: string,
     action: string,
     write: (workspace: RulesWorkspace) => Promise<Result<void, ErrorBody>>,
   ): Promise<RulesChange> {
     const root = await findRepositoryRoot(cwd)
     if (root === undefined) return fail(errorBody('DCK-RUL-003', cwd))
+    if (root !== shown) return fail(errorBody('DCK-RUL-006', `${root} is not ${shown}`))
     const result = await write(workspaceOf(root))
     cache.delete(root)
-    if (!result.ok) return result
+    if (!result.ok) {
+      logger.warn('rules change refused', { root, action, error: result.error.message })
+      return result
+    }
     logger.info('rules changed', { root, action })
     return ok(toView(root, (await load(root)).loaded))
   }
+
+  // A rule changed from the page keeps a shared block current, as the CLI does
+  const andRefresh =
+    (write: (workspace: RulesWorkspace) => Promise<Result<void, ErrorBody>>) =>
+    async (workspace: RulesWorkspace): Promise<Result<void, ErrorBody>> => {
+      const written = await write(workspace)
+      if (!written.ok) return written
+      const refreshed = await workspace.refreshShared()
+      return refreshed.ok ? ok(undefined) : refreshed
+    }
 
   const isSlow = (entry: CacheEntry, check: CompiledCheck) =>
     check.kind !== 'maxLength' && entry.slow.has(check.expression)
@@ -200,21 +217,36 @@ export function createRulesService(options: RulesServiceOptions) {
       return root === undefined ? undefined : toView(root, (await load(root)).loaded)
     },
 
-    setEnabled: (cwd: string, id: string, enabled: boolean) =>
-      change(cwd, 'set-enabled', (workspace) => workspace.setEnabled(id, enabled, 'repository')),
-
-    setField: (cwd: string, id: string, check: number, name: string, value: string | number) =>
-      change(cwd, 'set-field', (workspace) =>
-        workspace.setField(id, check, name, value, 'repository'),
+    setEnabled: (cwd: string, root: string, id: string, enabled: boolean) =>
+      change(
+        cwd,
+        root,
+        'set-enabled',
+        andRefresh((workspace) => workspace.setEnabled(id, enabled, 'repository')),
       ),
 
-    shareWithAgents: (cwd: string, on: boolean) =>
-      change(cwd, on ? 'share-with-agents' : 'stop-sharing', (workspace) =>
+    setField: (
+      cwd: string,
+      root: string,
+      id: string,
+      check: number,
+      name: string,
+      value: string | number,
+    ) =>
+      change(
+        cwd,
+        root,
+        'set-field',
+        andRefresh((workspace) => workspace.setField(id, check, name, value, 'repository')),
+      ),
+
+    shareWithAgents: (cwd: string, root: string, on: boolean) =>
+      change(cwd, root, on ? 'share-with-agents' : 'stop-sharing', (workspace) =>
         workspace.shareWithAgents(on),
       ),
 
-    addClaudeImport: (cwd: string) =>
-      change(cwd, 'add-claude-import', (workspace) => workspace.addClaudeImport()),
+    addClaudeImport: (cwd: string, root: string) =>
+      change(cwd, root, 'add-claude-import', (workspace) => workspace.addClaudeImport()),
 
     // Undefined when the branch and every commit not pushed yet are inside the enabled rules
     async marks(

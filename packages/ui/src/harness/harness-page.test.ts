@@ -11,6 +11,7 @@ import {
   type RuleView,
 } from '@dck/core'
 import { describe, expect, it } from 'vitest'
+import { createFocusKeeper } from '../kit/focus-keeper.ts'
 import { createHarnessPage } from './harness-page.ts'
 
 const ROOT = '/home/ana/acme/backend'
@@ -22,8 +23,15 @@ const branchFormat: RuleView = {
   why: 'The kind of work shows in the branch list',
   enabled: false,
   source: 'built-in',
+  checks: ['Use <type>/<slug>'],
   fields: [
-    { check: 0, name: 'main', kind: 'text', value: 'main|develop', message: 'Use <type>/<slug>' },
+    {
+      check: 0,
+      name: 'longLived',
+      kind: 'text',
+      value: 'main|develop',
+      message: 'Use <type>/<slug>',
+    },
     { check: 0, name: 'types', kind: 'text', value: 'feat|fix', message: 'Use <type>/<slug>' },
   ],
 }
@@ -35,9 +43,34 @@ const commitMessage: RuleView = {
   why: 'The history reads as a changelog',
   enabled: true,
   source: 'repository',
+  checks: ['Start with <type>:', 'Within 72 characters', 'No trailing period'],
   fields: [
     { check: 0, name: 'types', kind: 'text', value: 'feat|fix', message: 'Start with <type>:' },
     { check: 1, name: 'maxLength', kind: 'number', value: 72, message: 'Within 72 characters' },
+  ],
+}
+
+const reviewRubric: RuleView = {
+  id: 'review-rubric',
+  title: 'Review rubric',
+  applies: 'review',
+  why: 'A fixed order finds behavior problems first',
+  enabled: true,
+  source: 'repository',
+  checks: [],
+  fields: [],
+}
+
+const ticket: RuleView = {
+  id: 'ticket',
+  title: 'Ticket',
+  applies: 'branch',
+  why: 'Work is traceable',
+  enabled: true,
+  source: 'repository',
+  checks: ['Name the ticket'],
+  fields: [
+    { check: 0, name: 'key', kind: 'text', value: '[A-Z]+-[0-9]+', message: 'Name the ticket' },
   ],
 }
 
@@ -52,27 +85,32 @@ const viewOf = (overrides: Partial<RulesView> = {}): RulesView => ({
 const withAgents = (agents: Partial<RulesView['agents']>) =>
   viewOf({ agents: { ...viewOf().agents, ...agents } })
 
-// A host in memory: it applies a change to its view, or refuses it
+// A host in memory, one view per tab: it applies a change to the view of that tab, or refuses it
 async function open(initial: RulesView | undefined, locale: Locale = 'en') {
-  let view = initial
+  const views = new Map<number, RulesView | undefined>([[7, initial]])
+  let activePty = 7
   let refusal: RulesChange | undefined
   const calls: unknown[][] = []
   const change = (call: unknown[], apply: (current: RulesView) => RulesView) => {
     calls.push(call)
+    const [, ptyId, root] = call as [string, number, string]
+    const view = views.get(ptyId)
     if (refusal) return Promise.resolve(refusal)
     if (!view) return Promise.resolve(fail(errorBody('DCK-RUL-003')))
-    view = apply(view)
-    return Promise.resolve(ok(view))
+    if (view.root !== root) return Promise.resolve(fail(errorBody('DCK-RUL-006')))
+    const next = apply(view)
+    views.set(ptyId, next)
+    return Promise.resolve(ok(next))
   }
   const api: HostApi['rules'] = {
-    get: async () => view,
-    setEnabled: (ptyId, id, enabled) =>
-      change(['setEnabled', ptyId, id, enabled], (current) => ({
+    get: async (ptyId) => views.get(ptyId),
+    setEnabled: (ptyId, root, id, enabled) =>
+      change(['setEnabled', ptyId, root, id, enabled], (current) => ({
         ...current,
         rules: current.rules.map((rule) => (rule.id === id ? { ...rule, enabled } : rule)),
       })),
-    setField: (ptyId, id, check, name, value) =>
-      change(['setField', ptyId, id, check, name, value], (current) => ({
+    setField: (ptyId, root, id, check, name, value) =>
+      change(['setField', ptyId, root, id, check, name, value], (current) => ({
         ...current,
         rules: current.rules.map((rule) =>
           rule.id === id
@@ -85,13 +123,13 @@ async function open(initial: RulesView | undefined, locale: Locale = 'en') {
             : rule,
         ),
       })),
-    shareWithAgents: (ptyId, on) =>
-      change(['shareWithAgents', ptyId, on], (current) => ({
+    shareWithAgents: (ptyId, root, on) =>
+      change(['shareWithAgents', ptyId, root, on], (current) => ({
         ...current,
         agents: { ...current.agents, shared: on, stale: false },
       })),
-    addClaudeImport: (ptyId) =>
-      change(['addClaudeImport', ptyId], (current) => ({
+    addClaudeImport: (ptyId, root) =>
+      change(['addClaudeImport', ptyId, root], (current) => ({
         ...current,
         agents: { ...current.agents, claudeImportMissing: false },
       })),
@@ -99,16 +137,13 @@ async function open(initial: RulesView | undefined, locale: Locale = 'en') {
 
   const host = document.createElement('div')
   document.body.replaceChildren(host)
+  // Redraws like the settings screen does: everything again, with the focus put back
+  const keeper = createFocusKeeper(host)
   const page = createHarnessPage({
     api,
     i18n: createTranslator(locale),
-    ptyId: () => 7,
-    // Redraws like the settings screen does: everything again, with the focus put back
-    requestRender() {
-      const focused = document.activeElement?.getAttribute('data-focus')
-      host.replaceChildren(...page.render())
-      if (focused) host.querySelector<HTMLElement>(`[data-focus="${focused}"]`)?.focus()
-    },
+    ptyId: () => activePty,
+    requestRender: () => keeper.redraw(() => host.replaceChildren(...page.render())),
   })
   await page.refresh()
 
@@ -126,6 +161,18 @@ async function open(initial: RulesView | undefined, locale: Locale = 'en') {
     refuseWith(result: RulesChange | undefined) {
       refusal = result
     },
+    // Another tab becomes active, in the repository given, without the page being read again
+    switchTab(ptyId: number, view: RulesView | undefined) {
+      views.set(ptyId, view)
+      activePty = ptyId
+    },
+    // The tab of the page moves to another repository behind it, as a `cd` does
+    moveTab(view: RulesView) {
+      views.set(7, view)
+    },
+    page,
+    settle,
+    redraw: () => keeper.redraw(() => host.replaceChildren(...page.render())),
     async toggle(key: string) {
       control(key)?.click()
       await settle()
@@ -147,7 +194,6 @@ describe('createHarnessPage rows', () => {
   it('should show the repository and one row per rule with its reason when the page opens', async () => {
     const { host, texts, control } = await open(viewOf())
 
-    expect(host.querySelector('.spath')?.textContent).toBe('~/acme/backend')
     expect(texts('label.sname2')).toEqual(
       expect.arrayContaining(['Branch names', 'Commit messages']),
     )
@@ -156,11 +202,23 @@ describe('createHarnessPage rows', () => {
     expect(control('rule-commit-message')?.checked).toBe(true)
   })
 
-  it('should show the fields only under an enabled rule, with the check message once per check', async () => {
+  it('should show the folder of the repository, its whole path and where the rules are saved when the page opens', async () => {
+    const { host } = await open(viewOf())
+
+    const value = host.querySelector('.scontrol .spath')
+    const hints = [...(value?.closest('.srow2')?.querySelectorAll('.shint') ?? [])]
+    expect(value?.textContent).toBe('backend')
+    expect(hints.map((hint) => hint.textContent)).toEqual([
+      '~/acme/backend',
+      'Saved in .dck/rules of this repository, to share with the team. The Git section marks what is outside a rule; nothing is blocked.',
+    ])
+  })
+
+  it('should put the message of a check as the hint of its first field when the rule is enabled', async () => {
     const { texts, control } = await open(viewOf())
 
     expect(texts('.sfield label')).toEqual(['types', 'Maximum length'])
-    expect(texts('.scheck')).toEqual(['Start with <type>:', 'Within 72 characters'])
+    expect(texts('.sfield .shint')).toEqual(['Start with <type>:', 'Within 72 characters'])
     expect(control('rule-commit-message-0-types')?.type).toBe('text')
     expect(control('rule-commit-message-0-types')?.value).toBe('feat, fix')
     expect(control('rule-commit-message-1-maxLength')?.type).toBe('number')
@@ -168,13 +226,41 @@ describe('createHarnessPage rows', () => {
     expect(control('rule-branch-format-0-types')).toBeNull()
   })
 
+  it('should give a check with no field a line of its own when the rule is enabled', async () => {
+    const { texts } = await open(viewOf())
+
+    expect(texts('.scheck')).toEqual(['No trailing period'])
+  })
+
+  it('should say the rule only guides agents when it has no check', async () => {
+    const { texts } = await open(viewOf({ rules: [reviewRubric] }))
+
+    expect(texts('.scheck')).toEqual(['Guidance for agents only: nothing is checked.'])
+  })
+
   it('should say the check message once when two fields belong to the same check', async () => {
-    const { texts, toggle } = await open(viewOf({ rules: [branchFormat] }))
+    const { texts, toggle, control } = await open(viewOf({ rules: [branchFormat] }))
 
     await toggle('rule-branch-format')
 
-    expect(texts('.sfield label')).toEqual(['main', 'types'])
-    expect(texts('.scheck')).toEqual(['Use <type>/<slug>'])
+    expect(texts('.sfield label')).toEqual(['longLived', 'types'])
+    expect(texts('.sfield .shint')).toEqual(['Use <type>/<slug>'])
+    expect(control('rule-branch-format-0-types')?.getAttribute('aria-describedby')).toBe(
+      'rule-branch-format-0',
+    )
+  })
+
+  it('should say a field is a regular expression when its value is not a list of names', async () => {
+    const { control, host } = await open(viewOf({ rules: [ticket] }))
+
+    const input = control('rule-ticket-0-key')
+    const described = input?.getAttribute('aria-describedby') ?? ''
+
+    expect(input?.value).toBe('[A-Z]+-[0-9]+')
+    expect(described).toBe('rule-ticket-0 rule-ticket-0-key-expression')
+    expect(host.querySelector('#rule-ticket-0-key-expression')?.textContent).toBe(
+      'A regular expression, used as written.',
+    )
   })
 
   it('should tie every label and description to its control when the rows are drawn', async () => {
@@ -191,6 +277,12 @@ describe('createHarnessPage rows', () => {
     expect(control('rule-commit-message-1-maxLength')?.getAttribute('aria-describedby')).toBe(
       'rule-commit-message-1',
     )
+  })
+
+  it('should show the full value of a text field in its tooltip when it is cut', async () => {
+    const { control } = await open(viewOf())
+
+    expect(control('rule-commit-message-0-types')?.getAttribute('data-tip-full')).toBe('feat, fix')
   })
 
   it('should show one sentence and nothing else when the tab is not inside a repository', async () => {
@@ -227,6 +319,24 @@ describe('createHarnessPage rows', () => {
     expect(broken.host.textContent).toContain('why: required')
   })
 
+  it('should draw the warning shape beside each notice when something needs attention', async () => {
+    const { host } = await open(
+      viewOf({
+        agents: { ...viewOf().agents, shared: true, stale: true, claudeImportMissing: true },
+        invalid: [{ path: `${ROOT}/.dck/rules/broken.md`, message: 'why: required' }],
+      }),
+    )
+
+    const notices = [...host.querySelectorAll('.snotice')]
+
+    expect(notices.map((notice) => notice.textContent)).toEqual([
+      'The block in AGENTS.md is out of date',
+      'CLAUDE.md does not import AGENTS.md',
+      'Invalid files',
+    ])
+    for (const notice of notices) expect(notice.querySelector('svg.glyph-warning')).not.toBeNull()
+  })
+
   it.each([
     ['en', ['Repository', 'Harness', 'Agents', 'Share with agents']],
     ['pt-BR', ['Repositório', 'Harness', 'Agentes', 'Compartilhar com agentes']],
@@ -261,20 +371,39 @@ describe('createHarnessPage changes', () => {
 
     await toggle('rule-branch-format')
 
-    expect(calls).toEqual([['setEnabled', 7, 'branch-format', true]])
+    expect(calls).toEqual([['setEnabled', 7, ROOT, 'branch-format', true]])
     expect(control('rule-branch-format')?.checked).toBe(true)
     expect(control('rule-branch-format-0-types')?.value).toBe('feat, fix')
   })
 
-  it('should say why and leave the box as it was when the switch fails', async () => {
+  it('should say why in the language of the page without the detail when the switch fails', async () => {
     const { host, toggle, control, refuseWith } = await open(viewOf())
-    refuseWith(fail(errorBody('DCK-RUL-002', 'EACCES: permission denied')))
+    refuseWith(fail(errorBody('DCK-RUL-002', 'EACCES: permission denied, /home/ana/acme')))
 
     await toggle('rule-branch-format')
 
-    expect(control('rule-branch-format')?.checked).toBe(false)
-    expect(host.querySelector('[role="alert"]')?.textContent).toBe(
-      'Could not write the file: EACCES: permission denied',
+    const box = control('rule-branch-format')
+    const alert = host.querySelector('[role="alert"]')
+    expect(box?.checked).toBe(false)
+    expect(alert?.textContent).toBe('Could not write the file')
+    expect(alert?.id).toBe('rule-branch-format-error')
+    expect(box?.getAttribute('aria-describedby')).toBe(
+      'rule-branch-format-hint rule-branch-format-error',
+    )
+  })
+
+  it('should announce a failure once and keep showing it when the page is drawn again', async () => {
+    const { host, toggle, refuseWith, redraw } = await open(viewOf())
+    refuseWith(fail(errorBody('DCK-RUL-002')))
+    await toggle('rule-branch-format')
+    const announced = host.querySelectorAll('[role="alert"]').length
+
+    redraw()
+
+    expect(announced).toBe(1)
+    expect(host.querySelector('[role="alert"]')).toBeNull()
+    expect(host.querySelector('#rule-branch-format-error')?.textContent).toBe(
+      'Could not write the file',
     )
   })
 
@@ -285,39 +414,55 @@ describe('createHarnessPage changes', () => {
     await type('rule-commit-message-1-maxLength', '50')
 
     expect(calls).toEqual([
-      ['setField', 7, 'commit-message', 0, 'types', 'feat|fix|docs'],
-      ['setField', 7, 'commit-message', 1, 'maxLength', 50],
+      ['setField', 7, ROOT, 'commit-message', 0, 'types', 'feat|fix|docs'],
+      ['setField', 7, ROOT, 'commit-message', 1, 'maxLength', 50],
     ])
     expect(control('rule-commit-message-0-types')?.value).toBe('feat, fix, docs')
     expect(control('rule-commit-message-1-maxLength')?.value).toBe('50')
   })
 
-  it('should show the failure under the input and keep what was typed when the value is refused', async () => {
-    const { host, type, control, refuseWith } = await open(viewOf())
-    refuseWith(fail(errorBody('DCK-RUL-001', 'check.0.pattern: Unterminated group')))
+  it('should refuse without asking the host and keep the list when a list field gets an expression', async () => {
+    const { host, calls, type, control } = await open(viewOf())
 
-    await type('rule-commit-message-0-types', 'feat|fix(')
+    await type('rule-commit-message-0-types', 'feat, fix.*')
 
     const input = control('rule-commit-message-0-types')
+    expect(calls).toEqual([])
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(
+      'This value does not work in the rule. The previous one was kept.',
+    )
+    expect(input?.value).toBe('feat, fix.*')
+    expect(input?.getAttribute('aria-describedby')).toBe(
+      'rule-commit-message-0 rule-commit-message-0-types-error',
+    )
+  })
+
+  it('should show the failure under the label and keep what was typed when the value is refused', async () => {
+    const { host, type, control, refuseWith } = await open(viewOf({ rules: [ticket] }))
+    refuseWith(fail(errorBody('DCK-RUL-001', 'check.0.pattern: Unterminated group')))
+
+    await type('rule-ticket-0-key', '[A-Z+')
+
+    const input = control('rule-ticket-0-key')
     const alert = host.querySelector('[role="alert"]')
     expect(alert?.textContent).toBe(
       'This value does not work in the rule. The previous one was kept.',
     )
-    expect(alert?.className).toContain('serror')
-    expect(input?.closest('.srow2')?.nextElementSibling).toBe(alert)
-    expect(input?.value).toBe('feat|fix(')
+    expect(alert?.className).toBe('serror')
+    expect(input?.closest('.srow2')?.contains(alert ?? null)).toBe(true)
+    expect(input?.value).toBe('[A-Z+')
     expect(input?.getAttribute('aria-invalid')).toBe('true')
   })
 
   it('should clear the failure when the corrected value is accepted', async () => {
-    const { host, type, refuseWith } = await open(viewOf())
+    const { host, type, refuseWith } = await open(viewOf({ rules: [ticket] }))
     refuseWith(fail(errorBody('DCK-RUL-001', 'check.0.pattern: Unterminated group')))
-    await type('rule-commit-message-0-types', 'feat|fix(')
+    await type('rule-ticket-0-key', '[A-Z+')
     refuseWith(undefined)
 
-    await type('rule-commit-message-0-types', 'feat|fix')
+    await type('rule-ticket-0-key', '[A-Z]+')
 
-    expect(host.querySelector('[role="alert"]')).toBeNull()
+    expect(host.querySelector('.serror')).toBeNull()
   })
 
   it('should write the failure in the chosen language when a change is refused', async () => {
@@ -327,6 +472,89 @@ describe('createHarnessPage changes', () => {
     await toggle('rule-branch-format')
 
     expect(host.querySelector('[role="alert"]')?.textContent).toBe('Fora de um repositório git')
+  })
+
+  it('should write nothing when a removed input reports a change', async () => {
+    const { calls, control } = await open(viewOf())
+    const input = control('rule-commit-message-0-types')
+    input?.remove()
+
+    if (input) input.value = 'fe'
+    input?.dispatchEvent(new Event('change'))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(calls).toEqual([])
+  })
+})
+
+describe('createHarnessPage focus', () => {
+  it('should keep the whole value of the next field selected when an edit is saved after Tab', async () => {
+    const { calls, control, settle } = await open(
+      viewOf({ rules: [{ ...branchFormat, enabled: true }] }),
+    )
+    const edited = control('rule-branch-format-0-longLived')
+    const next = control('rule-branch-format-0-types')
+    const length = next?.value.length ?? 0
+    if (edited) edited.value = 'main, develop, trunk'
+    edited?.dispatchEvent(new Event('input', { bubbles: true }))
+
+    edited?.dispatchEvent(new Event('change', { bubbles: true }))
+    next?.focus()
+    next?.setSelectionRange(0, length)
+    await settle()
+
+    const drawn = control('rule-branch-format-0-types')
+    expect(calls).toHaveLength(1)
+    expect(drawn).not.toBe(next)
+    expect(document.activeElement).toBe(drawn)
+    expect([drawn?.selectionStart, drawn?.selectionEnd]).toEqual([0, length])
+  })
+
+  it('should keep what was typed and not saved yet when the page is drawn again', async () => {
+    const { control, redraw } = await open(viewOf())
+    const input = control('rule-commit-message-0-types')
+    input?.focus()
+    if (input) input.value = 'feat, fix, do'
+    input?.dispatchEvent(new Event('input', { bubbles: true }))
+
+    redraw()
+
+    const drawn = control('rule-commit-message-0-types')
+    expect(drawn).not.toBe(input)
+    expect(drawn?.value).toBe('feat, fix, do')
+    expect(document.activeElement).toBe(drawn)
+  })
+})
+
+describe('createHarnessPage tabs', () => {
+  it('should write into the repository shown when another tab became active after it was read', async () => {
+    const { calls, toggle, switchTab } = await open(viewOf())
+    switchTab(8, viewOf({ root: '/home/ana/acme/frontend' }))
+
+    await toggle('rule-branch-format')
+
+    expect(calls).toEqual([['setEnabled', 7, ROOT, 'branch-format', true]])
+  })
+
+  it('should show the repository of the new tab when it is read again after a tab change', async () => {
+    const { host, switchTab, page } = await open(viewOf())
+    switchTab(8, viewOf({ root: '/home/ana/acme/frontend' }))
+
+    await page.refresh()
+
+    expect(host.querySelector('.scontrol .spath')?.textContent).toBe('frontend')
+  })
+
+  it('should refuse the change when the tab of the page moved to another repository', async () => {
+    const { host, toggle, moveTab, control } = await open(viewOf())
+    moveTab(viewOf({ root: '/home/ana/acme/frontend' }))
+
+    await toggle('rule-branch-format')
+
+    expect(control('rule-branch-format')?.checked).toBe(false)
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(
+      'The tab is in another repository now; nothing was written',
+    )
   })
 })
 
@@ -350,7 +578,7 @@ describe('createHarnessPage agents', () => {
 
     await press('harness-share-confirm')
 
-    expect(calls).toEqual([['shareWithAgents', 7, true]])
+    expect(calls).toEqual([['shareWithAgents', 7, ROOT, true]])
     expect(control('harness-share')?.checked).toBe(true)
     expect(control('harness-share-confirm')).toBeNull()
     expect(document.activeElement).toBe(control('harness-share'))
@@ -372,7 +600,7 @@ describe('createHarnessPage agents', () => {
 
     await toggle('harness-share')
 
-    expect(calls).toEqual([['shareWithAgents', 7, false]])
+    expect(calls).toEqual([['shareWithAgents', 7, ROOT, false]])
     expect(control('harness-share')?.checked).toBe(false)
   })
 
@@ -383,7 +611,7 @@ describe('createHarnessPage agents', () => {
     await press('harness-update')
 
     expect(before).toContain('The block in AGENTS.md is out of date')
-    expect(calls).toEqual([['shareWithAgents', 7, true]])
+    expect(calls).toEqual([['shareWithAgents', 7, ROOT, true]])
     expect(control('harness-update')).toBeNull()
     expect(document.activeElement).toBe(control('harness-share'))
   })
@@ -398,7 +626,7 @@ describe('createHarnessPage agents', () => {
 
     expect(before).toContain('CLAUDE.md does not import AGENTS.md')
     expect(control('harness-claude-import')).toBeNull()
-    expect(calls).toEqual([['addClaudeImport', 7]])
+    expect(calls).toEqual([['addClaudeImport', 7, ROOT]])
   })
 
   it('should not mention CLAUDE.md when nothing is shared', async () => {

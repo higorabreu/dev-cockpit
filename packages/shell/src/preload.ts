@@ -62,13 +62,14 @@ const api: HostApi = {
   },
   rules: {
     get: (ptyId) => ipcRenderer.invoke(hostChannels.rulesGet, ptyId),
-    setEnabled: (ptyId, id, enabled) =>
-      ipcRenderer.invoke(hostChannels.rulesSetEnabled, { ptyId, id, enabled }),
-    setField: (ptyId, id, check, name, value) =>
-      ipcRenderer.invoke(hostChannels.rulesSetField, { ptyId, id, check, name, value }),
-    shareWithAgents: (ptyId, on) =>
-      ipcRenderer.invoke(hostChannels.rulesShareWithAgents, { ptyId, on }),
-    addClaudeImport: (ptyId) => ipcRenderer.invoke(hostChannels.rulesAddClaudeImport, { ptyId }),
+    setEnabled: (ptyId, root, id, enabled) =>
+      ipcRenderer.invoke(hostChannels.rulesSetEnabled, { ptyId, root, id, enabled }),
+    setField: (ptyId, root, id, check, name, value) =>
+      ipcRenderer.invoke(hostChannels.rulesSetField, { ptyId, root, id, check, name, value }),
+    shareWithAgents: (ptyId, root, on) =>
+      ipcRenderer.invoke(hostChannels.rulesShareWithAgents, { ptyId, root, on }),
+    addClaudeImport: (ptyId, root) =>
+      ipcRenderer.invoke(hostChannels.rulesAddClaudeImport, { ptyId, root }),
   },
   projects: {
     list: () => ipcRenderer.invoke(hostChannels.projectsList),

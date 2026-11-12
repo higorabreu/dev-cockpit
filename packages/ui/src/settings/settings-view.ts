@@ -732,6 +732,10 @@ export function createSettingsView(
     isOpen,
     // After switching language, rebuilds the open screen with the new texts
     rerender: () => (isOpen() ? render() : undefined),
+    // The Harness page is about the active tab's repository, so it is read again when the tab changes
+    activeTabChanged() {
+      if (isOpen() && activeTab === 'harness') void harness.refresh()
+    },
     toggle: () => (isOpen() ? closeView() : open()),
   }
 }

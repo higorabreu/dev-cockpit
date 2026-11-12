@@ -123,5 +123,10 @@
     "category": "not_found",
     "retryable": false,
     "rpc": -32021
+  },
+  "DCK-RUL-006": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32022
   }
 }

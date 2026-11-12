@@ -12,6 +12,8 @@ export interface RuleView {
   readonly enabled: boolean
   // Where the file with the last word lives
   readonly source: ExtensionSource
+  // The message of every check, in order; empty for a rule that is guidance only
+  readonly checks: readonly string[]
   readonly fields: readonly RuleField[]
 }
 

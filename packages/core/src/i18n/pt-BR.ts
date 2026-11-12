@@ -277,8 +277,12 @@ export const ptBR = {
   'harness.summary':
     'As regras deste repositório que orientam e conferem o trabalho, seu e dos agentes.',
   'harness.repository': 'Repositório',
+  'harness.repository.hint':
+    'Gravado em .dck/rules deste repositório, para compartilhar com a equipe. A seção Git marca o que está fora de uma regra; nada é bloqueado.',
   'harness.notRepository': 'A aba ativa não está em um repositório git.',
   'harness.field.maxLength': 'Tamanho máximo',
+  'harness.field.expression': 'Uma expressão regular, usada como está escrita.',
+  'harness.guidance': 'Só orienta os agentes: nada é conferido.',
   'harness.field.refused': 'Este valor não funciona na regra. O anterior foi mantido.',
   'harness.empty': 'Nenhuma regra encontrada.',
   'harness.group.agents': 'Agentes',
@@ -366,6 +370,7 @@ export const ptBR = {
   'error.DCK-RUL-003': 'Fora de um repositório git',
   'error.DCK-RUL-004': 'Nada a compartilhar: nenhuma regra do repositório está ligada',
   'error.DCK-RUL-005': 'Nenhuma regra tem este id',
+  'error.DCK-RUL-006': 'A aba está em outro repositório agora; nada foi gravado',
 } as const
 
 export type MessageKey = keyof typeof ptBR

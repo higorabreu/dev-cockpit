@@ -265,7 +265,12 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     panel.toggle()
   }
 
+  let shownTabId: string | undefined
   function render() {
+    if (state.activeId !== shownTabId) {
+      shownTabId = state.activeId
+      settingsView.activeTabChanged()
+    }
     tabBar.render(state, new Set(attention.unseenIds()))
     for (const [id, session] of sessions) {
       session.element.classList.toggle('active', id === state.activeId)

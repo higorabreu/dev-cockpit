@@ -48,19 +48,19 @@ const ptyId = z.number().int().nonnegative()
 // The limits are the ones of the rule model: an id, a variable name and an expression
 const ruleId = z.string().min(1).max(64)
 
-const ruleSwitchSchema = z.object({ ptyId, id: ruleId, enabled: z.boolean() })
+// The repository the page shows, which the tab must still be in
+const ruleRequestSchema = z.object({ ptyId, root: z.string().min(1).max(4096) })
 
-const ruleFieldSchema = z.object({
-  ptyId,
+const ruleSwitchSchema = ruleRequestSchema.extend({ id: ruleId, enabled: z.boolean() })
+
+const ruleFieldSchema = ruleRequestSchema.extend({
   id: ruleId,
   check: z.number().int().nonnegative(),
   name: z.string().min(1).max(64),
   value: z.union([z.string().max(500), z.number()]),
 })
 
-const agentsShareSchema = z.object({ ptyId, on: z.boolean() })
-
-const tabSchema = z.object({ ptyId })
+const agentsShareSchema = ruleRequestSchema.extend({ on: z.boolean() })
 
 // Only addresses from the connected GitLab's origin; the data comes from the server, so it is not trusted
 function parseOwnUrl(input: string, origin: string | null): string | undefined {
@@ -101,16 +101,18 @@ export interface BridgeOptions {
   // Keyed by the directory the tab is in; every change goes to that repository
   readonly rules: {
     view(cwd: string): Promise<RulesView | undefined>
-    setEnabled(cwd: string, id: string, enabled: boolean): Promise<RulesChange>
+    // `root` is the repository the page shows; a change is refused when the tab is in another one
+    setEnabled(cwd: string, root: string, id: string, enabled: boolean): Promise<RulesChange>
     setField(
       cwd: string,
+      root: string,
       id: string,
       check: number,
       name: string,
       value: string | number,
     ): Promise<RulesChange>
-    shareWithAgents(cwd: string, on: boolean): Promise<RulesChange>
-    addClaudeImport(cwd: string): Promise<RulesChange>
+    shareWithAgents(cwd: string, root: string, on: boolean): Promise<RulesChange>
+    addClaudeImport(cwd: string, root: string): Promise<RulesChange>
   }
   readonly shell: string
   readonly home: string
@@ -221,7 +223,7 @@ export function registerHostBridge(options: BridgeOptions) {
     return session && (await options.sessions.activity(session.pid))?.cwd
   }
 
-  function handleRules<Request extends { readonly ptyId: number }>(
+  function handleRules<Request extends { readonly ptyId: number; readonly root: string }>(
     channel: string,
     schema: z.ZodType<Request>,
     change: (cwd: string, request: Request) => Promise<RulesChange>,
@@ -243,16 +245,23 @@ export function registerHostBridge(options: BridgeOptions) {
     return cwd === undefined ? undefined : options.rules.view(cwd)
   })
   handleRules(hostChannels.rulesSetEnabled, ruleSwitchSchema, (cwd, request) =>
-    options.rules.setEnabled(cwd, request.id, request.enabled),
+    options.rules.setEnabled(cwd, request.root, request.id, request.enabled),
   )
   handleRules(hostChannels.rulesSetField, ruleFieldSchema, (cwd, request) =>
-    options.rules.setField(cwd, request.id, request.check, request.name, request.value),
+    options.rules.setField(
+      cwd,
+      request.root,
+      request.id,
+      request.check,
+      request.name,
+      request.value,
+    ),
   )
   handleRules(hostChannels.rulesShareWithAgents, agentsShareSchema, (cwd, request) =>
-    options.rules.shareWithAgents(cwd, request.on),
+    options.rules.shareWithAgents(cwd, request.root, request.on),
   )
-  handleRules(hostChannels.rulesAddClaudeImport, tabSchema, (cwd) =>
-    options.rules.addClaudeImport(cwd),
+  handleRules(hostChannels.rulesAddClaudeImport, ruleRequestSchema, (cwd, request) =>
+    options.rules.addClaudeImport(cwd, request.root),
   )
   ipcMain.handle(hostChannels.projectsList, () => options.projects.list())
   ipcMain.handle(hostChannels.projectsToggleFavorite, (_event, path: string) =>

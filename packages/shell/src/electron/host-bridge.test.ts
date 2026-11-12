@@ -104,11 +104,11 @@ function setup() {
     },
     rules: {
       view: async (cwd) => rulesView(cwd),
-      setEnabled: (cwd, id, enabled) => changeRules('setEnabled', cwd, id, enabled),
-      setField: (cwd, id, check, name, value) =>
-        changeRules('setField', cwd, id, check, name, value),
-      shareWithAgents: (cwd, on) => changeRules('shareWithAgents', cwd, on),
-      addClaudeImport: (cwd) => changeRules('addClaudeImport', cwd),
+      setEnabled: (cwd, root, id, enabled) => changeRules('setEnabled', cwd, root, id, enabled),
+      setField: (cwd, root, id, check, name, value) =>
+        changeRules('setField', cwd, root, id, check, name, value),
+      shareWithAgents: (cwd, root, on) => changeRules('shareWithAgents', cwd, root, on),
+      addClaudeImport: (cwd, root) => changeRules('addClaudeImport', cwd, root),
     },
     shell: '/bin/zsh',
     home: '/home/usuario',
@@ -446,13 +446,17 @@ describe('registerHostBridge rules', () => {
     const ptyId = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
     const cwd = `/pid/${ptyHost.sessions[0]?.pid}`
 
+    const root = '/home/ana/acme/backend'
+
     const result = await call(hostChannels.rulesSetEnabled, {
       ptyId,
+      root,
       id: 'branch-format',
       enabled: true,
     })
     await call(hostChannels.rulesSetField, {
       ptyId,
+      root,
       id: 'commit-message',
       check: 1,
       name: 'maxLength',
@@ -460,21 +464,22 @@ describe('registerHostBridge rules', () => {
     })
     await call(hostChannels.rulesSetField, {
       ptyId,
+      root,
       id: 'branch-format',
       check: 0,
       name: 'types',
       value: 'feat|fix',
     })
-    await call(hostChannels.rulesShareWithAgents, { ptyId, on: true })
-    await call(hostChannels.rulesAddClaudeImport, { ptyId })
+    await call(hostChannels.rulesShareWithAgents, { ptyId, root, on: true })
+    await call(hostChannels.rulesAddClaudeImport, { ptyId, root })
 
     expect(result).toEqual({ ok: true, value: rulesView(cwd) })
     expect(rulesCalls).toEqual([
-      ['setEnabled', cwd, 'branch-format', true],
-      ['setField', cwd, 'commit-message', 1, 'maxLength', 50],
-      ['setField', cwd, 'branch-format', 0, 'types', 'feat|fix'],
-      ['shareWithAgents', cwd, true],
-      ['addClaudeImport', cwd],
+      ['setEnabled', cwd, root, 'branch-format', true],
+      ['setField', cwd, root, 'commit-message', 1, 'maxLength', 50],
+      ['setField', cwd, root, 'branch-format', 0, 'types', 'feat|fix'],
+      ['shareWithAgents', cwd, root, true],
+      ['addClaudeImport', cwd, root],
     ])
   })
 
@@ -482,29 +487,48 @@ describe('registerHostBridge rules', () => {
     [
       'a switch that is not a boolean',
       hostChannels.rulesSetEnabled,
-      { ptyId: 1, id: 'branch-format', enabled: 'yes' },
+      { ptyId: 1, root: '/r', id: 'branch-format', enabled: 'yes' },
     ],
     [
       'an id that is too long',
       hostChannels.rulesSetEnabled,
-      { ptyId: 1, id: 'x'.repeat(65), enabled: true },
+      { ptyId: 1, root: '/r', id: 'x'.repeat(65), enabled: true },
     ],
     [
       'a check that is not a position',
       hostChannels.rulesSetField,
-      { ptyId: 1, id: 'branch-format', check: -1, name: 'types', value: 'feat' },
+      { ptyId: 1, root: '/r', id: 'branch-format', check: -1, name: 'types', value: 'feat' },
     ],
     [
       'a value that is an object',
       hostChannels.rulesSetField,
-      { ptyId: 1, id: 'branch-format', check: 0, name: 'types', value: { text: 'feat' } },
+      {
+        ptyId: 1,
+        root: '/r',
+        id: 'branch-format',
+        check: 0,
+        name: 'types',
+        value: { text: 'feat' },
+      },
     ],
     [
       'a value that is too long',
       hostChannels.rulesSetField,
-      { ptyId: 1, id: 'branch-format', check: 0, name: 'types', value: 'x'.repeat(501) },
+      {
+        ptyId: 1,
+        root: '/r',
+        id: 'branch-format',
+        check: 0,
+        name: 'types',
+        value: 'x'.repeat(501),
+      },
     ],
-    ['no answer to share or not', hostChannels.rulesShareWithAgents, { ptyId: 1 }],
+    ['no answer to share or not', hostChannels.rulesShareWithAgents, { ptyId: 1, root: '/r' }],
+    [
+      'no repository it was shown for',
+      hostChannels.rulesSetEnabled,
+      { ptyId: 1, id: 'branch-format', enabled: true },
+    ],
     ['a payload that is not an object', hostChannels.rulesAddClaudeImport, 1],
   ])(
     'should refuse the change without writing when it has %s',
@@ -522,7 +546,11 @@ describe('registerHostBridge rules', () => {
   it('should fail the change without writing when the session does not exist', async () => {
     const { call, rulesCalls } = setup()
 
-    const result = await call(hostChannels.rulesShareWithAgents, { ptyId: 99, on: true })
+    const result = await call(hostChannels.rulesShareWithAgents, {
+      ptyId: 99,
+      root: '/r',
+      on: true,
+    })
 
     expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-RUL-003' } } })
     expect(rulesCalls).toEqual([])

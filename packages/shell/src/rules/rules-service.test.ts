@@ -128,7 +128,7 @@ describe('createRulesService changes', () => {
   it('should write the complete rule in the repository and return it on when it is switched on', async () => {
     const service = make()
 
-    const result = await service.setEnabled(join(root, 'src'), 'branch-format', true)
+    const result = await service.setEnabled(join(root, 'src'), root, 'branch-format', true)
 
     const file = await read('.dck', 'rules', 'branch-format.md')
     expect(file).toContain('enabled: true')
@@ -142,9 +142,9 @@ describe('createRulesService changes', () => {
 
   it('should save the new value and return it when a field is edited', async () => {
     const service = make()
-    await service.setEnabled(root, 'commit-message', true)
+    await service.setEnabled(root, root, 'commit-message', true)
 
-    const result = await service.setField(root, 'commit-message', 1, 'maxLength', 50)
+    const result = await service.setField(root, root, 'commit-message', 1, 'maxLength', 50)
 
     const fields = result.ok ? result.value.rules[1]?.fields : []
     expect(fields?.[1]).toMatchObject({
@@ -157,10 +157,10 @@ describe('createRulesService changes', () => {
 
   it('should refuse the value and keep the file when the field would break the check', async () => {
     const service = make()
-    await service.setEnabled(root, 'branch-format', true)
+    await service.setEnabled(root, root, 'branch-format', true)
     const before = await read('.dck', 'rules', 'branch-format.md')
 
-    const result = await service.setField(root, 'branch-format', 0, 'types', 'feat|fix(')
+    const result = await service.setField(root, root, 'branch-format', 0, 'types', 'feat|fix(')
 
     expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-RUL-001' } } })
     expect(await read('.dck', 'rules', 'branch-format.md')).toBe(before)
@@ -169,9 +169,9 @@ describe('createRulesService changes', () => {
   it('should write the marked block and report it shared when the rules are shared with agents', async () => {
     const service = make()
     await writeFile(join(root, 'AGENTS.md'), '# Backend\n\nRun the tests first.\n')
-    await service.setEnabled(root, 'branch-format', true)
+    await service.setEnabled(root, root, 'branch-format', true)
 
-    const result = await service.shareWithAgents(root, true)
+    const result = await service.shareWithAgents(root, root, true)
 
     const text = await read('AGENTS.md')
     expect(text).toContain('# Backend\n\nRun the tests first.\n')
@@ -180,23 +180,62 @@ describe('createRulesService changes', () => {
     expect(result.ok && result.value.agents).toMatchObject({ shared: true, stale: false })
   })
 
-  it('should report the block out of date when a rule changes after it was shared', async () => {
+  it('should bring the shared block up to date when a rule is switched on from the page', async () => {
     const service = make()
-    await service.setEnabled(root, 'branch-format', true)
-    await service.shareWithAgents(root, true)
+    await service.setEnabled(root, root, 'branch-format', true)
+    await service.shareWithAgents(root, root, true)
 
-    const result = await service.setEnabled(root, 'commit-message', true)
+    const result = await service.setEnabled(root, root, 'commit-message', true)
 
-    expect(result.ok && result.value.agents).toMatchObject({ shared: true, stale: true })
+    expect(result.ok && result.value.agents).toMatchObject({ shared: true, stale: false })
+    expect(await read('AGENTS.md')).toContain('- Commit messages: ')
+  })
+
+  it('should bring the shared block up to date when a field is edited from the page', async () => {
+    const service = make()
+    await service.setEnabled(root, root, 'commit-message', true)
+    await service.shareWithAgents(root, root, true)
+
+    const result = await service.setField(root, root, 'commit-message', 1, 'maxLength', 50)
+
+    expect(result.ok && result.value.agents.stale).toBe(false)
+    expect(await read('AGENTS.md')).toContain('Keep the first line within 50 characters')
+  })
+
+  it('should still report the block out of date when a rule file is edited by hand', async () => {
+    const service = make()
+    await service.setEnabled(root, root, 'branch-format', true)
+    await service.shareWithAgents(root, root, true)
+    const file = join(root, '.dck', 'rules', 'branch-format.md')
+    await writeFile(file, (await readFile(file, 'utf8')).replace('Branch names', 'Branches'))
+
+    const view = await service.view(root)
+
+    expect(view?.agents).toMatchObject({ shared: true, stale: true })
+  })
+
+  it('should refuse without writing when the tab is now in another repository than the one shown', async () => {
+    const other = join(directory, 'acme', 'frontend')
+    await mkdir(join(other, '.git'), { recursive: true })
+
+    const result = await make().setEnabled(other, root, 'branch-format', true)
+
+    expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-RUL-006' } } })
+    expect(
+      await readFile(join(other, '.dck', 'rules', 'branch-format.md')).catch(() => 'none'),
+    ).toBe('none')
+    expect(
+      await readFile(join(root, '.dck', 'rules', 'branch-format.md')).catch(() => 'none'),
+    ).toBe('none')
   })
 
   it('should leave the file as it was when the sharing is switched off', async () => {
     const service = make()
     await writeFile(join(root, 'AGENTS.md'), '# Backend\n')
-    await service.setEnabled(root, 'branch-format', true)
-    await service.shareWithAgents(root, true)
+    await service.setEnabled(root, root, 'branch-format', true)
+    await service.shareWithAgents(root, root, true)
 
-    const result = await service.shareWithAgents(root, false)
+    const result = await service.shareWithAgents(root, root, false)
 
     expect(await read('AGENTS.md')).toBe('# Backend\n')
     expect(result.ok && result.value.agents.shared).toBe(false)
@@ -207,7 +246,7 @@ describe('createRulesService changes', () => {
     await writeFile(join(root, 'CLAUDE.md'), '# Notes\n')
     const before = await service.view(root)
 
-    const result = await service.addClaudeImport(root)
+    const result = await service.addClaudeImport(root, root)
 
     expect(before?.agents.claudeImportMissing).toBe(true)
     expect(await read('CLAUDE.md')).toBe('# Notes\n@AGENTS.md\n')
@@ -215,7 +254,7 @@ describe('createRulesService changes', () => {
   })
 
   it('should fail without writing when the directory is not inside a git repository', async () => {
-    const result = await make().setEnabled(directory, 'branch-format', true)
+    const result = await make().setEnabled(directory, root, 'branch-format', true)
 
     expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-RUL-003' } } })
   })
@@ -227,18 +266,21 @@ describe('createRulesService changes', () => {
       logger: { ...silentLogger, warn: (_message, context) => void warnings.push(context) },
     })
 
-    const result = await service.setEnabled(root, 'branch-format', true)
+    const result = await service.setEnabled(root, root, 'branch-format', true)
 
     expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-RUL-002' } } })
     expect(result.ok ? '' : result.error.message).toContain('ENOTDIR')
-    expect(warnings).toMatchObject([{ path: join(root, '.dck', 'rules', 'branch-format.md') }])
+    expect(warnings).toMatchObject([
+      { path: join(root, '.dck', 'rules', 'branch-format.md') },
+      { root, action: 'set-enabled', error: expect.stringContaining('ENOTDIR') },
+    ])
   })
 
   it('should refuse to share when AGENTS.md is a link', async () => {
     await writeFile(join(directory, 'notes.md'), '# Notes\n')
     await symlink(join(directory, 'notes.md'), join(root, 'AGENTS.md'))
 
-    const result = await make().shareWithAgents(root, true)
+    const result = await make().shareWithAgents(root, root, true)
 
     expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-RUL-002' } } })
     expect(await readFile(join(directory, 'notes.md'), 'utf8')).toBe('# Notes\n')
@@ -254,8 +296,8 @@ describe('createRulesService marks', () => {
 
   it('should mark nothing when the branch and the commits follow the enabled rules', async () => {
     const service = make()
-    await service.setEnabled(root, 'branch-format', true)
-    await service.setEnabled(root, 'commit-message', true)
+    await service.setEnabled(root, root, 'branch-format', true)
+    await service.setEnabled(root, root, 'commit-message', true)
 
     const marks = await service.marks(git('feat/add-login', 'feat: add the login form'))
 
@@ -264,8 +306,8 @@ describe('createRulesService marks', () => {
 
   it('should mark the branch and each failing commit with the check messages when they are outside a rule', async () => {
     const service = make()
-    await service.setEnabled(root, 'branch-format', true)
-    await service.setEnabled(root, 'commit-message', true)
+    await service.setEnabled(root, root, 'branch-format', true)
+    await service.setEnabled(root, root, 'commit-message', true)
 
     const marks = await service.marks(
       git('Feature/Login', 'updated things', 'fix: handle empty input'),
@@ -285,7 +327,7 @@ describe('createRulesService marks', () => {
 
   it('should skip the branch when the head is detached', async () => {
     const service = make()
-    await service.setEnabled(root, 'branch-format', true)
+    await service.setEnabled(root, root, 'branch-format', true)
 
     const marks = await service.marks(git(undefined))
 
@@ -321,7 +363,7 @@ describe('createRulesService marks', () => {
   it('should keep what it read for a few seconds when the files change behind it', async () => {
     let time = 1000
     const service = make({ ttlMs: 5000, now: () => time })
-    await service.setEnabled(root, 'branch-format', true)
+    await service.setEnabled(root, root, 'branch-format', true)
     await service.marks(git('Feature/Login'))
     await rm(join(root, '.dck'), { recursive: true })
 
@@ -336,10 +378,10 @@ describe('createRulesService marks', () => {
 
   it('should drop what it read when a change is written', async () => {
     const service = make({ ttlMs: 60_000 })
-    await service.setEnabled(root, 'branch-format', true)
+    await service.setEnabled(root, root, 'branch-format', true)
     const before = await service.marks(git('Feature/Login'))
 
-    await service.setEnabled(root, 'branch-format', false)
+    await service.setEnabled(root, root, 'branch-format', false)
     const after = await service.marks(git('Feature/Login'))
 
     expect(before?.branch?.failed).toHaveLength(1)
@@ -354,7 +396,7 @@ describe('createRulesService marks', () => {
         return 'timeout'
       },
     })
-    await service.setEnabled(root, 'branch-format', true)
+    await service.setEnabled(root, root, 'branch-format', true)
 
     const first = await service.marks(git('feat/add-login'))
     await service.marks(git('feat/add-login'))
@@ -371,7 +413,7 @@ describe('createRulesService marks', () => {
         return text === 'slow' ? 'timeout' : plainMatch(expression, text)
       },
     })
-    await service.setEnabled(root, 'branch-format', true)
+    await service.setEnabled(root, root, 'branch-format', true)
 
     const first = await service.marks(git('slow'))
     const next = await service.marks(git('Feature/Login'))
