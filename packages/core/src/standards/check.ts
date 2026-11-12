@@ -38,7 +38,15 @@ export function checkText(
   text: string,
   options: CheckOptions = {},
 ): CheckFailure[] {
-  const match = options.match ?? plainMatch
+  const run = options.match ?? plainMatch
+  let timedOut = false
+  // After one expression runs out of time the others are not run, so a call costs one time limit at most
+  const match: Matcher = (expression, value) => {
+    if (timedOut) return 'timeout'
+    const result = run(expression, value)
+    timedOut = result === 'timeout'
+    return result
+  }
   const checked = text.slice(0, CHECK_TEXT_MAX)
   const firstLine = checked.split(/\r?\n/, 1)[0] ?? ''
   const applies = (rule: CompiledRule) => !options.firstLineOnly || rule.scope === 'first-line'

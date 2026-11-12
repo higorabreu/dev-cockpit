@@ -182,6 +182,25 @@ describe('checkText', () => {
     ])
   })
 
+  it('should run no other expression and still check the length when one expression times out', () => {
+    const standards = standardsWith([
+      { pattern: '^(a+)+$', message: 'Only the letter a' },
+      { forbid: 'b', message: 'No b' },
+      { maxLength: 3, message: 'At most 3 characters' },
+      { required: 'a', message: 'Some a' },
+    ])
+    let calls = 0
+    const match: Matcher = () => {
+      calls += 1
+      return 'timeout'
+    }
+
+    const failures = checkText(standards, 'commit', 'aaaa', { match })
+
+    expect(calls).toBe(1)
+    expect(kindsOf(failures)).toEqual(['timeout', 'timeout', 'maxLength', 'timeout'])
+  })
+
   it('should hand the compiled expression and the text to the matcher when one is injected', () => {
     const standards = standardsWith([
       { forbid: '{word}', variables: { word: 'WIP' }, message: 'Remove WIP' },

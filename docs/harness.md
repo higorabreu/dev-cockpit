@@ -217,7 +217,9 @@ A rule has exactly one kind, a `message` and optionally a `scope` and `variables
   value that is a list of alternatives (`feat|fix|docs`) is shown as `feat, fix, docs`.
 
 Only the first 20,000 characters of a text are checked, and each expression runs with a time limit of 100
-milliseconds. An expression that runs out of time counts as a failed rule, with a note. There is no other
+milliseconds. An expression that runs out of time counts as a failed rule, with a note, and the expressions
+after it in the same check are not run: they fail the same way, so one check never waits more than one time
+limit. The length limits are still checked. There is no other
 rule kind and no script: code in a check waits for the extension host (phase 3).
 
 ## Sources and precedence
