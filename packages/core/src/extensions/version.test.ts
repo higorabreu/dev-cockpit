@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isVersion, isVersionRange, satisfies } from './version.ts'
+import { isVersion, isVersionRange, releaseOf, satisfies } from './version.ts'
 
 describe('isVersion', () => {
   it.each(['0.3.0', '1.20.3', '2.0.0-beta.1'])('should accept %s when it is a version', (text) => {
@@ -49,5 +49,15 @@ describe('satisfies', () => {
   it('should fail closed when the version or the range is malformed', () => {
     expect(satisfies('not-a-version', '>=0.3.0')).toBe(false)
     expect(satisfies('0.3.0', 'whatever')).toBe(false)
+  })
+})
+
+describe('releaseOf', () => {
+  it('should drop the pre-release suffix when the version has one', () => {
+    expect(releaseOf('0.3.0-beta.1')).toBe('0.3.0')
+  })
+
+  it('should be 0.0.0 when the text is not a version', () => {
+    expect(releaseOf('next')).toBe('0.0.0')
   })
 })

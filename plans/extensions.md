@@ -236,8 +236,11 @@ Phase 0, the foundation:
   because `ExtensionSource` already names the four sources; the adapter is `@dck/adapter-extension-files`. A
   global or repository folder becomes a candidate only when it holds a folder of a registered contribution
   point, so none shows up until the harness registers `standards`.
-- [ ] EXT-T3. The built-in extension, the `dck ext list` command (source, state, shadowed entries, translated
-  through the catalogs) and `docs/extensions.md` with the manifest and contribution point reference. (F3)
+- [x] EXT-T3. The built-in extension, the `dck ext list` command (source, state, shadowed entries, translated
+  through the catalogs) and `docs/extensions.md` with the manifest and contribution point reference. (F3) The built-in
+  extension is data in `core/src/extensions/built-in.ts`, beside the list of known contribution points. The
+  CLI finds the window's data folder with `defaultConfigDir` (or `DCK_CONFIG_DIR`) and looks for `.dck/` in
+  the current directory only; walking up to the repository root waits for the `GitContext` port of EXT-T5.
 
 Phase 1, the harness (the `standards` contribution point):
 

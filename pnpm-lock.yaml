@@ -105,6 +105,9 @@ importers:
       '@dck/adapter-agent-claude':
         specifier: workspace:^
         version: link:../adapters/agent-claude
+      '@dck/adapter-extension-files':
+        specifier: workspace:^
+        version: link:../adapters/extension-files
       '@dck/adapter-node-net':
         specifier: workspace:^
         version: link:../adapters/node-net

@@ -1,5 +1,6 @@
 import type { ExtensionSource } from './load.ts'
 import type { Manifest } from './manifest.ts'
+import { releaseOf } from './version.ts'
 
 export type ImplicitSource = Extract<ExtensionSource, 'global' | 'repository'>
 
@@ -16,12 +17,9 @@ export interface ImplicitManifestOptions {
   readonly contributes: Readonly<Record<string, string>>
 }
 
-// A range comparator takes no pre-release suffix, so 0.3.0-beta becomes 0.3.0
-const release = (version: string) => /^\d+\.\d+\.\d+/.exec(version)?.[0] ?? '0.0.0'
-
 // The manifest a global or repository folder would have written, so it loads like any other extension
 export function implicitManifest(options: ImplicitManifestOptions): Manifest {
-  const version = release(options.appVersion)
+  const version = releaseOf(options.appVersion)
   return {
     ...IMPLICIT_EXTENSIONS[options.source],
     version,

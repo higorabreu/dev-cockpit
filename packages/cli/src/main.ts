@@ -4,10 +4,17 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { fileURLToPath } from 'node:url'
-import { connectTo, defaultEndpoint, defaultStateDir } from '@dck/adapter-node-net'
+import {
+  connectTo,
+  defaultConfigDir,
+  defaultEndpoint,
+  defaultStateDir,
+} from '@dck/adapter-node-net'
 import { createJsonLogger, createTranslator, pickLocale, silentLogger } from '@dck/core'
 import { createGitLabViews, startDaemon } from '@dck/daemon'
+import packageJson from '../package.json' with { type: 'json' }
 import { runCli } from './cli.ts'
+import { createExtDeps } from './ext-deps.ts'
 
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
 const args = process.argv.slice(2)
@@ -60,6 +67,13 @@ if (args[0] === 'daemon') {
     connect: (target) => connectTo(target, silentLogger),
     out: (text) => process.stdout.write(text),
     err: (text) => process.stderr.write(text),
+    ext: createExtDeps({
+      configDir: process.env.DCK_CONFIG_DIR ?? defaultConfigDir(),
+      cwd: process.cwd(),
+      appVersion: packageJson.version,
+      logger: silentLogger,
+      readFile: (path) => readFile(path, 'utf8').catch(() => undefined),
+    }),
     // In the package the CLI runs inside Electron: the command `install` would write would not work
     agent:
       process.env.DCK_PACKAGED === '1'

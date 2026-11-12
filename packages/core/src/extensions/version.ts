@@ -11,6 +11,12 @@ function parse(text: string): Triple | undefined {
   return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : undefined
 }
 
+// A comparator takes no pre-release suffix, so a range is built from 0.3.0 when the app is 0.3.0-beta
+export const releaseOf = (version: string): string => {
+  const numbers = parse(version)
+  return numbers ? numbers.join('.') : '0.0.0'
+}
+
 const comparators = (range: string) => range.trim().split(/\s+/)
 
 // A range is space separated comparators that must all hold, for example ">=0.3.0 <1.0.0"
