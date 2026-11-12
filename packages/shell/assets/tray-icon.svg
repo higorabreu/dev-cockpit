@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 100 100" role="img">
+<title>Dev Cockpit</title>
+<path fill-rule="evenodd" d="M20 64 C20 38 36 22 56 22 C73 22 84 33 84 48 L84 64 C84 71 79 76 72 76 L32 76 C25 76 20 71 20 64 Z M46 44 H80 V60 C80 64 77 67 73 67 H52 C48.7 67 46 64.3 46 61 Z" fill="#E6E6E6"/>
+<polyline points="54,50 59,55.5 54,61" fill="none" stroke="#E6E6E6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="63" y1="61" x2="72" y2="61" stroke="#E6E6E6" stroke-width="3.5" stroke-linecap="round"/>
+</svg>

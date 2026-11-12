@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100" role="img">
+<title>Dev Cockpit</title>
+<rect width="100" height="100" rx="22" fill="#12171D"/>
+<path d="M20 64 C20 38 36 22 56 22 C73 22 84 33 84 48 L84 64 C84 71 79 76 72 76 L32 76 C25 76 20 71 20 64 Z" fill="#E8E6E1"/>
+<path d="M28 46 C31 34 41 27 54 26" fill="none" stroke="#12171D" stroke-width="3.5" stroke-linecap="round"/>
+<path d="M46 44 H80 V60 C80 64 77 67 73 67 H52 C48.7 67 46 64.3 46 61 Z" fill="#12171D"/>
+<polyline points="54,50 59,55.5 54,61" fill="none" stroke="#E8E6E1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="63" y1="61" x2="72" y2="61" stroke="#E8E6E1" stroke-width="3" stroke-linecap="round"/>
+</svg>
