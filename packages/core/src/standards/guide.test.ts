@@ -101,14 +101,22 @@ describe('renderBlock', () => {
     )
   })
 
-  it('should state the reason when a standard has no rule', () => {
+  it('should state the reason and point to the guide command when a standard has no rule and a short body', () => {
     const block = renderBlock([review])
 
-    expect(block).toContain('- Review rubric: Reviews stay comparable.')
+    expect(block.split('\n').slice(2)).toEqual([
+      '- Review rubric: Reviews stay comparable.',
+      '  Details: `dck guide review`',
+    ])
+  })
+
+  it('should state only the reason when a standard has no rule and no body', () => {
+    const block = renderBlock([{ ...review, body: '' }])
+
     expect(block).not.toContain('Details:')
   })
 
-  it('should point to the guide command only when the body is longer than the limit', () => {
+  it('should point to the guide command only when the body of a standard with rules is longer than the limit', () => {
     const body = (lines: number) => Array.from({ length: lines }, () => 'A line.').join('\n')
     const short = { ...branch, body: body(LONG_BODY_LINES) }
     const long = { ...review, body: body(LONG_BODY_LINES + 1) }

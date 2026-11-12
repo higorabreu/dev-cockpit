@@ -266,7 +266,8 @@ does not exist):
 - One line per enabled standard that the repository itself holds in `.dck/standards/` (the block is
   versioned with the team, so a standard only your own folder switches on stays out of it): its title and the messages of its rules, or its reason
   when it has no rule. The rules are stated in the block, so an agent follows them without running
-  anything. A standard whose body is longer than five lines also points to `dck guide`.
+  anything. A standard with no rule also points to `dck guide` when it has a body, and a standard with
+  rules when its body is longer than five lines.
 - The block is always in English and has the same bytes for the same standards, whatever the language of
   the system.
 - Only the lines from one marker to the other are ever changed; the other lines keep their line endings.

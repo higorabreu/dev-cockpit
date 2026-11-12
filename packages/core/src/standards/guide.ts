@@ -40,7 +40,7 @@ export function renderGuide(standards: readonly Standard[], application: string)
 
 const BLOCK_HEADING = '## Standards to follow in this repository'
 
-// A body longer than this is not repeated in the block: the line points to `dck guide` instead
+// A standard with rules points to `dck guide` from the block only when its body is longer than this
 export const LONG_BODY_LINES = 5
 
 // The block for an AGENTS.md: each rule is stated here, so an agent follows it without running anything
@@ -49,8 +49,10 @@ export function renderBlock(standards: readonly Standard[]): string {
   if (enabled.length === 0) return ''
   const lines = enabled.flatMap(({ title, why, applies, check, body }) => {
     const rule = check.map(ruleMessage).join('; ') || why
-    const isLong = body.split('\n').length > LONG_BODY_LINES
-    return [`- ${title}: ${rule}`, ...(isLong ? [`  Details: \`dck guide ${applies}\``] : [])]
+    // Without a rule the line only gives the reason, so any body is what the agent must read
+    const hasDetails =
+      check.length === 0 ? body.trim() !== '' : body.split('\n').length > LONG_BODY_LINES
+    return [`- ${title}: ${rule}`, ...(hasDetails ? [`  Details: \`dck guide ${applies}\``] : [])]
   })
   return [BLOCK_HEADING, '', ...lines].join('\n')
 }
