@@ -437,26 +437,20 @@ does not become a programming language.
 **How to revert:** the harness and packs contain no code loading, so they can be removed without touching the
 rest; the host contract is defined in phase 3 and is not frozen before it.
 
-## D36. The harness is used in the window, and nothing blocks
+## D36. The harness leaves the product before its first release
 
-**Decision:** the rules are used where the developer already is. The settings screen has a Harness page
-for the repository of the active tab: a switch per rule, its fields as plain inputs (the variables of its
-checks and its length limit, never the regular expression) and a switch that shares the rules with agents
-through a marked block in `AGENTS.md`. The Git section of the panel marks a branch or a commit outside a
-rule. The CLI offers the same through `dck init`, `dck rules`, `dck guide` and `dck check`, and both call
-one workspace in the core. The cockpit only shows: it installs no git hook. This replaces the
-`dck render --target` of D35, which generated a whole `CLAUDE.md` or `AGENTS.md`. The area is called
-Harness, in English and in Portuguese, and each item a rule (regra), whose entries under `check:` are
-checks, because "standards" read as app preferences and collided with "padrão" (default) in Portuguese.
-The title, reason and messages of a rule are the rule's own text, shown as written whatever the interface
-language, because the block in `AGENTS.md` must be the same bytes for the whole team.
-**Reason:** a harness that is only commands and a hook is what any plugin does and uses nothing the cockpit
-has: it is always open, knows the repository of the active tab and already reads its branch and commits. A
-generated instruction file competes with the one the team writes by hand, and an agent told to run a command
-before every action often skips it, so the block states the rules themselves. `AGENTS.md` is read by the
-common agents, Claude Code included when there is no `CLAUDE.md` or when it imports the file (D24).
-**Accepted cost:** nothing enforces a rule; `dck check` is there for whoever wants a hook, and it cannot
-run in CI until the CLI is published by itself. A check beyond its fields is still a regular expression
-edited in the file.
-**How to revert:** the page and the mark only read and write through the workspace, so they can be removed
-without touching the CLI; the rule files are plain markdown and stay readable without the tool.
+**Decision:** the AI agent harness (phase 1 of `plans/extensions.md`) and the standards packs (phase 1b)
+leave the product. The Harness was built and merged (rules as files in `.dck/rules/`, a settings page,
+marks in the Git section, `dck init`, `dck rules`, `dck guide`, `dck check`) and removed before any release.
+This drops the harness part of D35 and the per-agent standards generation of D8; the extension foundation
+of D35 (manifest, sources, `dck ext list`) stays, with no contribution point registered yet.
+**Reason:** reviewed with the maintainer after using it: it is configuration a developer sets once, not
+something used during the day; branch and commit conventions are already solved by a commit tool in one
+line of config; using it took too many concepts (rule, check, field, source, precedence, a marked block,
+a `CLAUDE.md` import); it wrote files into the team's repository, which a developer must first get the
+team to accept; and its marks pointed at commits that can only be fixed by rewriting history. The cockpit
+earns its place in what is open all day: tasks and reviews from Jira and GitLab, several agents at once,
+reviewing what an agent changed, and getting back to a project's context.
+**How to revert:** revert the commit that removed it; the code, its tests, its docs and the two reviews
+are in the history of pull request #12.
+

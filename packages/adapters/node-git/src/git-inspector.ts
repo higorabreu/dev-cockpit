@@ -1,3 +1,4 @@
+import { execFile } from 'node:child_process'
 import { join } from 'node:path'
 import {
   countDistinctFiles,
@@ -9,14 +10,26 @@ import {
   parseGitStatus,
   parseSubmoduleList,
 } from '@dck/core'
-import { git } from './git.ts'
 
+const TIMEOUT_MS = 3000
 const LOG_LIMIT = '20'
 const DEFAULT_SUBMODULE_TTL_MS = 8000
 
 export interface GitInspectorOptions {
   readonly submoduleTtlMs?: number
   readonly now?: () => number
+}
+
+function git(cwd: string, args: readonly string[]): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    // No optional lock: the periodic read must not compete for the index with the user's git
+    execFile(
+      'git',
+      ['--no-optional-locks', '-C', cwd, ...args],
+      { timeout: TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 },
+      (error, stdout) => resolve(error ? undefined : stdout),
+    )
+  })
 }
 
 const STATUS_ARGS = ['status', '--porcelain=v2', '-z', '--branch'] as const

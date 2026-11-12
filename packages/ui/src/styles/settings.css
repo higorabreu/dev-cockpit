@@ -224,10 +224,6 @@
   width: 64px;
 }
 
-.scontrol input[type="checkbox"] {
-  accent-color: var(--accent);
-}
-
 .scontrol input:focus-visible,
 .scontrol select:focus-visible,
 .srecord:focus-visible,

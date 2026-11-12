@@ -7,7 +7,7 @@ const valid = {
   version: '1.0.0',
   apiVersion: 1,
   engines: { dck: '>=0.3.0' },
-  contributes: { rules: 'rules/' },
+  contributes: { standards: 'standards/' },
 }
 
 const failureOf = (input: unknown) => {
@@ -45,7 +45,7 @@ describe('parseManifest', () => {
     ['an api version that is not a positive integer', { ...valid, apiVersion: 0 }],
     ['an engines range that is not supported', { ...valid, engines: { dck: '^0.3.0' } }],
     ['an unknown top level field', { ...valid, homepage: 'https://example.com' }],
-    ['a contribution point name in uppercase', { ...valid, contributes: { Rules: 'x' } }],
+    ['a contribution point name in uppercase', { ...valid, contributes: { Standards: 'x' } }],
   ])('should fail with DCK-EXT-001 when the manifest has %s', (_name, input) => {
     expect(failureOf(input)?.data?.code).toBe('DCK-EXT-001')
   })
