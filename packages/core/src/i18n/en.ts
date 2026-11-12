@@ -295,4 +295,6 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-GLB-005': 'GitLab is not responding',
   'error.DCK-GLB-006': 'Unexpected GitLab response',
   'error.DCK-GLB-007': 'Invalid GitLab address',
+  'error.DCK-EXT-001': 'Invalid extension manifest',
+  'error.DCK-EXT-002': 'Extension feature not supported by this version',
 }
