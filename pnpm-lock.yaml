@@ -36,7 +36,22 @@ importers:
         specifier: workspace:^
         version: link:../../core
 
+  packages/adapters/gitlab:
+    dependencies:
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../../core
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+
   packages/adapters/linux-proc:
+    dependencies:
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../../core
+
+  packages/adapters/node-fetch:
     dependencies:
       '@dck/core':
         specifier: workspace:^

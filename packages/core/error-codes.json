@@ -52,5 +52,47 @@
     "category": "internal",
     "retryable": false,
     "rpc": -32005
+  },
+  "DCK-NET-001": {
+    "message": "Sem resposta do servidor",
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32006
+  },
+  "DCK-GLB-001": {
+    "message": "O GitLab recusou o token",
+    "category": "permission_denied",
+    "retryable": false,
+    "rpc": -32007
+  },
+  "DCK-GLB-002": {
+    "message": "O token não tem permissão para esta consulta",
+    "category": "permission_denied",
+    "retryable": false,
+    "rpc": -32008
+  },
+  "DCK-GLB-003": {
+    "message": "Endereço do GitLab não encontrado",
+    "category": "not_found",
+    "retryable": false,
+    "rpc": -32009
+  },
+  "DCK-GLB-004": {
+    "message": "Limite de requisições do GitLab atingido",
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32010
+  },
+  "DCK-GLB-005": {
+    "message": "O GitLab não está respondendo",
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32011
+  },
+  "DCK-GLB-006": {
+    "message": "Resposta inesperada do GitLab",
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32012
   }
 }
