@@ -1,74 +1,92 @@
 # Dev Cockpit
 
-Terminal estilo Guake para o dia a dia de desenvolvimento: abre e fecha com uma tecla global, tem abas,
-um menu de segurar, busca de projetos e um painel com sessões, git e containers.
+A Guake-style terminal for day-to-day development. A global key opens and closes it, and it brings tabs,
+a hold menu, project search, a side panel with sessions, git and containers, and GitLab merge request
+views, all keyboard first.
 
-Versão **0.1.0**: primeira versão para uso real. O que ainda não existe está em
-[Limites conhecidos](#limites-conhecidos).
+Version **0.1.0**. What does not exist yet is listed under [Known limits](#known-limits).
 
-## Instalar para o uso diário
+## Install
 
-Requisitos para construir: Node 24 (`nvm use`), pnpm 9 e o `dpkg-deb` do sistema (Ubuntu e Debian).
+Requirements: Ubuntu or Debian on x86-64 or arm64 with X11, and `libsecret-tools` for the system keyring
+(the package declares it).
+
+1. Download the `.deb` for your architecture from the
+   [Releases](https://github.com/higorabreu/dev-cockpit/releases) page, and the `SHA256SUMS` file next to it.
+2. Check it: `sha256sum --check --ignore-missing SHA256SUMS`.
+3. Install it: `sudo apt install ./dev-cockpit_<version>_<arch>.deb`.
+
+This installs the app in `/opt/dev-cockpit`, adds a **Dev Cockpit** entry to the application menu and the
+`dck` command. The default global key is **F12**. To update, install the newer `.deb` over the old one. To
+start at login, tick **Start with the system** in the tray icon menu (off by default). To remove it:
+`sudo apt remove dev-cockpit`. Data lives in `~/.config/dev-cockpit`.
+
+## Build from source
+
+Requirements: Node 24 (`nvm use`), pnpm 9 and the system `dpkg-deb`.
 
 ```bash
 pnpm install
-pnpm install:local         # constrói o pacote .deb e instala (pede a senha do sudo)
+pnpm install:local         # builds the .deb package and installs it (asks for your sudo password)
 ```
 
-Isso instala o app em `/opt/dev-cockpit`, cria a entrada **Dev Cockpit** no menu de aplicativos e o
-comando `dck`. O padrão da tecla global é **F12**. Para trocar de versão, rode o mesmo comando de novo:
+If the cockpit is open, the script **asks before restarting**, because restarting closes the tabs and the
+commands running in them. `pnpm install:local --no-restart` installs and lets the new version apply on the
+next launch, `--yes` restarts without asking and `--skip-build` installs the `.deb` already built.
 
-- se o cockpit está aberto, ele **pergunta antes de reiniciar**, porque reiniciar fecha as abas e os
-  comandos que rodam nelas;
-- `pnpm install:local --no-restart` instala e deixa a versão nova valer na próxima abertura;
-- `pnpm install:local --yes` reinicia sem perguntar; `--skip-build` instala o `.deb` já construído.
+## Use
 
-Para iniciar com o login, marque **Iniciar com o sistema** no menu do ícone da bandeja (vem desligado).
-Para remover: `sudo apt remove dev-cockpit`. Os dados ficam em `~/.config/dev-cockpit`.
-
-## Usar
-
-| Tecla | O que faz |
+| Key | What it does |
 | --- | --- |
-| `F12` (configurável) | Mostra ou esconde a janela, no monitor onde está o mouse |
-| `F11` | Altura total ou ancorada |
-| `Ctrl+Shift+T` / `W` | Nova aba / fechar aba |
-| `Ctrl+Tab`, `Ctrl+Shift+Tab` | Próxima / anterior aba |
-| `Alt+1` a `9` | Vai para a aba |
-| Segurar `Ctrl` direito | Menu em roda: abas, projetos, agente, sistema. Soltar executa |
-| `Ctrl+Shift+O` | Busca de projetos (`Ctrl+D` fixa ou solta um favorito) |
-| `Ctrl+Shift+B` | Painel lateral |
-| `Ctrl+Shift+J` | Vai para a aba que terminou um comando |
-| `Ctrl+Shift+↑` `↓` | Opacidade |
-| `Ctrl +` `-` `0` | Tamanho da fonte |
-| `Ctrl+Shift+L` | Alterna tema claro e escuro |
-| `Ctrl+,` | Configurações (também pela engrenagem do painel) |
+| `F12` (configurable) | Shows or hides the window, on the monitor where the mouse is |
+| `F11` | Full height or anchored |
+| `Ctrl+Shift+T` / `W` | New tab / close tab |
+| `Ctrl+Tab`, `Ctrl+Shift+Tab` | Next / previous tab |
+| `Alt+1` to `9` | Go to tab |
+| Hold the right `Ctrl` | Wheel menu: tabs, projects, agent, system. Releasing runs the item |
+| `Ctrl+Shift+P` | Project search (`Ctrl+D` pins or unpins a favorite) |
+| `Ctrl+Shift+M` | Merge request views |
+| `Ctrl+Shift+B` | Side panel |
+| `Ctrl+Shift+Up` / `Down` | Opacity |
+| `Ctrl +`, `-`, `0` | Font size |
+| `Ctrl+Shift+L` | Switch between light and dark theme |
+| `Ctrl+,` | Settings (also through the gear in the panel) |
 
-Selecionar texto copia; o botão direito e o do meio colam. O comando `dck` controla a janela de fora
-(`dck toggle`, `dck ping`): útil para ligar a um atalho do sistema se a tecla global for recusada.
+Selecting text copies it; the right and middle buttons paste. The `dck` command controls the window from
+outside (`dck toggle`, `dck ping`): useful to bind to a system shortcut if the global key is refused.
 
-## Configurações
+## Settings
 
-`Ctrl+,` abre a tela: língua, tema, opacidade, fonte, altura da janela, tecla global, tecla do menu
-de segurar, pasta dos projetos, início com o sistema e o tempo para avisar um comando longo. Tudo vale
-na hora. As configurações ficam num `settings.json` que também pode ser editado à mão; campo inválido
-volta ao padrão. As variáveis `DCK_KEY`, `DCK_HEIGHT` e `DCK_PROJECTS_ROOT` vencem o arquivo.
+`Ctrl+,` opens the screen: language, theme, opacity, font, window height, global key, hold menu key,
+projects folder, start with the system, the threshold to notify a long command, and the GitLab
+connection. Everything applies at once. Settings live in a `settings.json` that can also be edited by
+hand; an invalid field goes back to its default. The `DCK_KEY`, `DCK_HEIGHT` and `DCK_PROJECTS_ROOT`
+variables win over the file.
 
-## Desenvolver sem atrapalhar o instalado
+## Develop without disturbing the installed one
 
 ```bash
-pnpm dev                   # constrói e abre; perfil, socket e tecla (F9) próprios, sem ícone na bandeja
-pnpm dev:dck toggle        # o CLI do repositório, falando com o cockpit de desenvolvimento
+pnpm dev                   # builds and opens; own profile, socket and key (F9), no tray icon
+pnpm dev:dck toggle        # the repository's CLI, talking to the development cockpit
 pnpm lint && pnpm typecheck && pnpm test
 ```
 
-O de desenvolvimento usa `~/.config/dev-cockpit-dev` e o socket `dck-dev`, então convive com o instalado.
-O `CLAUDE.md` descreve a arquitetura e os padrões; `plans/` tem o roadmap, as decisões e os planos.
+The development build uses `~/.config/dev-cockpit-dev` and the `dck-dev` socket, so it lives beside the
+installed one. Read [CONTRIBUTING.md](CONTRIBUTING.md) before sending a change, [docs/](docs/) for the
+architecture, decisions and roadmap, and [CLAUDE.md](CLAUDE.md) for the coding standards.
 
-## Limites conhecidos
+## Known limits
 
-- Só Linux com X11, testado no Ubuntu 24.04 e no GNOME. macOS e Windows entram depois, como adaptadores.
-- O pacote roda com `--no-sandbox`, como o resto do projeto, por causa da restrição de sandbox do Ubuntu.
-- Sem o banner de aprovações do Claude e sem o dado do agente no painel (código parado, ver D26).
-- Sem Jira e GitLab (Marco 2) e sem remapear os demais atalhos.
-- O ícone na bandeja do GNOME abre o menu e não alterna a janela direto.
+- Linux with X11 only, tested on Ubuntu 24.04 and GNOME. macOS is planned ([plans/macos.md](plans/macos.md))
+  and Windows after it, both as adapters.
+- The package runs with `--no-sandbox`, because of Ubuntu's sandbox restriction.
+- No Claude approvals banner and no agent data in the panel (the code is dormant, see D26).
+- GitLab only for now; Jira and key remapping for the remaining shortcuts are not done.
+- The GNOME tray icon opens the menu and does not toggle the window directly.
+
+## License
+
+Copyright (C) 2026 Higor Abreu Freiberger. Dev Cockpit is free software under the
+[GNU Affero General Public License v3.0](LICENSE): you may use, study, change and share it, and a
+modified version you distribute must be published under the same license, keeping the authorship. The
+name "Dev Cockpit" and the logo are not covered by that license: a fork should use its own name.

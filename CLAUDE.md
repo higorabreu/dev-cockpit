@@ -1,204 +1,213 @@
 # CLAUDE.md
 
-Orientações para o Claude Code neste repositório. Este arquivo é um **roteador**: diz o que o
-projeto é, as regras que valem sempre e onde aprender mais. Nome do projeto: Dev Cockpit (pacote `devcockpit`, comando `dck`).
+Guidelines for coding agents and contributors in this repository. This file is a **router**: it says
+what the project is, the rules that always apply and where to learn more. Project name: Dev Cockpit
+(package `devcockpit`, command `dck`). Contribution workflow: [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## O que é
+## What it is
 
-Cockpit local para desenvolvedores: terminal embutido estilo Guake (F12 abre, F11 tela cheia) com
-painel lateral recolhível, visões de trabalho vindas de Jira e GitLab, projetos e submódulos
-mapeados, e um harness que define como a IA trabalha (padrões como dado, aplicados por instrução,
-tools MCP e validadores). O app expõe um MCP server para o Claude CLI.
+A local cockpit for developers: a Guake-style embedded terminal (a global key opens it, F11 toggles
+full height) with a collapsible side panel, work views from GitLab (Jira next), mapped projects and
+submodules, and a harness that defines how AI works (standards as data, applied by instruction, MCP
+tools and validators, planned). Architecture, decisions and roadmap: [docs/](docs/).
 
-Decisões e roadmap em `plans/`.
+## Premises (they outrank any implementation taste)
 
-## Premissas (valem acima de qualquer gosto de implementação)
+1. **Light.** Little idle memory, no unnecessary processes.
+2. **Fast.** The hotkey shows the window with no perceptible wait; keys echo immediately.
+3. **Good UX/UI.** Calm, dense, keyboard first, no AI look.
+4. **Portable.** Linux first; macOS and Windows arrive as new adapters, without touching the core.
+5. **Simple.** Readable code before any optimization or abstraction.
 
-1. **Leve.** Pouca memória em repouso, sem processos desnecessários.
-2. **Rápido.** F12 mostra a janela sem espera perceptível; teclas têm eco imediato.
-3. **Boa UX/UI.** Calma, densa, teclado primeiro, sem cara de IA.
-4. **Portável.** Linux primeiro, macOS e Windows entram como adaptadores novos, sem tocar no núcleo.
-5. **Simples.** Código legível antes de qualquer otimização ou abstração.
-
-Orçamentos propostos, a validar no Marco 0 e depois mantidos como teste:
-tecla até eco no terminal em um frame (16 ms); F12 até janela visível abaixo de 100 ms;
-memória em repouso (shell mais daemon) abaixo de 300 MB; abertura a frio abaixo de 2 s;
-lista de 1000 itens rolando a 60 fps (virtualizada).
+Performance budgets, kept as tests or checks when they can be measured: key to echo in the terminal
+within one frame (16 ms); hotkey to visible window under 100 ms; idle memory (shell plus daemon) under
+300 MB; cold start under 2 s; a 1000-item list scrolling at 60 fps (virtualized).
 
 ## Stack
 
-- Node 24 LTS, pnpm workspaces, TypeScript estrito
-- Shell: Electron. Terminal: xterm.js com WebGL e node-pty
-- UI: React, Vite, Tailwind, Radix UI
-- Validação nas bordas: zod. Logs: pino. SQLite local (driver a validar no spike)
-- MCP: SDK oficial em TypeScript
-- Lint e formatação: Biome. Testes: Vitest
+- Node 24 LTS, pnpm workspaces, strict TypeScript
+- Shell: Electron. Terminal: xterm.js (DOM renderer) with node-pty
+- UI: TypeScript on the DOM with Vite, no framework; styles are plain CSS over generated design tokens
+- Validation at the edges: zod. Logs: the injected `Logger`. Local daemon over JSON-RPC 2.0
+- Lint and formatting: Biome. Tests: Vitest
 
-Se o spike mostrar que o Electron fere os orçamentos, o shell troca (Tauri); como daemon e UI são
-independentes dele, o resto é reaproveitado.
+Planned, not yet in the code: Radix UI and Tailwind for components, a local database, an MCP server for
+the Claude CLI. If Electron ever exceeds the budgets, the shell is swapped (Tauri); because the daemon
+and the UI are independent of it, the rest is reused.
 
-## Estrutura
+## Structure
 
 ```
 packages/
-  core/       domínio puro, sem I/O
-  design/     tokens.json, CSS gerado, componentes
-  ui/         app React
-  daemon/     processo local: SQLite, barramento de eventos, IPC
-  mcp/        servidor MCP (stdio), cliente do daemon
-  cli/        comando dck (toggle, render, check)
-  shell/      Electron: janela, atalho global, host do PTY
-  adapters/   platform-linux, jira, gitlab, ...
-plans/        contexto, roadmap, decisões e um plano por marco em andamento
+  core/       pure domain, no I/O: ports, ipc, settings, tabs, views, i18n, ...
+  design/     tokens.json and the CSS, terminal theme and contrast checks generated from it
+  ui/         the app: DOM, xterm, styles
+  daemon/     local process: IPC server, views, cache
+  cli/        the dck command (toggle, ping, agent)
+  shell/      Electron: window, global shortcut, PTY host
+  adapters/   node-pty, node-git, node-net, node-fetch, gitlab, docker-cli, secret-tool,
+              gnome-shortcuts, linux-proc, agent-claude
+docs/         architecture, decisions, roadmap
+plans/        active public plans; `plans/local/` is git-ignored personal notes
 ```
 
-## Arquitetura e portabilidade
+Source folders in `ui` and `shell` are grouped by feature or area, with tests beside the code and only
+the entry points (`main.ts`, `app.ts`, `preload.ts`) at the root of `src`. A folder holds at most 12
+source files and file names are lowercase kebab case; `conventions.test.ts` checks both.
 
-- **Regra de dependência:** `core` não importa nada de fora. Tudo que toca o sistema fica atrás de
-  uma porta (PTY, atalho global, notificação, cofre de segredos, janela, git, arquivos, relógio,
-  HTTP) e é implementado em `adapters/`.
-- **Daemon separado da interface.** O MCP server é iniciado pelo Claude CLI e o app pode estar
-  fechado. Janela, CLI e MCP são clientes do daemon.
-- Sem suposição de Unix: caminhos por biblioteca, nunca `~/.config` fixo; sem depender de bash; IPC
-  atrás de uma interface (socket em Unix, named pipe no Windows).
-- Atalho global tem plano B: `dck toggle` na CLI, para o usuário ligar a qualquer atalho do
-  sistema.
-- Módulos são fronteira de código no início. Contrato de plugin externo só depois de dois
-  conectores reais; não abstrair antes do segundo caso.
+## Architecture and portability
 
-## Padrões de código
+- **Dependency rule:** `core` imports nothing from outside. Everything that touches the system sits behind
+  a port (PTY, global shortcut, notification, secret store, window, git, files, clock, HTTP) and is
+  implemented in `adapters/`.
+- **Daemon separate from the interface.** Window, CLI and (later) MCP are clients of the daemon, and the
+  app may be closed.
+- No Unix assumption: paths through a library, never a fixed `~/.config`; no dependency on bash; IPC
+  behind an interface (a socket on Unix, a named pipe on Windows).
+- The global shortcut has a plan B: `dck toggle` in the CLI, for the user to bind to any system shortcut.
+- Modules are a code boundary at first. An external plugin contract only after two real connectors; do
+  not abstract before the second case.
 
-- TypeScript estrito, sem `any`. Aspas simples, sem ponto e vírgula (Biome).
-- Código limpo e desacoplado. Módulos dependem de portas e de contratos pequenos, nunca da
-  implementação de outro módulo; dependências entram por parâmetro, não por import de singleton;
-  uma responsabilidade por módulo e por função.
-- Nomes bons no lugar de comentários. Comentar só o essencial: o porquê de uma decisão não óbvia,
-  um workaround, uma armadilha ou uma restrição externa, em uma linha seca. Sem comentário que
-  descreva o que o código já diz, sem docblock em função trivial, sem exagero.
-- **Erros, como o código já faz (o teste `core/src/conventions.test.ts` cobre o que dá para medir):**
-  - Falha esperada de operação que pode dar errado (rede, cofre, protocolo, daemon) devolve
-    `Result<T, ErrorBody>`, criada com `fail(errorBody('DCK-X-001', detalhe))`. Nunca `ErrorCode` puro,
-    `string` nem `Error` no lugar do `ErrorBody`, e nunca `fail('DCK-...')` direto. O detalhe é contexto
-    para reproduzir (endpoint, status, código do SO), sem segredo.
-  - Dado opcional do ambiente (arquivo ausente, processo que sumiu, JSON de terceiro ilegível)
-    devolve `undefined` ou o valor padrão, com `.catch(() => undefined)` ou `catch` que retorna.
-    Conjunto fechado de estados usa união discriminada por `kind` (`ComposeStatus`).
-  - `throw` só para bug ou pré-condição violada (`new Error('invariant: ...')`). `DckError` só dentro de
-    handler do IPC, onde o hub o converte no código; erro inesperado vira `DCK-IPC-002` e o detalhe
-    vai para o log.
-  - `catch` nunca fica vazio: converte em `Result` ou valor padrão, ou registra no log e segue, ou traz
-    uma linha dizendo por que ignorar (ex.: `localStorage` indisponível).
-  - Arquivo de configuração ou estado inválido volta ao padrão, avisa com `logger.warn` e não derruba o
-    app. Escrita de arquivo é atômica (temporário e `rename`).
-- Códigos de erro `DCK-{DOMÍNIO}-{SEQ}` em `error-codes.json`, com uma faixa RPC única e a mensagem
-  no catálogo `i18n` (`error.<código>`, em inglês e pt-BR). Domínio é o assunto em maiúsculas, sempre três letras, hoje `IPC`, `DMN`, `SEC`, `NET` e `GLB`. Código sem
-  uso é removido, nunca marcado como obsoleto.
-- Logs pelo `Logger` injetado (`info`, `warn`, `error`), nunca `console` (só scripts de build). Mensagem em inglês, curta, sem
-  ponto final, e o contexto num objeto (`{ file, key, pid }`); a causa de uma exceção vai em `error:
-  String(error)`. Níveis: `error` falha, `warn` degradação, `info` evento relevante. Nunca registrar
-  segredo nem expor stack trace a clientes.
-- Estrutura: função `createX(dependências)` que devolve um objeto com a porta implementada; classe só
-  para fake de teste, `DckError` e `LineDecoder`. Porta em `core/src/ports`, adaptador em
-  `adapters/<nome>` (`@dck/adapter-<nome>`), recebendo o que toca o mundo (`fetch`, executor, raiz do
-  `/proc`) por parâmetro para o teste trocar. O `core` não importa pacote nem módulo `node:` e um
-  adaptador não importa outro.
-- Configuração: tudo que puder ter default, tem. Segredo ou endereço de ambiente não tem default e
-  falha no boot. Segredos no cofre do sistema atrás da porta, nunca em arquivo ou log.
-- Validar e sanitizar toda entrada externa (ticket, MR, resposta de API, comando do usuário) nas
-  bordas com zod.
-- Escrita em sistema externo (Jira, GitLab, arquivos de outros repositórios) só com aprovação do
-  usuário e com registro de ação que permita desfazer quando possível.
+## Code standards
 
-## Testes
+- Strict TypeScript, no `any`. Single quotes, no semicolons (Biome).
+- Clean, decoupled code. Modules depend on ports and small contracts, never on another module's
+  implementation; dependencies come in as parameters, not through a singleton import; one responsibility
+  per module and per function.
+- Good names instead of comments. Comment only the essential: the why of a non-obvious decision, a
+  workaround, a trap or an external constraint, in one dry line. No comment that describes what the code
+  already says, no docblock on a trivial function, no excess.
+- **Errors, as the code already does (`core/src/conventions.test.ts` covers what can be measured):**
+  - An expected failure of an operation that can go wrong (network, secret store, protocol, daemon)
+    returns `Result<T, ErrorBody>`, built with `fail(errorBody('DCK-X-001', detail))`. Never a bare
+    `ErrorCode`, `string` or `Error` in place of the `ErrorBody`, and never `fail('DCK-...')` directly. The
+    detail is context to reproduce (endpoint, status, OS code), without secrets.
+  - Optional environment data (missing file, a process that vanished, unreadable third-party JSON)
+    returns `undefined` or the default value, with `.catch(() => undefined)` or a `catch` that returns.
+    A closed set of states uses a discriminated union by `kind` (`ComposeStatus`).
+  - `throw` only for a bug or a violated precondition (`new Error('invariant: ...')`). `DckError` only
+    inside an IPC handler, where the hub converts it to the code; an unexpected error becomes
+    `DCK-IPC-002` and the detail goes to the log.
+  - A `catch` is never empty: it converts to a `Result` or a default value, or logs and moves on, or
+    carries one line saying why it is ignored (e.g. `localStorage` unavailable).
+  - An invalid configuration or state file goes back to the default, warns with `logger.warn` and does
+    not bring the app down. File writes are atomic (temporary file and `rename`).
+- Error codes `DCK-{DOMAIN}-{SEQ}` in `error-codes.json`, with a unique RPC range; the message text lives
+  in the i18n catalogs as `error.<code>`, in English and pt-BR. The domain is the subject in capitals,
+  always three letters, today `IPC`, `DMN`, `SEC`, `NET` and `GLB`. An unused code is removed, never
+  marked obsolete.
+- Logs go through the injected `Logger` (`info`, `warn`, `error`), never `console` (only build scripts).
+  English message, short, no final period, and the context in an object (`{ file, key, pid }`); the cause
+  of an exception goes in `error: String(error)`. Levels: `error` failure, `warn` degradation, `info`
+  relevant event. Never log a secret or expose a stack trace to clients.
+- Structure: a `createX(dependencies)` function that returns an object implementing the port; a class
+  only for a test fake, `DckError` and `LineDecoder`. Port in `core/src/ports`, adapter in
+  `adapters/<name>` (`@dck/adapter-<name>`), receiving what touches the world (`fetch`, executor, the
+  `/proc` root) as a parameter so tests can swap it. `core` imports neither packages nor `node:` modules
+  and an adapter does not import another adapter.
+- Configuration: everything that can have a default, has one. A secret or an environment address has no
+  default and fails at boot. Secrets live in the system secret store behind the port, never in a file or
+  log.
+- Validate and sanitize every external input (ticket, MR, API response, user command) at the edges with
+  zod.
+- Writing to an external system (Jira, GitLab, files of other repositories) only with the user's
+  approval and with an action log that allows undoing when possible.
 
-- Nome: `should [comportamento esperado] when [condição]`. Estrutura Arrange, Act, Assert.
-- Cada critério de pronto do plano do marco tem ao menos um teste ou verificação.
-- Mock só para dependência externa (rede, disco, relógio, processo). O domínio se testa sem mock.
-- Os orçamentos de desempenho viram testes ou verificações de CI quando houver como medir.
+## Language
+
+- Everything that is not text shown to the end user is in English: code, comments, logs, error details,
+  documentation, plans, issues, pull requests and commits. Portuguese exists only as a translation of
+  the interface, in `i18n/pt-BR.ts`. A test keeps comments in English.
+- No em dashes in UI text, docs or comments.
+
+## Tests
+
+- Name: `should [expected behavior] when [condition]`. Structure Arrange, Act, Assert.
+- Every acceptance criterion of a plan has at least one test or check.
+- Mock only external dependencies (network, disk, clock, process). The domain is tested without mocks.
+- Performance budgets become tests or CI checks when there is a way to measure them.
 
 ## Design system
 
-- Fonte da verdade: `packages/design/tokens.json` (cores nos temas escuro e claro, tipografia,
-  espaçamento, raio). Dele saem as variáveis CSS e o tema do xterm.js, para terminal e painel
-  terem a mesma paleta.
-- Nenhuma cor, tamanho ou fonte literal em componente: sempre token.
-- Componentes mínimos sobre Radix, acessíveis por teclado, com o atalho visível ao lado da ação.
-- Direção: calma e densa, estilo Linear. Lista limpa em uma coluna, estado em forma e cor juntas,
-  só a cor semântica chama atenção. Movimento mínimo.
-- A IA não é uma personagem: sem bolha de chat, ícone de faíscas, gradiente roxo ou avatar de robô.
-  A IA aparece como resultado verificável (diff para aceitar ou recusar, sugestão com origem).
-- **Tooltip:** só o do DS (`src/tooltip.ts`), nunca o atributo `title` nativo. Todo texto cortado por
-  reticências mostra o conteúdo inteiro sozinho, sem marcação; `data-tip` mostra um texto sempre
-  (ícones, contadores, setas) e `data-tip-full` dá o texto completo quando o visível é só parte dele.
-  Ícone sem rótulo visível leva `data-tip` com o nome. Atalho vai em `data-tip-key`, nunca no texto.
-- **Barra de rolagem:** só a do DS, a classe `scroll` (trilho transparente, controle fino que só aparece ao rolar ou
-  com o mouse sobre a lista e engrossa sob o mouse, tamanhos em `size.scrollbar` dos tokens). Toda lista que rola leva `scroll` e encosta nas bordas do cartão (o respiro vai em padding dentro dela), para a barra ficar sempre à mesma distância da borda; o terminal usa os mesmos
-  tokens. Única exceção: a faixa de abas rola na horizontal sem barra, com esmaecido na borda e a lista de abas
-  como apoio. Nada de `scrollbar-width` nem `::-webkit-scrollbar` fora do componente.
-- Termos de git e de ferramentas de desenvolvimento seguem o VS Code do autor, em português, e os
-  verbos de git que o dev já usa (pull, push, commit, branch). Nada de tradução livre nem rótulos
-  inventados como "para enviar"; Incoming e Outgoing também não, porque não são o que ele vê.
-- Fontes: Inter para texto, JetBrains Mono para chaves, branches e comandos.
-- Textos da interface em português do Brasil, diretos. Sem emoji. **Todo texto novo passa pelo
-  tradutor** (`@dck/core`, catálogos `i18n/pt-BR.ts` e `i18n/en.ts`, plural por `chave.one` e
-  `chave.other`, parâmetros `{nome}`): nunca texto fixo em componente. Um teste exige as mesmas
-  chaves e os mesmos parâmetros nas duas línguas. Língua pelo sistema, com a escolha do usuário
-  gravada em `dck-locale` quando a tela de configurações existir.
+- Source of truth: `packages/design/tokens.json` (colors in the dark and light themes, typography,
+  spacing, radius). The CSS variables and the xterm.js theme are generated from it, so terminal and
+  panel share the same palette.
+- No literal color, size or font in a component: always a token.
+- Minimal components, keyboard accessible, with the shortcut visible beside the action.
+- Direction: calm and dense, Linear style. A clean single-column list, state in shape and color
+  together, only the semantic color draws attention. Minimal motion.
+- AI is not a character: no chat bubble, sparkle icon, purple gradient or robot avatar. AI appears as a
+  verifiable result (a diff to accept or reject, a suggestion with its source).
+- **Tooltip:** only the design system's (`ui/src/kit/tooltip.ts`), never the native `title` attribute.
+  Any text cut by an ellipsis shows its full content by itself, with no markup; `data-tip` always shows
+  a text (icons, counters, arrows) and `data-tip-full` gives the full text when what is visible is only
+  part of it. An icon with no visible label gets `data-tip` with its name. A shortcut goes in
+  `data-tip-key`, never in the text.
+- **Scrollbar:** only the design system's, the `scroll` class (transparent track, a thin thumb that only
+  shows while scrolling or with the mouse over the list and thickens under the mouse, sizes in
+  `size.scrollbar` of the tokens). Every scrolling list carries `scroll` and touches the card edges
+  (the breathing room is padding inside it), so the bar is always at the same distance from the edge;
+  the terminal uses the same tokens. The only exception: the tab strip scrolls horizontally without a
+  bar, with a fade at the edge and the tab list as support. No `scrollbar-width` or
+  `::-webkit-scrollbar` outside the component.
+- Git and developer-tool terms follow VS Code, and the git verbs developers already use (pull, push,
+  commit, branch). No free translation or invented labels such as "to send"; Incoming and Outgoing
+  neither, because they are not what the user sees.
+- Fonts: Inter for text, JetBrains Mono for keys, branches and commands.
+- Interface text is direct and has no emoji. **All new text goes through the translator** (`@dck/core`,
+  catalogs `i18n/pt-BR.ts` and `i18n/en.ts`, plural by `key.one` and `key.other`, parameters `{name}`):
+  never a fixed text in a component. A test requires the same keys and the same parameters in both
+  languages. The language follows the system, with the user's choice in the settings screen.
 
-## Configurações
+## Settings
 
-- Fonte única: `settings.json` no diretório de dados do app, lido e gravado só pelo host
-  (`shell/src/settings-store.ts`) e validado pelo modelo em `@dck/core` (`settings/settings.ts`).
-  Campo inválido volta ao padrão sozinho; número fora do intervalo é cortado no limite.
-- **Configuração nova:** acrescente o campo em `settingsSchema` com padrão e limites, a linha em
-  `settings-view.ts` (com o texto nos dois catálogos) e reaja à mudança em `settings.onChange`. Nada de
-  `localStorage` para preferência do usuário.
-- Variáveis `DCK_*` vencem o arquivo e aparecem como bloqueadas na tela (`env-overrides.ts`).
-- Mudança que o sistema pode recusar (atalho global) passa pelo `veto` do store e volta ao valor anterior.
+- Single source: `settings.json` in the app's data directory, read and written only by the host
+  (`shell/src/settings/settings-store.ts`) and validated by the model in `@dck/core`
+  (`settings/settings.ts`). An invalid field goes back to its default by itself; a number out of range
+  is clamped to the limit.
+- **New setting:** add the field to `settingsSchema` with a default and limits, the row in
+  `ui/src/settings/settings-view.ts` (with the text in both catalogs) and react to the change in
+  `settings.onChange`. No `localStorage` for user preferences.
+- `DCK_*` variables win over the file and show as locked on the screen
+  (`shell/src/settings/env-overrides.ts`).
+- A change the system may refuse (the global shortcut) goes through the store's `veto` and returns to
+  the previous value.
 
-## Acessibilidade
+## Accessibility
 
-- Padrão do projeto: WCAG 2.2 nível AA, nos temas escuro e claro.
-- Contraste de texto de pelo menos 4,5:1 (3:1 para texto grande) e de ícones, bordas e indicadores
-  de estado de pelo menos 3:1, medidos contra o fundo real do elemento. Não usar `opacity` para
-  esmaecer texto ou ícone: o contraste vira imprevisível; usar um token de cor sólido.
-- O contraste é verificado por teste sobre os tokens de `packages/design`; token novo ou par de
-  cores novo entra com a verificação.
-- Estado nunca só por cor: seleção e foco também mudam forma, contorno ou peso.
-- Tudo é operável por teclado, com foco visível, e o movimento respeita `prefers-reduced-motion`.
-- Toda ação com atalho de teclado também se faz com o mouse (botão, menu ou clique), e o atalho aparece no tooltip dela
-  (`data-tip-key`). Toda lista rola com a roda do mouse, sem depender de setas. Atalho novo nasce com o seu caminho
-  pelo mouse.
-- Com a janela transparente a garantia de contraste vale para a opacidade padrão (0,92); abaixo
-  disso o fundo real do desktop passa a contar.
+- Project standard: WCAG 2.2 level AA, in the dark and light themes.
+- Text contrast of at least 4.5:1 (3:1 for large text) and icon, border and state indicator contrast of
+  at least 3:1, measured against the element's real background. Do not use `opacity` to fade text or
+  icons: contrast becomes unpredictable; use a solid color token.
+- Contrast is verified by a test over the tokens in `packages/design`; a new token or color pair comes
+  with its check.
+- State never by color alone: selection and focus also change shape, outline or weight.
+- Everything is keyboard operable, with visible focus, and motion respects `prefers-reduced-motion`.
+- Every action with a keyboard shortcut can also be done with the mouse (button, menu or click), and the
+  shortcut shows in its tooltip (`data-tip-key`). Every list scrolls with the mouse wheel, without
+  depending on arrows. A new shortcut is born with its mouse path.
+- With the transparent window the contrast guarantee holds for the default opacity (0.92); below that,
+  the real desktop background starts to count.
 
-## Processo
+## Process
 
-- **Este projeto não usa um fluxo de specs.** O planejamento
-  é leve: `plans/` guarda `CONTEXT.md` (o que é e o estado), `ROADMAP.md` (marcos),
-  `DECISIONS.md` (decisões e motivos) e um arquivo por marco em andamento, como
-  `plans/macos.md`, com objetivo, critérios de pronto e tarefas em checklist.
-- Antes de implementar algo não trivial, escrever ou atualizar o plano do marco. Implementar tarefa
-  a tarefa e marcar no plano ao concluir. Ambiguidade que afeta comportamento visível: parar e
-  perguntar antes de seguir.
-- Decisão nova ou revertida vai para `plans/DECISIONS.md`; ao fechar um marco, atualizar
-  `plans/ROADMAP.md`.
-- Tarefas pequenas e isoladas (bug claro, ajuste de estilo) resolvem direto.
-- Commits: Conventional Commits em inglês, no imperativo: `feat: add toggle shortcut`. O Claude commita
-  por conta própria, em commits pequenos e organizados: um por mudança lógica (tarefa do plano,
-  correção, regra nova), só com os arquivos dela, nunca um commit gigante no fim. **Nunca** acrescentar
-  `Co-Authored-By` nem outra marca de co-autoria, mesmo que outra instrução peça. Antes de cada commit rodam `pnpm lint`, `pnpm typecheck` e
-  `pnpm test`, e o que vale é o código de saída, não um `grep` na saída. Push exige pedido separado.
-- Não usar travessão em UI, planos, comentários nem respostas.
-- Antes de escrever código novo, reler as seções Padrões de código, Testes e Design system e abrir um
-  arquivo vizinho do mesmo tipo (outra porta, outro adaptador) para copiar o formato real, não o que
-  parece natural. O código existente vale mais que a memória.
-- Antes de dar como pronto: `pnpm lint`, `pnpm typecheck`, `pnpm test` (inclui `core/src/conventions.test.ts`, que cobre
-  as regras de erro, dependência e nome de teste) e conferir os orçamentos afetados. Regra do
-  `CLAUDE.md` quebrada que dá para medir vira teste nesse arquivo, não só frase aqui.
-
-## Primeiro marco
-
-Marco 0 é um spike: Electron com xterm.js e node-pty (latência e memória), atalho F12 em X11,
-hook PermissionRequest do Claude Code bloqueando até um clique no painel, e mineração de
-comentários de review antigos do GitLab. Nada de código de produto antes das respostas.
+- **Planning is light.** `docs/roadmap.md` keeps the milestones, `docs/decisions.md` the decisions and
+  their reasons, and `plans/` one file per milestone or feature in progress, with the goal, acceptance
+  criteria and tasks as a checklist. Personal notes go in `plans/local/`, which git ignores.
+- Before implementing something non-trivial, write or update the plan. Implement task by task and mark
+  it in the plan when done. An ambiguity that affects visible behavior: stop and ask before going on.
+- A new or reverted decision goes in `docs/decisions.md`; when a milestone closes, update
+  `docs/roadmap.md`.
+- Small, isolated tasks (a clear bug, a style tweak) are just done.
+- Commits: Conventional Commits in English, imperative: `feat: add toggle shortcut`. Small, organized
+  commits: one per logical change (a plan task, a fix, a new rule), only with its files, never one giant
+  commit at the end. Commits carry the author's `Signed-off-by` (see CONTRIBUTING.md); agents do not
+  add co-author trailers. Before each commit run `pnpm lint`, `pnpm typecheck` and `pnpm test`; what
+  counts is the exit code, not a `grep` of the output. Pushing needs a separate request.
+- Before writing new code, reread the Code standards, Tests and Design system sections and open a
+  neighboring file of the same kind (another port, another adapter) to copy the real format, not what
+  seems natural. The existing code outweighs memory.
+- Before calling it done: `pnpm lint`, `pnpm typecheck`, `pnpm test` (it includes
+  `core/src/conventions.test.ts`, which covers the error, dependency, language, structure and test name
+  rules) and check the affected budgets. A measurable rule of this file that gets broken becomes a test
+  in that file, not just a sentence here.
