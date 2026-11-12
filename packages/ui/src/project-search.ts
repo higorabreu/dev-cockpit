@@ -5,6 +5,8 @@ import { closeButton, keyHint } from './panel-frame.ts'
 export interface SearchEntry {
   readonly path: string
   readonly label: string
+  // Caminho completo com ~, mostrado discreto ao lado do nome
+  readonly location: string
   readonly favorite?: boolean
 }
 
@@ -60,7 +62,7 @@ export function createProjectSearch(
       .slice(start, start + VISIBLE_ROWS)
       .map((entry, offset) => {
         const index = start + offset
-        return `<button type="button" class="it${index === selected ? ' on' : ''}" role="option" aria-selected="${index === selected}" data-index="${index}"><span class="l">${escapeHtml(entry.label)}</span>${entry.favorite ? `<span class="pin" data-tip="${escapeHtml(t('projects.pinned'))}">${PIN}</span>` : ''}</button>`
+        return `<button type="button" class="it${index === selected ? ' on' : ''}" role="option" aria-selected="${index === selected}" data-index="${index}"><span class="l">${escapeHtml(entry.label)}</span><span class="p">${escapeHtml(entry.location)}</span>${entry.favorite ? `<span class="pin" data-tip="${escapeHtml(t('projects.pinned'))}">${PIN}</span>` : ''}</button>`
       })
       .join('')
   }

@@ -27,6 +27,7 @@ import { setFullHeight } from './layout-mode.ts'
 import { localeFor } from './locale.ts'
 import { createNotice } from './notice.ts'
 import { createEnvironmentSection } from './panel/environment-section.ts'
+import { displayPath } from './panel/format.ts'
 import { createGitSection } from './panel/git-section.ts'
 import { createPanel } from './panel/panel.ts'
 import { createSessionsSection } from './panel/sessions-section.ts'
@@ -117,6 +118,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     projects.map((project) => ({
       path: project.path,
       label: projectLabel(project),
+      location: displayPath(project.path),
       favorite: project.favorite === true,
     }))
 
@@ -237,7 +239,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     t: i18n.t,
     title: () => {
       const cwd = state.activeId ? watcher.get(state.activeId)?.cwd : undefined
-      return cwd ? cwd.replace(/^\/(?:home|Users)\/[^/]+/, '~') : ''
+      return cwd ? displayPath(cwd) : ''
     },
     refresh: async (expanded) => {
       const id = activeSession()?.ptyId
