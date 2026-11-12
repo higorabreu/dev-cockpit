@@ -98,5 +98,10 @@
     "category": "invalid_argument",
     "retryable": false,
     "rpc": -32016
+  },
+  "DCK-STD-001": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32017
   }
 }

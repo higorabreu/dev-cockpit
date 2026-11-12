@@ -307,4 +307,5 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-EXT-001': 'Invalid extension manifest',
   'error.DCK-EXT-002': 'Extension feature not supported by this version',
   'error.DCK-EXT-003': 'Extension not compatible with this version',
+  'error.DCK-STD-001': 'Invalid standard',
 }

@@ -20,8 +20,8 @@ paths:
 - An invalid configuration or state file goes back to the default, warns with `logger.warn` and does not
   bring the app down. File writes are atomic (temporary file, then `rename`).
 - Error codes are `DCK-{DOMAIN}-{SEQ}` in `packages/core/error-codes.json`, with a unique RPC range. The domain
-  is three capital letters (today `IPC`, `DMN`, `SEC`, `NET`, `GLB`). The message text is the catalog entry
-  `error.<code>` in both languages. An unused code is deleted, never marked obsolete.
+  is three capital letters (today `IPC`, `DMN`, `SEC`, `NET`, `GLB`, `EXT`, `STD`). The message text is the
+  catalog entry `error.<code>` in both languages. An unused code is deleted, never marked obsolete.
 - Logs use the injected `Logger` (`info`, `warn`, `error`), never `console` (only build scripts may). English
   message, short, no final period, context in an object (`{ file, key, pid }`), the cause of an exception in
   `error: String(error)`. `error` is a failure, `warn` a degradation, `info` a relevant event. Never log a

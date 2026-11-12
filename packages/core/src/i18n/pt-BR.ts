@@ -306,6 +306,7 @@ export const ptBR = {
   'error.DCK-EXT-001': 'Manifesto de extensão inválido',
   'error.DCK-EXT-002': 'Recurso de extensão não suportado por esta versão',
   'error.DCK-EXT-003': 'Extensão incompatível com esta versão',
+  'error.DCK-STD-001': 'Padrão inválido',
 } as const
 
 export type MessageKey = keyof typeof ptBR
