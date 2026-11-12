@@ -130,8 +130,9 @@ The order is meant to bring the tester in as late as possible and once per batch
   `Info.plist` (identifier, version, `LSUIElement`, `NSHighResolutionCapable`), generates the `.icns` with
   `iconutil` from the PNGs in `assets/`, puts the app in `Contents/Resources/app` and the `dck.mjs` CLI
   beside it, as in the `.deb`. No `.asar`, so `node-pty` needs no `asarUnpack`. Rebuild `node-pty` for the
-  runner's architecture (one artifact per architecture, no universal binary, to keep the app light), make
-  sure `spawn-helper` has mode 755 (the package ships it without execute permission) and check with
+  runner's architecture (one artifact per architecture, no universal binary, to keep the app light), keep
+  `spawn-helper` at mode 755 (the package ships it without execute permission; the root `postinstall` script
+  already fixes it for the checkout, and the packaging must do the same for the bundled copy) and check with
   `lipo -archs` that `pty.node` and `spawn-helper` have the right architecture. Ad hoc signing
   (`codesign --force --deep -s -`) with the entitlements `allow-jit`, `allow-unsigned-executable-memory` and
   `disable-library-validation`; a `.dmg` with `hdiutil`. The tester opens it with right click, Open, or
