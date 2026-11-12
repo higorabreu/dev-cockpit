@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest an idea or an improvement
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please read [docs/decisions.md](https://github.com/higorabreu/dev-cockpit/blob/main/docs/decisions.md) first: it explains why things are the way they are. Do not include private data.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do and what gets in the way?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+      description: How you imagine it working, including keyboard and mouse paths.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to work on this myself
