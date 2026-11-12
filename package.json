@@ -1,7 +1,7 @@
 {
   "name": "dev-cockpit",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "packageManager": "pnpm@9.15.9",
   "engines": {
@@ -11,7 +11,12 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "pnpm -r --if-present typecheck",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "pnpm --filter @dck/ui build && pnpm --filter @dck/shell build",
+    "package": "pnpm build && node packages/shell/scripts/package-deb.mjs",
+    "install:local": "bash scripts/install-local.sh",
+    "dev": "pnpm build && node scripts/dev.mjs",
+    "dev:dck": "node scripts/dev.mjs cli"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.6",
