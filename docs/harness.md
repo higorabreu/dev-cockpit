@@ -256,7 +256,8 @@ does not exist):
 <!-- dck:end -->
 ```
 
-- One line per enabled standard, from every source: its title and the messages of its rules, or its reason
+- One line per enabled standard that the repository itself holds in `.dck/standards/` (the block is
+  versioned with the team, so a standard only your own folder switches on stays out of it): its title and the messages of its rules, or its reason
   when it has no rule. The rules are stated in the block, so an agent follows them without running
   anything. A standard whose body is longer than five lines also points to `dck guide`.
 - The block is always in English and has the same bytes for the same standards, whatever the language of
@@ -281,8 +282,6 @@ missing line and offers to add it. The app never creates a `CLAUDE.md`, and `--y
 - `pr` is checked from a file or the standard input. Reading a description from GitLab waits for the
   connectors.
 - `paths` is stored and does not scope a standard yet.
-- The block lists every enabled standard, the user's global ones included, so two people with different
-  global standards write different blocks into the same `AGENTS.md`.
 - Removing the block from an `AGENTS.md` that held nothing else leaves an empty file.
 - Installing a pack of standards with a command (`dck ext install`) is planned for phase 1b; until then an
   installed extension is a folder placed by hand.

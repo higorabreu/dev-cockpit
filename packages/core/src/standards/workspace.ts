@@ -90,6 +90,12 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
     standard.layers.findLast((layer) => layer.source === target)?.path ??
     join(folders[target], `${standard.id}.md`)
 
+  // The block is versioned with the team, so it only states what the repository itself holds
+  const blockOf = (resolved: ResolvedStandards) =>
+    renderBlock(
+      resolved.standards.filter((standard) => standard.layers.at(-1)?.source === 'repository'),
+    )
+
   // Writes the complete standard, so the folder says all that applies and does not depend on the app version
   async function change(
     id: string,
@@ -113,7 +119,7 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
       const text = (await files.readText(agentsFile)) ?? ''
       const claude = await files.readText(claudeFile)
       const shared = hasBlock(text, MARKDOWN_BLOCK)
-      const current = upsertBlock(text, renderBlock(resolved.standards), MARKDOWN_BLOCK)
+      const current = upsertBlock(text, blockOf(resolved), MARKDOWN_BLOCK)
       return {
         ...resolved,
         agents: {
@@ -144,7 +150,7 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
     async shareWithAgents(on: boolean): Promise<void> {
       const text = (await files.readText(agentsFile)) ?? ''
       const next = on
-        ? upsertBlock(text, renderBlock((await resolve()).standards), MARKDOWN_BLOCK)
+        ? upsertBlock(text, blockOf(await resolve()), MARKDOWN_BLOCK)
         : removeBlock(text, MARKDOWN_BLOCK)
       if (next !== text) await files.writeText(agentsFile, next)
     },

@@ -285,6 +285,18 @@ describe('createStandardsWorkspace, agents', () => {
     expect((await workspace.load()).agents).toMatchObject({ shared: true, stale: false })
   })
 
+  it('should leave a standard out of the block when only the user folder switched it on', async () => {
+    const { files, workspace } = arrange()
+    await workspace.setEnabled('branch-format', true, 'repository')
+    await workspace.setEnabled('commit-message', true, 'global')
+
+    await workspace.shareWithAgents(true)
+
+    const text = files.texts.get(AGENTS) ?? ''
+    expect(text).toContain('- Branch names:')
+    expect(text).not.toContain('- Commit messages:')
+  })
+
   it('should restore the original text when sharing is turned off', async () => {
     const { files, workspace } = arrange()
     files.texts.set(AGENTS, ORIGINAL)
