@@ -159,9 +159,7 @@ async function check(args: readonly string[], io: Io, deps: StandardsDeps): Prom
     io.err(`${io.t('cli.check.unreadable', { file: printable(file ?? '-') })}\n`)
     return EXIT.usage
   }
-  // A branch name that is piped in ends with a newline
-  const checked = application === 'branch' ? text.replace(/\r?\n$/, '') : text
-  return report(application, checked, io, deps)
+  return report(application, text, io, deps)
 }
 
 export async function runStandardsCommand(

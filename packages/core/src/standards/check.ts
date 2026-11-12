@@ -47,7 +47,8 @@ export function checkText(
     timedOut = result === 'timeout'
     return result
   }
-  const checked = text.slice(0, CHECK_TEXT_MAX)
+  // A file or a piped text ends with a line break, which would fail a pattern anchored with $
+  const checked = text.replace(/\r?\n$/, '').slice(0, CHECK_TEXT_MAX)
   const firstLine = checked.split(/\r?\n/, 1)[0] ?? ''
   const applies = (rule: CompiledRule) => !options.firstLineOnly || rule.scope === 'first-line'
   return enabledFor(standards, application).flatMap((standard) =>

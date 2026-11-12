@@ -201,7 +201,7 @@ A rule has exactly one kind, a `message` and optionally a `scope` and `variables
 
 | Kind | Value | The text passes when |
 | --- | --- | --- |
-| `pattern` | A regular expression | The expression matches. Anchor it with `^` and `$` to describe the whole text |
+| `pattern` | A regular expression | The expression matches. Anchor it with `^` and `$` to describe the whole text; one line break at the end of the text is left out, so `$` works on a file or a piped text |
 | `required` | A regular expression | The expression matches somewhere, for a part the text must contain |
 | `forbid` | A regular expression | The expression does not match anywhere |
 | `maxLength` | A positive integer | The text has at most that many characters |

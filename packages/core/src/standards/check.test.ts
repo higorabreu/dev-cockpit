@@ -182,6 +182,17 @@ describe('checkText', () => {
     ])
   })
 
+  it.each([['\n'], ['\r\n']])(
+    'should pass a pattern anchored with $ when the text ends with one line break (%j)',
+    (lineBreak) => {
+      const standards = standardsWith([{ pattern: '^fix: \\S.*$', message: 'Start with fix' }])
+
+      const failures = checkText(standards, 'commit', `fix: handle empty input${lineBreak}`)
+
+      expect(failures).toEqual([])
+    },
+  )
+
   it('should run no other expression and still check the length when one expression times out', () => {
     const standards = standardsWith([
       { pattern: '^(a+)+$', message: 'Only the letter a' },
