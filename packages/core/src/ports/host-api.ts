@@ -1,4 +1,5 @@
 import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
+import type { ConnectionStatus } from './connections.ts'
 import type { ComposeStatus } from './environment.ts'
 import type { TabNotification } from './notifier.ts'
 import type { Project } from './projects.ts'
@@ -36,6 +37,13 @@ export interface HostApi {
     get(): Promise<SettingsView>
     update(patch: SettingsPatch): Promise<SettingsUpdate>
     onChange(listener: (settings: Settings, changed: readonly string[]) => void): Unsubscribe
+  }
+  readonly connections: {
+    readonly gitlab: {
+      status(): Promise<ConnectionStatus>
+      connect(url: string, token: string): Promise<ConnectionStatus>
+      disconnect(): Promise<ConnectionStatus>
+    }
   }
   readonly autostart: {
     isEnabled(): Promise<boolean>
@@ -75,6 +83,9 @@ export const hostChannels = {
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
   settingsChanged: 'settings:changed',
+  connectionsGitlabStatus: 'connections:gitlab:status',
+  connectionsGitlabConnect: 'connections:gitlab:connect',
+  connectionsGitlabDisconnect: 'connections:gitlab:disconnect',
   autostartGet: 'autostart:get',
   autostartSet: 'autostart:set',
   sessionActivity: 'session:activity',

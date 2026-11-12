@@ -218,6 +218,8 @@ export const ptBR = {
   'connections.error.DCK-GLB-004': 'O GitLab limitou as requisições. Tente de novo em instantes.',
   'connections.error.DCK-GLB-005': 'O GitLab não está respondendo.',
   'connections.error.DCK-GLB-006': 'O endereço respondeu, mas não parece ser um GitLab.',
+  'connections.error.DCK-GLB-007':
+    'Endereço inválido. Use https://, com o endereço completo do GitLab.',
   'connections.error.DCK-NET-001': 'Sem resposta do servidor. Confira a rede e o endereço.',
   'connections.error.DCK-SEC-001':
     'O cofre de segredos do sistema não está disponível (instale libsecret-tools).',

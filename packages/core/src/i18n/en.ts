@@ -220,6 +220,7 @@ export const en: Record<MessageKey, string> = {
   'connections.error.DCK-GLB-004': 'GitLab rate limited the requests. Try again shortly.',
   'connections.error.DCK-GLB-005': 'GitLab is not responding.',
   'connections.error.DCK-GLB-006': 'The address answered, but it does not look like GitLab.',
+  'connections.error.DCK-GLB-007': 'Invalid address. Use https:// with the full GitLab address.',
   'connections.error.DCK-NET-001':
     'No response from the server. Check the network and the address.',
   'connections.error.DCK-SEC-001': 'The system keyring is not available (install libsecret-tools).',

@@ -94,5 +94,11 @@
     "category": "internal",
     "retryable": false,
     "rpc": -32012
+  },
+  "DCK-GLB-007": {
+    "message": "Endereço do GitLab inválido",
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32013
   }
 }

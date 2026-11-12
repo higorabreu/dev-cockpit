@@ -24,6 +24,12 @@ const registry = errorCodes as unknown as Readonly<Record<ErrorCode, ErrorInfo>>
 export const errorInfo = (code: ErrorCode): ErrorInfo => registry[code]
 export const describeError = (code: ErrorCode): string => registry[code].message
 
+// O código dentro de um ErrorBody vem como texto; devolve o registrado ou o de erro interno do IPC
+export function errorCodeOf(body: { readonly data?: { readonly code: string } }): ErrorCode {
+  const code = body.data?.code
+  return code !== undefined && code in registry ? (code as ErrorCode) : 'DCK-IPC-002'
+}
+
 export class DckError extends Error {
   readonly code: ErrorCode
   readonly detail: string | undefined

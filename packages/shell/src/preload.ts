@@ -36,6 +36,14 @@ const api: HostApi = {
     onChange: (listener) =>
       subscribe<[Settings, readonly string[]]>(hostChannels.settingsChanged, listener),
   },
+  connections: {
+    gitlab: {
+      status: () => ipcRenderer.invoke(hostChannels.connectionsGitlabStatus),
+      connect: (url, token) =>
+        ipcRenderer.invoke(hostChannels.connectionsGitlabConnect, { url, token }),
+      disconnect: () => ipcRenderer.invoke(hostChannels.connectionsGitlabDisconnect),
+    },
+  },
   autostart: {
     isEnabled: () => ipcRenderer.invoke(hostChannels.autostartGet),
     set: (enabled) => ipcRenderer.invoke(hostChannels.autostartSet, enabled),

@@ -124,9 +124,15 @@ importers:
       '@dck/adapter-docker-cli':
         specifier: workspace:^
         version: link:../adapters/docker-cli
+      '@dck/adapter-gitlab':
+        specifier: workspace:^
+        version: link:../adapters/gitlab
       '@dck/adapter-linux-proc':
         specifier: workspace:^
         version: link:../adapters/linux-proc
+      '@dck/adapter-node-fetch':
+        specifier: workspace:^
+        version: link:../adapters/node-fetch
       '@dck/adapter-node-git':
         specifier: workspace:^
         version: link:../adapters/node-git
@@ -136,6 +142,9 @@ importers:
       '@dck/adapter-node-pty':
         specifier: workspace:^
         version: link:../adapters/node-pty
+      '@dck/adapter-secret-tool':
+        specifier: workspace:^
+        version: link:../adapters/secret-tool
       '@dck/core':
         specifier: workspace:^
         version: link:../core

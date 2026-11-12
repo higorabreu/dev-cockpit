@@ -16,6 +16,7 @@ function setup() {
   const touched: string[] = []
   let autostartOn = false
   const notified: TabNotification[] = []
+  const gitlabConnects: { url: string; token: string }[] = []
   const bridge = registerHostBridge({
     ipcMain,
     ptyHost,
@@ -50,6 +51,14 @@ function setup() {
         autostartOn = enabled
       },
     },
+    gitlab: {
+      status: async () => ({ kind: 'none' as const }),
+      connect: async (url, token) => {
+        gitlabConnects.push({ url, token })
+        return { kind: 'none' as const }
+      },
+      disconnect: async () => ({ kind: 'none' as const }),
+    },
     notifier: { notify: (notification) => void notified.push(notification) },
     projects: {
       list: async () => [{ name: 'alpha', path: '/p/alpha' }],
@@ -74,6 +83,7 @@ function setup() {
     bridge,
     touched,
     notified,
+    gitlabConnects,
     fullHeights: () => fullHeightToggles,
   }
 }
@@ -283,5 +293,31 @@ describe('registerHostBridge clipboard and window', () => {
     expect(await call(hostChannels.autostartSet, true)).toBe(true)
     expect(await call(hostChannels.autostartGet)).toBe(true)
     expect(await call(hostChannels.autostartSet, false)).toBe(false)
+  })
+})
+
+describe('registerHostBridge gitlab connection', () => {
+  it('should forward the address and the trimmed token when the request is valid', async () => {
+    const { call, gitlabConnects } = setup()
+
+    await call(hostChannels.connectionsGitlabConnect, {
+      url: 'https://gl.test',
+      token: ' glpat-x ',
+    })
+
+    expect(gitlabConnects).toEqual([{ url: 'https://gl.test', token: 'glpat-x' }])
+  })
+
+  it.each([
+    ['no token', { url: 'https://gl.test', token: '  ' }],
+    ['a payload that is not an object', 'glpat-x'],
+    ['a token that is too long', { url: 'https://gl.test', token: 'x'.repeat(513) }],
+  ])('should refuse the request without connecting when it has %s', async (_label, payload) => {
+    const { call, gitlabConnects } = setup()
+
+    const status = await call(hostChannels.connectionsGitlabConnect, payload)
+
+    expect(status).toEqual({ kind: 'error', url: undefined, code: 'DCK-GLB-007' })
+    expect(gitlabConnects).toEqual([])
   })
 })

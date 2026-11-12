@@ -3,10 +3,13 @@ import { mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
+import { createGitLabClient } from '@dck/adapter-gitlab'
 import { createProcessInspector, createProcessScanner } from '@dck/adapter-linux-proc'
+import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import { createGitInspector } from '@dck/adapter-node-git'
 import { connectTo, defaultEndpoint } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
+import { createSecretToolStore } from '@dck/adapter-secret-tool'
 import {
   createDockController,
   createJsonLogger,
@@ -37,6 +40,7 @@ import { createElectronShortcuts } from './electron-shortcuts.ts'
 import { createElectronStatusIcon } from './electron-status-icon.ts'
 import { createEnvironmentInspector } from './environment-inspector.ts'
 import { createFavoritesStore } from './favorites-store.ts'
+import { createGitLabConnection } from './gitlab-connection.ts'
 import { registerHostBridge } from './host-bridge.ts'
 import { createProjectCatalog } from './project-catalog.ts'
 import { createRecencyStore } from './recency-store.ts'
@@ -148,6 +152,17 @@ app.whenReady().then(async () => {
 
   logger.info('notifications available', { supported: Notification.isSupported() })
 
+  const http = createFetchHttpClient()
+  const gitlab = createGitLabConnection({
+    secrets: createSecretToolStore(),
+    createSource: (url, token) => createGitLabClient({ http, baseUrl: url, token }),
+    address: {
+      get: () => settingsStore.get().settings.connections.gitlab.url,
+      set: (url) => settingsStore.update({ connections: { gitlab: { url } } }),
+    },
+    logger,
+  })
+
   const bridge = registerHostBridge({
     ipcMain: createElectronIpc(ipcMain),
     ptyHost: createNodePtyHost(),
@@ -156,6 +171,7 @@ app.whenReady().then(async () => {
       writeText: async (text) => clipboard.writeText(text),
     },
     settings: settingsStore,
+    gitlab,
     autostart,
     projects: createProjectCatalog(
       () => {
@@ -213,6 +229,8 @@ app.whenReady().then(async () => {
   settingsStore.onChange((settings, changed) => {
     window.webContents.send(hostChannels.settingsChanged, settings, changed)
     if (changed.includes('window.heightRatio')) dock.refresh()
+    if (changed.includes('connections.gitlab.url') && !settings.connections.gitlab.url)
+      void gitlab.forgetToken()
   })
 
   const daemonScript = join(__dirname, 'daemon.cjs')

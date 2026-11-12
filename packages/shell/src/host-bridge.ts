@@ -2,6 +2,8 @@ import {
   type Autostart,
   type Clipboard,
   type ComposeStatus,
+  type ConnectionStatus,
+  type GitLabConnection,
   hostChannels,
   type Logger,
   type Notifier,
@@ -19,6 +21,12 @@ import { z } from 'zod'
 
 // O valor de cada campo é validado e corrigido pelo próprio modelo das configurações
 const patchSchema = z.record(z.string(), z.unknown())
+
+// O token só passa por aqui, nunca é devolvido nem registrado
+const connectSchema = z.object({
+  url: z.string().max(512),
+  token: z.string().trim().min(1).max(512),
+})
 
 const notificationSchema = z.object({
   title: z.string().max(200),
@@ -42,6 +50,7 @@ export interface BridgeOptions {
     update(patch: SettingsPatch): Promise<SettingsUpdate>
   }
   readonly autostart: Autostart
+  readonly gitlab: GitLabConnection
   readonly environment: { status(pid: number): Promise<ComposeStatus> }
   readonly sessions: {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
@@ -103,6 +112,16 @@ export function registerHostBridge(options: BridgeOptions) {
   ipcMain.handle(hostChannels.settingsUpdate, (_event, patch: unknown) =>
     options.settings.update(patchSchema.parse(patch) as SettingsPatch),
   )
+  ipcMain.handle(hostChannels.connectionsGitlabStatus, () => options.gitlab.status())
+  ipcMain.handle(hostChannels.connectionsGitlabConnect, (_event, payload: unknown) => {
+    const parsed = connectSchema.safeParse(payload)
+    if (!parsed.success) {
+      logger.warn('invalid gitlab connect request ignored')
+      return { kind: 'error', url: undefined, code: 'DCK-GLB-007' } satisfies ConnectionStatus
+    }
+    return options.gitlab.connect(parsed.data.url, parsed.data.token)
+  })
+  ipcMain.handle(hostChannels.connectionsGitlabDisconnect, () => options.gitlab.disconnect())
   ipcMain.handle(hostChannels.autostartGet, () => options.autostart.isEnabled())
   ipcMain.handle(hostChannels.autostartSet, async (_event, enabled: unknown) => {
     await options.autostart.setEnabled(enabled === true)
