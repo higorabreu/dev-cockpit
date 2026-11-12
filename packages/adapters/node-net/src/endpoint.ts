@@ -50,10 +50,11 @@ export interface ConfigDirEnvironment {
   readonly appData: string | undefined
 }
 
-// Electron names the window's userData folder after the package's productName
-const APP_FOLDER = 'Dev Cockpit'
+// Linux folders are lowercase with no spaces; macOS and Windows show the product name
+const LINUX_FOLDER = 'dev-cockpit'
+const PRODUCT_FOLDER = 'Dev Cockpit'
 
-// Where the window keeps settings.json, so a client outside Electron reads the same files
+// Where settings.json and the extensions live: the window sets it as its data folder and the CLI reads it
 export function defaultConfigDir(
   environment: ConfigDirEnvironment = {
     platform: process.platform,
@@ -63,8 +64,8 @@ export function defaultConfigDir(
   },
 ): string {
   if (environment.platform === 'win32')
-    return join(environment.appData ?? join(environment.home, 'AppData', 'Roaming'), APP_FOLDER)
+    return join(environment.appData ?? join(environment.home, 'AppData', 'Roaming'), PRODUCT_FOLDER)
   if (environment.platform === 'darwin')
-    return join(environment.home, 'Library', 'Application Support', APP_FOLDER)
-  return join(environment.configHome || join(environment.home, '.config'), APP_FOLDER)
+    return join(environment.home, 'Library', 'Application Support', PRODUCT_FOLDER)
+  return join(environment.configHome || join(environment.home, '.config'), LINUX_FOLDER)
 }

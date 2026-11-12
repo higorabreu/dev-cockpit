@@ -12,7 +12,7 @@ const configDir =
   join(process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config'), 'dev-cockpit-dev')
 const environment = {
   ...process.env,
-  // The dev CLI reads the settings and the extensions of the dev window, not the installed one's
+  // The dev window and the dev CLI share this folder, apart from the installed app's
   DCK_CONFIG_DIR: configDir,
   DCK_ENDPOINT: process.env.DCK_ENDPOINT ?? join(runtime, 'dck-dev', 'daemon.sock'),
   DCK_KEY: process.env.DCK_KEY ?? 'F9',
@@ -27,7 +27,7 @@ const [command, args] =
     ? ['node', [join(repository, 'packages', 'cli', 'src', 'main.ts'), ...process.argv.slice(3)]]
     : [
         join(repository, 'packages', 'shell', 'node_modules', '.bin', 'electron'),
-        [join(repository, 'packages', 'shell'), '--no-sandbox', `--user-data-dir=${configDir}`],
+        [join(repository, 'packages', 'shell'), '--no-sandbox'],
       ]
 
 const child = spawn(command, args, { env: environment, stdio: 'inherit' })

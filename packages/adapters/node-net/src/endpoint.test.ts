@@ -58,12 +58,12 @@ describe('defaultConfigDir', () => {
 
   it('should use the XDG config home when it is set', () => {
     expect(defaultConfigDir({ ...base, configHome: '/data/config' })).toBe(
-      '/data/config/Dev Cockpit',
+      '/data/config/dev-cockpit',
     )
   })
 
   it('should fall back to the config folder in the home when XDG is not set', () => {
-    expect(defaultConfigDir(base)).toBe('/home/ana/.config/Dev Cockpit')
+    expect(defaultConfigDir(base)).toBe('/home/ana/.config/dev-cockpit')
   })
 
   it('should use the application support folder when the platform is macOS', () => {
