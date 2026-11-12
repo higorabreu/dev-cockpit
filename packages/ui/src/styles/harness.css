@@ -1,0 +1,80 @@
+.scheck,
+.sfield {
+  padding-left: 16px;
+}
+
+.scheck {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* A rule text is the team's own and may hold a long path or expression with no space to break at */
+.sharness .shint,
+.sharness .serror {
+  overflow-wrap: anywhere;
+}
+
+.sharness .smono,
+.sfield input[type="text"],
+.spath {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* A control keeps its size up to half the row; the label column wraps around it */
+.sharness .scontrol {
+  min-width: 0;
+  max-width: 50%;
+  flex: none;
+}
+
+/* A number sits beside its label like the other settings; a text value stacks under its label */
+.sfield {
+  align-items: flex-start;
+}
+
+.sfield .slabel {
+  padding-top: 6px;
+}
+
+.sfield.sstack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.sfield.sstack .slabel {
+  padding-top: 0;
+}
+
+.sfield.sstack .scontrol {
+  max-width: none;
+}
+
+.sfield input[type="text"] {
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.spath {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sintro {
+  margin: 0 0 4px;
+}
+
+.snotice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.snotice .glyph {
+  color: var(--warning);
+}

@@ -3,6 +3,8 @@ import {
   type Clipboard,
   type ComposeStatus,
   type ConnectionStatus,
+  errorBody,
+  fail,
   type GitLabConnection,
   hostChannels,
   type Logger,
@@ -11,6 +13,8 @@ import {
   type PtyCreateOptions,
   type PtyHost,
   type PtySession,
+  type RulesChange,
+  type RulesView,
   type SessionActivityInfo,
   type SessionSnapshot,
   type SettingsPatch,
@@ -39,6 +43,24 @@ const notificationSchema = z.object({
   body: z.string().max(500),
   tabId: z.string().max(100),
 })
+
+const ptyId = z.number().int().nonnegative()
+// The limits are the ones of the rule model: an id, a variable name and an expression
+const ruleId = z.string().min(1).max(64)
+
+// The repository the page shows, which the tab must still be in
+const ruleRequestSchema = z.object({ ptyId, root: z.string().min(1).max(4096) })
+
+const ruleSwitchSchema = ruleRequestSchema.extend({ id: ruleId, enabled: z.boolean() })
+
+const ruleFieldSchema = ruleRequestSchema.extend({
+  id: ruleId,
+  check: z.number().int().nonnegative(),
+  name: z.string().min(1).max(64),
+  value: z.union([z.string().max(500), z.number()]),
+})
+
+const agentsShareSchema = ruleRequestSchema.extend({ on: z.boolean() })
 
 // Only addresses from the connected GitLab's origin; the data comes from the server, so it is not trusted
 function parseOwnUrl(input: string, origin: string | null): string | undefined {
@@ -75,6 +97,22 @@ export interface BridgeOptions {
   readonly sessions: {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
+  }
+  // Keyed by the directory the tab is in; every change goes to that repository
+  readonly rules: {
+    view(cwd: string): Promise<RulesView | undefined>
+    // `root` is the repository the page shows; a change is refused when the tab is in another one
+    setEnabled(cwd: string, root: string, id: string, enabled: boolean): Promise<RulesChange>
+    setField(
+      cwd: string,
+      root: string,
+      id: string,
+      check: number,
+      name: string,
+      value: string | number,
+    ): Promise<RulesChange>
+    shareWithAgents(cwd: string, root: string, on: boolean): Promise<RulesChange>
+    addClaudeImport(cwd: string, root: string): Promise<RulesChange>
   }
   readonly shell: string
   readonly home: string
@@ -179,6 +217,52 @@ export function registerHostBridge(options: BridgeOptions) {
     const session = sessions.get(id)
     return session ? options.sessions.snapshot(session.pid) : undefined
   })
+
+  async function cwdOf(id: number): Promise<string | undefined> {
+    const session = sessions.get(id)
+    return session && (await options.sessions.activity(session.pid))?.cwd
+  }
+
+  function handleRules<Request extends { readonly ptyId: number; readonly root: string }>(
+    channel: string,
+    schema: z.ZodType<Request>,
+    change: (cwd: string, request: Request) => Promise<RulesChange>,
+  ) {
+    ipcMain.handle(channel, async (_event, payload: unknown): Promise<RulesChange> => {
+      const parsed = schema.safeParse(payload)
+      if (!parsed.success) {
+        logger.warn('invalid rules request ignored', { channel })
+        return fail(errorBody('DCK-IPC-003'))
+      }
+      const cwd = await cwdOf(parsed.data.ptyId)
+      return cwd === undefined ? fail(errorBody('DCK-RUL-003')) : change(cwd, parsed.data)
+    })
+  }
+
+  ipcMain.handle(hostChannels.rulesGet, async (_event, id: unknown) => {
+    const parsed = ptyId.safeParse(id)
+    const cwd = parsed.success ? await cwdOf(parsed.data) : undefined
+    return cwd === undefined ? undefined : options.rules.view(cwd)
+  })
+  handleRules(hostChannels.rulesSetEnabled, ruleSwitchSchema, (cwd, request) =>
+    options.rules.setEnabled(cwd, request.root, request.id, request.enabled),
+  )
+  handleRules(hostChannels.rulesSetField, ruleFieldSchema, (cwd, request) =>
+    options.rules.setField(
+      cwd,
+      request.root,
+      request.id,
+      request.check,
+      request.name,
+      request.value,
+    ),
+  )
+  handleRules(hostChannels.rulesShareWithAgents, agentsShareSchema, (cwd, request) =>
+    options.rules.shareWithAgents(cwd, request.root, request.on),
+  )
+  handleRules(hostChannels.rulesAddClaudeImport, ruleRequestSchema, (cwd, request) =>
+    options.rules.addClaudeImport(cwd, request.root),
+  )
   ipcMain.handle(hostChannels.projectsList, () => options.projects.list())
   ipcMain.handle(hostChannels.projectsToggleFavorite, (_event, path: string) =>
     options.projects.toggleFavorite(path),

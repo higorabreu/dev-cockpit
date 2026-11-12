@@ -53,7 +53,7 @@ const finder = (overrides: Partial<FileExtensionFinderOptions> = {}) =>
     installedDir: join(root, 'extensions'),
     globalDir: join(root, 'global'),
     repositoryDir: join(root, 'backend', '.dck'),
-    implicit: { apiVersion: 1, appVersion: '0.3.0', points: { standards: 'standards' } },
+    implicit: { apiVersion: 1, appVersion: '0.3.0', points: { rules: 'rules' } },
     ...overrides,
   })
 
@@ -201,8 +201,8 @@ describe('createFileExtensionFinder, installed', () => {
 
 describe('createFileExtensionFinder, implicit', () => {
   it('should emit one implicit candidate per folder when global and repository hold a known point', async () => {
-    await folder('global', 'standards')
-    await folder('backend', '.dck', 'standards')
+    await folder('global', 'rules')
+    await folder('backend', '.dck', 'rules')
 
     const candidates = await finder().find()
 
@@ -212,7 +212,7 @@ describe('createFileExtensionFinder, implicit', () => {
         location: join(root, 'global'),
         manifest: expect.objectContaining({
           id: 'dck.global',
-          contributes: { standards: 'standards' },
+          contributes: { rules: 'rules' },
         }),
       },
       {
@@ -220,24 +220,24 @@ describe('createFileExtensionFinder, implicit', () => {
         location: join(root, 'backend', '.dck'),
         manifest: expect.objectContaining({
           id: 'dck.repository',
-          contributes: { standards: 'standards' },
+          contributes: { rules: 'rules' },
         }),
       },
     ])
   })
 
   it('should contribute only the points whose folder exists when several are known', async () => {
-    await folder('global', 'standards')
+    await folder('global', 'rules')
     // A file with the name of a point is not its folder
     await writeFile(join(root, 'global', 'themes'), '')
-    const points = { standards: 'standards', themes: 'themes', sections: 'sections' }
+    const points = { rules: 'rules', themes: 'themes', sections: 'sections' }
 
     const candidates = await finder({
       implicit: { apiVersion: 1, appVersion: '0.3.0', points },
     }).find()
 
     expect(candidates).toHaveLength(1)
-    expect(candidates[0]?.manifest).toMatchObject({ contributes: { standards: 'standards' } })
+    expect(candidates[0]?.manifest).toMatchObject({ contributes: { rules: 'rules' } })
   })
 
   it('should not emit an implicit candidate when the folder exists but holds no known point', async () => {
@@ -247,8 +247,8 @@ describe('createFileExtensionFinder, implicit', () => {
     expect(await finder().find()).toEqual([])
   })
 
-  it('should not emit an implicit candidate when no point is registered yet', async () => {
-    await folder('global', 'standards')
+  it('should not emit an implicit candidate when the options name no point', async () => {
+    await folder('global', 'rules')
 
     const candidates = await finder({
       implicit: { apiVersion: 1, appVersion: '0.3.0', points: {} },
@@ -258,8 +258,8 @@ describe('createFileExtensionFinder, implicit', () => {
   })
 
   it('should look only at the global folder when there is no repository folder', async () => {
-    await folder('global', 'standards')
-    await folder('backend', '.dck', 'standards')
+    await folder('global', 'rules')
+    await folder('backend', '.dck', 'rules')
 
     const candidates = await finder({ repositoryDir: undefined }).find()
 
@@ -268,28 +268,28 @@ describe('createFileExtensionFinder, implicit', () => {
 })
 
 describe('createFileExtensionFinder with loadExtensions (F2)', () => {
-  const standards = defineContributionPoint('standards', z.string())
+  const rules = defineContributionPoint('rules', z.string())
 
   const arrange = async () => {
     const installedCommits = await install(
       'acme.commits',
-      manifestFor('acme.commits', { standards: 'installed/' }),
+      manifestFor('acme.commits', { rules: 'installed/' }),
     )
-    await install('acme.reviews', manifestFor('acme.reviews', { standards: 'reviews/' }))
+    await install('acme.reviews', manifestFor('acme.reviews', { rules: 'reviews/' }))
     const broken = await install('acme.broken', '{ nope')
     const needsCode = await install('acme.runner', { ...manifestFor('acme.runner'), main: 'x.js' })
-    await folder('global', 'standards')
-    await folder('backend', '.dck', 'standards')
+    await folder('global', 'rules')
+    await folder('backend', '.dck', 'rules')
     const builtIn: ExtensionCandidate[] = [
       {
         source: 'built-in',
         location: '/opt/dck/extensions/dck.harness',
-        manifest: manifestFor('dck.harness', { standards: 'harness/' }),
+        manifest: manifestFor('dck.harness', { rules: 'harness/' }),
       },
       {
         source: 'built-in',
         location: '/opt/dck/extensions/acme.commits',
-        manifest: manifestFor('acme.commits', { standards: 'built-in/' }),
+        manifest: manifestFor('acme.commits', { rules: 'built-in/' }),
       },
     ]
     return { builtIn, installedCommits, broken, needsCode }
@@ -298,7 +298,7 @@ describe('createFileExtensionFinder with loadExtensions (F2)', () => {
   const load = (candidates: readonly ExtensionCandidate[], disabled: readonly string[] = []) =>
     loadExtensions({
       candidates,
-      points: [standards],
+      points: [rules],
       disabled: new Set(disabled),
       apiVersion: 1,
       appVersion: '0.3.0',
@@ -331,12 +331,12 @@ describe('createFileExtensionFinder with loadExtensions (F2)', () => {
         at: by.location,
       })),
     ).toEqual([{ id: 'acme.commits', from: 'built-in', by: 'installed', at: installedCommits }])
-    expect(contributionsFor(report, standards).map((entry) => entry.declaration)).toEqual([
+    expect(contributionsFor(report, rules).map((entry) => entry.declaration)).toEqual([
       'harness/',
       'installed/',
       'reviews/',
-      'standards',
-      'standards',
+      'rules',
+      'rules',
     ])
   })
 
@@ -363,8 +363,10 @@ describe('createFileExtensionFinder with loadExtensions (F2)', () => {
       'acme.reviews',
       'dck.global',
     ])
-    expect(contributionsFor(report, standards).map((entry) => entry.extension.manifest.id)).toEqual(
-      ['dck.harness', 'acme.commits', 'dck.repository'],
-    )
+    expect(contributionsFor(report, rules).map((entry) => entry.extension.manifest.id)).toEqual([
+      'dck.harness',
+      'acme.commits',
+      'dck.repository',
+    ])
   })
 })

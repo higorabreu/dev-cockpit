@@ -1,7 +1,21 @@
-import { defaultSettings, hostChannels, silentLogger, type TabNotification } from '@dck/core'
+import {
+  defaultSettings,
+  hostChannels,
+  ok,
+  type RulesView,
+  silentLogger,
+  type TabNotification,
+} from '@dck/core'
 import { FakePtyHost, MemoryClipboard } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
 import { type IpcMainApi, registerHostBridge } from './host-bridge.ts'
+
+const rulesView = (root: string): RulesView => ({
+  root,
+  rules: [],
+  invalid: [],
+  agents: { file: `${root}/AGENTS.md`, shared: false, stale: false, claudeImportMissing: false },
+})
 
 function setup() {
   const handlers = new Map<string, (...args: never[]) => unknown>()
@@ -19,6 +33,11 @@ function setup() {
   const gitlabConnects: { url: string; token: string }[] = []
   const viewRefreshes: { view: string; maxAgeMs: number | undefined }[] = []
   const opened: string[] = []
+  const rulesCalls: unknown[][] = []
+  const changeRules = async (name: string, cwd: string, ...args: unknown[]) => {
+    rulesCalls.push([name, cwd, ...args])
+    return ok(rulesView(cwd))
+  }
   const bridge = registerHostBridge({
     ipcMain,
     ptyHost,
@@ -83,6 +102,14 @@ function setup() {
       touch: async (path: string) => void touched.push(path),
       toggleFavorite: async (path: string) => !path.endsWith('/pinned'),
     },
+    rules: {
+      view: async (cwd) => rulesView(cwd),
+      setEnabled: (cwd, root, id, enabled) => changeRules('setEnabled', cwd, root, id, enabled),
+      setField: (cwd, root, id, check, name, value) =>
+        changeRules('setField', cwd, root, id, check, name, value),
+      shareWithAgents: (cwd, root, on) => changeRules('shareWithAgents', cwd, root, on),
+      addClaudeImport: (cwd, root) => changeRules('addClaudeImport', cwd, root),
+    },
     shell: '/bin/zsh',
     home: '/home/usuario',
     logger: silentLogger,
@@ -104,6 +131,7 @@ function setup() {
     gitlabConnects,
     viewRefreshes,
     opened,
+    rulesCalls,
     fullHeights: () => fullHeightToggles,
   }
 }
@@ -391,5 +419,140 @@ describe('registerHostBridge external', () => {
     call(hostChannels.externalOpen, url)
 
     expect(opened).toEqual([])
+  })
+})
+
+describe('registerHostBridge rules', () => {
+  it('should return the rules of the directory the tab is in when the interface asks', async () => {
+    const { call, ptyHost } = setup()
+    const id = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+
+    const view = await call(hostChannels.rulesGet, id)
+
+    expect(view).toEqual(rulesView(`/pid/${ptyHost.sessions[0]?.pid}`))
+  })
+
+  it.each([
+    ['the session does not exist', 99],
+    ['the id is not a number', 'tab-1'],
+  ])('should return nothing when %s and the rules are asked', async (_label, id) => {
+    const { call } = setup()
+
+    expect(await call(hostChannels.rulesGet, id)).toBeUndefined()
+  })
+
+  it('should pass each change with the directory of the tab when the request is valid', async () => {
+    const { call, ptyHost, rulesCalls } = setup()
+    const ptyId = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+    const cwd = `/pid/${ptyHost.sessions[0]?.pid}`
+
+    const root = '/home/ana/acme/backend'
+
+    const result = await call(hostChannels.rulesSetEnabled, {
+      ptyId,
+      root,
+      id: 'branch-format',
+      enabled: true,
+    })
+    await call(hostChannels.rulesSetField, {
+      ptyId,
+      root,
+      id: 'commit-message',
+      check: 1,
+      name: 'maxLength',
+      value: 50,
+    })
+    await call(hostChannels.rulesSetField, {
+      ptyId,
+      root,
+      id: 'branch-format',
+      check: 0,
+      name: 'types',
+      value: 'feat|fix',
+    })
+    await call(hostChannels.rulesShareWithAgents, { ptyId, root, on: true })
+    await call(hostChannels.rulesAddClaudeImport, { ptyId, root })
+
+    expect(result).toEqual({ ok: true, value: rulesView(cwd) })
+    expect(rulesCalls).toEqual([
+      ['setEnabled', cwd, root, 'branch-format', true],
+      ['setField', cwd, root, 'commit-message', 1, 'maxLength', 50],
+      ['setField', cwd, root, 'branch-format', 0, 'types', 'feat|fix'],
+      ['shareWithAgents', cwd, root, true],
+      ['addClaudeImport', cwd, root],
+    ])
+  })
+
+  it.each([
+    [
+      'a switch that is not a boolean',
+      hostChannels.rulesSetEnabled,
+      { ptyId: 1, root: '/r', id: 'branch-format', enabled: 'yes' },
+    ],
+    [
+      'an id that is too long',
+      hostChannels.rulesSetEnabled,
+      { ptyId: 1, root: '/r', id: 'x'.repeat(65), enabled: true },
+    ],
+    [
+      'a check that is not a position',
+      hostChannels.rulesSetField,
+      { ptyId: 1, root: '/r', id: 'branch-format', check: -1, name: 'types', value: 'feat' },
+    ],
+    [
+      'a value that is an object',
+      hostChannels.rulesSetField,
+      {
+        ptyId: 1,
+        root: '/r',
+        id: 'branch-format',
+        check: 0,
+        name: 'types',
+        value: { text: 'feat' },
+      },
+    ],
+    [
+      'a value that is too long',
+      hostChannels.rulesSetField,
+      {
+        ptyId: 1,
+        root: '/r',
+        id: 'branch-format',
+        check: 0,
+        name: 'types',
+        value: 'x'.repeat(501),
+      },
+    ],
+    ['no answer to share or not', hostChannels.rulesShareWithAgents, { ptyId: 1, root: '/r' }],
+    [
+      'no repository it was shown for',
+      hostChannels.rulesSetEnabled,
+      { ptyId: 1, id: 'branch-format', enabled: true },
+    ],
+    ['a payload that is not an object', hostChannels.rulesAddClaudeImport, 1],
+  ])(
+    'should refuse the change without writing when it has %s',
+    async (_label, channel, payload) => {
+      const { call, rulesCalls } = setup()
+      await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+
+      const result = await call(channel, payload)
+
+      expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-IPC-003' } } })
+      expect(rulesCalls).toEqual([])
+    },
+  )
+
+  it('should fail the change without writing when the session does not exist', async () => {
+    const { call, rulesCalls } = setup()
+
+    const result = await call(hostChannels.rulesShareWithAgents, {
+      ptyId: 99,
+      root: '/r',
+      on: true,
+    })
+
+    expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-RUL-003' } } })
+    expect(rulesCalls).toEqual([])
   })
 })

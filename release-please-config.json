@@ -60,6 +60,11 @@
         },
         {
           "type": "json",
+          "path": "packages/adapters/node-vm/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "packages/adapters/secret-tool/package.json",
           "jsonpath": "$.version"
         },

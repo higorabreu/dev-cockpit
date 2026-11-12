@@ -3,6 +3,8 @@ import {
   type GitFile,
   type GitStatus,
   type GitSubmodule,
+  type RuleMark,
+  type RuleMarks,
   type SessionSnapshot,
   type Translator,
   ticketFromBranch,
@@ -10,11 +12,14 @@ import {
 import { collapseThen } from './collapse.ts'
 import { h, icon } from './dom.ts'
 import { agoText } from './format.ts'
+import { activityGlyph } from './glyphs.ts'
 import type { PanelSection } from './panel.ts'
 
 export interface GitSource {
   snapshot(): SessionSnapshot | undefined
   requestRender(): void
+  // Opens the Harness page, where the rules behind a mark are switched and edited
+  openRules(): void
 }
 
 const BRANCH_ICON =
@@ -65,11 +70,41 @@ function fileRow(file: GitFile) {
   )
 }
 
-function commitRow(i18n: Translator, commit: GitCommit, nowSeconds: number) {
+// A check that ran out of time is not a failure, so it is told apart in the tooltip
+function markText(i18n: Translator, { failed, slow }: RuleMark): string {
+  return [
+    failed.length > 0 && i18n.t('git.ruleTip', { checks: failed.join('; ') }),
+    slow.length > 0 && i18n.t('git.ruleSlow', { checks: slow.join('; ') }),
+  ]
+    .filter(Boolean)
+    .join('. ')
+}
+
+// Marks what is outside an enabled rule; the button opens the rules, its tooltip says which checks
+function ruleMark(source: GitSource, i18n: Translator, key: string, mark: RuleMark | undefined) {
+  if (!mark || (mark.failed.length === 0 && mark.slow.length === 0)) return false
+  const tip = markText(i18n, mark)
+  const button = h(
+    'button',
+    { type: 'button', class: 'rule-mark', 'aria-label': tip, 'data-tip': tip, 'data-focus': key },
+    activityGlyph('warning'),
+  )
+  button.addEventListener('click', () => source.openRules())
+  return button
+}
+
+function commitRow(
+  source: GitSource,
+  i18n: Translator,
+  commit: GitCommit,
+  nowSeconds: number,
+  mark?: RuleMark,
+) {
   return h(
     'div',
     { class: 'frow' },
     h('span', { class: 'fname', 'data-tip-full': commit.subject }, commit.subject),
+    ruleMark(source, i18n, `git-mark-${commit.hash}`, mark),
     h(
       'span',
       { class: 'fs hash', 'data-tip': agoText(i18n, nowSeconds, commit.time) },
@@ -148,7 +183,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
     return h('div', { class: 'group' }, head, open && wrap)
   }
 
-  function body(git: GitStatus): HTMLElement {
+  function body(git: GitStatus, marks: RuleMarks | undefined): HTMLElement {
     const nowSeconds = Date.now() / 1000
     const ticket = ticketFromBranch(git.branch)
     // Long lists show the first rows and a button to see the rest
@@ -196,6 +231,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
           { class: 'brow' },
           icon(BRANCH_ICON, 14, 'branch-icon'),
           h('b', { class: 'branch' }, git.branch ?? i18n.t('git.detached')),
+          ruleMark(source, i18n, 'git-mark-branch', marks?.branch),
           sync(i18n, git.ahead, git.behind),
         ),
         (ticket || git.upstream) &&
@@ -222,7 +258,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
           git.behind,
           () =>
             limited('incoming', git.incoming, i18n.t('git.commits'), (c) =>
-              commitRow(i18n, c, nowSeconds),
+              commitRow(source, i18n, c, nowSeconds),
             ),
           i18n.t('git.pullTip', { upstream: git.upstream ?? 'origin' }),
         ),
@@ -233,7 +269,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
           git.ahead,
           () =>
             limited('outgoing', git.outgoing, i18n.t('git.commits'), (c) =>
-              commitRow(i18n, c, nowSeconds),
+              commitRow(source, i18n, c, nowSeconds, marks?.commits[c.hash]),
             ),
           i18n.t('git.pushTip', { upstream: git.upstream ?? 'origin' }),
         ),
@@ -266,7 +302,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
       const snapshot = source.snapshot()
       if (!snapshot) return h('p', { class: 'muted' }, i18n.t('sessions.noInfo'))
       if (!snapshot.git) return h('p', { class: 'muted' }, i18n.t('git.notRepository'))
-      return body(snapshot.git)
+      return body(snapshot.git, snapshot.rules)
     },
   }
 }
