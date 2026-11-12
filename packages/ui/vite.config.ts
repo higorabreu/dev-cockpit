@@ -13,5 +13,14 @@ const tokensCss = (): Plugin => ({
 export default defineConfig({
   base: './',
   plugins: [tokensCss()],
-  build: { outDir: 'dist', emptyOutDir: true },
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    rolldownOptions: {
+      output: {
+        // O terminal é o maior pedaço e vale sozinho; o app fica pequeno e o aviso de tamanho some sem silenciá-lo
+        codeSplitting: { groups: [{ name: 'xterm', test: /node_modules[\\/]@xterm/ }] },
+      },
+    },
+  },
 })
