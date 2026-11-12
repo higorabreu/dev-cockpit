@@ -7,6 +7,7 @@ import {
   createAttentionTracker,
   createLiveTranslator,
   defaultSettings,
+  duplicateLabel,
   emptyTabs,
   formatDuration,
   type HostApi,
@@ -314,7 +315,18 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     // Leitura nova: o vigia atrasa até um ciclo e o usuário pode ter acabado de dar cd
     const fresh = ptyId === undefined ? undefined : await api.session.activity(ptyId)
     const cwd = fresh?.cwd ?? watcher.get(id)?.cwd
-    await open(cwd ? { cwd } : {})
+    const label = state.tabs.find((tab) => tab.id === id)?.label
+    await open({
+      ...(cwd ? { cwd } : {}),
+      ...(label
+        ? {
+            label: duplicateLabel(
+              state.tabs.map((tab) => tab.label),
+              label,
+            ),
+          }
+        : {}),
+    })
   }
 
   function openProject(path: string) {

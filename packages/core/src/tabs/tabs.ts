@@ -73,3 +73,11 @@ export function recentTabs(state: TabsState): readonly TabInfo[] {
   const used = state.recent.flatMap((id) => byId.get(id) ?? [])
   return [...used, ...state.tabs.filter((tab) => !state.recent.includes(tab.id))]
 }
+
+// Duplicata mantém o nome e ganha o menor índice livre: dev-cockpit(2), dev-cockpit(3)
+export function duplicateLabel(labels: readonly string[], label: string): string {
+  const base = label.replace(/\(\d+\)$/, '')
+  let index = 2
+  while (labels.includes(`${base}(${index})`)) index += 1
+  return `${base}(${index})`
+}

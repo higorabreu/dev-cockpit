@@ -4,6 +4,7 @@ import {
   activateTabAt,
   closeOtherTabs,
   closeTab,
+  duplicateLabel,
   emptyTabs,
   openTab,
   recentTabs,
@@ -146,5 +147,25 @@ describe('recentTabs', () => {
     const state = closeOtherTabs(withTabs('a', 'b', 'c'), 'b')
 
     expect(recentTabs(state).map((entry) => entry.id)).toEqual(['b'])
+  })
+})
+
+describe('duplicateLabel', () => {
+  it('should add the index 2 when duplicating a tab for the first time', () => {
+    const labels = ['dev-cockpit']
+
+    expect(duplicateLabel(labels, 'dev-cockpit')).toBe('dev-cockpit(2)')
+  })
+
+  it('should use the smallest free index when other duplicates exist', () => {
+    const labels = ['dev-cockpit', 'dev-cockpit(2)', 'dev-cockpit(4)']
+
+    expect(duplicateLabel(labels, 'dev-cockpit')).toBe('dev-cockpit(3)')
+  })
+
+  it('should keep the base name when duplicating a duplicate', () => {
+    const labels = ['dev-cockpit', 'dev-cockpit(2)']
+
+    expect(duplicateLabel(labels, 'dev-cockpit(2)')).toBe('dev-cockpit(3)')
   })
 })
