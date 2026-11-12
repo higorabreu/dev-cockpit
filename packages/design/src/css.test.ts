@@ -42,4 +42,9 @@ describe('buildCss', () => {
     expect(css).toContain('--radius-medium: 8px;')
     expect(css).toContain('--motion-normal: 170ms;')
   })
+
+  it('should expose the scrollbar sizes when building the css', () => {
+    expect(css).toContain('--size-scrollbar: 8px;')
+    expect(css).toContain('--size-scrollbar-thumb: 4px;')
+  })
 })

@@ -160,7 +160,7 @@ export function createPanel(options: PanelOptions) {
       h('div', { class: 'phead' }, options.title()),
       h(
         'div',
-        { class: 'pscroll' },
+        { class: 'pscroll scroll' },
         open.length > 0 && h('div', { class: 'stack' }, ...open.map(sectionBlock)),
         // Recolhidas ficam no fim da coluna, abaixo das abertas; sem nenhuma aberta, alinham no topo
         closed.length > 0 &&

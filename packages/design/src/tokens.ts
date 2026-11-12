@@ -53,7 +53,11 @@ export interface Tokens {
     readonly iconIdle: number
   }
   readonly font: { readonly sans: string; readonly mono: string }
-  readonly size: { readonly terminal: number }
+  readonly size: {
+    readonly terminal: number
+    readonly scrollbar: number
+    readonly scrollbarThumb: number
+  }
   readonly radius: { readonly small: string; readonly medium: string; readonly large: string }
   readonly motion: { readonly fast: string; readonly normal: string; readonly easing: string }
 }

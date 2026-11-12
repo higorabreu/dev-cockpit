@@ -33,7 +33,7 @@ export function createTabList(panel: HTMLElement, button: HTMLElement, deps: Tab
     'aria-label': t('tabs.search'),
     placeholder: t('tabs.search'),
   })
-  const list = h('div', { class: 'tl-list', role: 'listbox' })
+  const list = h('div', { class: 'tl-list scroll', role: 'listbox' })
   panel.replaceChildren(input, list)
 
   const isOpen = () => !panel.hidden

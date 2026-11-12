@@ -82,7 +82,12 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const status = h('span', { class: 'vstatus', role: 'status' })
   const pendingButton = h('button', { type: 'button', class: 'vbtn', 'aria-pressed': 'false' })
   const notice = h('div', { class: 'vnotice' })
-  const list = h('div', { class: 'vlist', id: 'views-list', role: 'listbox', tabindex: '-1' })
+  const list = h('div', {
+    class: 'vlist scroll',
+    id: 'views-list',
+    role: 'listbox',
+    tabindex: '-1',
+  })
   const inner = h('div', { class: 'vinner' })
   list.append(inner)
   const hint = hintBar()

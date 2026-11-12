@@ -215,11 +215,6 @@ body.full #main {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  scrollbar-width: none;
-}
-
-.pscroll::-webkit-scrollbar {
-  display: none;
 }
 
 #dock[data-open="false"] #panel {
@@ -627,9 +622,41 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   display: none !important;
 }
 
+/* Barra de rolagem do DS: trilho transparente e só o controle deslizante, que engrossa ao passar o mouse.
+   Metade da diferença entre trilho e controle vira a folga de cada lado */
+:root {
+  --scrollbar-gap: calc((var(--size-scrollbar) - var(--size-scrollbar-thumb)) / 2);
+}
+
+.scroll::-webkit-scrollbar {
+  width: var(--size-scrollbar);
+  height: var(--size-scrollbar);
+}
+
+.scroll::-webkit-scrollbar-button {
+  display: none;
+}
+
+.scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+  border: var(--scrollbar-gap) solid transparent;
+  border-radius: var(--radius-medium);
+  background: var(--muted);
+  background-clip: padding-box;
+}
+
+.scroll::-webkit-scrollbar-thumb:hover {
+  border-width: calc(var(--scrollbar-gap) - 1px);
+  background: var(--fg);
+  background-clip: padding-box;
+}
+
 /* Scrollbar do xterm: sem setas, trilho fino e só o controle deslizante, que some sem rolagem */
 .xterm .xterm-scrollable-element > .scrollbar.vertical {
-  width: 8px !important;
+  width: var(--size-scrollbar) !important;
 }
 
 .xterm .xterm-scrollable-element > .scrollbar > .scra {
@@ -638,15 +665,15 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 
 .xterm .xterm-scrollable-element > .scrollbar > .slider {
   left: auto !important;
-  right: 2px;
-  width: 4px !important;
+  right: var(--scrollbar-gap);
+  width: var(--size-scrollbar-thumb) !important;
   border-radius: var(--radius-medium);
   background: var(--muted) !important;
 }
 
 .xterm .xterm-scrollable-element > .scrollbar > .slider:hover,
 .xterm .xterm-scrollable-element > .scrollbar > .slider.active {
-  width: 6px !important;
+  width: calc(var(--size-scrollbar-thumb) + 2px) !important;
   background: var(--fg) !important;
 }
 
@@ -932,7 +959,6 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   gap: 1px;
   max-height: 296px;
   overflow-y: auto;
-  scrollbar-width: thin;
 }
 
 .tab .pip {
@@ -1394,11 +1420,6 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   min-width: 0;
   flex: 1;
   overflow-y: auto;
-  scrollbar-width: none;
-}
-
-.spanel::-webkit-scrollbar {
-  display: none;
 }
 
 .spanel .sgroup:last-child {
@@ -1825,15 +1846,10 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   min-height: 0;
   flex: 1;
   overflow-y: auto;
-  scrollbar-width: none;
   outline: none;
 }
 
 .vlist[hidden] {
-  display: none;
-}
-
-.vlist::-webkit-scrollbar {
   display: none;
 }
 
