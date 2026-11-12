@@ -1,8 +1,19 @@
-# Dev Cockpit
+<p align="center">
+  <img src="packages/shell/assets/app-512.png" alt="Dev Cockpit icon" width="128" height="128">
+</p>
 
-A Guake-style terminal for day-to-day development. A global key opens and closes it, and it brings tabs,
-a hold menu, project search, a side panel with sessions, git and containers, and GitLab merge request
-views, all keyboard first.
+<h1 align="center">Dev Cockpit</h1>
+
+<p align="center">
+  A Guake-style terminal for day-to-day development, keyboard first.
+</p>
+
+<p align="center">
+  <a href="https://github.com/higorabreu/dev-cockpit/actions/workflows/ci.yml"><img src="https://github.com/higorabreu/dev-cockpit/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+</p>
+
+A global key opens and closes it, and it brings tabs, a hold menu, project search, a side panel with
+sessions, git and containers, and GitLab merge request views.
 
 Version **0.1.0**. What does not exist yet is listed under [Known limits](#known-limits).
 
