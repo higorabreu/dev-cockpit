@@ -17,6 +17,9 @@ const PATHS: Record<string, string> = {
 const ICON_ATTRS =
   'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"'
 
+const IDENTITY_PATH =
+  'M20 64C20 38 36 22 56 22C73 22 84 33 84 48L84 64C84 71 79 76 72 76L32 76C25 76 20 71 20 64ZM46 44H80V60C80 64 77 67 73 67H52C48.7 67 46 64.3 46 61Z'
+
 export const WHEEL_SIZE = 196
 const INNER = 38
 const OUTER = 96
@@ -93,7 +96,7 @@ export function wheelMarkup(state: HoldMenuState, t: Translate): MenuMarkup {
     .join('')
   const hub = category
     ? `<svg x="-9" y="-16" width="18" height="18" ${ICON_ATTRS} style="color:var(--fg)"><path d="${PATHS[category.icon] ?? ''}"/></svg><text class="hubt" y="14">${escapeHtml(t('menu.hub.count', { index: selectedIndex(state) + 1, total: category.items.length }))}</text>`
-    : ''
+    : `<svg x="-10" y="-10" width="20" height="20" viewBox="0 0 100 100" aria-hidden="true" style="color:var(--muted)"><path fill="currentColor" fill-rule="evenodd" d="${IDENTITY_PATH}"/><path d="M54 50 59 55.5 54 61M63 61H72" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
   const rows = category?.items.length
     ? visibleWindow(category.items.length, selectedIndex(state), maxRows(state.category, count))
         .map((index) => {
