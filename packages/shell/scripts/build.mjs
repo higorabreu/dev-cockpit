@@ -64,4 +64,4 @@ const electronVersion = JSON.parse(
   readFileSync(require.resolve('electron/package.json'), 'utf8'),
 ).version
 await rebuild({ buildPath: dist, electronVersion, onlyModules: ['node-pty'], force: true })
-console.log(`shell construído em ${dist} para o Electron ${electronVersion}`)
+console.log(`shell built in ${dist} for Electron ${electronVersion}`)

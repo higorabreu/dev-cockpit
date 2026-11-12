@@ -1,5 +1,5 @@
-// Roda o cockpit do repositório sem brigar com o instalado: perfil, socket e tecla próprios,
-// sem ícone na bandeja. Uso: `pnpm dev` (constrói e abre) ou `pnpm dev:dck toggle` (o CLI do dev).
+// Runs the cockpit from the repository without clashing with the installed one: own profile, socket and key,
+// no tray icon. Usage: `pnpm dev` (builds and opens) or `pnpm dev:dck toggle` (the dev CLI).
 import { spawn } from 'node:child_process'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -12,7 +12,7 @@ const environment = {
   DCK_ENDPOINT: process.env.DCK_ENDPOINT ?? join(runtime, 'dck-dev', 'daemon.sock'),
   DCK_KEY: process.env.DCK_KEY ?? 'F9',
   DCK_NO_TRAY: '1',
-  // O cofre do sistema é um só: o dev usa chaves próprias e nunca toca o token do app instalado
+  // The system keyring is shared: dev uses its own keys and never touches the installed app's token
   DCK_PROFILE: process.env.DCK_PROFILE ?? 'dev',
 }
 

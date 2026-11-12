@@ -29,7 +29,7 @@ const { version } = JSON.parse(readFileSync(join(shell, 'package.json'), 'utf8')
 const architecture = { x64: 'amd64', arm64: 'arm64' }[process.arch]
 if (!architecture) throw new Error(`arquitetura sem suporte: ${process.arch}`)
 if (!existsSync(join(dist, 'main.cjs'))) {
-  throw new Error('rode `pnpm --filter @dck/shell build` antes (o dist não existe)')
+  throw new Error('run `pnpm --filter @dck/shell build` first (dist does not exist)')
 }
 
 const NAME = 'dev-cockpit'
@@ -64,7 +64,7 @@ writeFileSync(
       name: NAME,
       productName: 'Dev Cockpit',
       version,
-      description: 'Terminal estilo Guake com painel de projetos',
+      description: 'Guake-style terminal with a project panel',
       main: 'main.cjs',
     },
     null,
@@ -95,7 +95,7 @@ const write = (path, content, mode = 0o644) => {
 write(
   join(stage, 'usr', 'bin', 'dck'),
   `#!/bin/sh
-# Roda o CLI dentro do Electron empacotado: não depende do Node do usuário
+# Runs the CLI inside the packaged Electron: it does not depend on the user's Node
 exec env ELECTRON_RUN_AS_NODE=1 DCK_PACKAGED=1 /${INSTALL}/${NAME} /${INSTALL}/resources/dck.mjs "$@"
 `,
   0o755,
@@ -106,7 +106,8 @@ write(
   `[Desktop Entry]
 Type=Application
 Name=Dev Cockpit
-Comment=Terminal estilo Guake com painel de projetos
+Comment=Guake-style terminal with a project panel
+Comment[pt_BR]=Terminal estilo Guake com painel de projetos
 Exec=/${INSTALL}/${NAME} --no-sandbox
 Icon=${NAME}
 Terminal=false
@@ -149,9 +150,9 @@ Installed-Size: ${sizeKb}
 Maintainer: Dev Cockpit <noreply@localhost>
 Depends: libgtk-3-0t64 | libgtk-3-0, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0t64 | libatspi2.0-0, libuuid1, libsecret-tools
 Recommends: x11-utils
-Description: Terminal estilo Guake com painel de projetos
- Janela de terminal que abre com uma tecla global, com abas, busca de projetos,
- painel de sessões, git e containers, e o comando dck para controlá-la.
+Description: Guake-style terminal with a project panel
+ Terminal window that opens with a global hotkey, with tabs, project search,
+ a panel for sessions, git and containers, and the dck command to control it.
 `,
 )
 
