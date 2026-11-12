@@ -56,13 +56,14 @@ async function writeAtomically(path: string, text: string) {
   })
 }
 
-function parseYaml(yaml: string | undefined): unknown {
-  if (yaml === undefined) return undefined
+// A YAML error keeps its first line, which names the problem and where it is
+function parseYaml(yaml: string | undefined): { frontMatter: unknown; problem?: string } {
+  if (yaml === undefined) return { frontMatter: undefined }
   try {
-    return parse(yaml)
-  } catch {
-    // The core reports a file without a front matter with its path, so nothing is logged here
-    return undefined
+    return { frontMatter: parse(yaml) }
+  } catch (error) {
+    const [first = ''] = String(error).split('\n')
+    return { frontMatter: undefined, problem: `front matter: ${first}` }
   }
 }
 
@@ -92,7 +93,7 @@ export function createStandardFiles(options: StandardFilesOptions = {}): Standar
           if ('problem' in read)
             return { path, frontMatter: undefined, body: '', problem: read.problem }
           const { yaml, body } = splitStandardFile(read.text)
-          return { path, frontMatter: parseYaml(yaml), body }
+          return { path, body, ...parseYaml(yaml) }
         }),
       )
     },

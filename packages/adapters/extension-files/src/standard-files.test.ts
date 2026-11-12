@@ -51,13 +51,19 @@ describe('createStandardFiles', () => {
     ])
   })
 
-  it('should still list a file, without a front matter, when its YAML cannot be parsed', async () => {
+  it('should list a file with the first line of the YAML error when its front matter cannot be parsed', async () => {
     await writeFile(join(root, 'broken.md'), '---\nid: [unclosed\n---\nThe body.\n')
 
     const read = await files.list(root)
 
     expect(read).toEqual([
-      { path: join(root, 'broken.md'), frontMatter: undefined, body: 'The body.\n' },
+      {
+        path: join(root, 'broken.md'),
+        frontMatter: undefined,
+        body: 'The body.\n',
+        problem:
+          'front matter: YAMLParseError: Flow sequence in block collection must be sufficiently indented and end with a ] at line 1, column 14:',
+      },
     ])
   })
 

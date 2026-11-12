@@ -45,11 +45,15 @@ interface ParsedFile {
 
 const rank = (source: ExtensionSource) => EXTENSION_SOURCES.indexOf(source)
 
-const describeIssues = (error: z.ZodError) =>
-  error.issues
+// Why a file cannot be used: what the adapter met, a missing front matter, or the first schema issues
+function problemOf(file: StandardFile, error: z.ZodError | undefined): string {
+  if (file.problem !== undefined) return file.problem
+  if (file.frontMatter === undefined) return 'no front matter between two --- lines'
+  return (error?.issues ?? [])
     .slice(0, 3)
     .map((issue) => `${issue.path.join('.') || 'front matter'}: ${issue.message}`)
     .join('; ')
+}
 
 // A higher file replaces each field it declares; `check` and a non-blank body are replaced as a whole
 function merge(layers: readonly ParsedFile[], path: string): Result<ResolvedStandard, ErrorBody> {
@@ -93,8 +97,7 @@ export function resolveStandards(files: readonly StandardFile[]): ResolvedStanda
   for (const file of [...files].sort((a, b) => rank(a.source) - rank(b.source))) {
     const parsed = frontMatterSchema.safeParse(file.frontMatter)
     if (file.problem !== undefined || !parsed.success) {
-      const detail = file.problem ?? (parsed.success ? '' : describeIssues(parsed.error))
-      const error = errorBody('DCK-STD-001', `${file.path}: ${detail}`)
+      const error = errorBody('DCK-STD-001', `${file.path}: ${problemOf(file, parsed.error)}`)
       invalid.push({ path: file.path, source: file.source, error })
       continue
     }

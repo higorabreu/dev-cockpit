@@ -235,7 +235,8 @@ describe('resolveStandards', () => {
       { ...branch, check: [{ maxLength: 5, scope: 'line', message: 'No' }] },
       'check.0.scope:',
     ],
-    ['a front matter that is not an object', undefined, 'front matter:'],
+    ['a front matter that is not an object', 'just text', 'front matter:'],
+    ['no front matter', undefined, 'no front matter between two --- lines'],
   ])('should report the field when the file has %s', (_case, frontMatter, expected) => {
     const files = [file('repository', frontMatter)]
 
