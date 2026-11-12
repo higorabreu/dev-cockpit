@@ -6,7 +6,7 @@ updates:
       interval: weekly
     groups:
       dependencies:
-        patterns: ['*']
+        patterns: ["*"]
     commit-message:
       prefix: chore
   - package-ecosystem: github-actions
@@ -15,6 +15,6 @@ updates:
       interval: weekly
     groups:
       actions:
-        patterns: ['*']
+        patterns: ["*"]
     commit-message:
       prefix: ci
