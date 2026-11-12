@@ -294,6 +294,9 @@ export const ptBR = {
   'error.DCK-GLB-005': 'O GitLab não está respondendo',
   'error.DCK-GLB-006': 'Resposta inesperada do GitLab',
   'error.DCK-GLB-007': 'Endereço do GitLab inválido',
+  'error.DCK-EXT-001': 'Manifesto de extensão inválido',
+  'error.DCK-EXT-002': 'Recurso de extensão não suportado por esta versão',
+  'error.DCK-EXT-003': 'Extensão incompatível com esta versão',
 } as const
 
 export type MessageKey = keyof typeof ptBR

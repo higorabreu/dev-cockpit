@@ -83,5 +83,20 @@
     "category": "invalid_argument",
     "retryable": false,
     "rpc": -32013
+  },
+  "DCK-EXT-001": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32014
+  },
+  "DCK-EXT-002": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32015
+  },
+  "DCK-EXT-003": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32016
   }
 }
