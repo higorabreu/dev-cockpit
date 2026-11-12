@@ -9,7 +9,7 @@ const CHECK_MS = 500
 interface Candidate {
   readonly anchor: HTMLElement
   readonly text: string
-  readonly instant: boolean
+  readonly key?: string
 }
 
 function isTruncated(element: HTMLElement): boolean {
@@ -17,13 +17,18 @@ function isTruncated(element: HTMLElement): boolean {
   return style.textOverflow === 'ellipsis' && element.scrollWidth > element.clientWidth + 1
 }
 
+const tipOf = (anchor: HTMLElement, text: string): Candidate => {
+  const key = anchor.getAttribute('data-tip-key')
+  return key ? { anchor, text, key } : { anchor, text }
+}
+
 // `data-tip` sempre mostra o texto dado; texto cortado por reticências mostra o conteúdo inteiro
 // (ou `data-tip-full`, quando o texto visível é só parte do que se quer mostrar)
-function candidateAt(target: EventTarget | null): Omit<Candidate, 'instant'> | undefined {
+function candidateAt(target: EventTarget | null): Candidate | undefined {
   let element = target instanceof HTMLElement ? target : null
   for (let depth = 0; element && depth < MAX_DEPTH; depth++, element = element.parentElement) {
     const tip = element.getAttribute('data-tip')
-    if (tip) return { anchor: element, text: tip }
+    if (tip) return tipOf(element, tip)
     if (isTruncated(element)) {
       const text = element.getAttribute('data-tip-full') ?? element.textContent?.trim()
       if (text) return { anchor: element, text }
@@ -56,10 +61,15 @@ export function installTooltips() {
     tip.hidden = true
   }
 
-  function show({ anchor, text }: Omit<Candidate, 'instant'>) {
+  function show({ anchor, text, key }: Candidate) {
     // O elemento pode ter sido trocado durante o atraso: não há onde ancorar o tooltip
     if (!anchor.isConnected) return
-    tip.textContent = text
+    const shortcut = document.createElement('kbd')
+    shortcut.textContent = key ?? ''
+    tip.replaceChildren(text, ...(key ? [shortcut] : []))
+    // Posição antiga encolhe o tooltip junto à borda e quebra o texto, e a medida sai errada
+    tip.style.left = '0'
+    tip.style.top = '0'
     tip.hidden = false
     const box = anchor.getBoundingClientRect()
     const size = tip.getBoundingClientRect()
@@ -67,7 +77,7 @@ export function installTooltips() {
       { x: box.x, y: box.y, width: box.width, height: box.height },
       { width: size.width, height: size.height },
       { width: window.innerWidth, height: window.innerHeight },
-      anchor.dataset.tipSide === 'left' ? 'left' : 'below',
+      anchor.closest<HTMLElement>('[data-tip-side]')?.dataset.tipSide === 'left' ? 'left' : 'below',
     )
     tip.style.left = `${Math.round(placement.x)}px`
     tip.style.top = `${Math.round(placement.y)}px`
@@ -80,7 +90,7 @@ export function installTooltips() {
     }, CHECK_MS)
   }
 
-  function schedule(candidate: Omit<Candidate, 'instant'>, instant: boolean) {
+  function schedule(candidate: Candidate, instant: boolean) {
     if (current === candidate.anchor) return
     hide()
     const chained = Date.now() - hiddenAt < CHAIN_WINDOW_MS
@@ -96,7 +106,7 @@ export function installTooltips() {
   document.addEventListener('focusin', (event) => {
     const target = event.target instanceof HTMLElement ? event.target : null
     const text = target?.getAttribute('data-tip')
-    if (target && text) schedule({ anchor: target, text }, true)
+    if (target && text) schedule(tipOf(target, text), true)
   })
   document.addEventListener('focusout', hide)
   document.addEventListener('mousedown', hide, true)

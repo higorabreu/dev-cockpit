@@ -130,7 +130,7 @@ plans/        contexto, roadmap, decisões e um plano por marco em andamento
 - **Tooltip:** só o do DS (`src/tooltip.ts`), nunca o atributo `title` nativo. Todo texto cortado por
   reticências mostra o conteúdo inteiro sozinho, sem marcação; `data-tip` mostra um texto sempre
   (ícones, contadores, setas) e `data-tip-full` dá o texto completo quando o visível é só parte dele.
-  Ícone sem rótulo visível leva `data-tip` com o nome.
+  Ícone sem rótulo visível leva `data-tip` com o nome. Atalho vai em `data-tip-key`, nunca no texto.
 - Termos de git e de ferramentas de desenvolvimento seguem o VS Code do autor, em português, e os
   verbos de git que o dev já usa (pull, push, commit, branch). Nada de tradução livre nem rótulos
   inventados como "para enviar"; Incoming e Outgoing também não, porque não são o que ele vê.

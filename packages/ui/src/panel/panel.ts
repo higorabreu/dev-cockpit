@@ -115,8 +115,6 @@ export function createPanel(options: PanelOptions) {
             'data-focus': `rail-${section.id}`,
             'aria-label': section.label,
             'data-tip': section.label,
-            // O trilho fica na borda direita da janela: o tooltip abre para o lado de dentro
-            'data-tip-side': 'left',
             'aria-expanded': String(state.open && state.sections[section.id] === true),
           },
           icon(section.icon),

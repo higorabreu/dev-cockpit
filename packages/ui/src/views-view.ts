@@ -105,9 +105,11 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   function drawStatic() {
     overlay.setAttribute('aria-label', t('views.title'))
     refreshButton.textContent = t('views.refresh')
-    refreshButton.dataset.tip = `${t('views.refresh')} (Ctrl+R)`
+    refreshButton.dataset.tip = t('views.refresh')
+    refreshButton.dataset.tipKey = 'Ctrl+R'
     pendingButton.textContent = t('views.pending')
-    pendingButton.dataset.tip = `${t('views.pending')} (Alt+P)`
+    pendingButton.dataset.tip = t('views.pending')
+    pendingButton.dataset.tipKey = 'Alt+P'
     input.placeholder = t('views.filter.placeholder')
     hint.replaceChildren(
       keyHint('↑↓', t('views.hint.navigate')),

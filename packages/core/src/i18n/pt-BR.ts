@@ -196,7 +196,6 @@ export const ptBR = {
   'views.flag.pipeline.running': 'Pipeline rodando',
   'views.flag.pipeline.pending': 'Pipeline na fila',
   'views.flag.pipeline.canceled': 'Pipeline cancelado',
-  'views.tooltip': 'Trabalho (Ctrl+Shift+M)',
   'views.waiting.one': '{count} MR esperando a sua review',
   'views.waiting.other': '{count} MRs esperando a sua review',
   'settings.group.appearance': 'Aparência',

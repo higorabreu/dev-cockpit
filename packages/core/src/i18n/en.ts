@@ -197,7 +197,6 @@ export const en: Record<MessageKey, string> = {
   'views.flag.pipeline.running': 'Pipeline running',
   'views.flag.pipeline.pending': 'Pipeline queued',
   'views.flag.pipeline.canceled': 'Pipeline canceled',
-  'views.tooltip': 'Work (Ctrl+Shift+M)',
   'views.waiting.one': '{count} merge request waiting for your review',
   'views.waiting.other': '{count} merge requests waiting for your review',
   'settings.group.appearance': 'Appearance',

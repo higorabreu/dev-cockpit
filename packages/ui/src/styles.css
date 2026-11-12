@@ -1042,6 +1042,12 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   transition: opacity var(--motion-fast) ease;
 }
 
+#tooltip kbd {
+  margin-left: 8px;
+  color: var(--muted);
+  font: 11px var(--font-mono);
+}
+
 #tooltip[data-open="true"] {
   opacity: 1;
 }
