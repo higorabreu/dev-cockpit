@@ -17,9 +17,9 @@ code.
 2. **Work views** from GitLab (Jira next) as saved queries, never a mirror of the board: my merge
    requests with pending work, reviews waiting for me.
 3. **Projects and submodules mapped**, with quick switching.
-4. **An AI harness.** Standards (branch, commit, merge request, review rubric) as files, stated to the
-   agent in a block of `AGENTS.md` and checked on request ([harness.md](harness.md)). MCP tools over them
-   are planned.
+4. **An AI harness.** Rules (branch, commit, merge request, review rubric) as files, stated to the agent
+   in a block of `AGENTS.md` and checked on request ([harness.md](harness.md)). MCP tools over them are
+   planned.
 5. **An MCP server** (planned) for the Claude CLI to query the app: next task, briefing, project scope.
 
 Out of scope for now: team use, accounts and permissions; being an IDE (the code reader is read-only
@@ -86,7 +86,7 @@ A folder holds at most 12 source files and file names are lowercase kebab case; 
 - [docs/decisions.md](decisions.md): the decisions that shaped the project, with the reasons.
 - [docs/roadmap.md](roadmap.md): milestones and what is next.
 - [docs/extensions.md](extensions.md): the extension manifest, contribution points, sources and `dck ext list`.
-- [docs/harness.md](harness.md): the standards of a repository, the `dck init`, `standards`, `guide` and
-  `check` commands, the standard file format and the block in `AGENTS.md`.
+- [docs/harness.md](harness.md): the rules of a repository, the `dck init`, `rules`, `guide` and `check`
+  commands, the rule file format and the block in `AGENTS.md`.
 - [AGENTS.md](../AGENTS.md): coding standards, tests, design system and process.
 - [CONTRIBUTING.md](../CONTRIBUTING.md): how to set up, test and send a change.

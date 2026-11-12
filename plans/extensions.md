@@ -10,9 +10,9 @@ The work starts small, in a deliberate order, and each step must be useful on it
 
 0. **The foundation** (phase 0): a manifest, contribution points, the sources an extension can come from and
    the extensions folder. No code is loaded from anywhere and no extension kind exists yet.
-1. **The AI agent harness** (phase 1): the first contribution point. Standards written as files, shown to the
+1. **The AI agent harness** (phase 1): the first contribution point. Rules written as files, shown to the
    agent in its instruction file and checked automatically.
-2. **Standards packs** (phase 1b): the first installable extension, a folder of standards with a manifest.
+2. **Rule packs** (phase 1b): the first installable extension, a folder of rules with a manifest.
 3. **Connectors in an extension host** (phase 3), then **interface contributions** and a **shared index**
    (phases 4 and 5). Sketched below, not designed in detail until the earlier phases exist.
 
@@ -25,11 +25,11 @@ one vendor). The decision record is D35 in `docs/decisions.md`.
 
 ## Principles
 
-- **A standard is data in a file; the app interprets it and never knows its content.** The product delivers
-  the engine, the user brings the standards.
-- **Nothing is mandatory.** With no standard installed everything works as it did.
-- **Small and declarative first.** A rule language that grows becomes a programming language, so rules stay
-  few and declarative; code only arrives in phase 3, in a dedicated extension host, with permissions the user approves.
+- **A rule is data in a file; the app interprets it and never knows its content.** The product delivers
+  the engine, the user brings the rules.
+- **Nothing is mandatory.** With no rule installed everything works as it did.
+- **Small and declarative first.** A check language that grows becomes a programming language, so checks
+  stay few and declarative; code only arrives in phase 3, in a dedicated extension host, with permissions the user approves.
 - **Built-in and installed things use the same contracts.** The built-in examples are not special: they are
   a pack that ships with the app and goes through the same registry as an installed one.
 - **The user stays in control.** Every file the tool writes outside its own folder needs approval (D7).
@@ -46,24 +46,24 @@ Three layers, all driven by the same files.
 | --- | --- | --- |
 | Guide | A short instruction with a scope and the reason for it | Branch name format, review rubric |
 | Sensor | A declarative check run in a hook or in CI | `dck check` of a branch, a commit message, an MR description |
-| Tool | A least-privilege tool exposed to an agent over MCP, read-only by default | List the standards, query the context (phase 2) |
+| Tool | A least-privilege tool exposed to an agent over MCP, read-only by default | List the rules, query the context (phase 2) |
 
 A **gate** (writing to an external system only with approval) already exists as a rule of the project (D7).
 
-### Where standards live
+### Where rules live
 
 From the lowest to the highest precedence:
 
 1. the **built-in examples** that ship with the app, all **off** by default;
 2. **installed packs** (phase 1b), in the user's extensions folder;
-3. the user's **global** standards, in a folder of the app's config directory;
-4. the **repository's** standards, in `.dck/standards/`, which can be versioned with the team.
+3. the user's **global** rules, in a folder of the app's config directory;
+4. the **repository's** rules, in `.dck/rules/`, which can be versioned with the team.
 
-A standard with the same `id` in a higher source replaces the fields it declares in the lower one, so a user
+A rule with the same `id` in a higher source replaces the fields it declares in the lower one, so a user
 changes one field (for example the branch format) without editing the original. Open question Q2 covers the
 exact merge rule.
 
-### A standard file
+### A rule file
 
 Markdown with a front matter that zod validates, and a body that is the instruction for the agent.
 
@@ -72,7 +72,7 @@ Markdown with a front matter that zod validates, and a body that is the instruct
 id: branch-format
 title: Branch names
 applies: branch            # branch | commit | pr | review | code-style | any free name
-paths: []                  # optional globs that scope the standard to part of a repository
+paths: []                  # optional globs that scope the rule to part of a repository
 why: Work is traceable from the branch name
 enabled: true
 check:
@@ -84,31 +84,31 @@ check:
 Name the branch `<type>/<TICKET>-<short-slug>`. The ticket key comes first so the branch can be traced.
 ```
 
-- `why` is required, so a standard can be pruned later when nobody remembers its reason.
-- A `check` is a short list of declarative rules: `pattern` (a regular expression with `{variables}`),
+- `why` is required, so a rule can be pruned later when nobody remembers its reason.
+- `check` is a short list of declarative checks: `pattern` (a regular expression with `{variables}`),
   `maxLength`, `required` (the text must contain a match) and `forbid` (it must not). Nothing else.
-- A rule may set `scope: first-line` to look at the first line only, which a commit subject needs.
+- A check may set `scope: first-line` to look at the first line only, which a commit subject needs.
 - `paths` is read and kept, and not used to filter yet.
 - A script as a check (`check.run`) is out of scope until phase 3 and needs approval when it arrives.
 
 ### Commands (phase 1)
 
 The harness is used from the cockpit window and from the CLI, and both call the same code in the core (the
-standards workspace). Configuring is switching a standard on or off and editing its fields; the file in
-`.dck/standards/` is always the complete standard, so what is in the folder is what applies.
+rules workspace). Configuring is switching a rule on or off and editing its fields; the file in
+`.dck/rules/` is always the complete rule, so what is in the folder is what applies.
 
 - `dck init`: asks about each built-in example one by one, then whether to share the rules with agents
   (the block in `AGENTS.md`). It shows what it will write and asks once before writing. `--yes` takes the
   recommended answers (branch format and commit message on, sharing on); `--remove` takes the block out and
-  leaves the standards files alone.
-- `dck standards`: what is on, where each standard comes from and what it overrides, plus the files that
-  are invalid. `dck standards enable <id>` and `disable <id>` switch a standard in the repository
-  (`--global` in the user's folder).
-- `dck guide <application>`: prints the full instruction of the enabled standards of that application,
+  leaves the rule files alone.
+- `dck rules`: what is on, where each rule comes from and what it overrides, plus the files that are
+  invalid. `dck rules enable <id>` and `disable <id>` switch a rule in the repository (`--global` in the
+  user's folder).
+- `dck guide <application>`: prints the full instruction of the enabled rules of that application,
   with its size in lines and estimated tokens on the error stream (characters divided by four, with no
   tokenizer dependency) and a warning above `--budget N`.
 - `dck check <application> [file]`: validates the current branch (`branch`), or the text of a file or of
-  the standard input (`commit`, `pr`, any other name). Silent when it passes, the failing rule and its
+  the standard input (`commit`, `pr`, any other name). Silent when it passes, the failing check and its
   message when it does not.
 
 Exit codes follow the existing sysexits convention (0 success, 64 incorrect usage, 70 internal error) and 1
@@ -116,32 +116,33 @@ for a failed check.
 
 ### The interface
 
-- **A Standards page in the settings screen**, for the repository of the active tab. Each standard is a row
-  with its reason and a switch. An enabled standard shows its **fields**: the variables of its rules (for
-  example the accepted types) and its length limit, edited as plain inputs, never as a regular expression.
-  A rule message may name its own fields (`{types}`, `{maxLength}`), so it stays true after an edit.
+- **A Harness page in the settings screen**, for the repository of the active tab, with one muted line under
+  its title that says what the rules are for. Each rule is a row with its reason and a switch. An enabled rule
+  shows its **fields**: the variables of its checks (for example the accepted types) and its length limit,
+  edited as plain inputs, never as a regular expression. A check message may name its own fields (`{types}`,
+  `{maxLength}`), so it stays true after an edit.
 - **Agents.** A switch on the same page writes the rules into a marked block of `AGENTS.md`
   (`<!-- dck:start -->` to `<!-- dck:end -->`), after a confirmation, and never touches the text around it.
-  The block states each rule itself, so an agent follows it without running anything; `dck guide` is for
-  the long texts. Claude Code reads `AGENTS.md` by itself when the repository has no `CLAUDE.md`; when it
-  has one that does not import it, the page says so and offers to add the `@AGENTS.md` line. It never
-  creates a `CLAUDE.md`. A block that no longer matches the standards is shown as out of date.
+  The block states each rule and its checks, so an agent follows them without running anything;
+  `dck guide` is for the long texts. Claude Code reads `AGENTS.md` by itself when the repository has no
+  `CLAUDE.md`; when it has one that does not import it, the page says so and offers to add the `@AGENTS.md`
+  line. It never creates a `CLAUDE.md`. A block that no longer matches the rules is shown as out of date.
 - **The Git section of the panel** marks the branch and each commit not pushed yet that is outside a
-  standard, with the rule in the tooltip. For a commit only the first line rules are checked, because the
+  rule, with the failed checks in the tooltip. For a commit only the first line checks run, because the
   panel reads the subject.
 - **Nothing blocks.** The cockpit shows; it installs no git hook. `dck check` exists for whoever wants to
   call it from a hook or a script of their own.
 
 Known limits, on purpose for now: the `dck` command only exists where the app is installed, so the check
-cannot run in CI until the CLI is published by itself; a custom rule is still a regular expression in a
-YAML front matter, the fields only cover what a rule exposes as a variable or a limit.
+cannot run in CI until the CLI is published by itself; a custom check is still a regular expression in a
+YAML front matter, the fields only cover what a check exposes as a variable or a limit.
 
 ## Phases
 
 | Phase | Delivers | Needs |
 | --- | --- | --- |
 | **0. Foundation** | Manifest v1, a contribution point registry, extension sources with precedence, the extensions folder, `dck ext list`, the built-in extension | Pure `core` plus a files adapter |
-| **1. Harness** | The `standards` contribution point: standards files, `.dck/`, `dck init`, `dck standards`, `dck guide`, `dck check`, the Standards page, the mark in the Git section, the block in `AGENTS.md`, built-in examples | Phase 0 |
+| **1. Harness** | The `rules` contribution point: rule files, `.dck/`, `dck init`, `dck rules`, `dck guide`, `dck check`, the Harness page, the mark in the Git section, the block in `AGENTS.md`, built-in examples | Phase 0 |
 | **1b. Packs** | `dck ext install\|enable\|disable\|remove\|dev` and packs as the first installable extension kind | Phase 1 |
 | 2. Agent tools | Harness and project context as MCP tools (the old M2-T13), so an agent queries the same engine | An MCP server, planned in the roadmap |
 | 3. Connectors | An **extension host** (a dedicated Node process) that loads JavaScript or TypeScript extensions written against a dck API, permissions shown and approved at install, GitLab and Jira as the two reference connectors | The provider-neutral refactor of the core ports |
@@ -163,13 +164,13 @@ Three small, shared pieces, all in the pure `core` with the file access behind a
     "version": "1.0.0",
     "apiVersion": 1,
     "engines": { "dck": ">=0.3.0" },
-    "contributes": { "standards": "standards/" }
+    "contributes": { "rules": "rules/" }
   }
   ```
 
 - **The contribution point registry.** A contribution point is a name, a zod schema for what an extension
   declares under it, and a consumer that receives the validated declarations with their source. The harness
-  registers `standards` in phase 1; later phases add `connectors`, `themes` and `sections`. A manifest that
+  registers `rules` in phase 1; later phases add `connectors`, `themes` and `sections`. A manifest that
   contributes to a point this version does not know is **refused with a clear message**, never half-loaded, and
   a manifest with an entry that would need code (a `run` or `main` field, permissions) is refused the same way
   until phase 3.
@@ -185,7 +186,7 @@ Three small, shared pieces, all in the pure `core` with the file access behind a
 
 ### Phase 1b in more detail: packs
 
-A **pack** is an extension whose only contribution is `standards`, so the manifest above is already a pack.
+A **pack** is an extension whose only contribution is `rules`, so the manifest above is already a pack.
 
 - Installed in the user's extensions folder (`<config dir>/extensions/<id>/`), from a local folder or a git
   URL. Because a pack holds no code, installing it needs no permissions; the install shows what it contains
@@ -222,7 +223,7 @@ first-party ones ship built in through the same registry as an installed extensi
 
 | Today | Destination | Phase |
 | --- | --- | --- |
-| Standards of the harness and the built-in examples | Extension (built-in pack) | 1 |
+| Rules of the harness and the built-in examples | Extension (built-in pack) | 1 |
 | GitLab connector (adapter, connection, merge request views) | Extension (connector, built in) | 3, after the provider-neutral refactor |
 | Jira (not built yet) | Extension from day one, as the second connector | 3 |
 | Claude agent adapter (dormant, D26) and any other agent | Extension (agent) | 3 |
@@ -242,17 +243,17 @@ scanning and search, and system notifications.
 | F1 | A valid manifest loads; an invalid one is reported with its path and field and the others still load; an unknown contribution point, or an entry that needs code, is refused with a clear message | Test |
 | F2 | Extensions from the four sources are found, ordered by precedence, with the shadowed ones listed, and a disabled extension contributes nothing | Test |
 | F3 | The built-in extension goes through the same registry as an installed one and shows in `dck ext list` with its source | Test |
-| C1 | With no standard anywhere, the app and the CLI behave as before, `dck guide` says there is nothing to show and `dck check` passes | Test |
+| C1 | With no rule anywhere, the app and the CLI behave as before, `dck guide` says there is nothing to show and `dck check` passes | Test |
 | C2 | The user enables a built-in example and changes one field in their own file; `guide` and `check` apply the change without editing the original | Test |
-| C3 | `dck check branch` exits 0 when the current branch matches, and non-zero with the failing rule and its message otherwise; nothing is printed on success | Test with a fake git |
+| C3 | `dck check branch` exits 0 when the current branch matches, and non-zero with the failing check and its message otherwise; nothing is printed on success | Test with a fake git |
 | C4 | `dck guide` prints lines and estimated tokens and warns above the budget; `dck init` shows what it will write and writes nothing without an explicit approval | Test |
 | C4b | Sharing with agents only changes its own marked block in `AGENTS.md`, doing it twice changes nothing, and removing it leaves the file as it was | Test |
-| C4c | On the Standards page a standard is switched on, a field is edited and the rules are shared with agents, and the Git section marks a branch outside the standard | Test, and screenshots in both themes checked against the design system |
-| C5 | Precedence holds: repository over global over packs over built-in, with the shadowed standards listed | Test |
-| C6 | An invalid standard file is reported with its path and field, the other standards still load, and the app does not crash | Test |
-| C7 | A pack installs with `dck ext install <folder>`, shows in `dck ext list`, applies its standards, disappears on `disable` and is deleted on `remove`; a manifest with unsupported fields is refused with a clear message | Test |
+| C4c | On the Harness page a rule is switched on, a field is edited and the rules are shared with agents, and the Git section marks a branch outside the rule | Test, and screenshots in both themes checked against the design system |
+| C5 | Precedence holds: repository over global over packs over built-in, with the shadowed rules listed | Test |
+| C6 | An invalid rule file is reported with its path and field, the other rules still load, and the app does not crash | Test |
+| C7 | A pack installs with `dck ext install <folder>`, shows in `dck ext list`, applies its rules, disappears on `disable` and is deleted on `remove`; a manifest with unsupported fields is refused with a clear message | Test |
 | C8 | A contributor creates a pack from the guide and installs it in about 15 minutes | Manual, with a volunteer |
-| C9 | Measured budgets and cold start do not regress (the window reads the standards only for the open panel and the Standards page, with a time limit on every expression) | Gate and the existing checks |
+| C9 | Measured budgets and cold start do not regress (the window reads the rules only for the open panel and the Harness page, with a time limit on every expression) | Gate and the existing checks |
 
 ## Tasks
 
@@ -268,7 +269,7 @@ Phase 0, the foundation:
   `extensions.disabled` setting through the existing settings model. (F2) The port is named `ExtensionFinder`
   because `ExtensionSource` already names the four sources; the adapter is `@dck/adapter-extension-files`. A
   global or repository folder becomes a candidate only when it holds a folder of a registered contribution
-  point, so none shows up until the harness registers `standards`.
+  point, so none shows up until the harness registers `rules`.
 - [x] EXT-T3. The built-in extension, the `dck ext list` command (source, state, shadowed entries, translated
   through the catalogs) and `docs/extensions.md` with the manifest and contribution point reference. (F3) The built-in
   extension is data in `core/src/extensions/built-in.ts`, beside the list of known contribution points. The
@@ -277,22 +278,22 @@ Phase 0, the foundation:
   folder is `dev-cockpit` on Linux and set by the window itself, and the settings store reads the file again
   before it saves, so an edit made by the CLI survives.
 
-Phase 1, the harness (the `standards` contribution point):
+Phase 1, the harness (the `rules` contribution point):
 
-- [x] EXT-T4. `core`: the standard schema, the rule kinds, `{variable}` expansion, per-field replacement, and
+- [x] EXT-T4. `core`: the rule schema, the check kinds, `{variable}` expansion, per-field replacement, and
   pure `guide` and `check` functions, plus the marked block and the file formatter. A new error domain
-  `STD`. Tests for every rule kind and for precedence. (C1, C3, C5, C6)
-- [x] EXT-T5. Register `standards` in the foundation; read the standard files of every source through the
+  `RUL`. Tests for every check kind and for precedence. (C1, C3, C5, C6)
+- [x] EXT-T5. Register `rules` in the foundation; read the rule files of every source through the
   files adapter (front matter parsed there, validated in the core); a `GitContext` port (current branch) on
-  the existing git adapter; the standards workspace the CLI and the window share; a timed matcher. (C3, C5)
+  the existing git adapter; the rules workspace the CLI and the window share; a timed matcher. (C3, C5)
 - [x] EXT-T6. The built-in examples as data in the built-in extension: branch format, commit message, review
   rubric, MR description, all disabled, plus a test that every example is valid. (C2)
-- [ ] EXT-T7. CLI: `dck init` (questions, sharing with agents, `--yes`, `--remove`), `dck standards`
+- [ ] EXT-T7. CLI: `dck init` (questions, sharing with agents, `--yes`, `--remove`), `dck rules`
   (`enable`, `disable`), `dck guide` (budget) and `dck check` with the exit codes above, translated through
   the i18n catalogs. (C2, C3, C4, C4b)
-- [ ] EXT-T7b. Interface: the Standards page (switches, fields, agents) and the mark in the Git section,
+- [ ] EXT-T7b. Interface: the Harness page (switches, fields, agents) and the mark in the Git section,
   through new `HostApi` methods served by the same workspace. (C4c, C9)
-- [ ] EXT-T8. `docs/harness.md`: the daily use first, then the file format, the rule kinds and precedence,
+- [ ] EXT-T8. `docs/harness.md`: the daily use first, then the file format, the check kinds and precedence,
   and the known limits. (C8)
 
 Phase 1b, packs:
@@ -309,8 +310,8 @@ Decided with the maintainer on 2026-11-12:
 
 | Id | Question | Decision |
 | --- | --- | --- |
-| Q1 | Where is the global standards folder? | The app's config directory (`<config dir>/standards/`), through the same path function as the settings, never a fixed `~/.config` |
-| Q2 | Field-level or whole-standard replacement when a higher source repeats an `id`? | Front matter fields are replaced per field; the `check` list and the body are replaced as a whole, so a user never gets a half-merged rule |
+| Q1 | Where is the global rules folder? | The app's config directory (`<config dir>/rules/`), through the same path function as the settings, never a fixed `~/.config` |
+| Q2 | Field-level or whole-rule replacement when a higher source repeats an `id`? | Front matter fields are replaced per field; the `check` list and the body are replaced as a whole, so a user never gets a half-merged check |
 | Q3 | Which `applies` values are built in? | `branch`, `commit`, `pr`, `review` and `code-style` get dedicated handling (for example `dck check branch` reads the current branch); any other name is a free application rendered and checked by name |
 | D35 | How does extension code run (phase 3)? | In a dedicated extension host process with a JavaScript API, separate from the window (the VS Code model) |
 
@@ -318,10 +319,10 @@ Decided with the maintainer on 2026-11-12, after a review of the daily use (D36)
 
 | Id | Question | Decision |
 | --- | --- | --- |
-| Q6 | How does the instruction reach the agent? | A marked block in `AGENTS.md` with each rule stated in it; `dck guide` for the long texts. No generated `CLAUDE.md` |
-| Q7 | Where is the harness used? | In the cockpit window (the Standards page and the Git section) and in the CLI, over one shared workspace |
-| Q8 | What happens when something is outside a standard? | The panel shows it. Nothing blocks and no git hook is installed |
-| Q9 | How is a standard configured? | A switch and the rule's fields (its variables and its length limit); the file written is always the complete standard |
+| Q6 | How does the instruction reach the agent? | A marked block in `AGENTS.md` with each rule and its checks stated in it; `dck guide` for the long texts. No generated `CLAUDE.md` |
+| Q7 | Where is the harness used? | In the cockpit window (the Harness page and the Git section) and in the CLI, over one shared workspace |
+| Q8 | What happens when something is outside a rule? | The panel shows it. Nothing blocks and no git hook is installed |
+| Q9 | How is a rule configured? | A switch and the fields of its checks (their variables and their length limit); the file written is always the complete rule |
 | Q10 | What does `dck init` switch on? | It asks about each example; `--yes` takes branch format and commit message |
 
 Still open, with a proposal:
@@ -335,9 +336,9 @@ Still open, with a proposal:
 
 | Risk | Effect | Mitigation |
 | --- | --- | --- |
-| The rule language keeps growing | It becomes a programming language that nobody can read | Four rule kinds and nothing else until phase 3; new needs become a connector or a script with approval |
+| The check language keeps growing | It becomes a programming language that nobody can read | Four check kinds and nothing else until phase 3; new needs become a connector or a script with approval |
 | A user regular expression with catastrophic backtracking | `dck check` hangs, for example inside a git hook | Limit the pattern and input length and run the check with a time limit |
 | Sharing with agents damages a hand-written instruction file | The user loses their own text | It only writes inside its own marked block and asks first |
-| Standards become long and cost context on every request | The agent follows the instructions worse | Show the size and a budget warning, and keep the examples short with a reason each |
+| Rules become long and cost context on every request | The agent follows the instructions worse | Show the size and a budget warning, and keep the examples short with a reason each |
 | Designing the extension API before the second connector exists | A contract that fits one provider only | Phases 1 and 1b contain no code loading; the host contract is extracted in phase 3 from GitLab and Jira |
 | Extension code runs with the user's rights in its host | A malicious or buggy extension can read files or the network | Say it plainly in the docs, show the declared permissions at install, mediate secrets and settings through the host API, and add a curated index and signing in phase 5 |

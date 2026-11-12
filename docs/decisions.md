@@ -439,20 +439,22 @@ rest; the host contract is defined in phase 3 and is not frozen before it.
 
 ## D36. The harness is used in the window, and nothing blocks
 
-**Decision:** the standards are used where the developer already is. The settings screen has a Standards
-page for the repository of the active tab: a switch per standard, its fields as plain inputs (the variables
-of its rules and its length limit, never the regular expression) and a switch that shares the rules with
-agents through a marked block in `AGENTS.md`. The Git section of the panel marks a branch or a commit
-outside a standard. The CLI offers the same through `dck init`, `dck standards`, `dck guide` and
-`dck check`, and both call one workspace in the core. The cockpit only shows: it installs no git hook.
-This replaces the `dck render --target` of D35, which generated a whole `CLAUDE.md` or `AGENTS.md`.
+**Decision:** the rules are used where the developer already is. The settings screen has a Harness page
+for the repository of the active tab: a switch per rule, its fields as plain inputs (the variables of its
+checks and its length limit, never the regular expression) and a switch that shares the rules with agents
+through a marked block in `AGENTS.md`. The Git section of the panel marks a branch or a commit outside a
+rule. The CLI offers the same through `dck init`, `dck rules`, `dck guide` and `dck check`, and both call
+one workspace in the core. The cockpit only shows: it installs no git hook. This replaces the
+`dck render --target` of D35, which generated a whole `CLAUDE.md` or `AGENTS.md`. The area is called
+Harness, in English and in Portuguese, and each item a rule (regra), whose entries under `check:` are
+checks, because "standards" read as app preferences and collided with "padrão" (default) in Portuguese.
 **Reason:** a harness that is only commands and a hook is what any plugin does and uses nothing the cockpit
 has: it is always open, knows the repository of the active tab and already reads its branch and commits. A
 generated instruction file competes with the one the team writes by hand, and an agent told to run a command
 before every action often skips it, so the block states the rules themselves. `AGENTS.md` is read by the
 common agents, Claude Code included when there is no `CLAUDE.md` or when it imports the file (D24).
-**Accepted cost:** nothing enforces a standard; `dck check` is there for whoever wants a hook, and it cannot
-run in CI until the CLI is published by itself. A rule beyond its fields is still a regular expression
+**Accepted cost:** nothing enforces a rule; `dck check` is there for whoever wants a hook, and it cannot
+run in CI until the CLI is published by itself. A check beyond its fields is still a regular expression
 edited in the file.
 **How to revert:** the page and the mark only read and write through the workspace, so they can be removed
-without touching the CLI; the standards files are plain markdown and stay readable without the tool.
+without touching the CLI; the rule files are plain markdown and stay readable without the tool.

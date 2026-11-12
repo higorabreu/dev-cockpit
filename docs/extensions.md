@@ -13,12 +13,12 @@ app reads the manifests, validates them, decides which ones win and reports the 
 | Shipped | Planned, not in the code |
 | --- | --- |
 | The manifest (version 1) and its validation | `dck ext install`, `enable`, `disable`, `remove`, `dev` (phase 1b) |
-| Contribution points, with `standards` registered | Extensions with code in a dedicated host process (phase 3) |
+| Contribution points, with `rules` registered | Extensions with code in a dedicated host process (phase 3) |
 | Four sources with precedence and shadowing | Interface contributions and a shared index (phases 4 and 5) |
-| The built-in extension, with the standard examples | |
+| The built-in extension, with the example rules | |
 | The `extensions.disabled` setting | |
 | `dck ext list` | |
-| The harness commands that use the standards ([harness.md](harness.md)) | |
+| The harness commands that use the rules ([harness.md](harness.md)) | |
 
 ## The manifest
 
@@ -30,7 +30,7 @@ app reads the manifests, validates them, decides which ones win and reports the 
   "description": "Commit message rules",
   "apiVersion": 1,
   "engines": { "dck": ">=0.3.0" },
-  "contributes": { "standards": "standards" }
+  "contributes": { "rules": "rules" }
 }
 ```
 
@@ -73,18 +73,18 @@ extension declares under that id in `contributes`. The loader validates each dec
 its point and hands the valid ones to whoever consumes the point, from the lowest to the highest
 precedence.
 
-One contribution point is registered, `standards`; any other key in `contributes` is refused as unknown.
+One contribution point is registered, `rules`; any other key in `contributes` is refused as unknown.
 `connectors`, `themes` and `sections` are planned for later phases.
 
-### `standards`
+### `rules`
 
-The declaration is the folder that holds the extension's standard files, relative to the extension and
-written with forward slashes: `"standards"` or `"team/standards"`. An empty name, an absolute path, a
-backslash or a `..` part is refused (`DCK-EXT-001`). Every `*.md` file directly inside the folder is one
-standard: a YAML front matter between two `---` lines, validated by the app, and a markdown body. A file
-that cannot be read as a standard is reported with its path and the others still load. Files with the same
-standard `id` are layered from the lowest to the highest source, each replacing the fields it declares.
-The file format and the commands that use the standards are in [harness.md](harness.md).
+The declaration is the folder that holds the extension's rule files, relative to the extension and
+written with forward slashes: `"rules"` or `"team/rules"`. An empty name, an absolute path, a backslash or
+a `..` part is refused (`DCK-EXT-001`). Every `*.md` file directly inside the folder is one rule: a YAML
+front matter between two `---` lines, validated by the app, and a markdown body. A file that cannot be read
+as a rule is reported with its path and the others still load. Files with the same rule `id` are layered
+from the lowest to the highest source, each replacing the fields it declares. The file format and the
+commands that use the rules are in [harness.md](harness.md).
 
 ## Sources and precedence
 
@@ -111,7 +111,7 @@ A manifest that cannot be read or is not valid JSON is still listed, as refused.
 
 ### The built-in extension
 
-The app ships one extension, `dck.built-in`, as data. It contributes the standard examples (branch
+The app ships one extension, `dck.built-in`, as data. It contributes the example rules (branch
 format, commit message, review rubric and merge request description), all off until the user turns one
 on. It takes the version of the running app and goes through the same loader as an installed extension:
 it can be disabled or refused by the same rules.
@@ -120,7 +120,7 @@ it can be disabled or refused by the same rules.
 
 The global folder and a repository's `.dck/` have no manifest. Each is treated as one implicit extension,
 `dck.global` and `dck.repository`, whose `contributes` lists the contribution points it has a folder for
-(today only `standards`, from `<config directory>/standards/` and `.dck/standards/`). A folder that holds
+(today only `rules`, from `<config directory>/rules/` and `.dck/rules/`). A folder that holds
 nothing this version knows is not listed.
 
 ## Disabling an extension
@@ -183,7 +183,7 @@ $ dck ext list
 dck.built-in  0.2.0  built-in  active
 ```
 
-A `standards/` folder in the config directory or in the repository's `.dck/` adds its implicit extension:
+A `rules/` folder in the config directory or in the repository's `.dck/` adds its implicit extension:
 
 ```
 $ dck ext list
