@@ -10,7 +10,7 @@ painel lateral recolhível, visões de trabalho vindas de Jira e GitLab, projeto
 mapeados, e um harness que define como a IA trabalha (padrões como dado, aplicados por instrução,
 tools MCP e validadores). O app expõe um MCP server para o Claude CLI.
 
-Visão completa, decisões e roadmap: https://claude.ai/artifact/KjA38GfNPnsomqnqvEVAM9
+Decisões e roadmap em `plans/`.
 
 ## Premissas (valem acima de qualquer gosto de implementação)
 
@@ -174,10 +174,10 @@ plans/        contexto, roadmap, decisões e um plano por marco em andamento
 
 ## Processo
 
-- **Este projeto não usa o fluxo acme/SDD.** Vale acima da regra global do autor. O planejamento
+- **Este projeto não usa um fluxo de specs.** O planejamento
   é leve: `plans/` guarda `CONTEXT.md` (o que é e o estado), `ROADMAP.md` (marcos),
   `DECISIONS.md` (decisões e motivos) e um arquivo por marco em andamento, como
-  `plans/marco-0-spike.md`, com objetivo, critérios de pronto e tarefas em checklist.
+  `plans/macos.md`, com objetivo, critérios de pronto e tarefas em checklist.
 - Antes de implementar algo não trivial, escrever ou atualizar o plano do marco. Implementar tarefa
   a tarefa e marcar no plano ao concluir. Ambiguidade que afeta comportamento visível: parar e
   perguntar antes de seguir.
