@@ -1,0 +1,84 @@
+#tab-list {
+  position: fixed;
+  z-index: 40;
+  width: 280px;
+  max-height: min(60vh, 380px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-large);
+  overflow: hidden;
+}
+
+#tab-list[hidden] {
+  display: none;
+}
+
+.tl-input {
+  flex: none;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  outline: none;
+}
+
+.tl-input::placeholder {
+  color: var(--muted);
+}
+
+.tl-input:focus-visible {
+  border-bottom-color: var(--fg);
+}
+
+.tl-list {
+  min-height: 0;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+}
+
+.tl-row {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tl-row.on {
+  background: var(--tab-active);
+}
+
+.tl-row[aria-current="true"] {
+  font-weight: 600;
+}
+
+.tl-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tl-flag {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}

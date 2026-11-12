@@ -1,0 +1,30 @@
+#tooltip {
+  position: fixed;
+  z-index: 70;
+  max-width: 320px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-medium);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--motion-fast) ease;
+}
+
+#tooltip kbd {
+  margin-left: 8px;
+  color: var(--muted);
+  font: 11px var(--font-mono);
+}
+
+#tooltip[data-open="true"] {
+  opacity: 1;
+}
+
+#tooltip[hidden] {
+  display: none;
+}

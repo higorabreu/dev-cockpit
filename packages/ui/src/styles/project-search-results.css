@@ -1,0 +1,24 @@
+#search-results .it {
+  color: var(--fg);
+}
+
+#search-results .it .l {
+  flex: 0 1 auto;
+}
+
+#search-results .it .p {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font: 11px var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#search-results .pin {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--fg);
+}

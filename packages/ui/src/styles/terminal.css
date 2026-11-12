@@ -1,0 +1,90 @@
+.xterm,
+.xterm .xterm-viewport,
+.xterm .xterm-scrollable-element {
+  background-color: transparent !important;
+}
+
+/* Native viewport scrolling stays; only the system scrollbar goes away */
+.xterm .xterm-viewport {
+  scrollbar-width: none;
+}
+
+.xterm .xterm-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+body.shifting .xterm .xterm-scrollable-element > .scrollbar {
+  display: none !important;
+}
+
+/* The bar always sits flush with the card edge, at its `--scrollbar-gap`: whatever scrolls touches the card edges and the
+   breathing room is padding inside the list. In the terminal the fit reserves the scrollbar strip itself, so the session
+   has no right padding.
+
+   DS scrollbar: transparent track and only the thumb, visible while scrolling or with the mouse over the
+   list (`scrollbar.ts`) and thicker under the mouse.
+   Half the difference between track and thumb becomes the gap on each side */
+:root {
+  --scrollbar-gap: calc((var(--size-scrollbar) - var(--size-scrollbar-thumb)) / 2);
+}
+
+.scroll::-webkit-scrollbar {
+  width: var(--size-scrollbar);
+  height: var(--size-scrollbar);
+}
+
+.scroll::-webkit-scrollbar-button {
+  display: none;
+}
+
+.scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+  border: var(--scrollbar-gap) solid transparent;
+  border-radius: var(--radius-medium);
+  background: transparent;
+  background-clip: padding-box;
+}
+
+.scroll:hover::-webkit-scrollbar-thumb,
+.scroll[data-scrolling]::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  background-clip: padding-box;
+}
+
+.scroll::-webkit-scrollbar-thumb:hover {
+  border-width: calc(var(--scrollbar-gap) - 1px);
+  background: var(--fg);
+  background-clip: padding-box;
+}
+
+/* xterm scrollbar: no arrows, thin track and only the thumb, which disappears without scrolling */
+.xterm .xterm-scrollable-element > .scrollbar.vertical {
+  width: var(--size-scrollbar) !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar > .scra {
+  display: none !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar > .slider {
+  left: auto !important;
+  right: var(--scrollbar-gap);
+  width: var(--size-scrollbar-thumb) !important;
+  border-radius: var(--radius-medium);
+  background: var(--muted) !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar > .slider:hover,
+.xterm .xterm-scrollable-element > .scrollbar > .slider.active {
+  width: calc(var(--size-scrollbar-thumb) + 2px) !important;
+  background: var(--fg) !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body.enter {
+    animation: enter var(--motion-normal) var(--motion-easing);
+  }
+}

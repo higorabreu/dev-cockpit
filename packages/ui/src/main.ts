@@ -1,6 +1,6 @@
 import '@xterm/xterm/css/xterm.css'
 import 'virtual:dck-tokens.css'
-import './styles.css'
+import './styles/index.css'
 import { startApp } from './app.ts'
 import { installScrollbars } from './kit/scrollbar.ts'
 import { installTooltips } from './kit/tooltip.ts'
