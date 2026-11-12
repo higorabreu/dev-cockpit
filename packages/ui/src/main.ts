@@ -24,7 +24,6 @@ await startApp(
     rail: element('rail-sections'),
     settingsButton: element('rail-settings'),
     viewsButton: element('rail-views'),
-    viewsBadge: element('rail-views-badge'),
     split: element('split'),
     notice: element('notice'),
     menu: element('tab-menu'),

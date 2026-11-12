@@ -113,7 +113,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     hint.replaceChildren(
       kbd('↑↓', t('views.hint.navigate')),
       kbd('Enter', t('views.hint.open')),
-      kbd('Tab', t('views.hint.switch')),
+      kbd('←→', t('views.hint.switch')),
       kbd('Esc', t('views.hint.close')),
     )
   }
@@ -332,10 +332,9 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     else if (key === 'PageDown') move(8)
     else if (key === 'PageUp') move(-8)
     else if (key === 'Enter') openSelected()
-    else if (key === 'Tab') {
-      const next =
-        VIEWS[(VIEWS.indexOf(current) + (event.shiftKey ? -1 : 1) + VIEWS.length) % VIEWS.length]
-      switchView(next ?? current)
+    else if ((key === 'ArrowLeft' || key === 'ArrowRight') && query === '') {
+      const step = key === 'ArrowRight' ? 1 : -1
+      switchView(VIEWS[(VIEWS.indexOf(current) + step + VIEWS.length) % VIEWS.length] ?? current)
     } else if (event.ctrlKey && key.toLowerCase() === 'r') refresh()
     else if (event.altKey && key.toLowerCase() === 'p') {
       onlyPending = !onlyPending

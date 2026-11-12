@@ -51,7 +51,6 @@ export interface AppElements {
   readonly rail: HTMLElement
   readonly settingsButton: HTMLElement
   readonly viewsButton: HTMLElement
-  readonly viewsBadge: HTMLElement
   readonly split: HTMLElement
   readonly notice: HTMLElement
   readonly menu: HTMLElement
@@ -148,10 +147,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   let reviewCount = 0
   function showReviewCount(count: number) {
     reviewCount = count
-    const { viewsBadge, viewsButton } = elements
-    viewsBadge.hidden = reviewCount === 0
-    viewsBadge.textContent = reviewCount > 99 ? '99+' : String(reviewCount)
-    viewsButton.setAttribute(
+    elements.viewsButton.setAttribute(
       'aria-label',
       reviewCount === 0
         ? i18n.t('views.title')
