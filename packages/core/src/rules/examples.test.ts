@@ -99,8 +99,8 @@ describe('built-in rules', () => {
     )
 
     expect(fields).toEqual([
-      ['branch-format', 'main', 'main|master|develop'],
       ['branch-format', 'types', 'feat|fix|docs|refactor|test|chore|ci'],
+      ['branch-format', 'longLived', 'main|master|develop'],
       ['commit-message', 'types', 'feat|fix|docs|refactor|test|chore|ci'],
       ['commit-message', 'maxLength', 72],
     ])

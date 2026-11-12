@@ -343,7 +343,7 @@ describe('createRulesWorkspace, agents', () => {
 <!-- dck:start -->
 ## Rules to follow in this repository
 
-- Branch names: Use <type>/<short-slug> in lowercase with a type from feat, fix, docs, refactor, test, chore, ci, for example feat/add-login
+- Branch names: Use <type>/<short-slug> in lowercase with a type from feat, fix, docs, refactor, test, chore, ci, for example feat/add-login; long-lived branches such as main, master, develop keep their names
 - Commit messages: Start with <type>(<optional scope>): <summary> with a type from feat, fix, docs, refactor, test, chore, ci, for example fix(cli): handle empty input; Keep the first line within 72 characters
 <!-- dck:end -->
 `,

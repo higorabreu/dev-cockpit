@@ -410,7 +410,7 @@ describe('dck check', () => {
 
     expect(code).toBe(EXIT.failed)
     expect(err()).toBe(
-      'Branch names: Use <type>/<short-slug> in lowercase with a type from feat, fix, docs, refactor, test, chore, ci, for example feat/add-login\n',
+      'Branch names: Use <type>/<short-slug> in lowercase with a type from feat, fix, docs, refactor, test, chore, ci, for example feat/add-login; long-lived branches such as main, master, develop keep their names\n',
     )
   })
 

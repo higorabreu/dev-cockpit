@@ -10,7 +10,7 @@ export interface BuiltInRule {
 
 // Alternatives of an expression, kept as check variables so a screen can edit them as fields
 const TYPES = 'feat|fix|docs|refactor|test|chore|ci'
-const MAIN_BRANCHES = 'main|master|develop'
+const LONG_LIVED = 'main|master|develop'
 
 const branchFormat: Rule = {
   id: 'branch-format',
@@ -21,16 +21,16 @@ const branchFormat: Rule = {
   enabled: false,
   check: [
     {
-      pattern: '^({main}|({types})/[a-z0-9][a-z0-9-]*)$',
-      variables: { main: MAIN_BRANCHES, types: TYPES },
+      pattern: '^({longLived}|({types})/[a-z0-9][a-z0-9-]*)$',
+      variables: { types: TYPES, longLived: LONG_LIVED },
       message:
-        'Use <type>/<short-slug> in lowercase with a type from {types}, for example feat/add-login',
+        'Use <type>/<short-slug> in lowercase with a type from {types}, for example feat/add-login; long-lived branches such as {longLived} keep their names',
     },
   ],
   body: `Name a branch \`<type>/<short-slug>\`, in lowercase with hyphens, for example \`feat/add-login\`.
 The check below lists the types. The long-lived branches, such as main, keep their names.
 
-To accept other types or other long-lived branches, change the fields \`types\` and \`main\` of the check.`,
+To accept other types or other long-lived branches, change the fields \`types\` and \`longLived\` of the check.`,
 }
 
 const commitMessage: Rule = {

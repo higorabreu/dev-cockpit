@@ -127,7 +127,7 @@ nothing to show and exits with 0.
 
 ```
 $ dck check branch
-Branch names: Use <type>/<short-slug> in lowercase with a type from feat, fix, docs, refactor, test, chore, ci, for example feat/add-login
+Branch names: Use <type>/<short-slug> in lowercase with a type from feat, fix, docs, refactor, test, chore, ci, for example feat/add-login; long-lived branches such as main, master, develop keep their names
 $ echo $?
 1
 ```
@@ -265,7 +265,7 @@ does not exist):
 <!-- dck:start -->
 ## Rules to follow in this repository
 
-- Branch names: Use <type>/<short-slug> in lowercase with a type from feat, fix, docs, refactor, test, chore, ci, for example feat/add-login
+- Branch names: Use <type>/<short-slug> in lowercase with a type from feat, fix, docs, refactor, test, chore, ci, for example feat/add-login; long-lived branches such as main, master, develop keep their names
 - Commit messages: Start with <type>(<optional scope>): <summary> with a type from feat, fix, docs, refactor, test, chore, ci, for example fix(cli): handle empty input; Keep the first line within 72 characters
 - Review rubric: A fixed order finds behavior problems before style remarks and makes reviews comparable
   Details: `dck guide review`
