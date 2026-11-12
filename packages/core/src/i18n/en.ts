@@ -154,7 +154,7 @@ export const en: Record<MessageKey, string> = {
   'tray.quit': 'Quit',
 
   'cli.usage':
-    'Usage: dck <command>\n\nCommands:\n  toggle   Show or hide the window\n  ping     Check that the daemon is answering\n  daemon   Run the daemon in the foreground\n  agent    Connect a code agent to the cockpit (report, install, uninstall)\n  ext      List the extensions and where each one comes from (list)\n',
+    'Usage: dck <command>\n\nCommands:\n  toggle     Show or hide the window\n  ping       Check that the daemon is answering\n  daemon     Run the daemon in the foreground\n  agent      Connect a code agent to the cockpit (report, install, uninstall)\n  ext        List the extensions and where each one comes from (list)\n  standards  List the standards and switch one on or off (enable, disable)\n  guide      Print the instructions of the standards for branch, commit, pr or review\n  check      Check the current branch (check branch) or a text (check commit <file>)\n',
   'cli.startDaemon': 'Start the daemon with: dck daemon',
   'cli.noWindow': 'No window is connected to the daemon.',
   'cli.ext.usage': 'Usage: dck ext list',
@@ -166,6 +166,24 @@ export const en: Record<MessageKey, string> = {
   'cli.ext.state.disabled': 'disabled',
   'cli.ext.state.shadowed': 'shadowed by {source}',
   'cli.ext.rejected': 'Rejected:',
+  'cli.standards.usage':
+    'Usage: dck standards [list]\n       dck standards enable|disable <id> [--global]',
+  'cli.standards.on': 'on',
+  'cli.standards.off': 'off',
+  'cli.standards.overrides': 'overrides {sources}',
+  'cli.standards.invalid': 'Invalid:',
+  'cli.standards.stale': '{file} is out of date with the standards. Refresh it with: dck init',
+  'cli.standards.switchedOn': '{id} switched on in {path}',
+  'cli.standards.switchedOff': '{id} switched off in {path}',
+  'cli.standards.refreshed': '{file} updated with the current rules',
+  'cli.standards.writeFailed': 'Could not write: {detail}',
+  'cli.guide.usage': 'Usage: dck guide <application> [--budget N]',
+  'cli.guide.empty': 'No standard is on for {application}. Nothing to show.',
+  'cli.guide.size': 'standards: {count}, lines: {lines}, estimated tokens: {tokens}',
+  'cli.guide.overBudget': 'Above the budget of {budget} tokens.',
+  'cli.check.usage': 'Usage: dck check <application> [file|-]',
+  'cli.check.unreadable': 'Could not read {file}',
+  'cli.check.timeout': 'not checked, the expression took too long',
 
   'menu.system.settings': 'Settings',
   'tray.settings': 'Settings',

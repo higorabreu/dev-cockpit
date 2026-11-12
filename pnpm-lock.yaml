@@ -117,15 +117,25 @@ importers:
       '@dck/adapter-extension-files':
         specifier: workspace:^
         version: link:../adapters/extension-files
+      '@dck/adapter-node-git':
+        specifier: workspace:^
+        version: link:../adapters/node-git
       '@dck/adapter-node-net':
         specifier: workspace:^
         version: link:../adapters/node-net
+      '@dck/adapter-node-vm':
+        specifier: workspace:^
+        version: link:../adapters/node-vm
       '@dck/core':
         specifier: workspace:^
         version: link:../core
       '@dck/daemon':
         specifier: workspace:^
         version: link:../daemon
+    devDependencies:
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
 
   packages/core:
     dependencies:

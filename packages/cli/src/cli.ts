@@ -10,6 +10,12 @@ import {
 import { type AgentDeps, runAgentCommand } from './agent-commands.ts'
 import { type ExtDeps, runExtCommand } from './ext-commands.ts'
 import { EXIT } from './output.ts'
+import {
+  runStandardsCommand,
+  STANDARDS_COMMANDS,
+  type StandardsCommand,
+  type StandardsDeps,
+} from './standards-commands.ts'
 
 export interface CliDeps {
   readonly endpoint: string
@@ -21,6 +27,8 @@ export interface CliDeps {
   readonly agent?: AgentDeps
   // Present when the `ext` command is available
   readonly ext?: ExtDeps
+  // Present when the commands of the standards are available
+  readonly standards?: StandardsDeps
 }
 
 export { EXIT } from './output.ts'
@@ -45,6 +53,9 @@ const usage = (text: string, unavailable: readonly string[]) =>
     .filter((line) => !unavailable.some((command) => line.startsWith(`  ${command} `)))
     .join('\n')
 
+const isStandardsCommand = (command: string | undefined): command is StandardsCommand =>
+  STANDARDS_COMMANDS.some((known) => known === command)
+
 export async function runCli(argv: readonly string[], deps: CliDeps): Promise<number> {
   const t = deps.t ?? createTranslator('pt-BR').t
   const [command, ...rest] = argv
@@ -54,8 +65,15 @@ export async function runCli(argv: readonly string[], deps: CliDeps): Promise<nu
   if (command === 'ext' && deps.ext) {
     return runExtCommand(rest, { out: deps.out, err: deps.err, t }, deps.ext)
   }
+  if (deps.standards && isStandardsCommand(command)) {
+    return runStandardsCommand(command, rest, { out: deps.out, err: deps.err, t }, deps.standards)
+  }
   if (command !== 'toggle' && command !== 'ping') {
-    const unavailable = [...(deps.agent ? [] : ['agent']), ...(deps.ext ? [] : ['ext'])]
+    const unavailable = [
+      ...(deps.agent ? [] : ['agent']),
+      ...(deps.ext ? [] : ['ext']),
+      ...(deps.standards ? [] : STANDARDS_COMMANDS),
+    ]
     deps.err(usage(t('cli.usage'), unavailable))
     return command === undefined || command === '--help' ? EXIT.ok : EXIT.usage
   }

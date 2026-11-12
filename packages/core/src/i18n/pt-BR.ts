@@ -153,7 +153,7 @@ export const ptBR = {
   'tray.quit': 'Sair',
 
   'cli.usage':
-    'Uso: dck <comando>\n\nComandos:\n  toggle   Mostra ou esconde a janela\n  ping     Confere se o daemon está respondendo\n  daemon   Roda o daemon em primeiro plano\n  agent    Liga um agente de código ao cockpit (report, install, uninstall)\n  ext      Lista as extensões e de onde vem cada uma (list)\n',
+    'Uso: dck <comando>\n\nComandos:\n  toggle     Mostra ou esconde a janela\n  ping       Confere se o daemon está respondendo\n  daemon     Roda o daemon em primeiro plano\n  agent      Liga um agente de código ao cockpit (report, install, uninstall)\n  ext        Lista as extensões e de onde vem cada uma (list)\n  standards  Lista os padrões e liga ou desliga um deles (enable, disable)\n  guide      Mostra as instruções dos padrões de branch, commit, pr ou review\n  check      Confere a branch atual (check branch) ou um texto (check commit <arquivo>)\n',
   'cli.startDaemon': 'Inicie o daemon com: dck daemon',
   'cli.noWindow': 'Nenhuma janela está conectada ao daemon.',
   'cli.ext.usage': 'Uso: dck ext list',
@@ -165,6 +165,24 @@ export const ptBR = {
   'cli.ext.state.disabled': 'desativada',
   'cli.ext.state.shadowed': 'sobreposta por {source}',
   'cli.ext.rejected': 'Recusadas:',
+  'cli.standards.usage':
+    'Uso: dck standards [list]\n     dck standards enable|disable <id> [--global]',
+  'cli.standards.on': 'ligado',
+  'cli.standards.off': 'desligado',
+  'cli.standards.overrides': 'sobrepõe {sources}',
+  'cli.standards.invalid': 'Inválidos:',
+  'cli.standards.stale': '{file} está desatualizado em relação aos padrões. Atualize com: dck init',
+  'cli.standards.switchedOn': '{id} ligado em {path}',
+  'cli.standards.switchedOff': '{id} desligado em {path}',
+  'cli.standards.refreshed': '{file} atualizado com as regras atuais',
+  'cli.standards.writeFailed': 'Não foi possível gravar: {detail}',
+  'cli.guide.usage': 'Uso: dck guide <aplicação> [--budget N]',
+  'cli.guide.empty': 'Nenhum padrão ligado para {application}. Nada a mostrar.',
+  'cli.guide.size': 'padrões: {count}, linhas: {lines}, tokens estimados: {tokens}',
+  'cli.guide.overBudget': 'Acima do orçamento de {budget} tokens.',
+  'cli.check.usage': 'Uso: dck check <aplicação> [arquivo|-]',
+  'cli.check.unreadable': 'Não foi possível ler {file}',
+  'cli.check.timeout': 'não conferido, a expressão demorou demais',
 
   'menu.system.settings': 'Configurações',
   'tray.settings': 'Configurações',
