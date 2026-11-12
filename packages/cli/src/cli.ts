@@ -7,7 +7,6 @@ import {
   type Translate,
   type Transport,
 } from '@dck/core'
-import { type AgentDeps, runAgentCommand } from './agent-commands.ts'
 import { type ExtDeps, runExtCommand } from './ext-commands.ts'
 
 export interface CliDeps {
@@ -16,8 +15,6 @@ export interface CliDeps {
   out(text: string): void
   err(text: string): void
   readonly t?: Translate
-  // Present when the `agent` command is available
-  readonly agent?: AgentDeps
   // Present when the `ext` command is available
   readonly ext?: ExtDeps
 }
@@ -38,7 +35,7 @@ export function exitCodeFor(error: ErrorBody): number {
   }
 }
 
-// A command line only shows up when the command is available (in the package `agent` stays dormant)
+// A command line only shows up when the command is available
 const usage = (text: string, unavailable: readonly string[]) =>
   text
     .split('\n')
@@ -48,14 +45,11 @@ const usage = (text: string, unavailable: readonly string[]) =>
 export async function runCli(argv: readonly string[], deps: CliDeps): Promise<number> {
   const t = deps.t ?? createTranslator('pt-BR').t
   const [command, ...rest] = argv
-  if (command === 'agent' && deps.agent) {
-    return runAgentCommand(rest, deps, deps.agent)
-  }
   if (command === 'ext' && deps.ext) {
     return runExtCommand(rest, { out: deps.out, err: deps.err, t }, deps.ext)
   }
   if (command !== 'toggle' && command !== 'ping') {
-    const unavailable = [...(deps.agent ? [] : ['agent']), ...(deps.ext ? [] : ['ext'])]
+    const unavailable = deps.ext ? [] : ['ext']
     deps.err(usage(t('cli.usage'), unavailable))
     return command === undefined || command === '--help' ? EXIT.ok : EXIT.usage
   }

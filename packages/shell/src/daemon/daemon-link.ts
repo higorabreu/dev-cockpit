@@ -22,8 +22,6 @@ export interface DaemonLinkOptions {
   onViews?(snapshot: unknown): void
   // Called on every ready daemon connection, for whoever needs to send the configuration
   onReady?(): void
-  // Data an agent pushed through the daemon (for example Claude's statusLine)
-  onAgentReport?(message: unknown): void
   // Called when the found daemon is older than this shell version; the caller
   // shuts it down (by `shutdown`, or by force if it does not know the method) and starts a new one
   replaceDaemon?(shutdown: () => Promise<boolean>): Promise<void>
@@ -102,7 +100,6 @@ export function startDaemonLink(options: DaemonLinkOptions): DaemonLink {
       if (windowEvent.safeParse(data).success) guard('window', onToggle)
     })
     if (subscribed.ok) logger.info('daemon connected')
-    await client.subscribe('agent', (data) => guard('agent', () => options.onAgentReport?.(data)))
     await client.subscribe('views', (data) => guard('views', () => options.onViews?.(data)))
     ready = client
     guard('ready', () => options.onReady?.())

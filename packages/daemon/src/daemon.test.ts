@@ -69,46 +69,6 @@ describe('startDaemon', () => {
     expect(second.ok).toBe(false)
   })
 
-  it('should deliver an agent report to a subscriber when the cli reports', async () => {
-    const { newClient } = await boot()
-    const window = await newClient()
-    const received: unknown[] = []
-    await window.subscribe('agent', (data) => received.push(data))
-    const cli = await newClient()
-
-    const result = await cli.request('agent.report', {
-      agent: 'claude',
-      ptyId: 3,
-      payload: { a: 1 },
-    })
-    await new Promise((resolve) => setTimeout(resolve, 50))
-
-    expect(result).toEqual({ ok: true, value: { delivered: 1 } })
-    expect(received).toEqual([{ agent: 'claude', ptyId: 3, payload: { a: 1 } }])
-  })
-
-  it('should reject an agent report when the params are invalid', async () => {
-    const { newClient } = await boot()
-    const cli = await newClient()
-
-    const result = await cli.request('agent.report', { agent: '', ptyId: -1 })
-
-    expect(result.ok).toBe(false)
-  })
-
-  it('should reject an agent report when the payload is too large', async () => {
-    const { newClient } = await boot()
-    const cli = await newClient()
-
-    const result = await cli.request('agent.report', {
-      agent: 'claude',
-      ptyId: 1,
-      payload: { blob: 'x'.repeat(300 * 1024) },
-    })
-
-    expect(result.ok).toBe(false)
-  })
-
   it('should report its protocol version when asked for info', async () => {
     const { newClient } = await boot()
     const client = await newClient()

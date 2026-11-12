@@ -11,14 +11,6 @@ import {
 } from '@dck/core'
 import { z } from 'zod'
 
-const MAX_REPORT_BYTES = 256 * 1024
-
-const agentReport = z.object({
-  agent: z.string().min(1).max(64),
-  ptyId: z.number().int().nonnegative(),
-  payload: z.unknown().refine((value) => JSON.stringify(value ?? null).length <= MAX_REPORT_BYTES),
-})
-
 const viewParams = z.object({
   view: z.enum(['review', 'mine']),
   // With a max age, only fetches from the server if what is stored is older
@@ -54,8 +46,6 @@ export async function startDaemon(
         return { stopping: true }
       },
       'window.toggle': () => ({ delivered: hub.publish('window', { action: 'toggle' }) }),
-      // The agent (for example through the statusLine) pushes data for a tab; the daemon just relays it
-      'agent.report': (params) => ({ delivered: hub.publish('agent', agentReport.parse(params)) }),
       'views.configure': async (params) => {
         await views.configure(configureParams.parse(params).url ?? undefined)
         return {}
