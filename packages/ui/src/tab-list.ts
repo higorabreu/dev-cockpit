@@ -12,14 +12,14 @@ export interface TabListDeps {
   entries(): readonly TabListEntry[]
   onPick(id: string): void
   onClose(): void
-  // Verdadeiro quando a barra de abas está no topo e a lista abre para baixo
+  // True when the tab bar is at the top and the list opens downward
   barOnTop(): boolean
   t: Translate
 }
 
 const CHECK = '<path d="M5 12.5l4.5 4.5L19 7"/>'
 
-// Lista pesquisável de todas as abas, ancorada no botão do fim da barra
+// Searchable list of all tabs, anchored to the button at the end of the bar
 export function createTabList(panel: HTMLElement, button: HTMLElement, deps: TabListDeps) {
   const { t } = deps
   let matches: readonly TabListEntry[] = []
@@ -128,7 +128,7 @@ export function createTabList(panel: HTMLElement, button: HTMLElement, deps: Tab
     const row = event.target.closest<HTMLElement>('[data-index]')
     if (row) pick(Number(row.dataset.index))
   })
-  // O botão faz o alterna sozinho; tratar o clique nele aqui fecharia e o clique reabriria
+  // The button toggles by itself; handling the click on it here would close it and the click would reopen it
   window.addEventListener(
     'mousedown',
     (event) => {

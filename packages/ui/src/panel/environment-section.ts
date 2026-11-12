@@ -4,7 +4,7 @@ import { activityGlyph } from './glyphs.ts'
 import type { PanelSection } from './panel.ts'
 
 export interface EnvironmentSource {
-  // Indefinido até a primeira leitura
+  // Undefined until the first read
   status(): ComposeStatus | undefined
 }
 

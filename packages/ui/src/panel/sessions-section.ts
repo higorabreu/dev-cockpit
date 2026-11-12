@@ -12,7 +12,7 @@ export interface SessionsSource {
   tabs(): readonly { id: string; label: string }[]
   activeId(): string | undefined
   info(id: string): SessionActivityInfo | undefined
-  // Algo que terminou fora da vista e o usuário ainda não viu
+  // Something finished out of sight and the user has not seen it yet
   finished(id: string): FinishedCommand | undefined
   finishedCount(): number
   select(id: string): void

@@ -609,7 +609,7 @@ body.full #main {
   background-color: transparent !important;
 }
 
-/* A rolagem nativa do viewport continua, só a barra do sistema some */
+/* Native viewport scrolling stays; only the system scrollbar goes away */
 .xterm .xterm-viewport {
   scrollbar-width: none;
 }
@@ -622,13 +622,13 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   display: none !important;
 }
 
-/* A barra fica sempre rente à borda do cartão, a `--scrollbar-gap` dela: quem rola encosta nas bordas do cartão e o
-   respiro fica em padding dentro da lista. No terminal o encaixe reserva a faixa da barra sozinho, por isso a sessão
-   não tem padding à direita.
+/* The bar always sits flush with the card edge, at its `--scrollbar-gap`: whatever scrolls touches the card edges and the
+   breathing room is padding inside the list. In the terminal the fit reserves the scrollbar strip itself, so the session
+   has no right padding.
 
-   Barra de rolagem do DS: trilho transparente e só o controle deslizante, visível ao rolar ou com o mouse sobre a
-   lista (`scrollbar.ts`) e mais grosso sob o mouse.
-   Metade da diferença entre trilho e controle vira a folga de cada lado */
+   DS scrollbar: transparent track and only the thumb, visible while scrolling or with the mouse over the
+   list (`scrollbar.ts`) and thicker under the mouse.
+   Half the difference between track and thumb becomes the gap on each side */
 :root {
   --scrollbar-gap: calc((var(--size-scrollbar) - var(--size-scrollbar-thumb)) / 2);
 }
@@ -665,7 +665,7 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   background-clip: padding-box;
 }
 
-/* Scrollbar do xterm: sem setas, trilho fino e só o controle deslizante, que some sem rolagem */
+/* xterm scrollbar: no arrows, thin track and only the thumb, which disappears without scrolling */
 .xterm .xterm-scrollable-element > .scrollbar.vertical {
   width: var(--size-scrollbar) !important;
 }

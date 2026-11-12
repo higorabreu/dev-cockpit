@@ -1,3 +1,3 @@
-// Enquanto a tela de configurações grava uma tecla nova, os atalhos do cockpit ficam quietos:
-// a tecla digitada é o dado, não um comando
+// While the settings screen records a new key, the cockpit shortcuts stay quiet:
+// the typed key is data, not a command
 export const inputGate = { blocked: false }

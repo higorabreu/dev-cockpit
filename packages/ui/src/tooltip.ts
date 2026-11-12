@@ -1,7 +1,7 @@
 import { placeTooltip } from '@dck/core'
 
 const SHOW_DELAY_MS = 400
-// Passando de um elemento para o vizinho logo em seguida, o tooltip aparece sem esperar
+// Moving to a neighboring element right away, the tooltip shows without waiting
 const CHAIN_WINDOW_MS = 300
 const MAX_DEPTH = 5
 const CHECK_MS = 500
@@ -22,8 +22,8 @@ const tipOf = (anchor: HTMLElement, text: string): Candidate => {
   return key ? { anchor, text, key } : { anchor, text }
 }
 
-// `data-tip` sempre mostra o texto dado; texto cortado por reticências mostra o conteúdo inteiro
-// (ou `data-tip-full`, quando o texto visível é só parte do que se quer mostrar)
+// `data-tip` always shows the given text; text cut by an ellipsis shows its full content
+// (or `data-tip-full`, when the visible text is only part of what should be shown)
 function candidateAt(target: EventTarget | null): Candidate | undefined {
   let element = target instanceof HTMLElement ? target : null
   for (let depth = 0; element && depth < MAX_DEPTH; depth++, element = element.parentElement) {
@@ -62,12 +62,12 @@ export function installTooltips() {
   }
 
   function show({ anchor, text, key }: Candidate) {
-    // O elemento pode ter sido trocado durante o atraso: não há onde ancorar o tooltip
+    // The element may have been replaced during the delay: there is nothing to anchor the tooltip to
     if (!anchor.isConnected) return
     const shortcut = document.createElement('kbd')
     shortcut.textContent = key ?? ''
     tip.replaceChildren(text, ...(key ? [shortcut] : []))
-    // Posição antiga encolhe o tooltip junto à borda e quebra o texto, e a medida sai errada
+    // A stale position squeezes the tooltip against the edge and wraps the text, and the measurement comes out wrong
     tip.style.left = '0'
     tip.style.top = '0'
     tip.hidden = false
@@ -84,7 +84,7 @@ export function installTooltips() {
     tip.dataset.open = 'true'
     anchor.setAttribute('aria-describedby', 'tooltip')
     current = anchor
-    // O painel redesenha o que mudou; se o elemento saiu da tela o tooltip sai junto
+    // The panel redraws what changed; if the element left the screen, the tooltip goes with it
     checkTimer = setInterval(() => {
       if (!anchor.isConnected) hide()
     }, CHECK_MS)

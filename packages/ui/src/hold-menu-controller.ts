@@ -26,11 +26,11 @@ export interface MenuTab {
 
 export interface HoldMenuActions {
   categories(): readonly MenuCategory[]
-  // Da mais recente para a mais antiga
+  // Most recent to oldest
   tabs(): readonly MenuTab[]
   run(categoryId: string, item: MenuItem): void
   switchTo(tabId: string): void
-  // Tecla que abre o menu ao ser segurada; vem das configurações e pode mudar com o app aberto
+  // Key that opens the menu while held; comes from settings and can change while the app is open
   triggerCode(): string
 }
 
@@ -84,7 +84,7 @@ export function createHoldMenuController(
     elements.card.innerHTML = markup.card
     elements.hint.innerHTML = markup.hint
     elements.scrim.classList.add('open')
-    // A dica fica na linha da barra de abas, centralizada com ela
+    // The hint sits on the tab bar row, centered with it
     const box = elements.bar.getBoundingClientRect()
     elements.hint.style.top = `${Math.round(box.top + (box.height - elements.hint.offsetHeight) / 2)}px`
   }

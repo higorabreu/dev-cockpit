@@ -14,13 +14,13 @@ import { actionHint, closeButton, hintBar, keyHint } from './panel-frame.ts'
 
 const ROW_HEIGHT = 46
 const OVERSCAN = 4
-// Dado mais velho que isso é buscado de novo ao abrir
+// Data older than this is fetched again on open
 const STALE_MS = 60_000
-// Para o selo do trilho, que não precisa estar tão fresco quanto a lista aberta
+// For the rail badge, which does not need to be as fresh as the open list
 const WARM_STALE_MS = 5 * 60_000
 const VIEWS: readonly MergeRequestView[] = ['review', 'mine']
 
-// Ícones SVG e não caracteres: a fonte de reserva dos símbolos desalinha o chip
+// SVG icons rather than characters: the fallback font for the symbols misaligns the chip
 const GLYPHS = {
   cross: '<path d="M6 6l12 12M18 6L6 18"/>',
   dot: '<circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>',
@@ -32,7 +32,7 @@ export interface ViewsViewDeps {
   readonly i18n: Translator
   onClose(): void
   openSettings(): void
-  // Quantas MRs esperam a review do usuário; alimenta o selo do ícone no trilho
+  // How many MRs are waiting for the user's review; feeds the rail icon badge
   onReviewCount(count: number): void
 }
 
@@ -44,7 +44,7 @@ const unavailable: ViewSnapshot = {
   error: undefined,
 }
 
-// Visões Review e Minhas: lista virtualizada, filtro sempre ativo, teclado primeiro
+// Review and Mine views: virtualized list, always-on filter, keyboard first
 export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const { api, i18n } = deps
   const t = i18n.t
@@ -363,7 +363,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     onlyPending = !onlyPending
     refilter()
   })
-  // As teclas são ouvidas no campo: depois de clicar em qualquer botão o foco volta para ele, senão os atalhos param
+  // Keys are listened for on the field: after clicking any button focus returns to it, otherwise the shortcuts stop
   box.addEventListener('click', () => {
     if (isOpen()) input.focus()
   })
@@ -371,7 +371,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     if (event.target === overlay) close()
   })
 
-  // O daemon publica o estado novo de uma visão depois de cada busca
+  // The daemon publishes the new state of a view after each fetch
   api.views.onChange((snapshot) => {
     snapshots.set(snapshot.view, snapshot)
     announceCount()
@@ -387,7 +387,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     async open() {
       overlay.classList.add('open')
       input.focus()
-      // Mostra o que está guardado na hora; a busca roda por cima se o dado estiver velho
+      // Shows what is stored right away; the fetch runs on top if the data is stale
       for (const view of VIEWS) {
         const snapshot = await api.views.snapshot(view)
         if (snapshot) snapshots.set(view, snapshot)
@@ -399,7 +399,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       if (isOpen()) close()
       else void this.open()
     },
-    // Sem abrir a tela: traz o que está guardado e atualiza se tiver mais de 5 minutos, para o selo do trilho
+    // Without opening the screen: loads what is stored and refreshes if older than 5 minutes, for the rail badge
     async warm() {
       const snapshot = await api.views.refresh('review', WARM_STALE_MS)
       if (snapshot) snapshots.set('review', snapshot)

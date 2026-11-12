@@ -15,7 +15,7 @@ export interface ShortcutActions {
   changeFontSize(delta: number | 'reset'): void
 }
 
-// Ouvido na fase de captura: as teclas do app não chegam ao shell
+// Listened for in the capture phase: the app's keys never reach the shell
 export function bindShortcuts(actions: ShortcutActions): () => void {
   const handle = (event: KeyboardEvent) => {
     if (inputGate.blocked) return

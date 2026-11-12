@@ -3,7 +3,7 @@ import type { Terminal } from '@xterm/xterm'
 
 const COPY_DELAY_MS = 150
 
-// Selecionar copia; o clique direito e o do meio colam; Ctrl+Shift+C e V como nos outros terminais
+// Selecting copies; right and middle click paste; Ctrl+Shift+C and V as in other terminals
 export function attachClipboard(
   terminal: Terminal,
   element: HTMLElement,
@@ -23,7 +23,7 @@ export function attachClipboard(
   element.addEventListener('mousedown', (event) => {
     if (event.button === 0) pressed = true
   })
-  // O mouseup é ouvido na janela: soltar o botão fora do terminal não chega ao elemento
+  // mouseup is listened for on the window: releasing the button outside the terminal does not reach the element
   window.addEventListener('mouseup', () => {
     if (!pressed) return
     pressed = false

@@ -5,5 +5,5 @@ export function agoText(i18n: Translator, nowSeconds: number, thenSeconds: numbe
   return i18n.t(`ago.${unit}`, { value })
 }
 
-// Caminho com a pasta do usuário abreviada, como o shell mostra
+// Path with the user's home abbreviated, as the shell shows it
 export const displayPath = (path: string): string => path.replace(/^\/(?:home|Users)\/[^/]+/, '~')

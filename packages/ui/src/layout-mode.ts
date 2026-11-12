@@ -1,7 +1,7 @@
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
 const DURATION_MS = 190
 
-// FLIP: troca a ordem no layout e anima cada bloco da posição antiga para a nova
+// FLIP: swaps the order in the layout and animates each block from the old position to the new one
 export function setFullHeight(full: boolean, blocks: readonly HTMLElement[]) {
   document.body.classList.add('shifting')
   setTimeout(() => document.body.classList.remove('shifting'), DURATION_MS + 120)

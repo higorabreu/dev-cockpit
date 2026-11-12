@@ -3,7 +3,7 @@ import { defineConfig, type Plugin } from 'vite'
 
 const virtualTokens = 'virtual:dck-tokens.css'
 
-// As variáveis CSS saem direto de packages/design, sem arquivo intermediário
+// CSS variables come straight from packages/design, with no intermediate file
 const tokensCss = (): Plugin => ({
   name: 'dck-tokens',
   resolveId: (id) => (id === virtualTokens ? `\0${virtualTokens}` : undefined),
@@ -18,7 +18,7 @@ export default defineConfig({
     emptyOutDir: true,
     rolldownOptions: {
       output: {
-        // O terminal é o maior pedaço e vale sozinho; o app fica pequeno e o aviso de tamanho some sem silenciá-lo
+        // The terminal is the biggest chunk and stands alone; the app stays small and the size warning goes away without silencing it
         codeSplitting: { groups: [{ name: 'xterm', test: /node_modules[\\/]@xterm/ }] },
       },
     },

@@ -1,7 +1,7 @@
 const DURATION_MS = 170
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
 
-// Fecha com animação antes de aplicar a mudança de estado, que redesenha o painel
+// Closes with an animation before applying the state change, which redraws the panel
 export function collapseThen(wrap: Element | null, apply: () => void) {
   if (!wrap || reducedMotion.matches) {
     apply()

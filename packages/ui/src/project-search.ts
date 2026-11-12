@@ -5,7 +5,7 @@ import { closeButton, keyHint } from './panel-frame.ts'
 export interface SearchEntry {
   readonly path: string
   readonly label: string
-  // Caminho completo com ~, mostrado discreto ao lado do nome
+  // Full path with ~, shown muted beside the name
   readonly location: string
   readonly favorite?: boolean
 }
@@ -53,7 +53,7 @@ export function createProjectSearch(
       results.innerHTML = `<div class="empty">${escapeHtml(t('projects.none'))}</div>`
       return
     }
-    // Redesenhar zera a rolagem; sem guardar, a roda do mouse perderia a posição a cada tecla
+    // Redrawing resets the scroll; without saving, the mouse wheel would lose its position on every key
     const scrolled = results.scrollTop
     results.innerHTML = matches
       .map(
@@ -124,7 +124,7 @@ export function createProjectSearch(
       drawHint()
       if (isOpen()) draw()
     },
-    // Atualiza a lista mantendo o texto digitado e o item destacado, depois de fixar ou soltar
+    // Updates the list keeping the typed text and the highlighted item, after pinning or unpinning
     update(items: readonly SearchEntry[]) {
       const current = matches[selected]?.path
       entries = items

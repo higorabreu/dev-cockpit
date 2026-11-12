@@ -1,7 +1,7 @@
 import type { MessageKey, Translator } from '@dck/core'
 
-// Os textos do index.html (rótulos de acessibilidade e placeholders) trazem a chave no atributo
-// `data-i18n-aria`, `data-i18n-tip` ou `data-i18n-placeholder` e são preenchidos na língua do usuário ao abrir
+// The texts in index.html (accessibility labels and placeholders) carry the key in the attribute
+// `data-i18n-aria`, `data-i18n-tip` or `data-i18n-placeholder` and are filled in the user's language on open
 export function translateStatic(i18n: Translator, root: ParentNode = document) {
   document.documentElement.lang = i18n.locale
   for (const element of root.querySelectorAll<HTMLElement>('[data-i18n-aria]')) {

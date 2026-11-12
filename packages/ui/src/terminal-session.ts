@@ -45,7 +45,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   terminal.open(element)
 
   const clipboard = attachClipboard(terminal, element, api.clipboard, options.onCopied)
-  // Teclas que o xterm não deve enviar ao shell: Ctrl+Shift+C e V copiam e colam
+  // Keys xterm must not send to the shell: Ctrl+Shift+C and V copy and paste
   terminal.attachCustomKeyEventHandler((event) => {
     if (event.type !== 'keydown') return true
     if (!event.ctrlKey || !event.shiftKey) return true
@@ -61,7 +61,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     return true
   })
 
-  // A aba precisa estar visível para o xterm medir as colunas; quem chama mostra antes de criar
+  // The tab must be visible for xterm to measure the columns; the caller shows it before creating
   fit.fit()
   const id = await api.pty.create({
     cols: terminal.cols,
@@ -79,7 +79,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     options.onExit()
   })
 
-  // Ajusta no próximo frame: esperar mais deixa o conteúdo transbordar e a scrollbar pisca
+  // Fits on the next frame: waiting longer lets the content overflow and the scrollbar flickers
   let fitFrame = 0
   const observer = new ResizeObserver(() => {
     cancelAnimationFrame(fitFrame)

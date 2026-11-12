@@ -2,7 +2,7 @@ import type { Translator } from '@dck/core'
 
 const VISIBLE_MS = 1800
 
-// O aviso ocupa um lugar fixo no fim da barra de abas e some vazio, sem cobrir nenhuma aba
+// The notice takes a fixed spot at the end of the tab bar and disappears when empty, covering no tab
 export function createNotice(element: HTMLElement, i18n: Translator) {
   let timer: ReturnType<typeof setTimeout> | undefined
 

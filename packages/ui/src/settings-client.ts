@@ -2,7 +2,7 @@ import type { HostApi, Settings, SettingsPatch, SettingsUpdate, Unsubscribe } fr
 
 export interface SettingsClient {
   current(): Settings
-  // Chaves fixadas por uma variável de ambiente: a tela não deixa mudar
+  // Keys pinned by an environment variable: the screen does not let them change
   locked(): readonly string[]
   update(patch: SettingsPatch): Promise<SettingsUpdate>
   onChange(listener: (settings: Settings, changed: readonly string[]) => void): Unsubscribe
@@ -12,8 +12,8 @@ const LEGACY_KEYS = ['dck-theme', 'dck-opacity', 'dck-font-size', 'dck-locale'] 
 
 type Reader = (key: string) => string | null
 
-// Antes das configurações, tema, opacidade, fonte e língua ficavam no localStorage. Na primeira
-// execução sem arquivo, o que estiver lá vira o ponto de partida, para ninguém perder a escolha
+// Before settings existed, theme, opacity, font and language lived in localStorage. On the first
+// run with no file, whatever is there becomes the starting point, so nobody loses their choice
 export function legacyPatch(read: Reader): SettingsPatch {
   const patch: Record<string, unknown> = {}
   const theme = read('dck-theme')
@@ -49,7 +49,7 @@ export async function createSettingsClient(api: HostApi): Promise<SettingsClient
       locked = result.locked
     }
   }
-  // Depois de migrar (ou se já havia arquivo) as chaves antigas não servem mais
+  // After migrating (or if a file already existed) the old keys are no longer needed
   if (storage) for (const key of LEGACY_KEYS) storage.removeItem(key)
 
   const listeners = new Set<(settings: Settings, changed: readonly string[]) => void>()

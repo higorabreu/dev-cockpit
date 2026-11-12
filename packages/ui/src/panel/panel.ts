@@ -4,12 +4,12 @@ import { h, icon } from './dom.ts'
 export interface PanelSection {
   readonly id: string
   readonly label: string
-  // Traços do ícone do trilho, em 24x24
+  // Strokes of the rail icon, on 24x24
   readonly icon: string
   readonly expandedByDefault: boolean
-  // Texto curto à direita do título, visível mesmo com a seção recolhida
+  // Short text to the right of the title, visible even with the section collapsed
   summary(): string
-  // Selo do trilho, só quando algo pede atenção
+  // Rail badge, only when something needs attention
   badge(): string | undefined
   body(): HTMLElement
 }
@@ -27,9 +27,9 @@ export interface PanelOptions {
   readonly sections: readonly PanelSection[]
   title(): string
   t: Translate
-  // Chamado depois de um clique de mouse, para o terminal voltar a receber as teclas
+  // Called after a mouse click, so the terminal receives keys again
   afterPointer?(): void
-  // Carrega os dados das seções abertas; só roda com o painel visível
+  // Loads the data of the open sections; only runs with the panel visible
   refresh(expanded: readonly string[]): Promise<void>
 }
 
@@ -80,19 +80,19 @@ export function createPanel(options: PanelOptions) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
     } catch {
-      // sem armazenamento, o estado vale só nesta execução
+      // without storage, the state only lasts for this run
     }
   }
 
-  // Redesenhar troca os botões; quem usa o teclado não pode perder o foco por isso
+  // Redrawing replaces the buttons; keyboard users must not lose focus because of it
   function keepFocus(redraw: () => void) {
     const key = document.activeElement?.getAttribute('data-focus')
     redraw()
     if (key) document.querySelector<HTMLElement>(`[data-focus="${key}"]`)?.focus()
   }
 
-  // Só troca os botões quando algo mudou: refazê-los a cada ciclo derruba o tooltip de quem está
-  // com o mouse em cima, que nem chega a aparecer
+  // Only replaces the buttons when something changed: rebuilding them every cycle drops the tooltip of someone
+  // hovering with the mouse, which never even gets to show
   let railSignature = ''
 
   function renderRail() {
@@ -162,7 +162,7 @@ export function createPanel(options: PanelOptions) {
         'div',
         { class: 'pscroll scroll' },
         open.length > 0 && h('div', { class: 'stack' }, ...open.map(sectionBlock)),
-        // Recolhidas ficam no fim da coluna, abaixo das abertas; sem nenhuma aberta, alinham no topo
+        // Collapsed ones go at the end of the column, below the open ones; with none open, they align at the top
         closed.length > 0 &&
           h(
             'div',
@@ -171,10 +171,10 @@ export function createPanel(options: PanelOptions) {
           ),
       ),
     )
-    // Só troca o DOM quando o conteúdo mudou, para não perder foco e hover a cada ciclo
+    // Only replaces the DOM when the content changed, to avoid losing focus and hover every cycle
     if (content.innerHTML === signature) return
     signature = content.innerHTML
-    // A lista é refeita a cada mudança; sem guardar, a rolagem volta ao topo
+    // The list is rebuilt on every change; without saving, the scroll returns to the top
     const scrolled = panel.querySelector('.pscroll')?.scrollTop ?? 0
     panel.replaceChildren(content)
     const scroller = panel.querySelector('.pscroll')
@@ -182,7 +182,7 @@ export function createPanel(options: PanelOptions) {
     settleEnter()
   }
 
-  // A seção que acabou de abrir nasce com o conteúdo fechado e cresce no quadro seguinte
+  // A section that just opened starts with its content closed and grows on the next frame
   function settleEnter() {
     pendingEnter = undefined
     const entering = panel.querySelectorAll('[data-state="enter"]')
@@ -202,7 +202,7 @@ export function createPanel(options: PanelOptions) {
       ]),
     )
 
-  // Seções que mudam de lugar (abertas em cima, recolhidas no fim) deslizam até a nova posição
+  // Sections that change place (open on top, collapsed at the end) slide to the new position
   function slideFrom(before: Map<string, number>) {
     if (reducedMotion.matches) return
     for (const el of panel.querySelectorAll<HTMLElement>('.psec')) {
@@ -339,7 +339,7 @@ export function createPanel(options: PanelOptions) {
     open: () => setOpen(true),
     close: () => setOpen(false),
     render,
-    // Depois de trocar a língua: refaz o trilho e o painel mesmo sem nada ter mudado
+    // After switching language: rebuilds the rail and the panel even though nothing changed
     retranslate() {
       railSignature = ''
       signature = ''

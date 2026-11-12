@@ -4,7 +4,7 @@ export interface MenuAction {
   run(): void
 }
 
-// Menu de contexto de uma aba; fecha ao clicar fora ou com Esc
+// Context menu for a tab; closes on outside click or Esc
 export function createTabMenu(element: HTMLElement) {
   const close = () => {
     element.hidden = true

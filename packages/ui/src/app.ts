@@ -174,7 +174,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     notifyAfterMs: () => settings.current().system.notifyAfterSeconds * 1000,
   })
 
-  // Visto é a aba ativa numa janela com foco; fora disso o aviso fica pendente
+  // Seen means the active tab in a focused window; otherwise the notice stays pending
   const isSeen = (tabId: string) => tabId === state.activeId && document.hasFocus()
 
   function markActiveSeen() {
@@ -244,7 +244,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     },
     refresh: async (expanded) => {
       const id = activeSession()?.ptyId
-      // O Docker só é consultado com a seção aberta: é a leitura mais pesada do painel
+      // Docker is only queried with the section open: it is the heaviest read in the panel
       const [snapshot, containers] = await Promise.all([
         id === undefined ? undefined : api.session.inspect(id),
         id !== undefined && expanded.includes('env') ? api.environment.inspect(id) : undefined,
@@ -317,7 +317,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
 
   async function duplicate(id: string) {
     const ptyId = sessions.get(id)?.ptyId
-    // Leitura nova: o vigia atrasa até um ciclo e o usuário pode ter acabado de dar cd
+    // Fresh read: the watcher lags up to one cycle and the user may have just run cd
     const fresh = ptyId === undefined ? undefined : await api.session.activity(ptyId)
     const cwd = fresh?.cwd ?? watcher.get(id)?.cwd
     const label = state.tabs.find((tab) => tab.id === id)?.label
@@ -336,7 +336,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
 
   function openProject(path: string) {
     api.projects.touch(path)
-    // O host persiste a ordem; aqui sobe o projeto já, sem esperar a próxima leitura
+    // The host persists the order; here the project moves up right away, without waiting for the next read
     const used = projects.find((project) => project.path === path)
     if (used) projects = [used, ...projects.filter((project) => project !== used)]
     const existing = projectTabs.get(path)
@@ -348,7 +348,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     void open({ cwd: path, project: path, ...(name ? { label: name } : {}) })
   }
 
-  // Atalho e menu alternam entre claro e escuro: viram a escolha explícita, não mais "do sistema"
+  // The shortcut and the menu toggle between light and dark: they become an explicit choice, no longer "system"
   function toggleTheme() {
     void settings.update({ theme: theme === 'dark' ? 'light' : 'dark' })
   }
@@ -371,14 +371,14 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       settingsView.rerender()
       tabBar.render(state, new Set(attention.unseenIds()))
     }
-    // A pasta e a profundidade só são lidas na listagem: recarrega para o menu e a busca
+    // The folder and depth are only read when listing: reload for the menu and the search
     if (changed.some((key) => key.startsWith('projects.'))) void refreshProjects()
     if (changed.includes('opacity')) applyOpacity(next.opacity)
     if (changed.includes('fontSize')) {
       for (const session of sessions.values()) session.setFontSize(next.fontSize)
     }
   })
-  // No modo "do sistema" o desktop pode trocar de tema com o cockpit aberto
+  // In "system" mode the desktop may switch themes while the cockpit is open
   watchSystemTheme(() => {
     if (settings.current().theme === 'system') showTheme()
   })
@@ -478,7 +478,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     'views:open': () => void viewsView.open(),
   }
 
-  // Nomes repetidos ganham a pasta pai para se distinguirem na lista
+  // Repeated names get their parent folder to tell them apart in the list
   function projectLabel(project: Project) {
     const repeated = projects.filter((other) => other.name === project.name).length > 1
     if (!repeated) return project.name
@@ -575,7 +575,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
 
   api.window.onFullHeightChange((full) => {
     setFullHeight(full, [bar, elements.main])
-    // Em altura total sobra espaço: o painel abre sozinho e volta ao que era ao sair
+    // At full height there is spare room: the panel opens by itself and returns to what it was on exit
     if (full && settings.current().window.panelOnFullHeight && !panel.isOpen()) {
       panel.open()
       autoOpened = true

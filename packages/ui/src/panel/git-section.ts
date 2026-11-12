@@ -102,7 +102,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(groups))
     } catch {
-      // sem armazenamento, o estado vale só nesta execução
+      // without storage, the state only lasts for this run
     }
   }
 
@@ -151,7 +151,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
   function body(git: GitStatus): HTMLElement {
     const nowSeconds = Date.now() / 1000
     const ticket = ticketFromBranch(git.branch)
-    // Listas longas mostram as primeiras linhas e um botão para ver o resto
+    // Long lists show the first rows and a button to see the rest
     const limited = <T>(
       id: GroupId,
       items: readonly T[],

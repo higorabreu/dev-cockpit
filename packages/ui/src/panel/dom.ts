@@ -19,7 +19,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(
 
 const SVG = 'http://www.w3.org/2000/svg'
 
-// Ícones de traço em 24x24, desenhados com o mesmo contorno do restante da interface
+// Stroke icons on 24x24, drawn with the same outline as the rest of the interface
 export function icon(paths: string, size = 17, className?: string): SVGSVGElement {
   const svg = document.createElementNS(SVG, 'svg')
   if (className) svg.setAttribute('class', className)

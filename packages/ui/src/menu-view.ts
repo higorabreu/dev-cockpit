@@ -31,7 +31,7 @@ const fixed = (value: number) => value.toFixed(1)
 const point = (radius: number, angle: number) =>
   [Math.cos(angle) * radius, Math.sin(angle) * radius] as const
 
-// Cada borda radial é deslocada para dentro do setor, deixando uma folga de largura constante
+// Each radial edge is shifted inward from the sector, leaving a constant-width gap
 function sectorPath(index: number, count: number) {
   const step = (2 * Math.PI) / count
   const start = sectorAngle(index, count) - step / 2
@@ -47,7 +47,7 @@ function sectorPath(index: number, count: number) {
   return `M${edge(start, OUTER, 1)} A${outer} ${outer} 0 0 1 ${edge(end, OUTER, -1)} L${edge(end, INNER, -1)} A${inner} ${inner} 0 0 0 ${edge(start, INNER, 1)}Z`
 }
 
-// A lista abre fora da roda, na direção do setor selecionado
+// The list opens outside the wheel, in the direction of the selected sector
 function fanStyle(index: number, count: number) {
   const angle = sectorAngle(index, count)
   const cx = Math.cos(angle)
@@ -65,11 +65,11 @@ function fanStyle(index: number, count: number) {
 const SIDE_ROWS = 9
 const VERTICAL_ROWS = 5
 
-// Setores de cima e de baixo têm menos espaço, a lista abre na vertical
+// Top and bottom sectors have less room, so the list opens vertically
 const maxRows = (index: number, count: number) =>
   index >= 0 && Math.abs(Math.cos(sectorAngle(index, count))) > 0.35 ? SIDE_ROWS : VERTICAL_ROWS
 
-// Janela de linhas ao redor da selecionada, para listas maiores que a tela
+// Window of rows around the selected one, for lists taller than the screen
 function visibleWindow(total: number, selected: number, rows: number): readonly number[] {
   const size = Math.min(total, rows)
   const start = Math.min(Math.max(selected - Math.floor(size / 2), 0), total - size)

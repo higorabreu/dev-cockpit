@@ -2,7 +2,7 @@ import type { ContainerState, SessionActivity } from '@dck/core'
 
 const SVG = 'http://www.w3.org/2000/svg'
 
-// O estado vai sempre em forma e em texto: círculo cheio, vazado ou em arco
+// State is always shown as both shape and text: filled circle, hollow or arc
 export type GlyphKind = SessionActivity | 'done' | ContainerState
 
 const SHAPES: Record<GlyphKind, string> = {

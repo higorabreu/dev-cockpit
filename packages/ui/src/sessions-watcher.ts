@@ -14,7 +14,7 @@ export interface WatcherOptions {
 
 const DEFAULT_INTERVAL_MS = 2000
 
-// Vigia a atividade de todas as abas, mesmo com a janela escondida: é leitura leve, sem git
+// Watches the activity of all tabs, even with the window hidden: a light read, no git
 export function createSessionWatcher(options: WatcherOptions) {
   const known = new Map<string, SessionActivityInfo>()
   let running = false

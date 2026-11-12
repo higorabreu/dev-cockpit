@@ -27,7 +27,7 @@ const getPath = (source: unknown, key: string): unknown =>
     .split('.')
     .reduce<unknown>((value, part) => (value as Record<string, unknown>)?.[part], source)
 
-// Monta o patch aninhado de uma chave com ponto: 'window.heightRatio' vira { window: { heightRatio } }
+// Builds the nested patch for a dotted key: 'window.heightRatio' becomes { window: { heightRatio } }
 function patchFor(key: string, value: unknown): SettingsPatch {
   const path = key.split('.')
   const patch: Record<string, unknown> = {}
@@ -75,7 +75,7 @@ export function createSettingsView(
     readonly api: HostApi
     readonly i18n: Translator
     onClose(): void
-    // Mostra a opacidade enquanto o controle é arrastado, antes de gravar
+    // Shows the opacity while the control is dragged, before saving
     previewOpacity(value: number): void
   },
 ) {
@@ -87,12 +87,12 @@ export function createSettingsView(
   let confirmingReset = false
   let activeTab: TabId = TABS[0].id
   let gitlab: ConnectionStatus | 'checking' = { kind: 'none' }
-  // O token só existe aqui entre digitar e conectar, e a tela nunca o recebe de volta
+  // The token only exists here between typing and connecting, and the screen never gets it back
   let draftUrl: string | undefined
   let draftToken = ''
   // Mensagem de erro por chave, mostrada junto ao controle
   const errors = new Map<string, string>()
-  // Mudanças feitas aqui não precisam redesenhar tudo: o controle já está no valor certo
+  // Changes made here need not redraw everything: the control already has the right value
   let local = 0
 
   const isOpen = () => overlay.classList.contains('open')
@@ -135,7 +135,7 @@ export function createSettingsView(
     return button
   }
 
-  // Mostra ou esconde o "restaurar" de cada linha conforme o valor atual
+  // Shows or hides each row's "restore" depending on the current value
   function refreshResets() {
     for (const button of body.querySelectorAll<HTMLElement>('.sreset')) {
       const key = button.dataset.key ?? ''
@@ -183,7 +183,7 @@ export function createSettingsView(
     return element
   }
 
-  // O valor guardado é uma fração (0,6); a barra e o texto mostram porcentagem (60)
+  // The stored value is a fraction (0.6); the bar and the text show a percentage (60)
   function percent(
     key: string,
     limits: { readonly min: number; readonly max: number },
@@ -514,7 +514,7 @@ export function createSettingsView(
         return render()
       }
       confirmingReset = false
-      // As conexões ficam de fora: restaurar preferências não deve desconectar uma conta
+      // Connections are left out: restoring preferences must not disconnect an account
       void commit(
         { ...defaultSettings, connections: undefined } as SettingsPatch,
         'shortcuts.toggleWindow',
@@ -700,7 +700,7 @@ export function createSettingsView(
     if (event.target === overlay) closeView()
   })
 
-  // Mudança vinda de fora (atalho de opacidade, outro lugar) atualiza a tela aberta
+  // A change coming from outside (opacity shortcut, elsewhere) updates the open screen
   settings.onChange(() => {
     if (isOpen() && local === 0) render()
   })
@@ -709,7 +709,7 @@ export function createSettingsView(
     open,
     close: closeView,
     isOpen,
-    // Depois de trocar a língua, refaz a tela aberta com os textos novos
+    // After switching language, rebuilds the open screen with the new texts
     rerender: () => (isOpen() ? render() : undefined),
     toggle: () => (isOpen() ? closeView() : open()),
   }

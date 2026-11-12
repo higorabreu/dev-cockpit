@@ -4,7 +4,7 @@ export interface TabBarCallbacks {
   activate(id: string): void
   contextMenu(id: string, x: number, y: number): void
   reorder(ids: readonly string[]): void
-  // Há aba que terminou fora da área visível da barra
+  // A tab finished outside the visible area of the bar
   hiddenAttention(hidden: boolean): void
 }
 
@@ -30,7 +30,7 @@ export function createTabBar(
     })
   }
 
-  // Esmaecido só na borda que tem mais abas e o aviso de aba terminada fora da vista
+  // Faded only on the edge that has more tabs, and the notice for a tab that finished out of sight
   function syncEdges() {
     const start = container.scrollLeft > 1
     const end = container.scrollLeft + container.clientWidth < container.scrollWidth - 1
@@ -60,7 +60,7 @@ export function createTabBar(
 
   return {
     render(state: TabsState, unseen: ReadonlySet<string> = new Set()) {
-      // Trocar os filhos zera a rolagem; sem guardar, o redesenho do vigia desfaz a rolagem do usuário
+      // Replacing the children resets the scroll; without saving, the watcher's redraw undoes the user's scroll
       const scrolled = container.scrollLeft
       container.replaceChildren(
         ...state.tabs.map((tab) => {
