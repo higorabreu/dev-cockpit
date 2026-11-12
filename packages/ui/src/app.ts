@@ -131,7 +131,6 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       api,
       i18n,
       onClose: () => activeSession()?.focus(),
-      openViews: () => void viewsView.open(),
       previewOpacity: applyOpacity,
     },
   )
