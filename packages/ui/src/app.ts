@@ -50,6 +50,8 @@ export interface AppElements {
   readonly panel: HTMLElement
   readonly rail: HTMLElement
   readonly settingsButton: HTMLElement
+  readonly viewsButton: HTMLElement
+  readonly viewsBadge: HTMLElement
   readonly split: HTMLElement
   readonly notice: HTMLElement
   readonly menu: HTMLElement
@@ -130,6 +132,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       api,
       i18n,
       onClose: () => activeSession()?.focus(),
+      openViews: () => void viewsView.open(),
       previewOpacity: applyOpacity,
     },
   )
@@ -139,7 +142,22 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     i18n,
     onClose: () => activeSession()?.focus(),
     openSettings: () => settingsView.open(),
+    onReviewCount: showReviewCount,
   })
+
+  let reviewCount = 0
+  function showReviewCount(count: number) {
+    reviewCount = count
+    const { viewsBadge, viewsButton } = elements
+    viewsBadge.hidden = reviewCount === 0
+    viewsBadge.textContent = reviewCount > 99 ? '99+' : String(reviewCount)
+    viewsButton.setAttribute(
+      'aria-label',
+      reviewCount === 0
+        ? i18n.t('views.title')
+        : `${i18n.t('views.title')}. ${i18n.plural('views.waiting', reviewCount)}`,
+    )
+  }
 
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
 
@@ -325,6 +343,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       panel.retranslate()
       search.retranslate()
       viewsView.retranslate()
+      showReviewCount(reviewCount)
       settingsView.rerender()
       tabBar.render(state, new Set(attention.unseenIds()))
     }
@@ -407,6 +426,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     'system:settings': () => settingsView.open(),
     'system:panel': togglePanel,
     'project:search': searchProjects,
+    'views:open': () => void viewsView.open(),
   }
 
   // Nomes repetidos ganham a pasta pai para se distinguirem na lista
@@ -441,6 +461,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
             label: `${i18n.t('projects.search')}…`,
             shortcut: 'Ctrl+Shift+O',
           },
+          { id: 'views:open', label: i18n.t('views.open'), shortcut: 'Ctrl+Shift+M' },
           ...projects.map((project) => ({
             id: `${PROJECT_PREFIX}${project.path}`,
             label: projectLabel(project),
@@ -519,6 +540,10 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     if (state.tabs.some((tab) => tab.id === tabId)) update(activateTab(state, tabId))
   })
   elements.settingsButton.addEventListener('click', () => settingsView.toggle())
+  elements.viewsButton.addEventListener('click', () => viewsView.toggle())
+  showReviewCount(0)
+  void viewsView.warm()
+  api.window.onShown(() => void viewsView.warm())
   api.window.onOpenSettings(() => settingsView.open())
   api.window.onShown(() => {
     setTimeout(markActiveSeen, 150)

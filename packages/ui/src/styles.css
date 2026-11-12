@@ -166,6 +166,13 @@ body.full #main {
   gap: 4px;
 }
 
+#rail-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
 #dock[data-open="false"] #rail {
   border-left: 0;
 }
@@ -210,6 +217,10 @@ body.full #main {
   color: var(--bg);
   font: 600 9.5px / 14px var(--font-sans);
   text-align: center;
+}
+
+.badge[hidden] {
+  display: none;
 }
 
 .pinner {

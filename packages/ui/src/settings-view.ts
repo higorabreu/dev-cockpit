@@ -75,6 +75,7 @@ export function createSettingsView(
     readonly api: HostApi
     readonly i18n: Translator
     onClose(): void
+    openViews(): void
     // Mostra a opacidade enquanto o controle é arrastado, antes de gravar
     previewOpacity(value: number): void
   },
@@ -341,6 +342,19 @@ export function createSettingsView(
       return t('connections.connectedAs', { user: gitlab.user.username })
     if (gitlab.kind === 'error') return t(connectionErrorKey(gitlab.code))
     return t('connections.none')
+  }
+
+  function viewsButton(): HTMLElement {
+    const button = h(
+      'button',
+      { type: 'button', class: 'srecord', 'data-focus': 'conn-views' },
+      t('connections.views.open'),
+    )
+    button.addEventListener('click', () => {
+      closeView()
+      deps.openViews()
+    })
+    return button
   }
 
   function gitlabRows(): HTMLElement[] {

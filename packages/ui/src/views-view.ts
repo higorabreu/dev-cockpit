@@ -15,6 +15,8 @@ const ROW_HEIGHT = 46
 const OVERSCAN = 4
 // Dado mais velho que isso é buscado de novo ao abrir
 const STALE_MS = 60_000
+// Para o selo do trilho, que não precisa estar tão fresco quanto a lista aberta
+const WARM_STALE_MS = 5 * 60_000
 const VIEWS: readonly MergeRequestView[] = ['review', 'mine']
 
 // Ícones SVG e não caracteres: a fonte de reserva dos símbolos desalinha o chip
@@ -30,6 +32,8 @@ export interface ViewsViewDeps {
   readonly i18n: Translator
   onClose(): void
   openSettings(): void
+  // Quantas MRs esperam a review do usuário; alimenta o selo do ícone no trilho
+  onReviewCount(count: number): void
 }
 
 const unavailable: ViewSnapshot = {
@@ -53,6 +57,10 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   let frame = 0
 
   const isOpen = () => overlay.classList.contains('open')
+  const announceCount = () => {
+    const review = snapshots.get('review')
+    deps.onReviewCount(review && review.state !== 'unconfigured' ? review.items.length : 0)
+  }
   const snapshotOf = (view: MergeRequestView) => snapshots.get(view) ?? { ...unavailable, view }
 
   const input = h('input', {
@@ -289,6 +297,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   async function load(view: MergeRequestView) {
     const snapshot = await api.views.refresh(view, STALE_MS)
     if (snapshot) snapshots.set(view, snapshot)
+    announceCount()
     if (isOpen() && view === current) refilter(matches[selected]?.id)
   }
 
@@ -349,6 +358,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   // O daemon publica o estado novo de uma visão depois de cada busca
   api.views.onChange((snapshot) => {
     snapshots.set(snapshot.view, snapshot)
+    announceCount()
     if (isOpen() && snapshot.view === current) refilter(matches[selected]?.id)
     else if (isOpen()) drawTabs()
   })
@@ -368,6 +378,16 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       }
       refilter()
       for (const view of VIEWS) void load(view)
+    },
+    toggle() {
+      if (isOpen()) close()
+      else void this.open()
+    },
+    // Sem abrir a tela: traz o que está guardado e atualiza se tiver mais de 5 minutos, para o selo do trilho
+    async warm() {
+      const snapshot = await api.views.refresh('review', WARM_STALE_MS)
+      if (snapshot) snapshots.set('review', snapshot)
+      announceCount()
     },
     retranslate() {
       drawStatic()
