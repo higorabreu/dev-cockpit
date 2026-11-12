@@ -247,7 +247,7 @@ describe('createFileExtensionFinder, implicit', () => {
     expect(await finder().find()).toEqual([])
   })
 
-  it('should not emit an implicit candidate when no point is registered yet', async () => {
+  it('should not emit an implicit candidate when the options name no point', async () => {
     await folder('global', 'standards')
 
     const candidates = await finder({

@@ -46,7 +46,7 @@ const isDirectory = (path: string) =>
     () => false,
   )
 
-const nodeFiles: ExtensionFiles = {
+export const nodeFiles: ExtensionFiles = {
   async readDir(path) {
     const entries = await readdir(path, { withFileTypes: true }).catch(() => undefined)
     if (entries === undefined) return undefined
@@ -64,7 +64,7 @@ const nodeFiles: ExtensionFiles = {
 }
 
 // Code unit order, so the result does not depend on the locale or on the file system
-const byName = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
+export const byName = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 
 const MAX_LEVELS = 32
 

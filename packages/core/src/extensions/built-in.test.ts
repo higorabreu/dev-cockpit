@@ -4,8 +4,9 @@ import {
   builtInExtension,
   CONTRIBUTION_POINTS,
   EXTENSION_API_VERSION,
+  STANDARDS_POINT,
 } from './built-in.ts'
-import { type ExtensionCandidate, loadExtensions } from './load.ts'
+import { contributionsFor, type ExtensionCandidate, loadExtensions } from './load.ts'
 
 const load = (
   candidates: readonly ExtensionCandidate[],
@@ -32,7 +33,43 @@ const installed: ExtensionCandidate = {
   },
 }
 
+const pack = (standards: unknown): ExtensionCandidate => ({
+  ...installed,
+  manifest: { ...(installed.manifest as object), contributes: { standards } },
+})
+
+describe('STANDARDS_POINT', () => {
+  it.each(['standards', 'team/standards'])(
+    'should accept the folder %s when it is inside the extension',
+    (folder) => {
+      const report = load([pack(folder)], '0.3.0')
+
+      expect(contributionsFor(report, STANDARDS_POINT).map((item) => item.declaration)).toEqual([
+        folder,
+      ])
+    },
+  )
+
+  it.each(['', '..', '../standards', 'a/../../b', '/etc/standards', 'C:/standards', 'a\\b', 7])(
+    'should refuse the folder %j when it is not a folder inside the extension',
+    (folder) => {
+      const report = load([pack(folder)], '0.3.0')
+
+      expect(report.active).toEqual([])
+      expect(report.rejected[0]?.error.data?.code).toBe('DCK-EXT-001')
+    },
+  )
+})
+
 describe('builtInExtension', () => {
+  it('should contribute its standards folder when it goes through the loader', () => {
+    const report = load([builtInExtension('0.3.0')], '0.3.0')
+
+    expect(contributionsFor(report, STANDARDS_POINT)).toMatchObject([
+      { extension: { source: 'built-in' }, declaration: 'standards' },
+    ])
+  })
+
   it('should load as an active extension from the built-in source when it goes through the loader', () => {
     const candidate = builtInExtension('0.3.0')
 

@@ -47,3 +47,13 @@ export function formatStandardFile(standard: StandardDraft): string {
   const body = (standard.body ?? '').trim()
   return `${lines.join('\n')}\n${body === '' ? '' : `${body}\n`}`
 }
+
+// The reverse of the layout above: the YAML between a first `---` line and the next one, then the body
+export function splitStandardFile(text: string): { yaml: string | undefined; body: string } {
+  // Editors on Windows save a byte order mark and CRLF line endings
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/)
+  const isFence = (line: string | undefined) => line?.trimEnd() === '---'
+  const end = isFence(lines[0]) ? lines.findIndex((line, index) => index > 0 && isFence(line)) : -1
+  if (end === -1) return { yaml: undefined, body: lines.join('\n') }
+  return { yaml: lines.slice(1, end).join('\n'), body: lines.slice(end + 1).join('\n') }
+}

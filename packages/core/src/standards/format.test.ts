@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatStandardFile } from './format.ts'
+import { formatStandardFile, splitStandardFile } from './format.ts'
 import type { Standard } from './standard.ts'
 
 const full: Standard = {
@@ -65,4 +65,33 @@ The ticket key comes first.
 
     expect(text).toBe("---\nid: 'review-rubric'\npaths: []\nenabled: false\ncheck: []\n---\n")
   })
+})
+
+describe('splitStandardFile', () => {
+  it('should separate the front matter from the body when the file starts with a fenced block', () => {
+    const parts = splitStandardFile(
+      '---\nid: a\nenabled: true\n---\nThe body.\n\n--- not a fence\n',
+    )
+
+    expect(parts).toEqual({ yaml: 'id: a\nenabled: true', body: 'The body.\n\n--- not a fence\n' })
+  })
+
+  it('should give back what the formatter wrote when the file comes from it', () => {
+    const parts = splitStandardFile(formatStandardFile({ id: 'review-rubric', body: 'Check it.' }))
+
+    expect(parts).toEqual({ yaml: "id: 'review-rubric'", body: 'Check it.\n' })
+  })
+
+  it('should read the fences when the file has a byte order mark and Windows line endings', () => {
+    const parts = splitStandardFile('\uFEFF---\r\nid: a\r\n---\r\nThe body.\r\n')
+
+    expect(parts).toEqual({ yaml: 'id: a', body: 'The body.\n' })
+  })
+
+  it.each(['Just a note.\n', '---\nid: a\nnever closed\n', '\n---\nid: a\n---\n', ''])(
+    'should find no front matter in %j when the first line is not a closed fence',
+    (text) => {
+      expect(splitStandardFile(text)).toEqual({ yaml: undefined, body: text })
+    },
+  )
 })

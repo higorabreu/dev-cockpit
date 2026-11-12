@@ -31,8 +31,12 @@ export function createExtDeps(options: ExtDepsOptions): ExtDeps {
       installedDir: join(configDir, 'extensions'),
       globalDir: configDir,
       repositoryDir: join(options.repositoryRoot, '.dck'),
-      // No contribution point yet: the harness adds `standards` here
-      implicit: { apiVersion: EXTENSION_API_VERSION, appVersion, points: {} },
+      // A `standards` folder in the config directory or in `.dck` is an implicit extension
+      implicit: {
+        apiVersion: EXTENSION_API_VERSION,
+        appVersion,
+        points: { standards: 'standards' },
+      },
       logger,
     }),
     async disabled() {

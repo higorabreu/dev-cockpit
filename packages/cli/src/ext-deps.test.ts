@@ -58,6 +58,19 @@ describe('createExtDeps', () => {
     expect(lines).toEqual(['dck.built-in  0.3.0  built-in  active'])
   })
 
+  it('should list the global and the repository folders as extensions when each has a standards folder', async () => {
+    await mkdir(join(root, 'standards'), { recursive: true })
+    await mkdir(join(root, 'project', '.dck', 'standards'), { recursive: true })
+
+    const { lines } = await list()
+
+    expect(lines).toEqual([
+      'dck.built-in    0.3.0  built-in    active',
+      'dck.global      0.3.0  global      active',
+      'dck.repository  0.3.0  repository  active',
+    ])
+  })
+
   it('should show an installed extension as disabled when the settings file lists its id', async () => {
     await install('acme.commits', JSON.stringify(manifest('acme.commits')))
     await install('acme.reviews', JSON.stringify(manifest('acme.reviews')))

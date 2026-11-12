@@ -13,9 +13,11 @@ import type {
   Scheduler,
   Screen,
   SecretStore,
+  StandardFiles,
 } from '../ports/index.ts'
 import { silentLogger } from '../ports/logger.ts'
 import { ok } from '../result.ts'
+import { splitStandardFile } from '../standards/format.ts'
 import { createViewsService } from '../views/views-service.ts'
 
 export class FakeClock implements Clock {
@@ -67,6 +69,42 @@ export class MemorySecretStore implements SecretStore {
   async delete(key: string) {
     this.entries.delete(key)
     return ok(undefined)
+  }
+}
+
+// Files in memory, with `/` between the folders; the YAML parser comes in because the core has none
+export class MemoryStandardFiles implements StandardFiles {
+  readonly texts = new Map<string, string>()
+
+  constructor(private readonly parseYaml: (text: string) => unknown) {}
+
+  async list(folder: string) {
+    const inside = ([path]: [string, string]) =>
+      path.startsWith(`${folder}/`) &&
+      path.endsWith('.md') &&
+      !path.includes('/', folder.length + 1)
+    return [...this.texts]
+      .filter(inside)
+      .sort()
+      .map(([path, text]) => {
+        const { yaml, body } = splitStandardFile(text)
+        return { path, frontMatter: yaml === undefined ? undefined : this.parse(yaml), body }
+      })
+  }
+  async readText(path: string) {
+    return this.texts.get(path)
+  }
+  async writeText(path: string, text: string) {
+    this.texts.set(path, text)
+  }
+
+  private parse(yaml: string): unknown {
+    try {
+      return this.parseYaml(yaml)
+    } catch {
+      // Broken YAML reads as no front matter, the way the files adapter treats it
+      return undefined
+    }
   }
 }
 
