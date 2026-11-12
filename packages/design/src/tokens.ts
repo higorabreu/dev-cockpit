@@ -26,6 +26,7 @@ export interface ThemeTokens {
     readonly bg: string
     readonly surface: string
     readonly line: string
+    readonly controlLine: string
     readonly fg: string
     readonly muted: string
     readonly tabActive: string

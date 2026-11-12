@@ -35,6 +35,9 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     ['selected sector icon', fg, sectorSelected, GRAPHIC],
     ['selected sector outline', rgb(color.muted), surface, GRAPHIC],
     ['selected list item', fg, listSelected, TEXT],
+    // Inputs fill with the window color inside the surface, so their edge meets both
+    ['control border on the surface', rgb(color.controlLine), surface, GRAPHIC],
+    ['control border on the window', rgb(color.controlLine), rgb(color.bg), GRAPHIC],
     ['primary button text', rgb(color.accentInk), rgb(color.accent), TEXT],
     ['checked box on the surface', rgb(color.accent), surface, GRAPHIC],
     ['success on the surface', rgb(color.success), surface, TEXT],
