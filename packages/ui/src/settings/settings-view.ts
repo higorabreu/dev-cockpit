@@ -10,6 +10,7 @@ import {
   type SettingsPatch,
   type Translator,
 } from '@dck/core'
+import { trapFocus } from '../kit/focus-trap.ts'
 import { closeButton } from '../kit/panel-frame.ts'
 import { h } from '../panel/dom.ts'
 import { inputGate } from '../platform/input-gate.ts'
@@ -695,6 +696,10 @@ export function createSettingsView(
       event.stopPropagation()
       closeView()
     }
+  })
+  // On the document so a Tab pressed after a click on plain text, with the focus on the body, is caught too
+  document.addEventListener('keydown', (event) => {
+    if (isOpen()) trapFocus(overlay, event)
   })
   overlay.addEventListener('mousedown', (event) => {
     if (event.target === overlay) closeView()
