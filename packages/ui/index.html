@@ -10,7 +10,15 @@
   </head>
   <body>
     <div id="app">
-      <div id="bar" role="tablist" data-i18n-aria="a11y.tabs"></div>
+      <div id="bar">
+        <div id="tabs" role="tablist" data-i18n-aria="a11y.tabs"></div>
+        <div id="bar-end">
+          <div id="notice" role="status"></div>
+          <button id="tabs-all" type="button" data-i18n-aria="tabs.all" data-i18n-tip="tabs.all" aria-haspopup="dialog">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+        </div>
+      </div>
       <div id="main">
         <div id="host"></div>
         <div id="dock" data-open="false">
@@ -29,7 +37,6 @@
           </nav>
         </div>
       </div>
-      <div id="notice" role="status"></div>
       <div id="tab-menu" role="menu" hidden></div>
       <div id="search" role="dialog" data-i18n-aria="projects.search">
         <div id="search-box">
@@ -38,6 +45,7 @@
           <div id="search-hint" class="phint"></div>
         </div>
       </div>
+      <div id="tab-list" role="dialog" data-i18n-aria="tabs.all" hidden></div>
       <div id="views" role="dialog"></div>
       <div id="settings" role="dialog" data-i18n-aria="settings.title">
         <div id="settings-box"><div id="settings-body"></div></div>

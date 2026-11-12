@@ -2,8 +2,8 @@ import type { Translator } from '@dck/core'
 
 const VISIBLE_MS = 1800
 
-// O aviso fica na mesma linha da barra de abas, centralizado verticalmente com ela
-export function createNotice(element: HTMLElement, bar: HTMLElement, i18n: Translator) {
+// O aviso ocupa um lugar fixo no fim da barra de abas e some vazio, sem cobrir nenhuma aba
+export function createNotice(element: HTMLElement, i18n: Translator) {
   let timer: ReturnType<typeof setTimeout> | undefined
 
   return {
@@ -15,11 +15,8 @@ export function createNotice(element: HTMLElement, bar: HTMLElement, i18n: Trans
       amount.className = 'notice-count'
       amount.textContent = i18n.plural('notice.chars', count)
       element.replaceChildren(label, amount)
-      const box = bar.getBoundingClientRect()
-      element.style.top = `${Math.round(box.top + (box.height - element.offsetHeight) / 2)}px`
-      element.classList.add('show')
       clearTimeout(timer)
-      timer = setTimeout(() => element.classList.remove('show'), VISIBLE_MS)
+      timer = setTimeout(() => element.replaceChildren(), VISIBLE_MS)
     },
   }
 }

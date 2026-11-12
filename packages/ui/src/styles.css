@@ -24,7 +24,8 @@ body {
 #bar {
   order: 2;
   display: flex;
-  gap: 2px;
+  align-items: center;
+  gap: 8px;
   padding: 6px 8px;
   border-top: 1px solid var(--line);
   overflow: hidden;
@@ -36,7 +37,81 @@ body.full #bar {
   border-bottom: 1px solid var(--line);
 }
 
+#tabs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+#tabs[data-fade="start"] {
+  mask-image: linear-gradient(to right, transparent, #000 24px);
+}
+
+#tabs[data-fade="end"] {
+  mask-image: linear-gradient(to left, transparent, #000 24px);
+}
+
+#tabs[data-fade="both"] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 24px,
+    #000 calc(100% - 24px),
+    transparent
+  );
+}
+
+#bar-end {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#tabs-all {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+#tabs-all:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+#tabs-all:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
+#tabs-all[data-attention="true"]::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fg);
+}
+
 .tab {
+  flex: none;
+  max-width: 168px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
   padding: 5px 11px;
   border: 0;
   border-radius: var(--radius-medium);
@@ -55,6 +130,12 @@ body.full #bar {
 .tab:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: -2px;
+}
+
+.tab-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tab.dragging {
@@ -455,25 +536,16 @@ body.full #main {
 }
 
 #notice {
-  position: fixed;
-  right: 14px;
-  top: 0;
   display: flex;
   align-items: baseline;
   gap: 10px;
   color: var(--fg);
   font-size: 12px;
-  opacity: 0;
-  transform: translateY(3px);
-  pointer-events: none;
-  transition:
-    opacity var(--motion-fast) ease,
-    transform var(--motion-fast) ease;
+  white-space: nowrap;
 }
 
-#notice.show {
-  opacity: 1;
-  transform: none;
+#notice:empty {
+  display: none;
 }
 
 .notice-count {
@@ -844,13 +916,11 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 }
 
 .tab .pip {
-  display: inline-block;
+  flex: none;
   width: 6px;
   height: 6px;
-  margin-left: 7px;
   border-radius: 50%;
   background: var(--fg);
-  vertical-align: 1px;
 }
 
 .new {
@@ -1867,4 +1937,89 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 .pact:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 2px;
+}
+
+#tab-list {
+  position: fixed;
+  z-index: 40;
+  width: 280px;
+  max-height: min(60vh, 380px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-large);
+  overflow: hidden;
+}
+
+#tab-list[hidden] {
+  display: none;
+}
+
+.tl-input {
+  flex: none;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  outline: none;
+}
+
+.tl-input::placeholder {
+  color: var(--muted);
+}
+
+.tl-input:focus-visible {
+  border-bottom-color: var(--fg);
+}
+
+.tl-list {
+  min-height: 0;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+}
+
+.tl-row {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tl-row.on {
+  background: var(--tab-active);
+}
+
+.tl-row[aria-current="true"] {
+  font-weight: 600;
+}
+
+.tl-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tl-flag {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
 }

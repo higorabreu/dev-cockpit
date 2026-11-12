@@ -37,6 +37,7 @@ import { createSettingsView } from './settings-view.ts'
 import { bindShortcuts } from './shortcuts.ts'
 import { translateStatic } from './static-text.ts'
 import { createTabBar } from './tab-bar.ts'
+import { createTabList } from './tab-list.ts'
 import { createTabMenu } from './tab-menu.ts'
 import { createTerminalSession, type TerminalSession } from './terminal-session.ts'
 import { applyTheme, themeFor, watchSystemTheme } from './theme.ts'
@@ -44,6 +45,9 @@ import { createViewsView } from './views-view.ts'
 
 export interface AppElements {
   readonly bar: HTMLElement
+  readonly tabs: HTMLElement
+  readonly tabsAll: HTMLElement
+  readonly tabList: HTMLElement
   readonly host: HTMLElement
   readonly main: HTMLElement
   readonly dock: HTMLElement
@@ -80,7 +84,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const projectTabs = new Map<string, string>()
   const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
-  const notice = createNotice(elements.notice, bar, i18n)
+  const notice = createNotice(elements.notice, i18n)
   const menu = createTabMenu(elements.menu)
   let state: TabsState = emptyTabs
   let theme = themeFor(settings.current().theme)
@@ -363,8 +367,15 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   })
 
   const tabBar = createTabBar(
-    bar,
+    elements.tabs,
     {
+      hiddenAttention(hidden) {
+        elements.tabsAll.dataset.attention = String(hidden)
+        elements.tabsAll.setAttribute(
+          'aria-label',
+          hidden ? `${i18n.t('tabs.all')}, ${i18n.t('tabs.finished')}` : i18n.t('tabs.all'),
+        )
+      },
       activate: (id) => update(activateTab(state, id)),
       reorder: (ids) => {
         state = reorderTabs(state, ids)
@@ -386,6 +397,22 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     },
     () => i18n.t('tabs.finished'),
   )
+
+  createTabList(elements.tabList, elements.tabsAll, {
+    entries() {
+      const finished = new Set(attention.unseenIds())
+      return state.tabs.map((tab) => ({
+        id: tab.id,
+        label: tab.label,
+        current: tab.id === state.activeId,
+        finished: finished.has(tab.id),
+      }))
+    },
+    onPick: (id) => update(activateTab(state, id)),
+    onClose: () => activeSession()?.focus(),
+    barOnTop: () => document.body.classList.contains('full'),
+    t: i18n.t,
+  })
 
   const actions = {
     newTab: () => void open(),

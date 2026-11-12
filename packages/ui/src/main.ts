@@ -17,6 +17,9 @@ const settings = await createSettingsClient(window.dck)
 await startApp(
   {
     bar: element('bar'),
+    tabs: element('tabs'),
+    tabsAll: element('tabs-all'),
+    tabList: element('tab-list'),
     host: element('host'),
     main: element('main'),
     dock: element('dock'),

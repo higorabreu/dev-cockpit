@@ -108,6 +108,9 @@ export const ptBR = {
   'tabs.previous': 'Aba anterior',
   'tabs.nextFinished': 'Próxima que terminou',
   'tabs.finished': 'terminou',
+  'tabs.all': 'Todas as abas',
+  'tabs.search': 'Buscar aba',
+  'tabs.none': 'Nenhuma aba',
 
   'menu.cat.tabs': 'Abas',
   'menu.cat.projects': 'Projetos',

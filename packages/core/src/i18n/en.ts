@@ -109,6 +109,9 @@ export const en: Record<MessageKey, string> = {
   'tabs.previous': 'Previous tab',
   'tabs.nextFinished': 'Next finished',
   'tabs.finished': 'finished',
+  'tabs.all': 'All tabs',
+  'tabs.search': 'Search tabs',
+  'tabs.none': 'No tabs',
 
   'menu.cat.tabs': 'Tabs',
   'menu.cat.projects': 'Projects',
