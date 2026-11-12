@@ -11,6 +11,8 @@ export type Matcher = (expression: RegExp, text: string) => MatchResult
 
 export interface CheckOptions {
   readonly match?: Matcher
+  // For a caller that only holds the first line (a commit subject): the rules over the whole text are skipped
+  readonly firstLineOnly?: boolean
 }
 
 export interface CheckFailure {
@@ -39,8 +41,9 @@ export function checkText(
   const match = options.match ?? plainMatch
   const checked = text.slice(0, CHECK_TEXT_MAX)
   const firstLine = checked.split(/\r?\n/, 1)[0] ?? ''
+  const applies = (rule: CompiledRule) => !options.firstLineOnly || rule.scope === 'first-line'
   return enabledFor(standards, application).flatMap((standard) =>
-    standard.rules.flatMap((rule) => {
+    standard.rules.filter(applies).flatMap((rule) => {
       const result = outcome(rule, rule.scope === 'first-line' ? firstLine : checked, match)
       if (result === 'pass') return []
       const kind = result === 'timeout' ? result : rule.kind

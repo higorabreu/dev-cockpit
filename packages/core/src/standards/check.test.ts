@@ -100,6 +100,29 @@ describe('checkText', () => {
     expect(kindsOf(failures)).toEqual(['forbid'])
   })
 
+  it('should run only the first line rules when the caller holds the first line only', () => {
+    const standards = standardsWith([
+      { pattern: '^fix: ', scope: 'first-line', message: 'Start with fix' },
+      { required: 'Refs: ABC-[0-9]+', message: 'Name the ticket in the body' },
+      { maxLength: 10, message: 'At most 10 characters in all' },
+      { maxLength: 12, scope: 'first-line', message: 'Short subject' },
+    ])
+
+    const failures = checkText(standards, 'commit', 'handle empty input', { firstLineOnly: true })
+
+    expect(failures.map((failure) => failure.message)).toEqual(['Start with fix', 'Short subject'])
+  })
+
+  it('should pass when the caller holds the first line only and no rule looks at the first line', () => {
+    const standards = standardsWith([{ required: 'Refs: ABC-[0-9]+', message: 'Name the ticket' }])
+
+    const failures = checkText(standards, 'commit', 'fix: handle empty input', {
+      firstLineOnly: true,
+    })
+
+    expect(failures).toEqual([])
+  })
+
   it('should report every failing rule when several fail', () => {
     const standards = standardsWith([
       { pattern: '^fix: ', message: 'Start with fix' },
