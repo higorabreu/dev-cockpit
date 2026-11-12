@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { fileURLToPath } from 'node:url'
+import { findRepositoryRoot } from '@dck/adapter-extension-files'
 import {
   connectTo,
   defaultConfigDir,
@@ -69,7 +70,7 @@ if (args[0] === 'daemon') {
     err: (text) => process.stderr.write(text),
     ext: createExtDeps({
       configDir: process.env.DCK_CONFIG_DIR ?? defaultConfigDir(),
-      cwd: process.cwd(),
+      repositoryRoot: (await findRepositoryRoot(process.cwd())) ?? process.cwd(),
       appVersion: packageJson.version,
       logger: silentLogger,
       readFile: (path) => readFile(path, 'utf8').catch(() => undefined),
