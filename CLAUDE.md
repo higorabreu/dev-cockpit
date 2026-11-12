@@ -162,6 +162,9 @@ plans/        contexto, roadmap, decisões e um plano por marco em andamento
   cores novo entra com a verificação.
 - Estado nunca só por cor: seleção e foco também mudam forma, contorno ou peso.
 - Tudo é operável por teclado, com foco visível, e o movimento respeita `prefers-reduced-motion`.
+- Toda ação com atalho de teclado também se faz com o mouse (botão, menu ou clique), e o atalho aparece no tooltip dela
+  (`data-tip-key`). Toda lista rola com a roda do mouse, sem depender de setas. Atalho novo nasce com o seu caminho
+  pelo mouse.
 - Com a janela transparente a garantia de contraste vale para a opacidade padrão (0,92); abaixo
   disso o fundo real do desktop passa a contar.
 
