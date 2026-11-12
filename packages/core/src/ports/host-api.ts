@@ -1,10 +1,12 @@
 import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
+import type { MergeRequestView } from './code-review.ts'
 import type { ConnectionStatus } from './connections.ts'
 import type { ComposeStatus } from './environment.ts'
 import type { TabNotification } from './notifier.ts'
 import type { Project } from './projects.ts'
 import type { PtyExit, Unsubscribe } from './pty.ts'
 import type { SessionActivityInfo, SessionSnapshot } from './session.ts'
+import type { ViewSnapshot } from './views.ts'
 
 export interface PtyCreateOptions {
   readonly cols: number
@@ -44,6 +46,13 @@ export interface HostApi {
       connect(url: string, token: string): Promise<ConnectionStatus>
       disconnect(): Promise<ConnectionStatus>
     }
+  }
+  readonly views: {
+    // Indefinido quando o daemon não responde
+    snapshot(view: MergeRequestView): Promise<ViewSnapshot | undefined>
+    // Com idade máxima, só busca no servidor se o que está guardado for mais velho
+    refresh(view: MergeRequestView, maxAgeMs?: number): Promise<ViewSnapshot | undefined>
+    onChange(listener: (snapshot: ViewSnapshot) => void): Unsubscribe
   }
   readonly autostart: {
     isEnabled(): Promise<boolean>
@@ -86,6 +95,9 @@ export const hostChannels = {
   connectionsGitlabStatus: 'connections:gitlab:status',
   connectionsGitlabConnect: 'connections:gitlab:connect',
   connectionsGitlabDisconnect: 'connections:gitlab:disconnect',
+  viewsSnapshot: 'views:snapshot',
+  viewsRefresh: 'views:refresh',
+  viewsChanged: 'views:changed',
   autostartGet: 'autostart:get',
   autostartSet: 'autostart:set',
   sessionActivity: 'session:activity',

@@ -1,25 +1,14 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import type { Logger, ViewCache, ViewCacheData } from '@dck/core'
+import {
+  type Logger,
+  mergeRequestSummarySchema,
+  type ViewCache,
+  type ViewCacheData,
+} from '@dck/core'
 import { z } from 'zod'
 
-const summary = z.object({
-  id: z.string(),
-  number: z.number(),
-  title: z.string(),
-  url: z.string(),
-  project: z.string(),
-  author: z.string(),
-  sourceBranch: z.string(),
-  targetBranch: z.string(),
-  draft: z.boolean(),
-  updatedAt: z.string(),
-  hasConflicts: z.boolean(),
-  openDiscussions: z.boolean(),
-  pipeline: z.enum(['success', 'failed', 'running', 'pending', 'canceled', 'none', 'unknown']),
-})
-
-const cachedView = z.object({ items: z.array(summary), updatedAt: z.number() })
+const cachedView = z.object({ items: z.array(mergeRequestSummarySchema), updatedAt: z.number() })
 
 const dataSchema = z.object({
   scope: z.string(),

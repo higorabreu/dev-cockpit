@@ -1,8 +1,11 @@
 import {
   type Cancel,
+  type Client,
   createClient,
   DAEMON_PROTOCOL,
   type ErrorBody,
+  errorBody,
+  fail,
   type Logger,
   type Result,
   type Scheduler,
@@ -15,6 +18,10 @@ export interface DaemonLinkOptions {
   readonly scheduler: Scheduler
   readonly logger: Logger
   onToggle(): void
+  // Estado novo de uma visão, publicado pelo daemon depois de uma busca
+  onViews?(snapshot: unknown): void
+  // Chamado a cada conexão com o daemon pronta, para quem precisa enviar a configuração
+  onReady?(): void
   // Dados que um agente empurrou pelo daemon (por exemplo o statusLine do Claude)
   onAgentReport?(message: unknown): void
   // Chamado quando o daemon encontrado é mais antigo que esta versão do shell; quem chama
@@ -30,7 +37,13 @@ const windowEvent = z.object({ action: z.literal('toggle') })
 // Mantém a janela ligada ao daemon: assina o tópico "window" e reconecta quando a conexão cai
 const MAX_REPLACEMENTS = 2
 
-export function startDaemonLink(options: DaemonLinkOptions): { stop(): void } {
+export interface DaemonLink {
+  stop(): void
+  // Falha com DCK-DMN-002 enquanto não há conexão
+  request(method: string, params?: unknown): Promise<Result<unknown, ErrorBody>>
+}
+
+export function startDaemonLink(options: DaemonLinkOptions): DaemonLink {
   const { connect, scheduler, logger, onToggle } = options
   const retryMs = options.retryMs ?? 2000
   let stopped = false
@@ -38,6 +51,7 @@ export function startDaemonLink(options: DaemonLinkOptions): { stop(): void } {
   let replacements = 0
   let cancelRetry: Cancel | undefined
   let closeCurrent: (() => void) | undefined
+  let ready: Client | undefined
 
   const retry = () => {
     if (!stopped) cancelRetry = scheduler.after(retryMs, attempt)
@@ -62,6 +76,7 @@ export function startDaemonLink(options: DaemonLinkOptions): { stop(): void } {
     const client = createClient(transport)
     closeCurrent = () => client.close()
     transport.onClose(() => {
+      ready = undefined
       logger.warn('daemon connection lost')
       retry()
     })
@@ -88,11 +103,16 @@ export function startDaemonLink(options: DaemonLinkOptions): { stop(): void } {
     })
     if (subscribed.ok) logger.info('daemon connected')
     await client.subscribe('agent', (data) => guard('agent', () => options.onAgentReport?.(data)))
+    await client.subscribe('views', (data) => guard('views', () => options.onViews?.(data)))
+    ready = client
+    guard('ready', () => options.onReady?.())
   }
 
   void attempt()
 
   return {
+    request: async (method, params) =>
+      ready ? ready.request(method, params) : fail(errorBody('DCK-DMN-002', 'sem conexão')),
     stop() {
       stopped = true
       cancelRetry?.()

@@ -14,6 +14,8 @@ import {
   createDockController,
   createJsonLogger,
   createTranslator,
+  errorBody,
+  fail,
   hostChannels,
   pickLocale,
   type Translate,
@@ -30,7 +32,7 @@ import {
   Tray,
 } from 'electron'
 import { launchDaemon } from './daemon-launcher.ts'
-import { startDaemonLink } from './daemon-link.ts'
+import { type DaemonLink, startDaemonLink } from './daemon-link.ts'
 import { logDockWindow, logScreen } from './dock-log.ts'
 import { createElectronDockWindow } from './electron-dock-window.ts'
 import { createElectronIpc } from './electron-ipc.ts'
@@ -47,6 +49,7 @@ import { createRecencyStore } from './recency-store.ts'
 import { createSessionInspector } from './session-inspector.ts'
 import { createSettingsStore } from './settings-store.ts'
 import { buildTrayMenu } from './tray-menu.ts'
+import { createViewsGateway } from './views-gateway.ts'
 import { createGtkWorkareas } from './x11-workareas.ts'
 import { createXdgAutostart, defaultAutostartDirectory } from './xdg-autostart.ts'
 
@@ -163,6 +166,15 @@ app.whenReady().then(async () => {
     logger,
   })
 
+  let daemonLink: DaemonLink | undefined
+  const views = createViewsGateway({
+    request: async (method, params) =>
+      daemonLink ? daemonLink.request(method, params) : fail(errorBody('DCK-DMN-002')),
+    logger,
+  })
+  const configureViews = () =>
+    void views.configure(settingsStore.get().settings.connections.gitlab.url)
+
   const bridge = registerHostBridge({
     ipcMain: createElectronIpc(ipcMain),
     ptyHost: createNodePtyHost(),
@@ -172,6 +184,7 @@ app.whenReady().then(async () => {
     },
     settings: settingsStore,
     gitlab,
+    views,
     autostart,
     projects: createProjectCatalog(
       () => {
@@ -229,8 +242,10 @@ app.whenReady().then(async () => {
   settingsStore.onChange((settings, changed) => {
     window.webContents.send(hostChannels.settingsChanged, settings, changed)
     if (changed.includes('window.heightRatio')) dock.refresh()
-    if (changed.includes('connections.gitlab.url') && !settings.connections.gitlab.url)
-      void gitlab.forgetToken()
+    if (changed.includes('connections.gitlab.url')) {
+      configureViews()
+      if (!settings.connections.gitlab.url) void gitlab.forgetToken()
+    }
   })
 
   const daemonScript = join(__dirname, 'daemon.cjs')
@@ -256,6 +271,11 @@ app.whenReady().then(async () => {
   }
 
   const link = startDaemonLink({
+    onReady: configureViews,
+    onViews: (data) => {
+      const snapshot = views.parse(data)
+      if (snapshot) window.webContents.send(hostChannels.viewsChanged, snapshot)
+    },
     connect: () => connectTo(endpoint, logger),
     scheduler: {
       after(milliseconds, task) {
@@ -292,6 +312,8 @@ app.whenReady().then(async () => {
       dock.toggle()
     },
   })
+
+  daemonLink = link
 
   void window.loadFile(join(__dirname, 'ui', 'index.html'))
   window.webContents.once('did-finish-load', () => {

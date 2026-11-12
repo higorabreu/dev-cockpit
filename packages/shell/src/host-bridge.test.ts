@@ -17,6 +17,7 @@ function setup() {
   let autostartOn = false
   const notified: TabNotification[] = []
   const gitlabConnects: { url: string; token: string }[] = []
+  const viewRefreshes: { view: string; maxAgeMs: number | undefined }[] = []
   const bridge = registerHostBridge({
     ipcMain,
     ptyHost,
@@ -59,6 +60,21 @@ function setup() {
       },
       disconnect: async () => ({ kind: 'none' as const }),
     },
+    views: {
+      snapshot: async (view) => ({
+        view,
+        items: [],
+        updatedAt: 1,
+        state: 'idle' as const,
+        error: undefined,
+      }),
+      refresh: async (view, maxAgeMs) => {
+        viewRefreshes.push({ view, maxAgeMs })
+        return { view, items: [], updatedAt: 2, state: 'idle' as const, error: undefined }
+      },
+      configure: async () => undefined,
+      parse: () => undefined,
+    },
     notifier: { notify: (notification) => void notified.push(notification) },
     projects: {
       list: async () => [{ name: 'alpha', path: '/p/alpha' }],
@@ -84,6 +100,7 @@ function setup() {
     touched,
     notified,
     gitlabConnects,
+    viewRefreshes,
     fullHeights: () => fullHeightToggles,
   }
 }
@@ -319,5 +336,32 @@ describe('registerHostBridge gitlab connection', () => {
 
     expect(status).toEqual({ kind: 'error', url: undefined, code: 'DCK-GLB-007' })
     expect(gitlabConnects).toEqual([])
+  })
+})
+
+describe('registerHostBridge views', () => {
+  it('should return the snapshot of the view when the view is valid', async () => {
+    const { call } = setup()
+
+    expect(await call(hostChannels.viewsSnapshot, 'review')).toMatchObject({ view: 'review' })
+  })
+
+  it('should forward the view and the age limit when refreshing', async () => {
+    const { call, viewRefreshes } = setup()
+
+    await call(hostChannels.viewsRefresh, { view: 'mine', maxAgeMs: 30_000 })
+
+    expect(viewRefreshes).toEqual([{ view: 'mine', maxAgeMs: 30_000 }])
+  })
+
+  it.each([
+    ['an unknown view', { view: 'other' }],
+    ['a negative age', { view: 'review', maxAgeMs: -5 }],
+    ['not an object', 'review'],
+  ])('should ignore the refresh when the request has %s', async (_label, payload) => {
+    const { call, viewRefreshes } = setup()
+
+    expect(await call(hostChannels.viewsRefresh, payload)).toBeUndefined()
+    expect(viewRefreshes).toEqual([])
   })
 })

@@ -18,6 +18,7 @@ import {
   type SettingsView,
 } from '@dck/core'
 import { z } from 'zod'
+import type { ViewsGateway } from './views-gateway.ts'
 
 // O valor de cada campo é validado e corrigido pelo próprio modelo das configurações
 const patchSchema = z.record(z.string(), z.unknown())
@@ -26,6 +27,11 @@ const patchSchema = z.record(z.string(), z.unknown())
 const connectSchema = z.object({
   url: z.string().max(512),
   token: z.string().trim().min(1).max(512),
+})
+
+const viewRequestSchema = z.object({
+  view: z.enum(['review', 'mine']),
+  maxAgeMs: z.number().int().nonnegative().optional(),
 })
 
 const notificationSchema = z.object({
@@ -51,6 +57,7 @@ export interface BridgeOptions {
   }
   readonly autostart: Autostart
   readonly gitlab: GitLabConnection
+  readonly views: ViewsGateway
   readonly environment: { status(pid: number): Promise<ComposeStatus> }
   readonly sessions: {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
@@ -122,6 +129,16 @@ export function registerHostBridge(options: BridgeOptions) {
     return options.gitlab.connect(parsed.data.url, parsed.data.token)
   })
   ipcMain.handle(hostChannels.connectionsGitlabDisconnect, () => options.gitlab.disconnect())
+  ipcMain.handle(hostChannels.viewsSnapshot, (_event, view: unknown) => {
+    const parsed = viewRequestSchema.shape.view.safeParse(view)
+    return parsed.success ? options.views.snapshot(parsed.data) : undefined
+  })
+  ipcMain.handle(hostChannels.viewsRefresh, (_event, payload: unknown) => {
+    const parsed = viewRequestSchema.safeParse(payload)
+    return parsed.success
+      ? options.views.refresh(parsed.data.view, parsed.data.maxAgeMs)
+      : undefined
+  })
   ipcMain.handle(hostChannels.autostartGet, () => options.autostart.isEnabled())
   ipcMain.handle(hostChannels.autostartSet, async (_event, enabled: unknown) => {
     await options.autostart.setEnabled(enabled === true)

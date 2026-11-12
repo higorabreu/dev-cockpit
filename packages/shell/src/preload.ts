@@ -1,4 +1,4 @@
-import type { PtyExit, Settings } from '@dck/core'
+import type { PtyExit, Settings, ViewSnapshot } from '@dck/core'
 import { type HostApi, hostChannels } from '@dck/core/host-api'
 import { contextBridge, ipcRenderer } from 'electron'
 
@@ -43,6 +43,11 @@ const api: HostApi = {
         ipcRenderer.invoke(hostChannels.connectionsGitlabConnect, { url, token }),
       disconnect: () => ipcRenderer.invoke(hostChannels.connectionsGitlabDisconnect),
     },
+  },
+  views: {
+    snapshot: (view) => ipcRenderer.invoke(hostChannels.viewsSnapshot, view),
+    refresh: (view, maxAgeMs) => ipcRenderer.invoke(hostChannels.viewsRefresh, { view, maxAgeMs }),
+    onChange: (listener) => subscribe<[ViewSnapshot]>(hostChannels.viewsChanged, listener),
   },
   autostart: {
     isEnabled: () => ipcRenderer.invoke(hostChannels.autostartGet),
