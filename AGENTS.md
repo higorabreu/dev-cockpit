@@ -81,8 +81,8 @@ docs/               architecture, decisions, roadmap        plans/   active plan
 - Title `should [expected behavior] when [condition]`; body in Arrange, Act, Assert.
 - Every acceptance criterion of a plan has a test or check. Mock only external dependencies (network, disk,
   clock, process); the domain is tested without mocks.
-- Fixtures use neutral names (`acme/backend`, `gitlab.example.com`, `/home/ana/...`), never real hosts,
-  people or companies.
+- Fixtures use neutral names (`acme/backend`, `gitlab.example.com`, `/home/ana/...`), never real hosts or
+  people.
 - A measurable rule in this file that gets broken becomes a test in `packages/core/src/conventions.test.ts`.
 
 ## Process
@@ -97,4 +97,4 @@ docs/               architecture, decisions, roadmap        plans/   active plan
   `docs:`, `refactor:`, `test:`, `chore:`, `ci:`), signed off with `git commit -s` (DCO). Do not add
   co-author trailers. Release versions and the changelog are generated from these messages.
 - Pushing, publishing and anything that writes outside the repository needs a separate request.
-- Never commit secrets, `.env` files or internal or private data (company names, hosts, tokens).
+- Never commit secrets, `.env` files or private data (hosts, URLs, tokens).

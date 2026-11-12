@@ -13,4 +13,4 @@
 - [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
 - [ ] New interface text is in both `i18n/en.ts` and `i18n/pt-BR.ts`
 - [ ] Code, comments and docs are in English
-- [ ] No internal or private data (names, hosts, URLs, tokens, screenshots) in the change
+- [ ] No private data (hosts, URLs, tokens, screenshots) in the change

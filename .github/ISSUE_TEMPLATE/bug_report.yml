@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Do not include private data (company names, hosts, tokens, screenshots of private systems).
+        Do not include private data (hosts, tokens, screenshots of private systems).
   - type: textarea
     id: what
     attributes:

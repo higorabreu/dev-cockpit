@@ -9,7 +9,7 @@ By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 - For a new feature or a change in behavior, **open an issue first** and wait for a go-ahead, so your time
   is not spent on something that does not fit. Large changes need a short plan in `plans/`.
 - Look at [docs/decisions.md](docs/decisions.md): it explains why things are the way they are.
-- Never put internal or private data (company names, hosts, URLs, tokens, usernames, screenshots or logs
+- Never put private data (hosts, URLs, tokens, usernames, screenshots or logs
   from a private system) in an issue, a pull request, a test fixture or a comment. Use neutral names such
   as `acme/backend` and `gitlab.example.com`.
 
