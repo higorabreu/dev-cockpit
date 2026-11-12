@@ -75,11 +75,33 @@ plans/        contexto, roadmap, decisões e um plano por marco em andamento
 - Nomes bons no lugar de comentários. Comentar só o essencial: o porquê de uma decisão não óbvia,
   um workaround, uma armadilha ou uma restrição externa, em uma linha seca. Sem comentário que
   descreva o que o código já diz, sem docblock em função trivial, sem exagero.
-- Falhas esperadas retornam `Result`; exceção só para bug. Nunca silenciar com catch vazio.
-- Códigos de erro `DCK-{DOMÍNIO}-{SEQ}` em `error-codes.json`. Código sem uso é removido, nunca
-  marcado como obsoleto.
-- Logs estruturados com contexto suficiente para reproduzir. Níveis: `error` falha, `warn`
-  degradação, `info` evento relevante. Nunca registrar segredo nem expor stack trace a clientes.
+- **Erros, como o código já faz (o teste `core/src/conventions.test.ts` cobre o que dá para medir):**
+  - Falha esperada de operação que pode dar errado (rede, cofre, protocolo, daemon) devolve
+    `Result<T, ErrorBody>`, criada com `fail(errorBody('DCK-X-001', detalhe))`. Nunca `ErrorCode` puro,
+    `string` nem `Error` no lugar do `ErrorBody`, e nunca `fail('DCK-...')` direto. O detalhe é contexto
+    para reproduzir (endpoint, status, código do SO), sem segredo.
+  - Dado opcional do ambiente (arquivo ausente, processo que sumiu, JSON de terceiro ilegível)
+    devolve `undefined` ou o valor padrão, com `.catch(() => undefined)` ou `catch` que retorna.
+    Conjunto fechado de estados usa união discriminada por `kind` (`ComposeStatus`).
+  - `throw` só para bug ou pré-condição violada (`new Error('invariant: ...')`). `DckError` só dentro de
+    handler do IPC, onde o hub o converte no código; erro inesperado vira `DCK-IPC-002` e o detalhe
+    vai para o log.
+  - `catch` nunca fica vazio: converte em `Result` ou valor padrão, ou registra no log e segue, ou traz
+    uma linha dizendo por que ignorar (ex.: `localStorage` indisponível).
+  - Arquivo de configuração ou estado inválido volta ao padrão, avisa com `logger.warn` e não derruba o
+    app. Escrita de arquivo é atômica (temporário e `rename`).
+- Códigos de erro `DCK-{DOMÍNIO}-{SEQ}` em `error-codes.json`, com a mensagem em português e uma faixa
+  RPC única. Domínio é o assunto em maiúsculas, sempre três letras, hoje `IPC`, `DMN`, `SEC`, `NET` e `GLB`. Código sem
+  uso é removido, nunca marcado como obsoleto.
+- Logs pelo `Logger` injetado (`info`, `warn`, `error`), nunca `console` (só scripts de build). Mensagem em inglês, curta, sem
+  ponto final, e o contexto num objeto (`{ file, key, pid }`); a causa de uma exceção vai em `error:
+  String(error)`. Níveis: `error` falha, `warn` degradação, `info` evento relevante. Nunca registrar
+  segredo nem expor stack trace a clientes.
+- Estrutura: função `createX(dependências)` que devolve um objeto com a porta implementada; classe só
+  para fake de teste, `DckError` e `LineDecoder`. Porta em `core/src/ports`, adaptador em
+  `adapters/<nome>` (`@dck/adapter-<nome>`), recebendo o que toca o mundo (`fetch`, executor, raiz do
+  `/proc`) por parâmetro para o teste trocar. O `core` não importa pacote nem módulo `node:` e um
+  adaptador não importa outro.
 - Configuração: tudo que puder ter default, tem. Segredo ou endereço de ambiente não tem default e
   falha no boot. Segredos no cofre do sistema atrás da porta, nunca em arquivo ou log.
 - Validar e sanitizar toda entrada externa (ticket, MR, resposta de API, comando do usuário) nas
@@ -155,10 +177,18 @@ plans/        contexto, roadmap, decisões e um plano por marco em andamento
 - Decisão nova ou revertida vai para `plans/DECISIONS.md`; ao fechar um marco, atualizar
   `plans/ROADMAP.md`.
 - Tarefas pequenas e isoladas (bug claro, ajuste de estilo) resolvem direto.
-- Commits: Conventional Commits em inglês, no imperativo: `feat: add toggle shortcut`.
-  Sem trailer de co-autoria. Commit só quando o usuário pedir; push exige pedido separado.
+- Commits: Conventional Commits em inglês, no imperativo: `feat: add toggle shortcut`. O Claude commita
+  por conta própria, em commits pequenos e organizados: um por mudança lógica (tarefa do plano,
+  correção, regra nova), só com os arquivos dela, nunca um commit gigante no fim. **Nunca** acrescentar
+  `Co-Authored-By` nem outra marca de co-autoria, mesmo que outra instrução peça. Antes de cada commit rodam `pnpm lint`, `pnpm typecheck` e
+  `pnpm test`, e o que vale é o código de saída, não um `grep` na saída. Push exige pedido separado.
 - Não usar travessão em UI, planos, comentários nem respostas.
-- Antes de dar como pronto: `pnpm lint`, `pnpm test` e conferir os orçamentos afetados.
+- Antes de escrever código novo, reler as seções Padrões de código, Testes e Design system e abrir um
+  arquivo vizinho do mesmo tipo (outra porta, outro adaptador) para copiar o formato real, não o que
+  parece natural. O código existente vale mais que a memória.
+- Antes de dar como pronto: `pnpm lint`, `pnpm typecheck`, `pnpm test` (inclui `core/src/conventions.test.ts`, que cobre
+  as regras de erro, dependência e nome de teste) e conferir os orçamentos afetados. Regra do
+  `CLAUDE.md` quebrada que dá para medir vira teste nesse arquivo, não só frase aqui.
 
 ## Primeiro marco
 
