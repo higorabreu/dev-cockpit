@@ -448,6 +448,9 @@ describe('createStandardsWorkspace, agents', () => {
     ['no CLAUDE.md exists', undefined, false],
     ['CLAUDE.md does not import the file', '# Claude\n', true],
     ['CLAUDE.md imports the file', '@AGENTS.md\n\n## Claude Code\n', false],
+    ['CLAUDE.md imports the file with ./', '# Claude\r\n@./AGENTS.md\r\n', false],
+    ['CLAUDE.md imports the file within a sentence', 'Read @AGENTS.md first.\n', false],
+    ['CLAUDE.md imports another file', '@AGENTS.md.bak\n', true],
   ])('should tell whether the Claude import is missing when %s', async (_case, text, missing) => {
     const { files, workspace } = arrange()
     if (text !== undefined) files.texts.set(CLAUDE, text)

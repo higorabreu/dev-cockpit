@@ -53,6 +53,8 @@ export interface LoadedStandards extends ResolvedStandards {
 }
 
 const CLAUDE_IMPORT = '@AGENTS.md'
+// Claude Code imports `@AGENTS.md` or `@./AGENTS.md` on a line of its own or within a sentence
+const importsAgents = (text: string) => /(^|\s)@(\.\/)?AGENTS\.md(?=\s|$)/.test(text)
 
 // The one place the CLI and the window read and change the standards from
 export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
@@ -146,7 +148,7 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
           file: agentsFile,
           shared,
           stale: shared && current !== blockOf(await resolve('global')).trim(),
-          claudeImportMissing: claude !== undefined && !claude.includes(CLAUDE_IMPORT),
+          claudeImportMissing: claude !== undefined && !importsAgents(claude),
         },
       }
     },
@@ -183,7 +185,7 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
       const read = await files.readText(claudeFile)
       if (!read.ok) return read
       const text = read.value
-      if (text === undefined || text.includes(CLAUDE_IMPORT)) return ok(undefined)
+      if (text === undefined || importsAgents(text)) return ok(undefined)
       const gap = text === '' || text.endsWith('\n') ? '' : '\n'
       return files.writeText(claudeFile, `${text}${gap}${CLAUDE_IMPORT}\n`, deps.repositoryRoot)
     },

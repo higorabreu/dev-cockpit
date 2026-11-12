@@ -288,7 +288,8 @@ does not exist):
   `disable` refresh it.
 
 Claude Code reads `AGENTS.md` by itself when the repository has no `CLAUDE.md`. When there is a `CLAUDE.md`,
-it reads the block only if that file imports the other with a line `@AGENTS.md`; `dck init` notices the
+it reads the block only if that file imports the other with `@AGENTS.md` or `@./AGENTS.md`, on a line of
+its own or within a sentence; `dck init` notices the
 missing line and offers to add it. The app never creates a `CLAUDE.md`, and `--yes` never changes one.
 
 ## Known limits
