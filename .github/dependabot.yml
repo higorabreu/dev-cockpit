@@ -9,6 +9,10 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: chore
+    ignore:
+      # Types must follow the Node major the project runs on (.nvmrc)
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
