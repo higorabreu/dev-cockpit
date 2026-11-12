@@ -26,6 +26,7 @@ function setup(options: { answers?: string[]; stdin?: string } = {}) {
   const deps = createStandardsDeps({
     configDir: join(root, 'config'),
     repositoryRoot: repository,
+    inRepository: true,
     appVersion: '0.3.0',
     logger: silentLogger,
     readFile: (path) => readFile(path, 'utf8').catch(() => undefined),

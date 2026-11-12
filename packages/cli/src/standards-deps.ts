@@ -25,6 +25,7 @@ export function createStandardsDeps(options: StandardsDepsOptions): StandardsDep
       globalDir: options.configDir,
       join,
     }),
+    inRepository: options.inRepository,
     currentBranch: () => createGitContext().currentBranch(repositoryRoot),
     readInput: (file) =>
       file === undefined || file === '-' ? options.readStdin() : options.readFile(file),

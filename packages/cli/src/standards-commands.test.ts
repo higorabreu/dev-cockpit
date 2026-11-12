@@ -27,6 +27,7 @@ interface Options {
   readonly branch?: string
   readonly stdin?: string
   readonly match?: MatchResult
+  readonly inRepository?: boolean
 }
 
 function setup(options: Options = {}) {
@@ -69,6 +70,7 @@ function setup(options: Options = {}) {
       err: (text) => void err.push(text),
       standards: {
         workspace,
+        inRepository: options.inRepository ?? true,
         currentBranch: async () => options.branch,
         readInput: async (file) =>
           file === undefined || file === '-' ? options.stdin : files.texts.get(file),
@@ -220,6 +222,17 @@ describe('dck standards enable and disable', () => {
       `commit-message switched on in ${GLOBAL_STANDARDS}/commit-message.md`,
       'The repository keeps commit-message off and has the last word',
     ])
+  })
+
+  it('should refuse to switch a standard in the repository and keep working with --global when outside a repository', async () => {
+    const { run, err, files } = setup({ inRepository: false })
+
+    const refused = await run('standards', 'enable', 'commit-message')
+    const global = await run('standards', 'enable', '--global', 'commit-message')
+
+    expect([refused, global]).toEqual([EXIT.usage, EXIT.ok])
+    expect(err()).toBe('Not inside a git repository\n')
+    expect([...files.texts.keys()]).toEqual([`${GLOBAL_STANDARDS}/commit-message.md`])
   })
 
   it('should rewrite the file with the standard off when disabling', async () => {

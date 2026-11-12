@@ -23,7 +23,7 @@ const HANDWRITTEN = '# Agents\n\nRun the tests before a commit.\n'
 // An answer is what the user types: yes, no, or Enter for the default the question shows
 type Answer = 'yes' | 'no' | 'enter'
 
-function setup(answers: readonly Answer[] = [], locale: Locale = 'en') {
+function setup(answers: readonly Answer[] = [], locale: Locale = 'en', inRepository = true) {
   const files = new MemoryStandardFiles(parse)
   const workspace = createStandardsWorkspace({
     // Like the files adapter: a folder is an implicit extension only while it has files
@@ -69,6 +69,7 @@ function setup(answers: readonly Answer[] = [], locale: Locale = 'en') {
       err: (text) => void err.push(text),
       standards: {
         workspace,
+        inRepository,
         currentBranch: async () => undefined,
         readInput: async () => undefined,
         match: () => 'no-match',
@@ -311,6 +312,21 @@ describe('dck init', () => {
 })
 
 describe('dck init --yes', () => {
+  it.each([
+    ['en', 'Not inside a git repository\n'],
+    ['pt-BR', 'Fora de um repositório git\n'],
+  ] as const)(
+    'should refuse and write nothing when the folder is not inside a git repository (%s)',
+    async (locale, message) => {
+      const { run, err, written } = setup([], locale, false)
+
+      const code = await run('--yes')
+
+      expect(code).toBe(EXIT.usage)
+      expect(err()).toBe(message)
+      expect(written()).toEqual([])
+    },
+  )
   it('should offer the examples for the repository and share them when the user folder already has them on', async () => {
     const { run, written, files, workspace } = setup()
     await workspace.setEnabled('branch-format', true, 'global')

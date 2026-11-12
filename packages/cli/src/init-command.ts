@@ -1,5 +1,5 @@
 import { BUILT_IN_STANDARDS, type LoadedStandards, ok, type ResolvedStandard } from '@dck/core'
-import { EXIT, type Io, printable, refused } from './output.ts'
+import { EXIT, type Io, notInRepository, printable, refused } from './output.ts'
 import type { StandardsDeps } from './standards-commands.ts'
 
 type Choose = (question: string, fallback: boolean) => Promise<boolean>
@@ -85,6 +85,7 @@ export async function runInit(args: readonly string[], io: Io, deps: StandardsDe
     io.err(`${io.t('cli.init.usage')}\n`)
     return args.includes('--help') ? EXIT.ok : EXIT.usage
   }
+  if (!deps.inRepository) return notInRepository(io)
   const yes = args.includes('--yes')
   let asked = false
   const ask: Choose = (question, fallback) => {

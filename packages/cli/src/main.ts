@@ -63,9 +63,11 @@ if (args[0] === 'daemon') {
       process.env.LANGUAGE ?? '',
     ]),
   ).t
+  const repositoryRoot = await findRepositoryRoot(process.cwd())
   const extensions = {
     configDir: process.env.DCK_CONFIG_DIR ?? defaultConfigDir(),
-    repositoryRoot: (await findRepositoryRoot(process.cwd())) ?? process.cwd(),
+    repositoryRoot: repositoryRoot ?? process.cwd(),
+    inRepository: repositoryRoot !== undefined,
     appVersion: packageJson.version,
     logger: silentLogger,
     readFile: (path: string) => readFile(path, 'utf8').catch(() => undefined),

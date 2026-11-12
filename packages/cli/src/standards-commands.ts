@@ -9,10 +9,21 @@ import {
   type Translate,
 } from '@dck/core'
 import { runInit } from './init-command.ts'
-import { align, EXIT, type Io, printable, printableText, refused, rejection } from './output.ts'
+import {
+  align,
+  EXIT,
+  type Io,
+  notInRepository,
+  printable,
+  printableText,
+  refused,
+  rejection,
+} from './output.ts'
 
 export interface StandardsDeps {
   readonly workspace: StandardsWorkspace
+  // Outside a git repository nothing is written to the current directory
+  readonly inRepository: boolean
   // Undefined outside a repository or on a detached HEAD
   currentBranch(): Promise<string | undefined>
   // The text of a file, or of the standard input for no file or `-`; undefined when it cannot be read
@@ -80,6 +91,7 @@ async function switchStandard(
   if (id === undefined || id.startsWith('-') || extra.length > 0) {
     return usage(io, 'cli.standards.usage', args)
   }
+  if (target === 'repository' && !deps.inRepository) return notInRepository(io)
   const changed = await deps.workspace.setEnabled(id, enabled, target)
   if (!changed.ok) return refused(io, changed.error)
   const { standards, agents } = await deps.workspace.load()

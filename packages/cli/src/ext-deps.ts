@@ -8,6 +8,8 @@ export interface ExtDepsOptions {
   readonly configDir: string
   // The root of the current repository, or the current directory outside one
   readonly repositoryRoot: string
+  // Outside a repository the current directory's `.dck` is not read
+  readonly inRepository: boolean
   readonly appVersion: string
   readonly logger: Logger
   readFile(path: string): Promise<string | undefined>
@@ -30,7 +32,7 @@ export function createExtDeps(options: ExtDepsOptions): ExtDeps {
     finder: createFileExtensionFinder({
       installedDir: join(configDir, 'extensions'),
       globalDir: configDir,
-      repositoryDir: join(options.repositoryRoot, '.dck'),
+      repositoryDir: options.inRepository ? join(options.repositoryRoot, '.dck') : undefined,
       // A `standards` folder in the config directory or in `.dck` is an implicit extension
       implicit: {
         apiVersion: EXTENSION_API_VERSION,

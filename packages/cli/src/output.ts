@@ -55,3 +55,9 @@ export function refused(io: Io, error: ErrorBody): number {
   io.err(`${printable(rejection(error, io.t))}\n`)
   return errorCodeOf(error) === 'DCK-STD-002' ? EXIT.software : EXIT.failed
 }
+
+// Writing `.dck` into whatever folder the command ran in is never what the user meant
+export function notInRepository(io: Io): number {
+  io.err(`${io.t('error.DCK-STD-003')}\n`)
+  return EXIT.usage
+}

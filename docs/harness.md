@@ -11,8 +11,10 @@ nothing to show, and the app installs no git hook.
 ## Daily use
 
 The commands read and write files only. They never talk to the daemon, so they work with the window closed.
-The repository is the folder that holds `.git`, found by walking up from the current directory; outside a
-repository it is the current directory. Labels and questions follow the system language; the text of a
+The repository is the folder that holds `.git`, found by walking up from the current directory. Outside a
+repository `dck standards`, `dck guide` and `dck check` use only the built-in examples and your own folder,
+and `dck init` or a change without `--global` says the folder is not inside a git repository and exits
+with 64. Labels and questions follow the system language; the text of a
 standard is printed as it was written, except that a control character or a bidirectional control in it
 or in a path shows as `?`, and the detail after an error message is always in English.
 
@@ -149,7 +151,7 @@ dck check commit "$1"
 | --- | --- |
 | 0 | Success, including a passing check and a listing with invalid files |
 | 1 | A failed check, an unknown standard id, a file that would be overwritten, or nothing to share |
-| 64 | Incorrect usage, or an input file that cannot be read |
+| 64 | Incorrect usage, an input file that cannot be read, or a change to the repository outside one |
 | 70 | A file could not be written, or it or a folder on its way is a link |
 
 ## A standard file
