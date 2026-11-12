@@ -131,19 +131,21 @@ function directoriesUnder(directory: string): string[] {
 }
 
 const MAX_SOURCES_PER_FOLDER = 12
-const groupedPackages = ['ui', 'shell']
+
+// One file per port is the layout of the core's ports folder, so its size follows the number of ports
+const exemptFromSize = (directory: string) =>
+  directory === join(packagesRoot, 'core', 'src', 'ports')
 
 describe('project structure', () => {
-  it('should keep every source folder of the ui and the shell small when listing their files', () => {
-    const crowded = groupedPackages.flatMap((name) => {
-      const source = join(packagesRoot, name, 'src')
-      return [source, ...directoriesUnder(source)].flatMap((directory) => {
+  it('should keep every source folder small when listing the files of every package', () => {
+    const crowded = directoriesUnder(packagesRoot)
+      .filter((directory) => !exemptFromSize(directory))
+      .flatMap((directory) => {
         const sources = readdirSync(directory).filter(
           (file) => /\.tsx?$/.test(file) && !file.endsWith('.test.ts') && !file.endsWith('.d.ts'),
         )
         return sources.length > MAX_SOURCES_PER_FOLDER ? [relative(repositoryRoot, directory)] : []
       })
-    })
 
     expect(crowded).toEqual([])
   })
