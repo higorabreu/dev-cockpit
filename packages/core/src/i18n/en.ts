@@ -165,6 +165,7 @@ export const en: Record<MessageKey, string> = {
   'settings.locked': 'Set by an environment variable',
   'settings.reset': 'Restore default',
   'settings.resetAll': 'Restore all defaults',
+  'settings.resetAll.hint': 'Resets the preferences to their defaults. Connections are kept.',
   'settings.resetAllConfirm': 'Click again to confirm',
   'settings.language': 'Language',
   'settings.language.auto': 'Automatic (from the system)',

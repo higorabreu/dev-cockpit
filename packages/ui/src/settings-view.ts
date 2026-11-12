@@ -439,6 +439,7 @@ export function createSettingsView(
 
   function selectTab(id: TabId, focus = false) {
     activeTab = id
+    confirmingReset = false
     render()
     if (focus) body.querySelector<HTMLElement>(`#settings-tab-${id}`)?.focus()
   }
@@ -505,7 +506,12 @@ export function createSettingsView(
 
     const resetAll = h(
       'button',
-      { type: 'button', class: 'sreset-all', 'data-focus': 'set-reset-all' },
+      {
+        type: 'button',
+        class: 'sreset-all',
+        'data-focus': 'set-reset-all',
+        'data-confirming': confirmingReset ? 'true' : undefined,
+      },
       confirmingReset ? t('settings.resetAllConfirm') : t('settings.resetAll'),
     )
     resetAll.addEventListener('click', () => {
@@ -514,7 +520,11 @@ export function createSettingsView(
         return render()
       }
       confirmingReset = false
-      void commit(defaultSettings as SettingsPatch, 'shortcuts.toggleWindow').then(render)
+      // As conexões ficam de fora: restaurar preferências não deve desconectar uma conta
+      void commit(
+        { ...defaultSettings, connections: undefined } as SettingsPatch,
+        'shortcuts.toggleWindow',
+      ).then(render)
     })
 
     const panels: Record<TabId, Node[]> = {
@@ -629,6 +639,15 @@ export function createSettingsView(
             ),
           ),
         ),
+        group(
+          undefined,
+          h(
+            'div',
+            { class: 'srow2' },
+            h('span', { class: 'shint' }, t('settings.resetAll.hint')),
+            h('div', { class: 'scontrol' }, resetAll),
+          ),
+        ),
       ],
     }
 
@@ -649,7 +668,6 @@ export function createSettingsView(
           ...panels[activeTab],
         ),
       ),
-      h('footer', { class: 'sfoot' }, resetAll),
     )
     void value
     if (focused) body.querySelector<HTMLElement>(`[data-focus="${focused}"]`)?.focus()

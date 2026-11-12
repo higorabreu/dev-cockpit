@@ -164,6 +164,7 @@ export const ptBR = {
   'settings.locked': 'Definido por uma variável de ambiente',
   'settings.reset': 'Restaurar padrão',
   'settings.resetAll': 'Restaurar todos os padrões',
+  'settings.resetAll.hint': 'Volta as preferências ao padrão. As conexões continuam.',
   'settings.resetAllConfirm': 'Clique de novo para confirmar',
   'settings.language': 'Língua',
   'settings.language.auto': 'Automática (do sistema)',

@@ -1477,8 +1477,7 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   font: 11px var(--font-mono);
 }
 
-.srecord,
-.sreset-all {
+.srecord {
   padding: 5px 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius-medium);
@@ -1494,9 +1493,29 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   cursor: default;
 }
 
-.srecord:hover,
+.srecord:hover {
+  background: var(--hover);
+}
+
+.sreset-all {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .sreset-all:hover {
   background: var(--hover);
+  color: var(--fg);
+}
+
+.sreset-all[data-confirming="true"] {
+  color: var(--critical);
+  font-weight: 600;
 }
 
 .sreset {
@@ -1526,12 +1545,4 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   gap: 12px;
   color: var(--muted);
   font-size: 12px;
-}
-
-.sfoot {
-  flex: none;
-  padding: 12px 16px;
-  border-top: 1px solid var(--line);
-  display: flex;
-  justify-content: flex-end;
 }
