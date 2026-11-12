@@ -22,7 +22,7 @@ Version **0.1.0**. What does not exist yet is listed under [Known limits](#known
 Requirements: Ubuntu or Debian on x86-64 or arm64 with X11, and `libsecret-tools` for the system keyring
 (the package declares it).
 
-1. Download the `.deb` for your architecture from the
+1. Download the `.deb` for your processor (`amd64` for most Intel and AMD PCs, `arm64` for ARM machines; `uname -m` prints `x86_64` or `aarch64`) from the
    [Releases](https://github.com/higorabreu/dev-cockpit/releases) page, and the `SHA256SUMS` file next to it.
 2. Check it: `sha256sum --check --ignore-missing SHA256SUMS`.
 3. Install it: `sudo apt install ./dev-cockpit_<version>_<arch>.deb`.
