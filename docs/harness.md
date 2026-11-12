@@ -265,8 +265,11 @@ does not exist):
   anything. A standard whose body is longer than five lines also points to `dck guide`.
 - The block is always in English and has the same bytes for the same standards, whatever the language of
   the system.
-- Only the lines from one marker to the other are ever changed, and the file ends with one newline. Sharing
-  twice changes nothing, and removing the block leaves the text around it as it was.
+- Only the lines from one marker to the other are ever changed; the other lines keep their line endings.
+  An end marker pairs with the nearest start marker before it, so a stray start marker never takes the text
+  after it, and a start marker with no end after it is left alone (the block is then appended). Markers
+  inside a fenced code block are ignored. Sharing twice changes nothing, and removing the block leaves the
+  text around it as it was.
 - The block is **out of date** when it no longer says what the standards say, for example after a file was
   edited by hand. `dck standards` and `dck check` say so; `dck init` and `dck standards enable` or
   `disable` refresh it.

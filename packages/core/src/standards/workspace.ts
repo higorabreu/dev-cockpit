@@ -9,7 +9,7 @@ import { type ErrorBody, errorBody } from '../ipc/protocol.ts'
 import type { ExtensionFinder } from '../ports/extension-finder.ts'
 import type { StandardFiles } from '../ports/standard-files.ts'
 import { fail, ok, type Result } from '../result.ts'
-import { hasBlock, MARKDOWN_BLOCK, removeBlock, upsertBlock } from './block.ts'
+import { hasBlock, removeBlock, upsertBlock } from './block.ts'
 import { builtInStandardFiles } from './examples.ts'
 import { withRuleField } from './fields.ts'
 import { formatStandardFile } from './format.ts'
@@ -131,8 +131,8 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
       const resolved = await resolve()
       const text = (await readIfPossible(agentsFile)) ?? ''
       const claude = await readIfPossible(claudeFile)
-      const shared = hasBlock(text, MARKDOWN_BLOCK)
-      const current = upsertBlock(text, blockOf(resolved), MARKDOWN_BLOCK)
+      const shared = hasBlock(text)
+      const current = upsertBlock(text, blockOf(resolved))
       return {
         ...resolved,
         agents: {
@@ -164,9 +164,7 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
       const read = await files.readText(agentsFile)
       if (!read.ok) return read
       const text = read.value ?? ''
-      const next = on
-        ? upsertBlock(text, blockOf(await resolve()), MARKDOWN_BLOCK)
-        : removeBlock(text, MARKDOWN_BLOCK)
+      const next = on ? upsertBlock(text, blockOf(await resolve())) : removeBlock(text)
       return next === text ? ok(undefined) : files.writeText(agentsFile, next, deps.repositoryRoot)
     },
 
