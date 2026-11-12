@@ -8,6 +8,7 @@ import {
   type Transport,
 } from '@dck/core'
 import { type AgentDeps, runAgentCommand } from './agent-commands.ts'
+import { type ExtDeps, runExtCommand } from './ext-commands.ts'
 
 export interface CliDeps {
   readonly endpoint: string
@@ -17,6 +18,8 @@ export interface CliDeps {
   readonly t?: Translate
   // Present when the `agent` command is available
   readonly agent?: AgentDeps
+  // Present when the `ext` command is available
+  readonly ext?: ExtDeps
 }
 
 // Exit codes from sysexits.h, the BSD convention for command-line tools
@@ -35,14 +38,12 @@ export function exitCodeFor(error: ErrorBody): number {
   }
 }
 
-// The `agent` command line only shows up when it is available (in the package it stays dormant)
-const usage = (text: string, withAgent: boolean) =>
-  withAgent
-    ? text
-    : text
-        .split('\n')
-        .filter((line) => !line.startsWith('  agent '))
-        .join('\n')
+// A command line only shows up when the command is available (in the package `agent` stays dormant)
+const usage = (text: string, unavailable: readonly string[]) =>
+  text
+    .split('\n')
+    .filter((line) => !unavailable.some((command) => line.startsWith(`  ${command} `)))
+    .join('\n')
 
 export async function runCli(argv: readonly string[], deps: CliDeps): Promise<number> {
   const t = deps.t ?? createTranslator('pt-BR').t
@@ -50,8 +51,12 @@ export async function runCli(argv: readonly string[], deps: CliDeps): Promise<nu
   if (command === 'agent' && deps.agent) {
     return runAgentCommand(rest, deps, deps.agent)
   }
+  if (command === 'ext' && deps.ext) {
+    return runExtCommand(rest, { out: deps.out, err: deps.err, t }, deps.ext)
+  }
   if (command !== 'toggle' && command !== 'ping') {
-    deps.err(usage(t('cli.usage'), deps.agent !== undefined))
+    const unavailable = [...(deps.agent ? [] : ['agent']), ...(deps.ext ? [] : ['ext'])]
+    deps.err(usage(t('cli.usage'), unavailable))
     return command === undefined || command === '--help' ? EXIT.ok : EXIT.usage
   }
 

@@ -514,9 +514,9 @@ export function createSettingsView(
         return render()
       }
       confirmingReset = false
-      // Connections are left out: restoring preferences must not disconnect an account
+      // Left out: a reset must not disconnect an account or turn a disabled extension back on
       void commit(
-        { ...defaultSettings, connections: undefined } as SettingsPatch,
+        { ...defaultSettings, connections: undefined, extensions: undefined } as SettingsPatch,
         'shortcuts.toggleWindow',
       ).then(render)
     })

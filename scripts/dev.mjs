@@ -7,8 +7,13 @@ import { fileURLToPath } from 'node:url'
 
 const repository = join(dirname(fileURLToPath(import.meta.url)), '..')
 const runtime = process.env.XDG_RUNTIME_DIR ?? '/tmp'
+const configDir =
+  process.env.DCK_CONFIG_DIR ??
+  join(process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config'), 'dev-cockpit-dev')
 const environment = {
   ...process.env,
+  // The dev CLI reads the settings and the extensions of the dev window, not the installed one's
+  DCK_CONFIG_DIR: configDir,
   DCK_ENDPOINT: process.env.DCK_ENDPOINT ?? join(runtime, 'dck-dev', 'daemon.sock'),
   DCK_KEY: process.env.DCK_KEY ?? 'F9',
   DCK_NO_TRAY: '1',
@@ -22,11 +27,7 @@ const [command, args] =
     ? ['node', [join(repository, 'packages', 'cli', 'src', 'main.ts'), ...process.argv.slice(3)]]
     : [
         join(repository, 'packages', 'shell', 'node_modules', '.bin', 'electron'),
-        [
-          join(repository, 'packages', 'shell'),
-          '--no-sandbox',
-          `--user-data-dir=${join(process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config'), 'dev-cockpit-dev')}`,
-        ],
+        [join(repository, 'packages', 'shell'), '--no-sandbox', `--user-data-dir=${configDir}`],
       ]
 
 const child = spawn(command, args, { env: environment, stdio: 'inherit' })

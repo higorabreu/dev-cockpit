@@ -153,9 +153,18 @@ export const ptBR = {
   'tray.quit': 'Sair',
 
   'cli.usage':
-    'Uso: dck <comando>\n\nComandos:\n  toggle   Mostra ou esconde a janela\n  ping     Confere se o daemon está respondendo\n  daemon   Roda o daemon em primeiro plano\n  agent    Liga um agente de código ao cockpit (report, install, uninstall)\n',
+    'Uso: dck <comando>\n\nComandos:\n  toggle   Mostra ou esconde a janela\n  ping     Confere se o daemon está respondendo\n  daemon   Roda o daemon em primeiro plano\n  agent    Liga um agente de código ao cockpit (report, install, uninstall)\n  ext      Lista as extensões e de onde vem cada uma (list)\n',
   'cli.startDaemon': 'Inicie o daemon com: dck daemon',
   'cli.noWindow': 'Nenhuma janela está conectada ao daemon.',
+  'cli.ext.usage': 'Uso: dck ext list',
+  'cli.ext.source.built-in': 'embutida',
+  'cli.ext.source.installed': 'instalada',
+  'cli.ext.source.global': 'global',
+  'cli.ext.source.repository': 'repositório',
+  'cli.ext.state.active': 'ativa',
+  'cli.ext.state.disabled': 'desativada',
+  'cli.ext.state.shadowed': 'sobreposta por {source}',
+  'cli.ext.rejected': 'Recusadas:',
 
   'menu.system.settings': 'Configurações',
   'tray.settings': 'Configurações',

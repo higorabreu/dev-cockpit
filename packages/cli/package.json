@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@dck/adapter-agent-claude": "workspace:^",
+    "@dck/adapter-extension-files": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
     "@dck/core": "workspace:^",
     "@dck/daemon": "workspace:^"

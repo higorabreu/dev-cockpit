@@ -42,3 +42,29 @@ export function defaultStateDir(
     return join(environment.localAppData ?? join(environment.home, 'AppData', 'Local'), 'dck')
   return join(environment.stateHome || join(environment.home, '.local', 'state'), 'dck')
 }
+
+export interface ConfigDirEnvironment {
+  readonly platform: NodeJS.Platform
+  readonly home: string
+  readonly configHome: string | undefined
+  readonly appData: string | undefined
+}
+
+// Electron names the window's userData folder after the package's productName
+const APP_FOLDER = 'Dev Cockpit'
+
+// Where the window keeps settings.json, so a client outside Electron reads the same files
+export function defaultConfigDir(
+  environment: ConfigDirEnvironment = {
+    platform: process.platform,
+    home: homedir(),
+    configHome: process.env.XDG_CONFIG_HOME,
+    appData: process.env.APPDATA,
+  },
+): string {
+  if (environment.platform === 'win32')
+    return join(environment.appData ?? join(environment.home, 'AppData', 'Roaming'), APP_FOLDER)
+  if (environment.platform === 'darwin')
+    return join(environment.home, 'Library', 'Application Support', APP_FOLDER)
+  return join(environment.configHome || join(environment.home, '.config'), APP_FOLDER)
+}

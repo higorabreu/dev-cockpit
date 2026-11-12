@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { parseServerUrl } from '../connections/url.ts'
+import { EXTENSION_ID_MAX, EXTENSION_ID_PATTERN } from '../extensions/manifest.ts'
 
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
 export const THEMES = ['dark', 'light', 'system'] as const
@@ -11,6 +12,7 @@ export const LIMITS = {
   heightRatio: { min: 0.3, max: 1 },
   depth: { min: 1, max: 4 },
   notifyAfterSeconds: { min: 5, max: 600 },
+  disabledExtensions: { max: 200 },
 } as const
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -27,6 +29,19 @@ const asObject = (value: unknown) =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? value : {}
 
 const section = <T extends z.ZodRawShape>(shape: T) => z.preprocess(asObject, z.object(shape))
+
+// An entry that could never match a manifest id is dropped
+const isExtensionId = (value: unknown): value is string =>
+  typeof value === 'string' && value.length <= EXTENSION_ID_MAX && EXTENSION_ID_PATTERN.test(value)
+
+// A set kept as a sorted list: bad entries are dropped one by one instead of losing the whole list
+const extensionIds = z.preprocess(
+  (value) =>
+    Array.isArray(value)
+      ? [...new Set(value.filter(isExtensionId))].sort().slice(0, LIMITS.disabledExtensions.max)
+      : [],
+  z.array(z.string()).readonly(),
+)
 
 export const settingsSchema = z.preprocess(
   asObject,
@@ -67,13 +82,22 @@ export const settingsSchema = z.preprocess(
         true,
       ),
     }),
+    extensions: section({
+      // Managed by `dck ext enable` and `dck ext disable`, not by the settings screen
+      disabled: extensionIds,
+    }),
   }),
 )
 
 export type Settings = z.output<typeof settingsSchema>
 
 export type DeepPartial<T> = {
-  readonly [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K]
+  // A list is replaced as a whole, never merged by index
+  readonly [K in keyof T]?: T[K] extends readonly unknown[]
+    ? T[K]
+    : T[K] extends object
+      ? DeepPartial<T[K]>
+      : T[K]
 }
 
 export type SettingsPatch = DeepPartial<Settings>
@@ -99,6 +123,12 @@ export function mergeSettings(current: Settings, patch: SettingsPatch): Settings
   return parseSettings(deepMerge(current, patch))
 }
 
+// Parsing builds a new list every time, so lists are compared by content
+const sameValue = (a: unknown, b: unknown) =>
+  Array.isArray(a) && Array.isArray(b)
+    ? a.length === b.length && a.every((item, index) => item === b[index])
+    : a === b
+
 // Keys (dotted) that changed between two settings, to react only to what matters
 export function changedKeys(before: Settings, after: Settings): readonly string[] {
   const keys: string[] = []
@@ -107,7 +137,7 @@ export function changedKeys(before: Settings, after: Settings): readonly string[
       for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
         walk(a[key], b[key], path ? `${path}.${key}` : key)
       }
-    } else if (a !== b) keys.push(path)
+    } else if (!sameValue(a, b)) keys.push(path)
   }
   walk(before, after, '')
   return keys

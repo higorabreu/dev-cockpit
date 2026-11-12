@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseManifest } from './manifest.ts'
+import { EXTENSION_ID_MAX, parseManifest } from './manifest.ts'
 
 const valid = {
   id: 'acme.conventional-commits',
@@ -48,6 +48,12 @@ describe('parseManifest', () => {
     ['a contribution point name in uppercase', { ...valid, contributes: { Standards: 'x' } }],
   ])('should fail with DCK-EXT-001 when the manifest has %s', (_name, input) => {
     expect(failureOf(input)?.data?.code).toBe('DCK-EXT-001')
+  })
+
+  it('should fail with DCK-EXT-001 when the id is longer than the limit', () => {
+    const error = failureOf({ ...valid, id: `acme.${'x'.repeat(EXTENSION_ID_MAX)}` })
+
+    expect(error?.data?.code).toBe('DCK-EXT-001')
   })
 
   it('should name the failing field when the manifest is invalid', () => {

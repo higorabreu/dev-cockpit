@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultEndpoint, defaultStateDir } from './endpoint.ts'
+import { defaultConfigDir, defaultEndpoint, defaultStateDir } from './endpoint.ts'
 
 describe('defaultEndpoint', () => {
   it('should use the runtime directory when the platform provides one', () => {
@@ -45,5 +45,40 @@ describe('defaultStateDir', () => {
     })
 
     expect(result).toContain('dck')
+  })
+})
+
+describe('defaultConfigDir', () => {
+  const base = {
+    platform: 'linux' as const,
+    home: '/home/ana',
+    configHome: undefined,
+    appData: undefined,
+  }
+
+  it('should use the XDG config home when it is set', () => {
+    expect(defaultConfigDir({ ...base, configHome: '/data/config' })).toBe(
+      '/data/config/Dev Cockpit',
+    )
+  })
+
+  it('should fall back to the config folder in the home when XDG is not set', () => {
+    expect(defaultConfigDir(base)).toBe('/home/ana/.config/Dev Cockpit')
+  })
+
+  it('should use the application support folder when the platform is macOS', () => {
+    expect(defaultConfigDir({ ...base, platform: 'darwin' })).toBe(
+      '/home/ana/Library/Application Support/Dev Cockpit',
+    )
+  })
+
+  it('should use the roaming app data when the platform is Windows', () => {
+    const result = defaultConfigDir({
+      ...base,
+      platform: 'win32',
+      appData: 'C:\\Users\\ana\\AppData\\Roaming',
+    })
+
+    expect(result).toContain('Dev Cockpit')
   })
 })

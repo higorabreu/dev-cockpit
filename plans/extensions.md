@@ -230,11 +230,17 @@ Phase 0, the foundation:
   source), the refusal rules, and source precedence with shadowing. A new error domain `EXT` with its
   catalog entries (invalid manifest, unsupported contribution, incompatible version). Tests for every
   refusal and for precedence. (F1, F2) Done as pure functions in `core/src/extensions/` (`loadExtensions`, `contributionsFor`) instead of a stateful registry: the caller passes the known contribution points and the candidates, and gets a report.
-- [ ] EXT-T2. Ports and adapters: an `ExtensionSource` port in the core and a files adapter that reads the
+- [x] EXT-T2. Ports and adapters: an `ExtensionSource` port in the core and a files adapter that reads the
   extensions folder, the global folder and `.dck/`, with the directory access passed in, plus the
-  `extensions.disabled` setting through the existing settings model. (F2)
-- [ ] EXT-T3. The built-in extension, the `dck ext list` command (source, state, shadowed entries, translated
-  through the catalogs) and `docs/extensions.md` with the manifest and contribution point reference. (F3)
+  `extensions.disabled` setting through the existing settings model. (F2) The port is named `ExtensionFinder`
+  because `ExtensionSource` already names the four sources; the adapter is `@dck/adapter-extension-files`. A
+  global or repository folder becomes a candidate only when it holds a folder of a registered contribution
+  point, so none shows up until the harness registers `standards`.
+- [x] EXT-T3. The built-in extension, the `dck ext list` command (source, state, shadowed entries, translated
+  through the catalogs) and `docs/extensions.md` with the manifest and contribution point reference. (F3) The built-in
+  extension is data in `core/src/extensions/built-in.ts`, beside the list of known contribution points. The
+  CLI finds the window's data folder with `defaultConfigDir` (or `DCK_CONFIG_DIR`) and looks for `.dck/` in
+  the current directory only; walking up to the repository root waits for the `GitContext` port of EXT-T5.
 
 Phase 1, the harness (the `standards` contribution point):
 

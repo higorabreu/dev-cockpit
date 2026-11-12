@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { EXTENSION_ID_MAX, parseManifest } from '../extensions/manifest.ts'
 import { acceleratorFromEvent } from './accelerator.ts'
-import { changedKeys, defaultSettings, mergeSettings, parseSettings } from './settings.ts'
+import { changedKeys, defaultSettings, LIMITS, mergeSettings, parseSettings } from './settings.ts'
 
 describe('parseSettings', () => {
   it('should return the defaults when there is nothing to read', () => {
@@ -21,6 +22,7 @@ describe('parseSettings', () => {
       projects: { root: null, depth: 2 },
       connections: { gitlab: { url: null } },
       system: { notifyAfterSeconds: 30 },
+      extensions: { disabled: [] },
     })
   })
 
@@ -68,6 +70,65 @@ describe('parseSettings', () => {
   })
 })
 
+describe('parseSettings, extensions.disabled', () => {
+  it('should keep the valid ids when the list is well formed', () => {
+    const settings = parseSettings({ extensions: { disabled: ['acme.commits', 'acme.reviews'] } })
+
+    expect(settings.extensions.disabled).toEqual(['acme.commits', 'acme.reviews'])
+  })
+
+  it('should fall back to the empty list when the value is not a list', () => {
+    expect(parseSettings({ extensions: { disabled: 'acme.commits' } }).extensions.disabled).toEqual(
+      [],
+    )
+    expect(parseSettings({ extensions: { disabled: { 0: 'acme.commits' } } })).toEqual(
+      defaultSettings,
+    )
+    expect(parseSettings({ extensions: ['acme.commits'] })).toEqual(defaultSettings)
+  })
+
+  it('should drop only the bad entries when the list mixes valid and invalid ones', () => {
+    const disabled = ['acme.commits', 42, null, '', 'Acme.Commits', 'no-owner', ' acme.x ', ['a.b']]
+
+    const settings = parseSettings({ extensions: { disabled } })
+
+    expect(settings.extensions.disabled).toEqual(['acme.commits'])
+  })
+
+  it('should accept exactly the ids a manifest may have when filtering the entries', () => {
+    const manifest = (id: string) => ({
+      id,
+      name: 'Fixture',
+      version: '1.0.0',
+      apiVersion: 1,
+      engines: { dck: '>=0.3.0' },
+    })
+    const ids = ['acme.commits', 'a1.b-2', 'acme', 'acme.commits.extra', '1acme.commits', 'a.B']
+
+    const kept = parseSettings({ extensions: { disabled: ids } }).extensions.disabled
+
+    expect(kept).toEqual(ids.filter((id) => parseManifest(manifest(id)).ok).sort())
+  })
+
+  it('should keep one copy in a stable order when an id is repeated', () => {
+    const disabled = ['acme.reviews', 'acme.commits', 'acme.reviews']
+
+    const settings = parseSettings({ extensions: { disabled } })
+
+    expect(settings.extensions.disabled).toEqual(['acme.commits', 'acme.reviews'])
+  })
+
+  it('should cut the list and drop an overlong id when they pass the limits', () => {
+    const many = Array.from({ length: LIMITS.disabledExtensions.max + 50 }, (_, i) => `acme.e${i}`)
+    const long = `acme.${'x'.repeat(EXTENSION_ID_MAX)}`
+
+    const settings = parseSettings({ extensions: { disabled: [long, ...many] } })
+
+    expect(settings.extensions.disabled).toHaveLength(LIMITS.disabledExtensions.max)
+    expect(settings.extensions.disabled).not.toContain(long)
+  })
+})
+
 describe('mergeSettings', () => {
   it('should change only the given field and keep the rest when merging a patch', () => {
     const merged = mergeSettings(defaultSettings, { window: { heightRatio: 0.7 } })
@@ -86,6 +147,26 @@ describe('mergeSettings', () => {
     expect(mergeSettings(withRoot, { projects: { root: null } }).projects.root).toBeNull()
   })
 
+  it('should replace the whole list when a patch brings disabled extensions', () => {
+    const current = mergeSettings(defaultSettings, {
+      extensions: { disabled: ['acme.commits', 'acme.reviews', 'acme.themes'] },
+    })
+
+    const shorter = mergeSettings(current, { extensions: { disabled: ['acme.themes'] } })
+    const empty = mergeSettings(current, { extensions: { disabled: [] } })
+
+    expect(shorter.extensions.disabled).toEqual(['acme.themes'])
+    expect(empty.extensions.disabled).toEqual([])
+  })
+
+  it('should keep the disabled extensions when a patch touches another field', () => {
+    const current = mergeSettings(defaultSettings, { extensions: { disabled: ['acme.commits'] } })
+
+    const merged = mergeSettings(current, { theme: 'light', extensions: {} })
+
+    expect(merged.extensions.disabled).toEqual(['acme.commits'])
+  })
+
   it('should not change the current settings object when merging', () => {
     const before = structuredClone(defaultSettings)
 
@@ -100,6 +181,19 @@ describe('changedKeys', () => {
     const after = mergeSettings(defaultSettings, { theme: 'light', window: { heightRatio: 0.8 } })
 
     expect([...changedKeys(defaultSettings, after)].sort()).toEqual(['theme', 'window.heightRatio'])
+  })
+
+  it('should list the disabled extensions once when the list changes', () => {
+    const after = mergeSettings(defaultSettings, { extensions: { disabled: ['acme.commits'] } })
+
+    expect(changedKeys(defaultSettings, after)).toEqual(['extensions.disabled'])
+  })
+
+  it('should list nothing when the disabled extensions are the same in another order', () => {
+    const before = parseSettings({ extensions: { disabled: ['acme.commits', 'acme.reviews'] } })
+    const after = parseSettings({ extensions: { disabled: ['acme.reviews', 'acme.commits'] } })
+
+    expect(changedKeys(before, after)).toEqual([])
   })
 
   it('should list nothing when the settings are the same', () => {

@@ -84,5 +84,6 @@ A folder holds at most 12 source files and file names are lowercase kebab case; 
 
 - [docs/decisions.md](decisions.md): the decisions that shaped the project, with the reasons.
 - [docs/roadmap.md](roadmap.md): milestones and what is next.
+- [docs/extensions.md](extensions.md): the extension manifest, contribution points, sources and `dck ext list`.
 - [AGENTS.md](../AGENTS.md): coding standards, tests, design system and process.
 - [CONTRIBUTING.md](../CONTRIBUTING.md): how to set up, test and send a change.
