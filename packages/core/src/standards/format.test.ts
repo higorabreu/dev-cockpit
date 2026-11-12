@@ -55,16 +55,11 @@ The ticket key comes first.
 `)
   })
 
-  it('should write only the declared fields when the standard is a minimal override', () => {
-    const text = formatStandardFile({ id: 'branch-format', enabled: true })
-
-    expect(text).toBe("---\nid: 'branch-format'\nenabled: true\n---\n")
-  })
-
   it('should write empty lists inline when the standard has no paths and no rules', () => {
-    const text = formatStandardFile({ id: 'review-rubric', paths: [], enabled: false, check: [] })
+    const text = formatStandardFile({ ...full, paths: [], check: [], body: '' })
 
-    expect(text).toBe("---\nid: 'review-rubric'\npaths: []\nenabled: false\ncheck: []\n---\n")
+    expect(text).toContain('\npaths: []\n')
+    expect(text).toContain('\ncheck: []\n---\n')
   })
 })
 
@@ -90,9 +85,12 @@ describe('splitStandardFile', () => {
   })
 
   it('should give back what the formatter wrote when the file comes from it', () => {
-    const parts = splitStandardFile(formatStandardFile({ id: 'review-rubric', body: 'Check it.' }))
+    const text = formatStandardFile({ ...full, body: 'Check it.' })
 
-    expect(parts).toEqual({ yaml: "id: 'review-rubric'", body: 'Check it.\n' })
+    const parts = splitStandardFile(text)
+
+    expect(`---\n${parts.yaml}\n---\n${parts.body}`).toBe(text)
+    expect(parts.body).toBe('Check it.\n')
   })
 
   it('should read the fences when the file has a byte order mark and Windows line endings', () => {

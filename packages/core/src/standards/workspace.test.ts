@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parse } from 'yaml'
+import { parse, stringify } from 'yaml'
 import { EXTENSION_API_VERSION } from '../extensions/built-in.ts'
 import { type ImplicitSource, implicitManifest } from '../extensions/implicit.ts'
 import type { ExtensionCandidate } from '../extensions/load.ts'
@@ -9,7 +9,7 @@ import { fail, ok } from '../result.ts'
 import { MemoryStandardFiles } from '../testing/fakes.ts'
 import { checkText } from './check.ts'
 import { BUILT_IN_STANDARDS } from './examples.ts'
-import { formatStandardFile, type StandardDraft } from './format.ts'
+import { formatStandardFile } from './format.ts'
 import { createStandardsWorkspace } from './workspace.ts'
 
 const ROOT = '/home/ana/acme/backend'
@@ -68,8 +68,13 @@ function arrange(disabled: string[] = []) {
     globalDir: GLOBAL,
     join: (...parts) => parts.join('/'),
   })
-  const put = (source: keyof typeof FOLDERS, standard: StandardDraft, name = standard.id) =>
-    files.texts.set(`${FOLDERS[source]}/${name}.md`, formatStandardFile(standard))
+  // A file may hold only the fields it changes, as a hand-written override does
+  const put = (
+    source: keyof typeof FOLDERS,
+    { body = '', ...frontMatter }: { id: string; body?: string; [field: string]: unknown },
+    name = frontMatter.id,
+  ) =>
+    files.texts.set(`${FOLDERS[source]}/${name}.md`, `---\n${stringify(frontMatter)}---\n${body}\n`)
   const find = async (id: string) =>
     (await workspace.load()).standards.find((standard) => standard.id === id)
   return { files, workspace, put, find }
@@ -161,13 +166,16 @@ describe('createStandardsWorkspace, load', () => {
 describe('createStandardsWorkspace, changes', () => {
   it('should write the complete standard and show it enabled from the repository when a built-in example is enabled (C2)', async () => {
     const { files, workspace, find } = arrange()
-    const example = BUILT_IN_STANDARDS[0]?.standard ?? { id: '' }
+    const example = BUILT_IN_STANDARDS[0]?.standard
 
     const result = await workspace.setEnabled('branch-format', true, 'repository')
 
     expect(result).toEqual({ ok: true, value: undefined })
     expect([...files.texts]).toEqual([
-      [`${FOLDERS.repository}/branch-format.md`, formatStandardFile({ ...example, enabled: true })],
+      [
+        `${FOLDERS.repository}/branch-format.md`,
+        example && formatStandardFile({ ...example, enabled: true }),
+      ],
     ])
     const standard = await find('branch-format')
     expect(standard?.enabled).toBe(true)

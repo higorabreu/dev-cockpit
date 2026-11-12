@@ -1,8 +1,5 @@
 import { RULE_KINDS, type Standard, type StandardRule } from './standard.ts'
 
-// Only the id is required, so a minimal override (an id and the one field it changes) can be written
-export type StandardDraft = Pick<Standard, 'id'> & Partial<Standard>
-
 // YAML single quotes take a backslash literally, which keeps a regular expression readable
 const quote = (text: string) => (/['\r\n]/.test(text) ? JSON.stringify(text) : `'${text}'`)
 
@@ -29,13 +26,12 @@ function ruleLines(rule: StandardRule): string[] {
   return fields.map((line, index) => `${index === 0 ? '  - ' : '    '}${line}`)
 }
 
-function checkLines(check: readonly StandardRule[] | undefined): string[] {
-  if (check === undefined) return []
+function checkLines(check: readonly StandardRule[]): string[] {
   return check.length === 0 ? ['check: []'] : ['check:', ...check.flatMap(ruleLines)]
 }
 
 // The markdown text of a standard file, with the fields always in the same order
-export function formatStandardFile(standard: StandardDraft): string {
+export function formatStandardFile(standard: Standard): string {
   const lines = [
     '---',
     ...field('id', standard.id),
@@ -47,7 +43,7 @@ export function formatStandardFile(standard: StandardDraft): string {
     ...checkLines(standard.check),
     '---',
   ]
-  const body = (standard.body ?? '').trim()
+  const body = standard.body.trim()
   return `${lines.join('\n')}\n${body === '' ? '' : `${body}\n`}`
 }
 

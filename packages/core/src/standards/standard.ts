@@ -1,8 +1,5 @@
 import { z } from 'zod'
 
-// The applications with dedicated handling; any other lowercase name is a free application
-export const KNOWN_APPLICATIONS = ['branch', 'commit', 'pr', 'review', 'code-style'] as const
-
 export const RULE_KINDS = ['pattern', 'required', 'forbid', 'maxLength'] as const
 export type RuleKind = (typeof RULE_KINDS)[number]
 
