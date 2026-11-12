@@ -3,12 +3,12 @@ import { fuzzyScore, searchItems } from './fuzzy.ts'
 
 describe('fuzzyScore', () => {
   it('should match when the letters appear in order but not together', () => {
-    expect(fuzzyScore('nfc', 'shop-compose')).toBeDefined()
+    expect(fuzzyScore('spc', 'shop-compose')).toBeDefined()
   })
 
   it('should not match when a letter is missing or out of order', () => {
     expect(fuzzyScore('xyz', 'shop-compose')).toBeUndefined()
-    expect(fuzzyScore('cn', 'notifica')).toBeUndefined()
+    expect(fuzzyScore('ps', 'shop')).toBeUndefined()
   })
 
   it('should ignore case and accents when matching', () => {
