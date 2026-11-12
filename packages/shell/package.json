@@ -27,5 +27,6 @@
     "@electron/rebuild": "^4.2.1",
     "electron": "^45.3.0",
     "esbuild": "^0.28.2"
-  }
+  },
+  "license": "AGPL-3.0-only"
 }

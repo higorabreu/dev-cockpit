@@ -17,5 +17,6 @@
     "@dck/adapter-secret-tool": "workspace:^",
     "@dck/core": "workspace:^",
     "zod": "^4.6.7"
-  }
+  },
+  "license": "AGPL-3.0-only"
 }
