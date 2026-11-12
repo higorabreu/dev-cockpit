@@ -110,11 +110,15 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
     if (standard === undefined) return fail(errorBody('DCK-STD-001', `${id}: no such standard`))
     const edited = edit(standard)
     if (!edited.ok) return edited
-    return files.writeText(
-      fileFor(standard, target),
-      formatStandardFile(edited.value),
-      roots[target],
-    )
+    const path = fileFor(standard, target)
+    // The default name may already hold an invalid file or another standard, which is never overwritten
+    if (!standard.layers.some((layer) => layer.path === path)) {
+      const existing = await files.readText(path)
+      if (!existing.ok || existing.value !== undefined) {
+        return fail(errorBody('DCK-STD-001', `${path}: already holds something other than ${id}`))
+      }
+    }
+    return files.writeText(path, formatStandardFile(edited.value), roots[target])
   }
 
   // A file that cannot be read is treated as missing when only shown, and is never changed

@@ -79,7 +79,8 @@ AGENTS.md updated with the current rules
 
 `dck standards enable <id>` and `disable <id>` write the complete standard into `.dck/standards/`, or into
 the user's own folder with `--global`. When `AGENTS.md` already has the block, it is refreshed in the same
-command. An unknown id exits with 1. A standard switched on with `--global` stays off while a file of the
+command. An unknown id exits with 1, and so does a change whose file, `<id>.md`, already holds an invalid
+file or another standard: that file is never overwritten. A standard switched on with `--global` stays off while a file of the
 repository says it is off, because the repository has the last word.
 
 To change a rule, edit the file that was written: it is the whole standard, so what is in the folder is

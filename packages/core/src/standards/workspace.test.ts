@@ -220,6 +220,24 @@ describe('createStandardsWorkspace, changes', () => {
     expect(files.texts.get(`${FOLDERS.repository}/branches.md`)).toContain('enabled: true')
   })
 
+  it.each([
+    ['an invalid file', '---\nid: Broken Id\n---\nOur notes.\n'],
+    ['another standard', '---\nid: our-branches\ntitle: Ours\napplies: branch\nwhy: Ours\n---\n'],
+  ])(
+    'should fail with DCK-STD-001 and keep the file when the default name holds %s',
+    async (_case, text) => {
+      const { files, workspace } = arrange()
+      const path = `${FOLDERS.repository}/branch-format.md`
+      files.texts.set(path, text)
+
+      const result = await workspace.setEnabled('branch-format', true, 'repository')
+
+      expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-STD-001' } } })
+      expect(result.ok ? '' : result.error.message).toContain(path)
+      expect(files.texts.get(path)).toBe(text)
+    },
+  )
+
   it('should name the file a change is written to when asked before the change', async () => {
     const { workspace, put } = arrange()
     put('repository', { id: 'branch-format', title: 'Our branches' }, 'branches')
