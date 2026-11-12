@@ -12,7 +12,12 @@ const name = z
   .string()
   .max(64)
   .regex(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/, 'must be lowercase kebab case')
-const text = z.string().trim().min(1)
+// One line, so a message cannot carry a marker or a heading into the block of AGENTS.md
+const text = z
+  .string()
+  .trim()
+  .min(1)
+  .regex(/^[^\r\n]*$/, 'must be one line')
 // The length limit keeps a user expression cheap to compile and to run
 const expression = z.string().min(1).max(500)
 

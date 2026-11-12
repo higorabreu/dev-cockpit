@@ -188,9 +188,9 @@ To accept other types or another length, change the fields `types` and `maxLengt
 | Field | Rule |
 | --- | --- |
 | `id` | Required in every file. Lowercase kebab case, up to 64 characters |
-| `title` | Text, up to 100 characters |
+| `title` | One line of text, up to 100 characters |
 | `applies` | What the standard is about, in lowercase kebab case: `branch`, `commit`, `pr`, `review`, `code-style` or any name of your own. It is the argument of `dck guide` and `dck check` |
-| `why` | The reason for the standard, so it can be pruned when nobody remembers it |
+| `why` | The reason for the standard, in one line, so it can be pruned when nobody remembers it |
 | `enabled` | `true` or `false`. A standard that no file switches off is on; the built-in examples ship off |
 | `paths` | A list of globs. Read and kept, and not used to filter yet |
 | `check` | Up to 20 rules, described below. May be missing or empty: a standard can be an instruction only |
@@ -217,7 +217,7 @@ A rule has exactly one kind, a `message` and optionally a `scope` and `variables
 - `variables` names parts of the expression. `{name}` in the expression is replaced by the value of the
   variable, as a group. A name starts with a letter and holds letters and digits, so a quantifier such as
   `{1,72}` is left alone. A `{name}` with no variable makes the file invalid.
-- The `message` is what a failed check prints and what the agent reads. It may name the fields of its own
+- The `message` is one line: what a failed check prints and what the agent reads. It may name the fields of its own
   rule: `{name}` for a variable and `{maxLength}` for the limit, so it stays true after a field is edited. A
   value that is a list of alternatives (`feat|fix|docs`) is shown as `feat, fix, docs`.
 

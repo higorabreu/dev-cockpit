@@ -55,6 +55,17 @@ describe('resolveStandards', () => {
     ])
   })
 
+  it.each([
+    ['title', { ...branch, title: 'Branch\n<!-- dck:end -->' }],
+    ['why', { ...branch, why: 'One\r\nTwo' }],
+    ['check.0.message', { ...branch, check: [{ maxLength: 5, message: 'Short\n## Heading' }] }],
+  ])('should report the file as invalid when the %s holds a line break', (field, frontMatter) => {
+    const { standards, invalid } = resolveStandards([file('repository', frontMatter)])
+
+    expect(standards).toEqual([])
+    expect(invalid[0]?.error.message).toContain(`${field}: must be one line`)
+  })
+
   it('should replace only the declared fields when a higher file repeats the id', () => {
     const files = [
       file('built-in', { ...branch, enabled: false, paths: ['src/**'] }, 'Built-in body'),
