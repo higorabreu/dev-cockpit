@@ -10,7 +10,6 @@ export interface SearchEntry {
   readonly favorite?: boolean
 }
 
-const VISIBLE_ROWS = 9
 const PIN =
   '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 6 3 3H7l3-3zM12 13v7"/></svg>'
 
@@ -54,17 +53,16 @@ export function createProjectSearch(
       results.innerHTML = `<div class="empty">${escapeHtml(t('projects.none'))}</div>`
       return
     }
-    const start = Math.min(
-      Math.max(selected - Math.floor(VISIBLE_ROWS / 2), 0),
-      Math.max(matches.length - VISIBLE_ROWS, 0),
-    )
+    // Redesenhar zera a rolagem; sem guardar, a roda do mouse perderia a posição a cada tecla
+    const scrolled = results.scrollTop
     results.innerHTML = matches
-      .slice(start, start + VISIBLE_ROWS)
-      .map((entry, offset) => {
-        const index = start + offset
-        return `<button type="button" class="it${index === selected ? ' on' : ''}" role="option" aria-selected="${index === selected}" data-index="${index}"><span class="l">${escapeHtml(entry.label)}</span><span class="p">${escapeHtml(entry.location)}</span>${entry.favorite ? `<span class="pin" data-tip="${escapeHtml(t('projects.pinned'))}">${PIN}</span>` : ''}</button>`
-      })
+      .map(
+        (entry, index) =>
+          `<button type="button" class="it${index === selected ? ' on' : ''}" role="option" aria-selected="${index === selected}" data-index="${index}"><span class="l">${escapeHtml(entry.label)}</span><span class="p">${escapeHtml(entry.location)}</span>${entry.favorite ? `<span class="pin" data-tip="${escapeHtml(t('projects.pinned'))}">${PIN}</span>` : ''}</button>`,
+      )
       .join('')
+    results.scrollTop = scrolled
+    results.querySelector('.on')?.scrollIntoView({ block: 'nearest' })
   }
 
   function filter() {

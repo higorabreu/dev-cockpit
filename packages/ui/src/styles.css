@@ -71,6 +71,7 @@ body.full #bar {
   gap: 10px;
 }
 
+#tabs-new,
 #tabs-all {
   position: relative;
   width: 26px;
@@ -85,11 +86,13 @@ body.full #bar {
   cursor: pointer;
 }
 
+#tabs-new:hover,
 #tabs-all:hover {
   background: var(--hover);
   color: var(--fg);
 }
 
+#tabs-new:focus-visible,
 #tabs-all:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 1px;
@@ -927,6 +930,9 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  max-height: 296px;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .tab .pip {
