@@ -121,4 +121,12 @@ describe('exitCodeFor', () => {
     expect(await result.code).toBe(EXIT.unavailable)
     expect(result.err.join('')).toContain('No window is connected')
   })
+
+  it('should leave the agent command out of the usage when the agent commands are not available', async () => {
+    const result = run([], '/x')
+
+    await result.code
+
+    expect(result.err.join('')).not.toContain('agent')
+  })
 })

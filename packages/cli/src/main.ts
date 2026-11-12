@@ -50,50 +50,54 @@ if (args[0] === 'daemon') {
     connect: (target) => connectTo(target, silentLogger),
     out: (text) => process.stdout.write(text),
     err: (text) => process.stderr.write(text),
-    agent: {
-      env: process.env,
-      t,
-      readStdin,
-      forward: (command, input) =>
-        new Promise((resolve) => {
-          const child = execFile('sh', ['-c', command], { timeout: 5000 }, (_error, stdout) =>
-            resolve(stdout),
-          )
-          child.stdin?.end(input)
-        }),
-      settingsPath,
-      home: homedir(),
-      log: (line) => {
-        const file = join(
-          process.env.XDG_STATE_HOME || join(homedir(), '.local', 'state'),
-          'dck',
-          'agent-report.log',
-        )
-        // Falha ao gravar o log não pode atrapalhar o Claude: vai para stderr e segue
-        void mkdir(dirname(file), { recursive: true })
-          .then(() => appendFile(file, `${line}\n`))
-          .catch((error: unknown) => process.stderr.write(`dck: ${String(error)}\n`))
-      },
-      readSettings: (path) => readFile(path, 'utf8').catch(() => undefined),
-      // Escreve num arquivo ao lado e renomeia, para nunca deixar o settings.json pela metade
-      writeSettings: async (path, text) => {
-        await mkdir(dirname(path), { recursive: true })
-        const temporary = `${path}.dck-tmp`
-        await writeFile(temporary, text)
-        await rename(temporary, path)
-      },
-      backup: async (path) => {
-        const copy = `${path}.dck-backup`
-        await copyFile(path, copy)
-        return copy
-      },
-      confirm: async (question) => {
-        const reader = createInterface({ input: process.stdin, output: process.stdout })
-        const answer = await reader.question(question)
-        reader.close()
-        return /^(s|sim|y|yes)$/i.test(answer.trim())
-      },
-      commandParts: { node: process.execPath, script: fileURLToPath(import.meta.url) },
-    },
+    // No pacote o CLI roda dentro do Electron: o comando que `install` gravaria não funcionaria
+    agent:
+      process.env.DCK_PACKAGED === '1'
+        ? undefined
+        : {
+            env: process.env,
+            t,
+            readStdin,
+            forward: (command, input) =>
+              new Promise((resolve) => {
+                const child = execFile('sh', ['-c', command], { timeout: 5000 }, (_error, stdout) =>
+                  resolve(stdout),
+                )
+                child.stdin?.end(input)
+              }),
+            settingsPath,
+            home: homedir(),
+            log: (line) => {
+              const file = join(
+                process.env.XDG_STATE_HOME || join(homedir(), '.local', 'state'),
+                'dck',
+                'agent-report.log',
+              )
+              // Falha ao gravar o log não pode atrapalhar o Claude: vai para stderr e segue
+              void mkdir(dirname(file), { recursive: true })
+                .then(() => appendFile(file, `${line}\n`))
+                .catch((error: unknown) => process.stderr.write(`dck: ${String(error)}\n`))
+            },
+            readSettings: (path) => readFile(path, 'utf8').catch(() => undefined),
+            // Escreve num arquivo ao lado e renomeia, para nunca deixar o settings.json pela metade
+            writeSettings: async (path, text) => {
+              await mkdir(dirname(path), { recursive: true })
+              const temporary = `${path}.dck-tmp`
+              await writeFile(temporary, text)
+              await rename(temporary, path)
+            },
+            backup: async (path) => {
+              const copy = `${path}.dck-backup`
+              await copyFile(path, copy)
+              return copy
+            },
+            confirm: async (question) => {
+              const reader = createInterface({ input: process.stdin, output: process.stdout })
+              const answer = await reader.question(question)
+              reader.close()
+              return /^(s|sim|y|yes)$/i.test(answer.trim())
+            },
+            commandParts: { node: process.execPath, script: fileURLToPath(import.meta.url) },
+          },
   })
 }

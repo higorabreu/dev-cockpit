@@ -34,6 +34,15 @@ export function exitCodeFor(error: ErrorBody): number {
   }
 }
 
+// A linha do comando `agent` só aparece quando ele está disponível (no pacote ele fica parado)
+const usage = (text: string, withAgent: boolean) =>
+  withAgent
+    ? text
+    : text
+        .split('\n')
+        .filter((line) => !line.startsWith('  agent '))
+        .join('\n')
+
 export async function runCli(argv: readonly string[], deps: CliDeps): Promise<number> {
   const t = deps.t ?? createTranslator('pt-BR').t
   const [command, ...rest] = argv
@@ -41,7 +50,7 @@ export async function runCli(argv: readonly string[], deps: CliDeps): Promise<nu
     return runAgentCommand(rest, deps, deps.agent)
   }
   if (command !== 'toggle' && command !== 'ping') {
-    deps.err(t('cli.usage'))
+    deps.err(usage(t('cli.usage'), deps.agent !== undefined))
     return command === undefined || command === '--help' ? EXIT.ok : EXIT.usage
   }
 
