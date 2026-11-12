@@ -161,10 +161,10 @@ describe('createStandardsPage rows', () => {
   it('should show the fields only under an enabled standard, with the rule message once per rule', async () => {
     const { texts, control } = await open(viewOf())
 
-    expect(texts('.sfield label')).toEqual(['types', 'maxLength'])
+    expect(texts('.sfield label')).toEqual(['types', 'Maximum length'])
     expect(texts('.srule')).toEqual(['Start with <type>:', 'Within 72 characters'])
     expect(control('std-commit-message-0-types')?.type).toBe('text')
-    expect(control('std-commit-message-0-types')?.value).toBe('feat|fix')
+    expect(control('std-commit-message-0-types')?.value).toBe('feat, fix')
     expect(control('std-commit-message-1-maxLength')?.type).toBe('number')
     expect(control('std-commit-message-1-maxLength')?.value).toBe('72')
     expect(control('std-branch-format-0-types')).toBeNull()
@@ -250,7 +250,7 @@ describe('createStandardsPage changes', () => {
 
     expect(calls).toEqual([['setEnabled', 7, 'branch-format', true]])
     expect(control('std-branch-format')?.checked).toBe(true)
-    expect(control('std-branch-format-0-types')?.value).toBe('feat|fix')
+    expect(control('std-branch-format-0-types')?.value).toBe('feat, fix')
   })
 
   it('should say why and leave the box as it was when the switch fails', async () => {
@@ -265,17 +265,17 @@ describe('createStandardsPage changes', () => {
     )
   })
 
-  it('should save a field as text or as a number when its input changes', async () => {
+  it('should save a list of names typed with commas and a number when their inputs change', async () => {
     const { calls, type, control } = await open(viewOf())
 
-    await type('std-commit-message-0-types', ' feat|fix|docs ')
+    await type('std-commit-message-0-types', ' feat, fix docs ')
     await type('std-commit-message-1-maxLength', '50')
 
     expect(calls).toEqual([
       ['setField', 7, 'commit-message', 0, 'types', 'feat|fix|docs'],
       ['setField', 7, 'commit-message', 1, 'maxLength', 50],
     ])
-    expect(control('std-commit-message-0-types')?.value).toBe('feat|fix|docs')
+    expect(control('std-commit-message-0-types')?.value).toBe('feat, fix, docs')
     expect(control('std-commit-message-1-maxLength')?.value).toBe('50')
   })
 

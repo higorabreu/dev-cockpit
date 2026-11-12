@@ -13,7 +13,7 @@
   padding-bottom: 6px;
 }
 
-.sfield .sname2,
+.sfield .smono,
 .sfield input[type="text"],
 .spath {
   font-family: var(--font-mono);

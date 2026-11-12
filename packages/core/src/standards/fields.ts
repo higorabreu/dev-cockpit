@@ -14,7 +14,19 @@ export interface RuleField {
   readonly message: string
 }
 
-const MAX_LENGTH = 'maxLength'
+export const MAX_LENGTH_FIELD = 'maxLength'
+const MAX_LENGTH = MAX_LENGTH_FIELD
+
+// A value that is only names joined by "|" is shown and typed as a list, not as an expression
+const NAMES = /^[\w-]+(\|[\w-]+)*$/
+export const isNameList = (value: string | number): value is string =>
+  typeof value === 'string' && NAMES.test(value)
+export const listText = (value: string): string => value.split('|').join(', ')
+export const listValue = (text: string): string =>
+  text
+    .split(/[\s,|]+/)
+    .filter((name) => name !== '')
+    .join('|')
 
 export function ruleFields(standard: Pick<Standard, 'check'>): RuleField[] {
   return standard.check.flatMap((rule, index) => {

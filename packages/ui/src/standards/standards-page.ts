@@ -3,6 +3,10 @@ import {
   type ErrorBody,
   errorCodeOf,
   type HostApi,
+  isNameList,
+  listText,
+  listValue,
+  MAX_LENGTH_FIELD,
   type RuleField,
   type StandardsChange,
   type StandardsView,
@@ -106,6 +110,12 @@ export function createStandardsPage(deps: StandardsPageDeps) {
 
   const labelFor = (key: string, text: string) => h('label', { class: 'sname2', for: key }, text)
 
+  // The limit is a word of the interface; a variable name is a key of the file, so it reads as code
+  const fieldLabel = (key: string, field: RuleField) =>
+    field.name === MAX_LENGTH_FIELD && field.kind === 'number'
+      ? labelFor(key, t('standards.field.maxLength'))
+      : h('label', { class: 'sname2 smono', for: key }, field.name)
+
   const button = (key: string, text: string, className = 'srecord') =>
     h('button', { type: 'button', class: className, 'data-focus': key }, text)
 
@@ -139,10 +149,14 @@ export function createStandardsPage(deps: StandardsPageDeps) {
       'aria-describedby': hintId,
       'aria-invalid': errors.has(key) ? 'true' : undefined,
     })
-    input.value = drafts.get(key) ?? String(field.value)
+    // Names are typed with commas; the bar of the expression never shows
+    const isList = isNameList(field.value)
+    const shown = isList ? listText(String(field.value)) : String(field.value)
+    input.value = drafts.get(key) ?? shown
     input.addEventListener('change', () => {
-      const text = input.value.trim()
-      drafts.set(key, text)
+      const typed = input.value.trim()
+      const text = isList ? listValue(typed) : typed
+      drafts.set(key, typed)
       void act(
         key,
         (ptyId) =>
@@ -154,7 +168,7 @@ export function createStandardsPage(deps: StandardsPageDeps) {
     return h(
       'div',
       { class: 'srow2 sfield' },
-      h('div', { class: 'slabel' }, labelFor(key, field.name)),
+      h('div', { class: 'slabel' }, fieldLabel(key, field)),
       h('div', { class: 'scontrol' }, input),
     )
   }

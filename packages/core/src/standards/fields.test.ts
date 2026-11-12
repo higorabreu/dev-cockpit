@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ruleFields, withRuleField } from './fields.ts'
+import { isNameList, listText, listValue, ruleFields, withRuleField } from './fields.ts'
 import type { StandardRule } from './standard.ts'
 
 const check: readonly StandardRule[] = [
@@ -86,5 +86,20 @@ describe('withRuleField', () => {
     const result = withRuleField(check, 1, 'maxLength', 0)
 
     expect(result.ok ? '' : result.error.message).toContain('check.1.maxLength: ')
+  })
+})
+
+describe('name lists', () => {
+  it('should read as a list when the value is only names joined by a bar', () => {
+    expect(isNameList('feat|fix|docs')).toBe(true)
+    expect(isNameList('main')).toBe(true)
+    expect(isNameList('[A-Z]+-[0-9]+')).toBe(false)
+    expect(isNameList(72)).toBe(false)
+  })
+
+  it('should give back the same value when a list is shown and typed again', () => {
+    expect(listText('feat|fix|docs')).toBe('feat, fix, docs')
+    expect(listValue('feat, fix,docs  chore')).toBe('feat|fix|docs|chore')
+    expect(listValue(listText('feat|fix'))).toBe('feat|fix')
   })
 })
