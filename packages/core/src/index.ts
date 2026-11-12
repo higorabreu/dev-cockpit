@@ -1,5 +1,6 @@
 export * from './agent/format.ts'
 export * from './agent/merge.ts'
+export * from './attention/agent-signal.ts'
 export * from './attention/duration.ts'
 export * from './attention/tracker.ts'
 export * from './connections/errors.ts'
