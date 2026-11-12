@@ -66,6 +66,8 @@ next launch, `--yes` restarts without asking and `--skip-build` installs the `.d
 Selecting text copies it; the right and middle buttons paste. The `dck` command controls the window from
 outside (`dck toggle`, `dck ping`): useful to bind to a system shortcut if the global key is refused.
 
+A tab running a coding agent is marked when it needs you; [docs/agents.md](docs/agents.md) wires Claude Code in two commands.
+
 ## Settings
 
 `Ctrl+,` opens the screen: language, theme, opacity, font, window height, global key, hold menu key,

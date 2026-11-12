@@ -80,9 +80,13 @@ teammate without the cockpit sees nothing and Claude Code is never slowed down.
   for the fallback. (A1, A5)
 - [ ] AA-T3. Interface: the "needs you" mark on the tab and in the tab list, its notification text, "next
   finished" also visiting tabs that need you, both catalogs, screenshots in both themes. (A2, A8)
-- [ ] AA-T4. The Claude Code plugin in `integrations/claude-code/` with a marketplace manifest, a test of
+- [x] AA-T4. The Claude Code plugin in `integrations/claude-code/` with a marketplace manifest, a test of
   its `hooks.json`, `docs/agents.md` (install, states, wiring another agent), and a run with the real
   Claude Code: install, a permission, an answer, Esc, a resumed session, a background subagent. (A6, A7)
+  Verified with 2.1.323 and a fake `dck`: answer, permission, idle, `/exit`, `--resume`, `--continue` and
+  an install from a local copy of the marketplace signal as mapped, Esc signals nothing, no `dck` shows no
+  error; a background subagent's tools signal `working` after `Stop`, then `your-turn` when Claude reports
+  its result. Not verified: the install from GitHub before the branch is pushed.
 - [ ] AA-T5. Remove what D26 kept dormant and this replaces: the transcript and `statusLine` readers, `dck
   agent report|install|uninstall`, the agent inspector and reports in the shell. Record D37, update the
   roadmap. (A4)
