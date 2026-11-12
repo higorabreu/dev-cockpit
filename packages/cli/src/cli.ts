@@ -9,6 +9,7 @@ import {
 } from '@dck/core'
 import { type AgentDeps, runAgentCommand } from './agent-commands.ts'
 import { type ExtDeps, runExtCommand } from './ext-commands.ts'
+import { EXIT } from './output.ts'
 
 export interface CliDeps {
   readonly endpoint: string
@@ -22,8 +23,7 @@ export interface CliDeps {
   readonly ext?: ExtDeps
 }
 
-// Exit codes from sysexits.h, the BSD convention for command-line tools
-export const EXIT = { ok: 0, failed: 1, usage: 64, unavailable: 69, software: 70 } as const
+export { EXIT } from './output.ts'
 
 export function exitCodeFor(error: ErrorBody): number {
   switch (error.data?.category) {

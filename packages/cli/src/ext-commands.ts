@@ -1,17 +1,15 @@
 import {
   builtInExtension,
   CONTRIBUTION_POINTS,
-  describeError,
-  type ErrorBody,
   EXTENSION_API_VERSION,
   EXTENSION_SOURCES,
   type ExtensionFinder,
-  errorCodeOf,
   type LoadedExtension,
   type LoadReport,
   loadExtensions,
   type Translate,
 } from '@dck/core'
+import { align, EXIT, type Io, rejection } from './output.ts'
 
 export interface ExtDeps {
   readonly finder: ExtensionFinder
@@ -20,51 +18,9 @@ export interface ExtDeps {
   readonly appVersion: string
 }
 
-interface Io {
-  out(text: string): void
-  err(text: string): void
-  readonly t: Translate
-}
-
-const EXIT_OK = 0
-const EXIT_USAGE = 64
-
 const byPrecedence = (a: LoadedExtension, b: LoadedExtension) =>
   EXTENSION_SOURCES.indexOf(a.source) - EXTENSION_SOURCES.indexOf(b.source) ||
   a.manifest.id.localeCompare(b.manifest.id)
-
-// A manifest and a folder name are third-party text: a control character could clear the screen or forge a row
-const printable = (text: string) =>
-  [...text].map((char) => (char < ' ' || char === '\u007f' ? '?' : char)).join('')
-
-// Pads every column but the last to its widest cell, so the rows line up without a frame
-function align(table: readonly (readonly string[])[]): string[] {
-  const rows = table.map((row) => row.map(printable))
-  const widths: number[] = []
-  for (const row of rows) {
-    row.forEach((cell, column) => {
-      widths[column] = Math.max(widths[column] ?? 0, cell.length)
-    })
-  }
-  return rows.map((row) =>
-    row
-      .map((cell, column) => cell.padEnd(widths[column] ?? 0))
-      .join('  ')
-      .trimEnd(),
-  )
-}
-
-// An ErrorBody carries the English message and the detail as one text; the listing translates the message
-function detailOf(error: ErrorBody): string {
-  const prefix = `${describeError(errorCodeOf(error))}: `
-  return error.message.startsWith(prefix) ? error.message.slice(prefix.length) : ''
-}
-
-function rejection(error: ErrorBody, t: Translate): string {
-  const message = t(`error.${errorCodeOf(error)}`)
-  const detail = detailOf(error)
-  return detail === '' ? message : `${message}: ${detail}`
-}
 
 export function formatExtensionList(report: LoadReport, t: Translate): string[] {
   const source = (extension: { source: LoadedExtension['source'] }) =>
@@ -111,7 +67,7 @@ async function list(io: Io, deps: ExtDeps): Promise<number> {
   })
   // A refused extension is part of the report, not a failure of the command
   io.out(`${formatExtensionList(report, io.t).join('\n')}\n`)
-  return EXIT_OK
+  return EXIT.ok
 }
 
 export async function runExtCommand(
@@ -122,5 +78,5 @@ export async function runExtCommand(
   const [subcommand, ...rest] = args
   if (subcommand === 'list' && rest.length === 0) return list(io, deps)
   io.err(`${io.t('cli.ext.usage')}\n`)
-  return subcommand === '--help' ? EXIT_OK : EXIT_USAGE
+  return subcommand === '--help' ? EXIT.ok : EXIT.usage
 }
