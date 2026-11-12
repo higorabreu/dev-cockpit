@@ -64,7 +64,7 @@ export function createSettingsStore(options: SettingsStoreOptions) {
       await writeFile(temporary, `${JSON.stringify(stored, null, 2)}\n`)
       await rename(temporary, file)
     } catch (error) {
-      logger.error('could not save settings', { file, reason: String(error) })
+      logger.error('could not save settings', { file, error: String(error) })
     }
   }
 

@@ -33,7 +33,7 @@ export function createPathListFile(file: string, logger: Logger, label: string) 
         await mkdir(dirname(file), { recursive: true })
         await writeFile(file, JSON.stringify(paths))
       } catch (error) {
-        logger.error(`could not save ${label}`, { file, reason: String(error) })
+        logger.error(`could not save ${label}`, { file, error: String(error) })
       }
     },
   }

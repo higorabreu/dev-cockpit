@@ -54,7 +54,7 @@ process.on('uncaughtException', (error) => {
   logger.error('uncaught exception in main', { error: String(error), stack: error.stack })
 })
 process.on('unhandledRejection', (reason) => {
-  logger.error('unhandled rejection in main', { reason: String(reason) })
+  logger.error('unhandled rejection in main', { error: String(reason) })
 })
 
 if (!app.requestSingleInstanceLock()) app.quit()
