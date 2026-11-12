@@ -1247,8 +1247,7 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 }
 
 .snav-item {
-  position: relative;
-  padding: 6px 10px 6px 12px;
+  padding: 6px 10px;
   border: 0;
   border-radius: var(--radius-medium);
   background: none;
@@ -1264,20 +1263,8 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 }
 
 .snav-item[aria-selected="true"] {
-  background: var(--hover);
+  background: var(--tab-active);
   color: var(--fg);
-  font-weight: 600;
-}
-
-.snav-item[aria-selected="true"]::before {
-  content: "";
-  position: absolute;
-  top: 6px;
-  bottom: 6px;
-  left: 3px;
-  width: 2px;
-  border-radius: 1px;
-  background: var(--fg);
 }
 
 .snav-item:focus-visible {
@@ -1611,10 +1598,8 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 }
 
 .vtab[aria-selected="true"] {
-  background: var(--hover);
+  background: var(--tab-active);
   color: var(--fg);
-  font-weight: 600;
-  box-shadow: inset 0 -2px 0 var(--fg);
 }
 
 .vcount {
@@ -1646,9 +1631,7 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 }
 
 .vbtn[aria-pressed="true"] {
-  background: var(--hover);
-  font-weight: 600;
-  box-shadow: inset 0 -2px 0 var(--fg);
+  background: var(--tab-active);
 }
 
 .vk {
@@ -1745,7 +1728,6 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 
 .vrow[aria-selected="true"] {
   background: var(--list-selected);
-  box-shadow: inset 2px 0 0 var(--fg);
 }
 
 .vmain {
@@ -1759,10 +1741,6 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.vrow[aria-selected="true"] .vtitle {
-  font-weight: 600;
 }
 
 .vmeta {
