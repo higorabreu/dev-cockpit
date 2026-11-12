@@ -12,12 +12,13 @@ app reads the manifests, validates them, decides which ones win and reports the 
 
 | Shipped | Planned, not in the code |
 | --- | --- |
-| The manifest (version 1) and its validation | The harness commands that use the standards (phase 1) |
-| Contribution points, with `standards` registered | `dck ext install`, `enable`, `disable`, `remove`, `dev` (phase 1b) |
-| Four sources with precedence and shadowing | Extensions with code in a dedicated host process (phase 3) |
-| The built-in extension, with the standard examples | Interface contributions and a shared index (phases 4 and 5) |
+| The manifest (version 1) and its validation | `dck ext install`, `enable`, `disable`, `remove`, `dev` (phase 1b) |
+| Contribution points, with `standards` registered | Extensions with code in a dedicated host process (phase 3) |
+| Four sources with precedence and shadowing | Interface contributions and a shared index (phases 4 and 5) |
+| The built-in extension, with the standard examples | |
 | The `extensions.disabled` setting | |
 | `dck ext list` | |
+| The harness commands that use the standards ([harness.md](harness.md)) | |
 
 ## The manifest
 
@@ -83,6 +84,7 @@ backslash or a `..` part is refused (`DCK-EXT-001`). Every `*.md` file directly 
 standard: a YAML front matter between two `---` lines, validated by the app, and a markdown body. A file
 that cannot be read as a standard is reported with its path and the others still load. Files with the same
 standard `id` are layered from the lowest to the highest source, each replacing the fields it declares.
+The file format and the commands that use the standards are in [harness.md](harness.md).
 
 ## Sources and precedence
 
