@@ -51,6 +51,14 @@ describe('createSecretToolStore', () => {
     expect(calls[0]?.args[0]).toBe('clear')
   })
 
+  it('should succeed when deleting an entry that does not exist', async () => {
+    const { run } = recorder({ status: 1, stdout: '' })
+
+    const result = await createSecretToolStore(run).delete('gitlab.token')
+
+    expect(result.ok).toBe(true)
+  })
+
   it('should fail with the unavailable code when secret-tool is not installed', async () => {
     const { run } = recorder({ status: 'missing', stdout: '' })
     const store = createSecretToolStore(run)

@@ -54,6 +54,8 @@ export function createSecretToolStore(run: ToolRunner = runSecretTool): SecretSt
     async delete(key) {
       const result = await run(['clear', ...attributes(key)])
       if (result.status === 'missing') return fail(errorBody('DCK-SEC-001'))
+      // O clear sai com 1 e sem saída quando não havia nada para apagar
+      if (result.status === 1 && result.stdout === '') return ok(undefined)
       return result.status === 0
         ? ok(undefined)
         : fail(errorBody('DCK-SEC-002', `clear saiu com ${result.status}`))
