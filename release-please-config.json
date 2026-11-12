@@ -20,6 +20,11 @@
         },
         {
           "type": "json",
+          "path": "packages/adapters/extension-files/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "packages/adapters/gitlab/package.json",
           "jsonpath": "$.version"
         },
