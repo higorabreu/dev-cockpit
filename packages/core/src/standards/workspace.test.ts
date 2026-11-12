@@ -209,6 +209,46 @@ describe('createStandardsWorkspace, changes', () => {
     expect(sources((await find('commit-message'))?.layers)).toEqual(['built-in', 'global'])
   })
 
+  it('should leave the text of the user folder out when a standard is written to the repository', async () => {
+    const { files, workspace, put } = arrange()
+    put('global', {
+      id: 'branch-format',
+      title: 'Branch names',
+      applies: 'branch',
+      paths: [],
+      why: 'My own reason',
+      enabled: true,
+      check: [],
+      body: 'My private notes.',
+    })
+
+    await workspace.setEnabled('branch-format', true, 'repository')
+
+    const written = files.texts.get(`${FOLDERS.repository}/branch-format.md`) ?? ''
+    expect(written).not.toContain('My own reason')
+    expect(written).not.toContain('My private notes.')
+  })
+
+  it('should leave the text of the repository out when a standard is written to the user folder', async () => {
+    const { files, workspace, put } = arrange()
+    put('repository', {
+      id: 'branch-format',
+      title: 'Branch names',
+      applies: 'branch',
+      paths: [],
+      why: 'The team reason',
+      enabled: true,
+      check: [],
+      body: 'Team notes.',
+    })
+
+    await workspace.setEnabled('branch-format', false, 'global')
+
+    const written = files.texts.get(`${FOLDERS.global}/branch-format.md`) ?? ''
+    expect(written).not.toContain('The team reason')
+    expect(written).not.toContain('Team notes.')
+  })
+
   it('should rewrite the file that already holds the standard when it has another name', async () => {
     const { files, workspace, put } = arrange()
     put('repository', { id: 'branch-format', title: 'Our branches' }, 'branches')

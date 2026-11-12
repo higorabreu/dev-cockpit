@@ -68,7 +68,8 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
     global: join(deps.globalDir, 'standards'),
   }
 
-  async function resolve(): Promise<ResolvedStandards> {
+  // Without the files of `leftOut`, so what is written to one folder never copies text from the other
+  async function resolve(leftOut?: StandardsTarget): Promise<ResolvedStandards> {
     const report = loadExtensions({
       candidates: [builtInExtension(appVersion), ...(await deps.finder.find())],
       points: CONTRIBUTION_POINTS,
@@ -79,6 +80,7 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
     const found: StandardFile[] = []
     for (const { extension, declaration } of contributionsFor(report, STANDARDS_POINT)) {
       const { source, location, manifest } = extension
+      if (source === leftOut) continue
       // The built-in examples are data in the core, not files on disk
       if (source === 'built-in') found.push(...builtInStandardFiles())
       else {
@@ -106,7 +108,8 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
     target: StandardsTarget,
     edit: (standard: Standard) => Result<Standard, ErrorBody>,
   ): Promise<Result<void, ErrorBody>> {
-    const standard = (await resolve()).standards.find((candidate) => candidate.id === id)
+    const leftOut = target === 'repository' ? 'global' : 'repository'
+    const standard = (await resolve(leftOut)).standards.find((candidate) => candidate.id === id)
     if (standard === undefined) return fail(errorBody('DCK-STD-001', `${id}: no such standard`))
     const edited = edit(standard)
     if (!edited.ok) return edited
@@ -142,7 +145,7 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
         agents: {
           file: agentsFile,
           shared,
-          stale: shared && current !== blockOf(resolved).trim(),
+          stale: shared && current !== blockOf(await resolve('global')).trim(),
           claudeImportMissing: claude !== undefined && !claude.includes(CLAUDE_IMPORT),
         },
       }
@@ -168,7 +171,7 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
       const read = await files.readText(agentsFile)
       if (!read.ok) return read
       const text = read.value ?? ''
-      const block = on ? blockOf(await resolve()) : ''
+      const block = on ? blockOf(await resolve('global')) : ''
       // A block with no line would tell an agent nothing
       if (on && block === '') return fail(errorBody('DCK-STD-004'))
       const next = on ? upsertBlock(text, block) : removeBlock(text)
