@@ -45,6 +45,12 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
+  packages/adapters/gnome-shortcuts:
+    dependencies:
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../../core
+
   packages/adapters/linux-proc:
     dependencies:
       '@dck/core':
@@ -136,6 +142,9 @@ importers:
       '@dck/adapter-gitlab':
         specifier: workspace:^
         version: link:../adapters/gitlab
+      '@dck/adapter-gnome-shortcuts':
+        specifier: workspace:^
+        version: link:../adapters/gnome-shortcuts
       '@dck/adapter-linux-proc':
         specifier: workspace:^
         version: link:../adapters/linux-proc
