@@ -13,5 +13,3 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
-# Dados baixados pelos spikes nunca entram no repositório
-spikes/**/data/
