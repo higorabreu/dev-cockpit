@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
 import { createGitLabClient } from '@dck/adapter-gitlab'
+import { createGnomeShortcut } from '@dck/adapter-gnome-shortcuts'
 import { createProcessInspector, createProcessScanner } from '@dck/adapter-linux-proc'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import { createGitInspector } from '@dck/adapter-node-git'
@@ -50,6 +51,7 @@ import { createProjectCatalog } from './project-catalog.ts'
 import { createRecencyStore } from './recency-store.ts'
 import { createSessionInspector } from './session-inspector.ts'
 import { createSettingsStore } from './settings-store.ts'
+import { createToggleKeyBinder } from './toggle-key-binder.ts'
 import { buildTrayMenu } from './tray-menu.ts'
 import { createViewsGateway } from './views-gateway.ts'
 import { createGtkWorkareas } from './x11-workareas.ts'
@@ -71,35 +73,45 @@ if (!app.requestSingleInstanceLock()) app.quit()
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null)
 
-  const shortcuts = createElectronShortcuts(globalShortcut)
   let activeKey = ''
   const toggleWindow = () => dock.toggle()
 
-  const registerKey = (key: string) => {
-    try {
-      return shortcuts.register(key, toggleWindow)
-    } catch (error) {
-      // Um acelerador malformado faz o Electron lançar em vez de devolver falso
-      logger.warn('shortcut is not valid', { key, error: String(error) })
-      return false
-    }
-  }
+  const onGnome = (process.env.XDG_CURRENT_DESKTOP ?? '').split(':').includes('GNOME')
+  const toggleKey = createToggleKeyBinder({
+    // O atalho do sistema chama o CLI empacotado; em modo dev o Electron registra a tecla
+    desktop:
+      app.isPackaged && onGnome
+        ? createGnomeShortcut({
+            command: [
+              'env',
+              'ELECTRON_RUN_AS_NODE=1',
+              'DCK_PACKAGED=1',
+              process.execPath,
+              join(process.resourcesPath, 'dck.mjs'),
+              'toggle',
+            ],
+            name: 'Dev Cockpit',
+            logger,
+          })
+        : undefined,
+    electron: createElectronShortcuts(globalShortcut),
+    onToggle: toggleWindow,
+    onInvalid: (key, error) => logger.warn('shortcut is not valid', { key, error: String(error) }),
+  })
 
   // Trocar a tecla da janela só vale se o sistema aceitar a nova; senão volta a antiga
   const settingsStore = createSettingsStore({
     file: join(app.getPath('userData'), 'settings.json'),
     logger,
     env: process.env,
-    veto(next, changed) {
+    async veto(next, changed) {
       if (!changed.includes('shortcuts.toggleWindow')) return []
       const key = next.shortcuts.toggleWindow
-      if (activeKey) shortcuts.unregister(activeKey)
-      if (registerKey(key)) {
+      if (await toggleKey.bind(key)) {
         activeKey = key
         logger.info('shortcut registered', { key })
         return []
       }
-      if (activeKey) registerKey(activeKey)
       logger.warn('shortcut refused, keeping the previous one', { key })
       return ['shortcuts.toggleWindow']
     },
@@ -240,11 +252,10 @@ app.whenReady().then(async () => {
   })
 
   activeKey = loaded.settings.shortcuts.toggleWindow
-  if (registerKey(activeKey)) {
-    logger.info('shortcut registered', { key: activeKey })
-  } else {
-    logger.warn('shortcut refused, another program owns it', { key: activeKey })
-  }
+  void toggleKey.bind(activeKey).then((bound) => {
+    if (bound) logger.info('shortcut registered', { key: activeKey })
+    else logger.warn('shortcut refused, another program owns it', { key: activeKey })
+  })
 
   settingsStore.onChange((settings, changed) => {
     window.webContents.send(hostChannels.settingsChanged, settings, changed)
@@ -388,7 +399,7 @@ app.whenReady().then(async () => {
   app.on('before-quit', () => {
     link.stop()
     bridge.killAll()
-    shortcuts.unregister(activeKey)
+    toggleKey.release()
   })
 })
 
