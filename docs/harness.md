@@ -22,7 +22,13 @@ after an error message is always in English.
 
 The Harness page of the settings screen and the Git section of the panel offer the same through the same
 code (the rules workspace in the core): a switch per rule, its fields, the sharing with agents and a mark
-on a branch or a commit outside a rule. What one writes the other reads.
+on a branch or a commit outside a rule. What one writes the other reads. The page is about the repository
+of the active tab and is read again when the tab changes; a change is refused when the tab has moved to
+another repository since the page was read (`DCK-RUL-006`). The mark is a button: its tooltip names the
+checks and pressing it opens the page. A field that holds a list of names takes only names, so a typo
+never turns it into an expression. The title, reason and messages of a rule are the rule's own text and
+show as written whatever the interface language, because the block in `AGENTS.md` must have the same
+bytes for the whole team.
 
 ### Set up a repository
 
@@ -227,8 +233,10 @@ A check has exactly one kind, a `message` and optionally a `scope` and `variable
 Only the first 20,000 characters of a text are checked, and each expression runs with a time limit of 100
 milliseconds. An expression that runs out of time counts as a failed check, with a note, and the expressions
 after it in the same run are not run: they fail the same way, so one `dck check` never waits more than one
-time limit. The length limits are still checked. There is no other check kind and no script: code in a
-check waits for the extension host (phase 3).
+time limit. The length limits are still checked. The Git section polls, so it does not run an expression
+that ran out of time again until the rules change, and its tooltip says the check was not checked instead
+of failed. There is no other check kind and no script: code in a check waits for the extension host
+(phase 3).
 
 ## Sources and precedence
 
@@ -288,8 +296,8 @@ does not exist):
   text around it as it was.
 - The block is **out of date** when the lines between its markers no longer say what the rules say, for
   example after a rule file was edited by hand. The text around the block and its line endings do not
-  count. `dck rules` and the Harness page say so; `dck init` and `dck rules enable` or `disable` refresh
-  it.
+  count. `dck rules` and the Harness page say so; `dck init`, `dck rules enable` or `disable` and a switch
+  or a field changed on the Harness page refresh it.
 
 Claude Code reads `AGENTS.md` by itself when the repository has no `CLAUDE.md`. When there is a `CLAUDE.md`,
 it reads the block only if that file imports the other with `@AGENTS.md` or `@./AGENTS.md`, on a line of its

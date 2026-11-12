@@ -448,6 +448,8 @@ one workspace in the core. The cockpit only shows: it installs no git hook. This
 `dck render --target` of D35, which generated a whole `CLAUDE.md` or `AGENTS.md`. The area is called
 Harness, in English and in Portuguese, and each item a rule (regra), whose entries under `check:` are
 checks, because "standards" read as app preferences and collided with "padrão" (default) in Portuguese.
+The title, reason and messages of a rule are the rule's own text, shown as written whatever the interface
+language, because the block in `AGENTS.md` must be the same bytes for the whole team.
 **Reason:** a harness that is only commands and a hook is what any plugin does and uses nothing the cockpit
 has: it is always open, knows the repository of the active tab and already reads its branch and commits. A
 generated instruction file competes with the one the team writes by hand, and an agent told to run a command
