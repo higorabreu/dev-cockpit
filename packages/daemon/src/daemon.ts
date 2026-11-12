@@ -7,6 +7,7 @@ import {
   type Logger,
   ok,
   type Result,
+  type ViewsService,
 } from '@dck/core'
 import { z } from 'zod'
 
@@ -18,9 +19,18 @@ const agentReport = z.object({
   payload: z.unknown().refine((value) => JSON.stringify(value ?? null).length <= MAX_REPORT_BYTES),
 })
 
+const viewParams = z.object({
+  view: z.enum(['review', 'mine']),
+  // Com idade máxima, só busca no servidor se o que está guardado for mais velho
+  maxAgeMs: z.number().int().nonnegative().optional(),
+})
+
+const configureParams = z.object({ url: z.string().min(1).max(512).nullable() })
+
 export interface DaemonOptions {
   readonly endpoint: string
   readonly logger: Logger
+  readonly views: ViewsService
   // Chamado quando um cliente pede para o daemon encerrar, por exemplo para trocá-lo por um mais novo
   onShutdown?(): void
 }
@@ -33,7 +43,7 @@ export interface RunningDaemon {
 export async function startDaemon(
   options: DaemonOptions,
 ): Promise<Result<RunningDaemon, ErrorBody>> {
-  const { endpoint, logger } = options
+  const { endpoint, logger, views } = options
   const hub: Hub = createHub(
     {
       ping: () => 'pong',
@@ -46,9 +56,22 @@ export async function startDaemon(
       'window.toggle': () => ({ delivered: hub.publish('window', { action: 'toggle' }) }),
       // O agente (por exemplo pelo statusLine) empurra dados de uma aba; o daemon só repassa
       'agent.report': (params) => ({ delivered: hub.publish('agent', agentReport.parse(params)) }),
+      'views.configure': async (params) => {
+        await views.configure(configureParams.parse(params).url ?? undefined)
+        return {}
+      },
+      'views.snapshot': (params) => views.snapshot(viewParams.parse(params).view),
+      'views.refresh': async (params) => {
+        const { view, maxAgeMs } = viewParams.parse(params)
+        if (maxAgeMs === undefined) await views.refresh(view)
+        else await views.refreshIfStale(view, maxAgeMs)
+        return views.snapshot(view)
+      },
     },
     logger,
   )
+
+  const stopForwarding = views.onChange((snapshot) => hub.publish('views', snapshot))
 
   const listening = await listenOn(
     endpoint,
@@ -59,7 +82,16 @@ export async function startDaemon(
     },
     logger,
   )
-  if (!listening.ok) return listening
+  if (!listening.ok) {
+    stopForwarding()
+    return listening
+  }
 
-  return ok({ hub, stop: () => listening.value.close() })
+  return ok({
+    hub,
+    stop: () => {
+      stopForwarding()
+      return listening.value.close()
+    },
+  })
 }

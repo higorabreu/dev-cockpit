@@ -1,4 +1,4 @@
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 export interface EndpointEnvironment {
@@ -20,4 +20,25 @@ export function defaultEndpoint(
     ? join(environment.runtimeDir, 'dck')
     : join(tmpdir(), `dck-${environment.uid ?? 'user'}`)
   return join(directory, 'daemon.sock')
+}
+
+export interface StateDirEnvironment {
+  readonly platform: NodeJS.Platform
+  readonly home: string
+  readonly stateHome: string | undefined
+  readonly localAppData: string | undefined
+}
+
+// Onde ficam dados que sobrevivem ao logout, como o cache das visões
+export function defaultStateDir(
+  environment: StateDirEnvironment = {
+    platform: process.platform,
+    home: homedir(),
+    stateHome: process.env.XDG_STATE_HOME,
+    localAppData: process.env.LOCALAPPDATA,
+  },
+): string {
+  if (environment.platform === 'win32')
+    return join(environment.localAppData ?? join(environment.home, 'AppData', 'Local'), 'dck')
+  return join(environment.stateHome || join(environment.home, '.local', 'state'), 'dck')
 }

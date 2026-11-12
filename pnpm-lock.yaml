@@ -107,9 +107,18 @@ importers:
 
   packages/daemon:
     dependencies:
+      '@dck/adapter-gitlab':
+        specifier: workspace:^
+        version: link:../adapters/gitlab
+      '@dck/adapter-node-fetch':
+        specifier: workspace:^
+        version: link:../adapters/node-fetch
       '@dck/adapter-node-net':
         specifier: workspace:^
         version: link:../adapters/node-net
+      '@dck/adapter-secret-tool':
+        specifier: workspace:^
+        version: link:../adapters/secret-tool
       '@dck/core':
         specifier: workspace:^
         version: link:../core

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { connectTo } from '@dck/adapter-node-net'
 import { createClient, createTranslator, silentLogger } from '@dck/core'
+import { createFakeViews } from '@dck/core/testing'
 import { startDaemon } from '@dck/daemon'
 import { afterEach, describe, expect, it } from 'vitest'
 import { type AgentDeps, runAgentCommand } from './agent-commands.ts'
@@ -14,7 +15,7 @@ afterEach(async () => {
 
 async function bootDaemon() {
   const endpoint = join(mkdtempSync(join(tmpdir(), 'dck-agent-')), 'daemon.sock')
-  const started = await startDaemon({ endpoint, logger: silentLogger })
+  const started = await startDaemon({ endpoint, logger: silentLogger, views: createFakeViews() })
   if (!started.ok) throw new Error(started.error.message)
   cleanups.push(() => started.value.stop())
   return endpoint

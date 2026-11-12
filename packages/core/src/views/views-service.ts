@@ -6,8 +6,8 @@ import type { Unsubscribe } from '../ports/pty.ts'
 import type { CachedView, ViewCache, ViewSnapshot } from '../ports/views.ts'
 
 export interface ViewsServiceOptions {
-  // Indefinida quando não há conexão (sem endereço ou sem token)
-  source(): Promise<CodeReviewSource | undefined>
+  // Indefinida quando não há token para a conta
+  source(scope: string): Promise<CodeReviewSource | undefined>
   readonly cache: ViewCache
   readonly clock: Clock
   readonly logger: Logger
@@ -79,7 +79,7 @@ export function createViewsService(options: ViewsServiceOptions): ViewsService {
   async function fetchView(view: MergeRequestView) {
     const startedScope = scope
     const state = entry(view)
-    const source = await options.source()
+    const source = startedScope === undefined ? undefined : await options.source(startedScope)
     if (scope !== startedScope) return
     if (!source) {
       state.state = 'unconfigured'

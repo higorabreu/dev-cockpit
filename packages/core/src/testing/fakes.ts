@@ -14,7 +14,9 @@ import type {
   Screen,
   SecretStore,
 } from '../ports/index.ts'
+import { silentLogger } from '../ports/logger.ts'
 import { ok } from '../result.ts'
+import { createViewsService } from '../views/views-service.ts'
 
 export class FakeClock implements Clock {
   constructor(public time = 0) {}
@@ -191,4 +193,17 @@ export class FakePtyHost implements PtyHost {
     this.sessions.push(session)
     return session
   }
+}
+
+// Serviço de visões sem rede nem arquivo: toda busca devolve uma lista vazia
+export function createFakeViews() {
+  return createViewsService({
+    source: async () => ({
+      currentUser: async () => ok({ id: '1', username: 'user', name: 'User' }),
+      mergeRequests: async () => ok([]),
+    }),
+    cache: { load: async () => undefined, save: async () => undefined },
+    clock: { now: () => 1000 },
+    logger: silentLogger,
+  })
 }

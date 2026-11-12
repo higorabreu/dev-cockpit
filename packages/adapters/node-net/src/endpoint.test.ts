@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultEndpoint } from './endpoint.ts'
+import { defaultEndpoint, defaultStateDir } from './endpoint.ts'
 
 describe('defaultEndpoint', () => {
   it('should use the runtime directory when the platform provides one', () => {
@@ -18,5 +18,32 @@ describe('defaultEndpoint', () => {
     const result = defaultEndpoint({ platform: 'win32', runtimeDir: undefined, uid: undefined })
 
     expect(result).toBe('\\\\.\\pipe\\dck-daemon')
+  })
+})
+
+describe('defaultStateDir', () => {
+  const base = {
+    platform: 'linux' as const,
+    home: '/home/u',
+    stateHome: undefined,
+    localAppData: undefined,
+  }
+
+  it('should use the XDG state home when it is set', () => {
+    expect(defaultStateDir({ ...base, stateHome: '/data/state' })).toBe('/data/state/dck')
+  })
+
+  it('should fall back to the local state folder in the home when XDG is not set', () => {
+    expect(defaultStateDir(base)).toBe('/home/u/.local/state/dck')
+  })
+
+  it('should use the local app data when the platform is Windows', () => {
+    const result = defaultStateDir({
+      ...base,
+      platform: 'win32',
+      localAppData: 'C:\\Users\\u\\AppData\\Local',
+    })
+
+    expect(result).toContain('dck')
   })
 })

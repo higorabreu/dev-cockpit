@@ -4,9 +4,9 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { fileURLToPath } from 'node:url'
-import { connectTo, defaultEndpoint } from '@dck/adapter-node-net'
+import { connectTo, defaultEndpoint, defaultStateDir } from '@dck/adapter-node-net'
 import { createJsonLogger, createTranslator, pickLocale, silentLogger } from '@dck/core'
-import { startDaemon } from '@dck/daemon'
+import { createGitLabViews, startDaemon } from '@dck/daemon'
 import { runCli } from './cli.ts'
 
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
@@ -15,7 +15,16 @@ const args = process.argv.slice(2)
 if (args[0] === 'daemon') {
   const logger = createJsonLogger((line) => process.stderr.write(line))
   let stopDaemon = async () => process.exit(0)
-  const started = await startDaemon({ endpoint, logger, onShutdown: () => void stopDaemon() })
+  const views = createGitLabViews({
+    stateDir: process.env.DCK_STATE_DIR ?? defaultStateDir(),
+    logger,
+  })
+  const started = await startDaemon({
+    endpoint,
+    logger,
+    views,
+    onShutdown: () => void stopDaemon(),
+  })
   if (!started.ok) {
     logger.error('daemon did not start', { reason: started.error.message })
     process.exit(1)

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { connectTo } from '@dck/adapter-node-net'
 import { createClient, DAEMON_PROTOCOL, silentLogger } from '@dck/core'
+import { createFakeViews } from '@dck/core/testing'
 import { afterEach, describe, expect, it } from 'vitest'
 import { type RunningDaemon, startDaemon } from './daemon.ts'
 
@@ -13,7 +14,7 @@ afterEach(async () => {
 
 async function boot() {
   const endpoint = join(mkdtempSync(join(tmpdir(), 'dck-daemon-')), 'daemon.sock')
-  const started = await startDaemon({ endpoint, logger: silentLogger })
+  const started = await startDaemon({ endpoint, logger: silentLogger, views: createFakeViews() })
   if (!started.ok) throw new Error(started.error.message)
   const daemon: RunningDaemon = started.value
   cleanups.push(() => daemon.stop())
@@ -63,7 +64,7 @@ describe('startDaemon', () => {
   it('should refuse to start when another daemon owns the endpoint', async () => {
     const { endpoint } = await boot()
 
-    const second = await startDaemon({ endpoint, logger: silentLogger })
+    const second = await startDaemon({ endpoint, logger: silentLogger, views: createFakeViews() })
 
     expect(second.ok).toBe(false)
   })
@@ -119,6 +120,7 @@ describe('startDaemon', () => {
     let stopped = 0
     const endpoint = join(mkdtempSync(join(tmpdir(), 'dck-daemon-')), 'daemon.sock')
     const started = await startDaemon({
+      views: createFakeViews(),
       endpoint,
       logger: silentLogger,
       onShutdown: () => {
@@ -137,5 +139,44 @@ describe('startDaemon', () => {
 
     expect(reply).toEqual({ ok: true, value: { stopping: true } })
     expect(stopped).toBe(1)
+  })
+})
+
+describe('views methods', () => {
+  it('should answer a snapshot for the view when it is asked', async () => {
+    const { newClient } = await boot()
+    const client = await newClient()
+    await client.request('views.configure', { url: 'https://gl.test' })
+
+    const result = await client.request('views.snapshot', { view: 'review' })
+
+    expect(result).toMatchObject({ ok: true, value: { view: 'review', state: 'idle', items: [] } })
+  })
+
+  it('should publish the new state to the subscribers when a view is refreshed', async () => {
+    const { newClient } = await boot()
+    const window = await newClient()
+    const states: string[] = []
+    await window.subscribe('views', (data) => states.push((data as { state: string }).state))
+    const other = await newClient()
+    await other.request('views.configure', { url: 'https://gl.test' })
+
+    await other.request('views.refresh', { view: 'mine' })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(states).toContain('refreshing')
+    expect(states.at(-1)).toBe('idle')
+  })
+
+  it.each([
+    ['an unknown view', { view: 'other' }],
+    ['a negative age', { view: 'review', maxAgeMs: -1 }],
+  ])('should refuse the request when it has %s', async (_label, params) => {
+    const { newClient } = await boot()
+    const client = await newClient()
+
+    const result = await client.request('views.refresh', params)
+
+    expect(result.ok).toBe(false)
   })
 })
