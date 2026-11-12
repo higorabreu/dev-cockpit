@@ -121,3 +121,40 @@ describe('project language', () => {
     expect(found).toEqual([])
   })
 })
+
+function directoriesUnder(directory: string): string[] {
+  return readdirSync(directory).flatMap((name) => {
+    const path = join(directory, name)
+    if (name === 'node_modules' || name === 'dist' || !statSync(path).isDirectory()) return []
+    return [path, ...directoriesUnder(path)]
+  })
+}
+
+const MAX_SOURCES_PER_FOLDER = 12
+const groupedPackages = ['ui', 'shell']
+
+describe('project structure', () => {
+  it('should keep every source folder of the ui and the shell small when listing their files', () => {
+    const crowded = groupedPackages.flatMap((name) => {
+      const source = join(packagesRoot, name, 'src')
+      return [source, ...directoriesUnder(source)].flatMap((directory) => {
+        const sources = readdirSync(directory).filter(
+          (file) => /\.tsx?$/.test(file) && !file.endsWith('.test.ts') && !file.endsWith('.d.ts'),
+        )
+        return sources.length > MAX_SOURCES_PER_FOLDER ? [relative(repositoryRoot, directory)] : []
+      })
+    })
+
+    expect(crowded).toEqual([])
+  })
+
+  it('should name every source file in lowercase kebab case when listing the packages', () => {
+    const misnamed = [...all.map((file) => file.path), ...commentedFilesUnder(packagesRoot)]
+      .map((path) => path.split(/[\\/]/).pop() ?? path)
+      // pt-BR is a locale tag, so its catalog keeps the standard casing
+      .filter((file) => file !== 'pt-BR.ts')
+      .filter((file) => !/^[a-z0-9]+(-[a-z0-9]+)*(\.[a-z0-9]+)*\.(ts|tsx|css|mjs|sh)$/.test(file))
+
+    expect([...new Set(misnamed)]).toEqual([])
+  })
+})
