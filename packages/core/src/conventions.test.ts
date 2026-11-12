@@ -27,7 +27,7 @@ const offenders = (
   skip: (path: string) => boolean = () => false,
 ) => files.filter((file) => !skip(file.path) && pattern.test(file.text)).map((file) => file.path)
 
-// Each test here is the checkable version of a CLAUDE.md rule that was already broken or could be
+// Each test here is the checkable version of an AGENTS.md rule that was already broken or could be
 describe('project conventions', () => {
   it('should return ErrorBody as the failure of every Result when listing the sources', () => {
     const found = offenders(sources, /Result<[^;]{0,200}?,\s*(ErrorCode|string|Error)\s*>/)
@@ -158,5 +158,31 @@ describe('project structure', () => {
       .filter((file) => !/^[a-z0-9]+(-[a-z0-9]+)*(\.[a-z0-9]+)*\.(ts|tsx|css|mjs|sh)$/.test(file))
 
     expect([...new Set(misnamed)]).toEqual([])
+  })
+})
+
+describe('agent instructions', () => {
+  const rulesDirectory = join(repositoryRoot, '.claude', 'rules')
+  const instructionFiles = [
+    join(repositoryRoot, 'AGENTS.md'),
+    join(repositoryRoot, 'CLAUDE.md'),
+    ...readdirSync(rulesDirectory).map((file) => join(rulesDirectory, file)),
+  ]
+
+  // Longer instruction files cost context on every request and lower how well they are followed
+  it('should keep every instruction file under 200 lines when listing them', () => {
+    const long = instructionFiles.filter(
+      (path) => readFileSync(path, 'utf8').split('\n').length > 200,
+    )
+
+    expect(long.map((path) => relative(repositoryRoot, path))).toEqual([])
+  })
+
+  it('should scope every area rule with a paths header when listing the rules', () => {
+    const unscoped = readdirSync(rulesDirectory).filter(
+      (file) => !readFileSync(join(rulesDirectory, file), 'utf8').startsWith('---\npaths:\n'),
+    )
+
+    expect(unscoped).toEqual([])
   })
 })

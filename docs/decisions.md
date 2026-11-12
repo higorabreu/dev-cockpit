@@ -327,7 +327,7 @@ in the file; nothing mandatory to use.
 
 **Decision:** on 2026-11-11 milestone 2 started by returning a bare `ErrorCode` in `Result` (secret store,
 HTTP and GitLab), when the existing code returns `ErrorBody` (`fail(errorBody(code, detail))`). The deviation
-was only found when the author asked. The standard was written into `CLAUDE.md` based on the code, and the
+was only found when the author asked. The standard was written into `AGENTS.md` based on the code, and the
 rules that can be measured became `packages/core/src/conventions.test.ts`: a `Result` failure is an
 `ErrorBody`, `fail` always with `errorBody`, no empty `catch`, `core` importing neither packages nor
 `node:`, adapters not importing adapters, test titles starting with `should`.
@@ -335,7 +335,7 @@ rules that can be measured became `packages/core/src/conventions.test.ts`: a `Re
 `pnpm test`. The process also says to open a neighboring file before writing new code.
 **Open:** 19 old test titles do not follow `should ... when ...` (they use another conjunction). The test
 only requires the `should` prefix until someone decides between renaming the 19 or loosening the rule.
-**How to revert:** delete the test; `CLAUDE.md` remains as a guide.
+**How to revert:** delete the test; `AGENTS.md` remains as a guide.
 
 ## D29. Settings in internal tabs, list on the left
 

@@ -27,7 +27,7 @@ pnpm lint && pnpm typecheck && pnpm test
 
 ## What a good change looks like
 
-- It follows [CLAUDE.md](CLAUDE.md): the architecture (ports and adapters, `core` with no I/O), the error
+- It follows [AGENTS.md](AGENTS.md): the architecture (ports and adapters, `core` with no I/O), the error
   and logging patterns, the design system and accessibility rules. Open a neighboring file of the same
   kind and copy its real shape.
 - **English everywhere** except the interface translation: code, comments, logs, docs, issues and

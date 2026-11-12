@@ -29,7 +29,7 @@ external writes need approval); environment ops actions.
 ## Premises
 
 Light, fast, good UX/UI, portable, simple. The detail and the performance budgets are in
-[CLAUDE.md](../CLAUDE.md).
+[AGENTS.md](../AGENTS.md).
 
 ## Packages
 
@@ -84,5 +84,5 @@ A folder holds at most 12 source files and file names are lowercase kebab case; 
 
 - [docs/decisions.md](decisions.md): the decisions that shaped the project, with the reasons.
 - [docs/roadmap.md](roadmap.md): milestones and what is next.
-- [CLAUDE.md](../CLAUDE.md): coding standards, tests, design system and process.
+- [AGENTS.md](../AGENTS.md): coding standards, tests, design system and process.
 - [CONTRIBUTING.md](../CONTRIBUTING.md): how to set up, test and send a change.

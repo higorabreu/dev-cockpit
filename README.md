@@ -73,7 +73,7 @@ pnpm lint && pnpm typecheck && pnpm test
 
 The development build uses `~/.config/dev-cockpit-dev` and the `dck-dev` socket, so it lives beside the
 installed one. Read [CONTRIBUTING.md](CONTRIBUTING.md) before sending a change, [docs/](docs/) for the
-architecture, decisions and roadmap, and [CLAUDE.md](CLAUDE.md) for the coding standards.
+architecture, decisions and roadmap, and [AGENTS.md](AGENTS.md) for the coding standards.
 
 ## Known limits
 
