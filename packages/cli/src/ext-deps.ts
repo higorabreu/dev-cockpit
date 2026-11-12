@@ -6,7 +6,8 @@ import type { ExtDeps } from './ext-commands.ts'
 export interface ExtDepsOptions {
   // The window's data folder, where settings.json and the extensions folder live
   readonly configDir: string
-  readonly cwd: string
+  // The root of the current repository, or the current directory outside one
+  readonly repositoryRoot: string
   readonly appVersion: string
   readonly logger: Logger
   readFile(path: string): Promise<string | undefined>
@@ -29,7 +30,7 @@ export function createExtDeps(options: ExtDepsOptions): ExtDeps {
     finder: createFileExtensionFinder({
       installedDir: join(configDir, 'extensions'),
       globalDir: configDir,
-      repositoryDir: join(options.cwd, '.dck'),
+      repositoryDir: join(options.repositoryRoot, '.dck'),
       // No contribution point yet: the harness adds `standards` here
       implicit: { apiVersion: EXTENSION_API_VERSION, appVersion, points: {} },
       logger,

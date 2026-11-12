@@ -8,7 +8,7 @@ import { createGnomeShortcut } from '@dck/adapter-gnome-shortcuts'
 import { createProcessInspector, createProcessScanner } from '@dck/adapter-linux-proc'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import { createGitInspector } from '@dck/adapter-node-git'
-import { connectTo, defaultEndpoint } from '@dck/adapter-node-net'
+import { connectTo, defaultConfigDir, defaultEndpoint } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
 import { createSecretToolStore } from '@dck/adapter-secret-tool'
 import {
@@ -59,6 +59,9 @@ import { createSettingsStore } from './settings/settings-store.ts'
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
+
+// Set before anything reads it (the single instance lock does): the CLI looks in this same folder
+app.setPath('userData', process.env.DCK_CONFIG_DIR ?? defaultConfigDir())
 
 // Without this Electron opens a dialog behind the translucent window; here the error goes to the log
 process.on('uncaughtException', (error) => {

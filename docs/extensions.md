@@ -43,6 +43,9 @@ app reads the manifests, validates them, decides which ones win and reports the 
 | `engines.dck` | yes | A version range the running app must satisfy (syntax below); `engines` takes no other key |
 | `contributes` | no | An object keyed by contribution point id (a lowercase letter, then lowercase letters, digits or hyphens); defaults to `{}` |
 
+The owner `dck` is reserved for what ships with the app: an installed extension whose `id` starts with
+`dck.` is refused (`DCK-EXT-001`), so it cannot replace the built-in extension.
+
 The manifest is strict: a field that is not in this table is an error, not ignored. The fields `run`,
 `main`, `permissions` and `activationEvents` are refused with their own error (`DCK-EXT-002`), because they
 would need code.
@@ -80,9 +83,13 @@ An extension comes from one of four sources, from the lowest to the highest prec
 | Source | Where it comes from |
 | --- | --- |
 | `built-in` | Shipped with the app |
-| `installed` | A subfolder of the user's extensions folder (in the app's config directory) that holds a `dck-extension.json` |
+| `installed` | A subfolder of `<config directory>/extensions/` that holds a `dck-extension.json` |
 | `global` | The user's own files in the app's config directory |
-| `repository` | The `.dck/` folder of the current repository |
+| `repository` | The `.dck/` folder at the root of the current repository (the folder that holds `.git`), or of the current directory outside a repository |
+
+The config directory is `~/.config/dev-cockpit` on Linux (or under `XDG_CONFIG_HOME`),
+`~/Library/Application Support/Dev Cockpit` on macOS and `%APPDATA%\\Dev Cockpit` on Windows. The window and
+the CLI use the same folder; `DCK_CONFIG_DIR` overrides it.
 
 When the same `id` comes from more than one source, the highest source wins and the others are
 **shadowed**: they contribute nothing and are listed with the source that replaced them. Two extensions with
@@ -96,7 +103,7 @@ A manifest that cannot be read or is not valid JSON is still listed, as refused.
 
 The app ships one extension, `dck.built-in`, as data. It is empty for now and will carry the harness
 examples in phase 1. It takes the version of the running app and goes through the same loader as an
-installed extension: it can be disabled, shadowed or refused by the same rules.
+installed extension: it can be disabled or refused by the same rules.
 
 ### Implicit extensions
 
@@ -110,9 +117,8 @@ listed. Because no contribution point is registered yet, **neither shows up toda
 The setting `extensions.disabled` in `settings.json` is a list of extension ids, empty by default. A
 disabled extension is still loaded and listed, and contributes nothing. An entry that is not a valid id is
 dropped when the settings are read, and the list holds up to 200 ids. The commands `dck ext enable` and
-`dck ext disable` that will manage the list are planned (phase 1b); until then it is edited by hand, **with
-the window closed**: a running window keeps the settings in memory and writes them back on its next change,
-which would undo the edit.
+`dck ext disable` that will manage the list are planned (phase 1b); until then it is edited by hand. A
+running window reads the file again before it saves a change, so it keeps the edit.
 
 ```json
 { "extensions": { "disabled": ["acme.conventional-commits"] } }
@@ -127,7 +133,7 @@ reported with its location, an error code and a detail.
 
 | Code | Message | When |
 | --- | --- | --- |
-| `DCK-EXT-001` | Invalid extension manifest | The manifest is not a JSON object; a field is missing, has the wrong shape or is not known (up to three problems are named, each with its field); a declaration does not fit the schema of its contribution point; the same `id` twice in one source |
+| `DCK-EXT-001` | Invalid extension manifest | The manifest is not a JSON object; an installed extension uses the reserved `dck` owner; a field is missing, has the wrong shape or is not known (up to three problems are named, each with its field); a declaration does not fit the schema of its contribution point; the same `id` twice in one source |
 | `DCK-EXT-002` | Extension feature not supported by this version | The manifest has `run`, `main`, `permissions` or `activationEvents`; `contributes` names a contribution point this version does not know |
 | `DCK-EXT-003` | Extension not compatible with this version | `apiVersion` differs from the supported one; the app version is outside `engines.dck` |
 
@@ -145,12 +151,13 @@ acme.commits  1.0.0  installed  active
 acme.reviews  0.4.1  installed  disabled
 
 Rejected:
-  /home/ana/.config/Dev Cockpit/extensions/acme.old     installed  Extension not compatible with this version: acme.old needs dck <0.2.0, this is 0.3.0
-  /home/ana/.config/Dev Cockpit/extensions/acme.runner  installed  Extension feature not supported by this version: this version cannot run code: main
-  /home/ana/.config/Dev Cockpit/extensions/broken       installed  Invalid extension manifest: the manifest must be a JSON object
+  /home/ana/.config/dev-cockpit/extensions/acme.old     installed  Extension not compatible with this version: acme.old needs dck <0.2.0, this is 0.3.0
+  /home/ana/.config/dev-cockpit/extensions/acme.runner  installed  Extension feature not supported by this version: this version cannot run code: main
+  /home/ana/.config/dev-cockpit/extensions/broken       installed  Invalid extension manifest: the manifest must be a JSON object
 ```
 
-A shadowed copy is one more row, with the source that replaced it and its own location:
+A shadowed copy is one more row, with the source that replaced it and its own location. No pair of today's
+sources can repeat an `id` (the built-in and implicit ids are reserved), so this row only shows the format:
 
 ```
 acme.commits  0.9.0  built-in  shadowed by installed  built-in

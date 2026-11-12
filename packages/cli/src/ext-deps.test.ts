@@ -31,7 +31,7 @@ async function install(folder: string, content: string) {
 const deps = () =>
   createExtDeps({
     configDir: root,
-    cwd: join(root, 'project'),
+    repositoryRoot: join(root, 'project'),
     appVersion: '0.3.0',
     logger: silentLogger,
     readFile: (path) => readFile(path, 'utf8').catch(() => undefined),

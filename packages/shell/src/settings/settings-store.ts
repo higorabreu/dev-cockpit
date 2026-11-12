@@ -68,27 +68,37 @@ export function createSettingsStore(options: SettingsStoreOptions) {
     }
   }
 
+  const readText = () =>
+    readFile(file, 'utf8').catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== 'ENOENT')
+        logger.warn('settings file unreadable', { file, code: error.code })
+      return undefined
+    })
+
+  // Undefined when the text is not JSON, so the caller decides what to fall back to
+  function parse(text: string | undefined): Settings | undefined {
+    if (text === undefined) return undefined
+    try {
+      return parseSettings(JSON.parse(text))
+    } catch {
+      logger.warn('settings file is not valid json', { file })
+      return undefined
+    }
+  }
+
   return {
     async load(): Promise<SettingsView> {
-      const text = await readFile(file, 'utf8').catch((error: NodeJS.ErrnoException) => {
-        if (error.code !== 'ENOENT')
-          logger.warn('settings file unreadable', { file, code: error.code })
-        return undefined
-      })
+      const text = await readText()
       fresh = text === undefined
-      let raw: unknown
-      try {
-        raw = text === undefined ? undefined : JSON.parse(text)
-      } catch {
-        logger.warn('settings file is not valid json, using the defaults', { file })
-      }
-      stored = parseSettings(raw)
+      stored = parse(text) ?? defaultSettings
       recompute()
       return view
     },
     get: (): SettingsView => view,
     async update(patch: SettingsPatch): Promise<SettingsUpdate> {
       const before = view.settings
+      // The CLI edits the same file: read it again so this write does not undo that edit
+      stored = parse(await readText()) ?? stored
       let next = mergeSettings(stored, patch)
       let changed = changedKeys(stored, next)
       let rejected: readonly string[] = []

@@ -14,6 +14,7 @@ import {
   createFileExtensionFinder,
   type ExtensionFiles,
   type FileExtensionFinderOptions,
+  findRepositoryRoot,
   MANIFEST_FILE,
 } from './extension-finder.ts'
 
@@ -65,6 +66,29 @@ function recordingLogger() {
   }
   return { logger, warnings }
 }
+
+describe('findRepositoryRoot', () => {
+  it('should find the folder with .git when the directory is a subfolder of the repository', async () => {
+    await folder('backend', '.git')
+    const deep = await folder('backend', 'packages', 'api')
+
+    expect(await findRepositoryRoot(deep)).toBe(join(root, 'backend'))
+  })
+
+  it('should accept a .git file when the repository is a linked worktree', async () => {
+    const worktree = await folder('backend-fix')
+    await writeFile(join(worktree, '.git'), 'gitdir: /home/ana/backend/.git/worktrees/fix')
+
+    expect(await findRepositoryRoot(worktree)).toBe(worktree)
+  })
+
+  it('should be undefined when no folder above has .git', async () => {
+    const outside = await folder('notes')
+    const never = { readDir: async () => [], readFile: async () => undefined }
+
+    expect(await findRepositoryRoot(outside, never)).toBeUndefined()
+  })
+})
 
 describe('createFileExtensionFinder, installed', () => {
   it('should list each subfolder with a manifest when the extensions folder has several', async () => {
