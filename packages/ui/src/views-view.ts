@@ -214,6 +214,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     const snapshot = snapshotOf(current)
     notice.replaceChildren()
     notice.classList.remove('setup')
+    list.hidden = snapshot.state === 'unconfigured'
     notice.hidden = true
     const show = (...children: (Node | string)[]) => {
       notice.hidden = false

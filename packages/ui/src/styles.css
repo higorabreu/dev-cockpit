@@ -1730,6 +1730,10 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   outline: none;
 }
 
+.vlist[hidden] {
+  display: none;
+}
+
 .vlist::-webkit-scrollbar {
   display: none;
 }
