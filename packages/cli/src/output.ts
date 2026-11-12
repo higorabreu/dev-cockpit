@@ -42,3 +42,9 @@ export function rejection(error: ErrorBody, t: Translate): string {
   const detail = detailOf(error)
   return detail === '' ? message : `${message}: ${detail}`
 }
+
+// A file that could not be written is an internal error; an unknown id or a refused value is a failure
+export function refused(io: Io, error: ErrorBody): number {
+  io.err(`${rejection(error, io.t)}\n`)
+  return errorCodeOf(error) === 'DCK-STD-002' ? EXIT.software : EXIT.failed
+}

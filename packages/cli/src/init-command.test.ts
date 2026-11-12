@@ -2,6 +2,8 @@ import {
   createStandardsWorkspace,
   createTranslator,
   EXTENSION_API_VERSION,
+  errorBody,
+  fail,
   implicitManifest,
   type Locale,
 } from '@dck/core'
@@ -282,13 +284,13 @@ describe('dck init', () => {
   })
 
   it.each([
-    ['en', 'Could not write: Error: EROFS: read-only file system\n'],
-    ['pt-BR', 'Não foi possível gravar: Error: EROFS: read-only file system\n'],
+    ['en', 'Could not write the file: EROFS: read-only file system\n'],
+    ['pt-BR', 'Não foi possível gravar o arquivo: EROFS: read-only file system\n'],
   ] as const)(
     'should print a translated error and exit as an internal error when a write fails (%s)',
     async (locale, message) => {
       const { run, err, files } = setup([], locale)
-      files.writeText = () => Promise.reject(new Error('EROFS: read-only file system'))
+      files.writeText = async () => fail(errorBody('DCK-STD-002', 'EROFS: read-only file system'))
 
       const code = await run('--yes')
 

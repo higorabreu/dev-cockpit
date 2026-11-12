@@ -59,6 +59,10 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
   const { files, join, appVersion } = deps
   const agentsFile = join(deps.repositoryRoot, 'AGENTS.md')
   const claudeFile = join(deps.repositoryRoot, 'CLAUDE.md')
+  const roots: Record<StandardsTarget, string> = {
+    repository: deps.repositoryRoot,
+    global: deps.globalDir,
+  }
   const folders: Record<StandardsTarget, string> = {
     repository: join(deps.repositoryRoot, '.dck', 'standards'),
     global: join(deps.globalDir, 'standards'),
@@ -106,8 +110,17 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
     if (standard === undefined) return fail(errorBody('DCK-STD-001', `${id}: no such standard`))
     const edited = edit(standard)
     if (!edited.ok) return edited
-    await files.writeText(fileFor(standard, target), formatStandardFile(edited.value))
-    return ok(undefined)
+    return files.writeText(
+      fileFor(standard, target),
+      formatStandardFile(edited.value),
+      roots[target],
+    )
+  }
+
+  // A file that cannot be read is treated as missing when only shown, and is never changed
+  const readIfPossible = async (path: string) => {
+    const read = await files.readText(path)
+    return read.ok ? read.value : undefined
   }
 
   return {
@@ -116,8 +129,8 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
 
     async load(): Promise<LoadedStandards> {
       const resolved = await resolve()
-      const text = (await files.readText(agentsFile)) ?? ''
-      const claude = await files.readText(claudeFile)
+      const text = (await readIfPossible(agentsFile)) ?? ''
+      const claude = await readIfPossible(claudeFile)
       const shared = hasBlock(text, MARKDOWN_BLOCK)
       const current = upsertBlock(text, blockOf(resolved), MARKDOWN_BLOCK)
       return {
@@ -147,20 +160,24 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
       }),
 
     // On writes or refreshes the marked block of AGENTS.md, off removes it; the text around it is kept
-    async shareWithAgents(on: boolean): Promise<void> {
-      const text = (await files.readText(agentsFile)) ?? ''
+    async shareWithAgents(on: boolean): Promise<Result<void, ErrorBody>> {
+      const read = await files.readText(agentsFile)
+      if (!read.ok) return read
+      const text = read.value ?? ''
       const next = on
         ? upsertBlock(text, blockOf(await resolve()), MARKDOWN_BLOCK)
         : removeBlock(text, MARKDOWN_BLOCK)
-      if (next !== text) await files.writeText(agentsFile, next)
+      return next === text ? ok(undefined) : files.writeText(agentsFile, next, deps.repositoryRoot)
     },
 
     // Only an existing CLAUDE.md gets the import: creating one is the user's choice
-    async addClaudeImport(): Promise<void> {
-      const text = await files.readText(claudeFile)
-      if (text === undefined || text.includes(CLAUDE_IMPORT)) return
+    async addClaudeImport(): Promise<Result<void, ErrorBody>> {
+      const read = await files.readText(claudeFile)
+      if (!read.ok) return read
+      const text = read.value
+      if (text === undefined || text.includes(CLAUDE_IMPORT)) return ok(undefined)
       const gap = text === '' || text.endsWith('\n') ? '' : '\n'
-      await files.writeText(claudeFile, `${text}${gap}${CLAUDE_IMPORT}\n`)
+      return files.writeText(claudeFile, `${text}${gap}${CLAUDE_IMPORT}\n`, deps.repositoryRoot)
     },
   }
 }

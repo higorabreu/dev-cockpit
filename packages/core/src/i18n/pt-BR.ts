@@ -191,7 +191,6 @@ export const ptBR = {
   'cli.standards.switchedOn': '{id} ligado em {path}',
   'cli.standards.switchedOff': '{id} desligado em {path}',
   'cli.standards.refreshed': '{file} atualizado com as regras atuais',
-  'cli.standards.writeFailed': 'Não foi possível gravar: {detail}',
   'cli.guide.usage': 'Uso: dck guide <aplicação> [--budget N]',
   'cli.guide.empty': 'Nenhum padrão ligado para {application}. Nada a mostrar.',
   'cli.guide.size': 'padrões: {count}, linhas: {lines}, tokens estimados: {tokens}',

@@ -3,7 +3,6 @@ import {
   createFileExtensionFinder,
   createStandardFiles,
   findRepositoryRoot,
-  type WritableFiles,
 } from '@dck/adapter-extension-files'
 import {
   checkText,
@@ -38,7 +37,6 @@ export interface StandardsServiceOptions {
   // Comes with a time limit: an expression from a repository file must never hang the window
   readonly match: Matcher
   readonly logger: Logger
-  readonly fs?: WritableFiles
   readonly ttlMs?: number
   readonly now?: () => number
 }
@@ -82,8 +80,7 @@ export function createStandardsService(options: StandardsServiceOptions) {
   const { configDir, appVersion, match, logger } = options
   const ttl = options.ttlMs ?? DEFAULT_TTL_MS
   const now = options.now ?? Date.now
-  const fs = options.fs ? { fs: options.fs } : {}
-  const files = createStandardFiles(fs)
+  const files = createStandardFiles({ logger })
   // Reading the standards on every panel cycle would be expensive; they hold for a few seconds
   const cache = new Map<string, CacheEntry>()
 
@@ -100,7 +97,6 @@ export function createStandardsService(options: StandardsServiceOptions) {
           points: { standards: 'standards' },
         },
         logger,
-        ...fs,
       }),
       files,
       disabled: async () => new Set(options.disabled()),
@@ -125,20 +121,14 @@ export function createStandardsService(options: StandardsServiceOptions) {
   async function change(
     cwd: string,
     action: string,
-    write: (workspace: StandardsWorkspace) => Promise<Result<void, ErrorBody> | void>,
+    write: (workspace: StandardsWorkspace) => Promise<Result<void, ErrorBody>>,
   ): Promise<StandardsChange> {
-    const root = await findRepositoryRoot(cwd, options.fs)
+    const root = await findRepositoryRoot(cwd)
     if (root === undefined) return fail(errorBody('DCK-STD-003', cwd))
-    try {
-      const result = await write(workspaceOf(root))
-      if (result && !result.ok) return result
-      logger.info('standards changed', { root, action })
-    } catch (error) {
-      logger.warn('could not write the standards', { root, action, error: String(error) })
-      return fail(errorBody('DCK-STD-002', String(error)))
-    } finally {
-      cache.delete(root)
-    }
+    const result = await write(workspaceOf(root))
+    cache.delete(root)
+    if (!result.ok) return result
+    logger.info('standards changed', { root, action })
     return ok(toView(root, (await load(root)).loaded))
   }
 
@@ -172,7 +162,7 @@ export function createStandardsService(options: StandardsServiceOptions) {
   return {
     // Undefined when the directory is not inside a git repository
     async view(cwd: string): Promise<StandardsView | undefined> {
-      const root = await findRepositoryRoot(cwd, options.fs)
+      const root = await findRepositoryRoot(cwd)
       return root === undefined ? undefined : toView(root, (await load(root)).loaded)
     },
 

@@ -1,5 +1,5 @@
-import { BUILT_IN_STANDARDS, type LoadedStandards, type ResolvedStandard } from '@dck/core'
-import { EXIT, type Io, printable, rejection } from './output.ts'
+import { BUILT_IN_STANDARDS, type LoadedStandards, ok, type ResolvedStandard } from '@dck/core'
+import { EXIT, type Io, printable, refused } from './output.ts'
 import type { StandardsDeps } from './standards-commands.ts'
 
 type Choose = (question: string, fallback: boolean) => Promise<boolean>
@@ -50,13 +50,12 @@ const filesOf = (
 async function apply({ enable, share, claudeImport }: Plan, io: Io, deps: StandardsDeps) {
   for (const { id } of enable) {
     const changed = await deps.workspace.setEnabled(id, true, 'repository')
-    if (!changed.ok) {
-      io.err(`${rejection(changed.error, io.t)}\n`)
-      return EXIT.failed
-    }
+    if (!changed.ok) return refused(io, changed.error)
   }
-  if (share) await deps.workspace.shareWithAgents(true)
-  if (claudeImport) await deps.workspace.addClaudeImport()
+  const shared = share ? await deps.workspace.shareWithAgents(true) : ok(undefined)
+  if (!shared.ok) return refused(io, shared.error)
+  const imported = claudeImport ? await deps.workspace.addClaudeImport() : ok(undefined)
+  if (!imported.ok) return refused(io, imported.error)
   io.out(`${io.t('cli.init.done')}\n`)
   return EXIT.ok
 }
@@ -73,7 +72,8 @@ async function remove(
     return EXIT.ok
   }
   if (!(await approve(io.t('cli.init.remove', { file })))) return cancelled(io)
-  await deps.workspace.shareWithAgents(false)
+  const removed = await deps.workspace.shareWithAgents(false)
+  if (!removed.ok) return refused(io, removed.error)
   io.out(`${io.t('cli.init.removed', { file })}\n`)
   return EXIT.ok
 }

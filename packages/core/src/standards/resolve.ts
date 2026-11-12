@@ -12,6 +12,8 @@ export interface StandardFile {
   readonly path: string
   readonly frontMatter: unknown
   readonly body: string
+  // Why the adapter could not read the file, which is then reported with its path
+  readonly problem?: string
 }
 
 export type StandardLayer = Pick<StandardFile, 'source' | 'extension' | 'path'>
@@ -90,8 +92,9 @@ export function resolveStandards(files: readonly StandardFile[]): ResolvedStanda
   const byId = new Map<string, ParsedFile[]>()
   for (const file of [...files].sort((a, b) => rank(a.source) - rank(b.source))) {
     const parsed = frontMatterSchema.safeParse(file.frontMatter)
-    if (!parsed.success) {
-      const error = errorBody('DCK-STD-001', `${file.path}: ${describeIssues(parsed.error)}`)
+    if (file.problem !== undefined || !parsed.success) {
+      const detail = file.problem ?? (parsed.success ? '' : describeIssues(parsed.error))
+      const error = errorBody('DCK-STD-001', `${file.path}: ${detail}`)
       invalid.push({ path: file.path, source: file.source, error })
       continue
     }

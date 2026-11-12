@@ -1,7 +1,6 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { nodeFiles } from '@dck/adapter-extension-files'
 import {
   BUILT_IN_EXTENSION_ID,
   type GitStatus,
@@ -222,24 +221,27 @@ describe('createStandardsService changes', () => {
   })
 
   it('should return a failure and log it when the file cannot be written', async () => {
+    await writeFile(join(root, '.dck'), 'not a folder\n')
     const warnings: (LogContext | undefined)[] = []
     const service = make({
-      fs: {
-        ...nodeFiles,
-        writeFile: async () => {
-          throw new Error('EACCES: permission denied')
-        },
-      },
       logger: { ...silentLogger, warn: (_message, context) => void warnings.push(context) },
     })
 
-    const result = await service.shareWithAgents(root, true)
+    const result = await service.setEnabled(root, 'branch-format', true)
 
     expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-STD-002' } } })
-    expect(result.ok ? '' : result.error.message).toContain('EACCES')
-    expect(warnings).toEqual([
-      { root, action: 'share-with-agents', error: 'Error: EACCES: permission denied' },
-    ])
+    expect(result.ok ? '' : result.error.message).toContain('ENOTDIR')
+    expect(warnings).toMatchObject([{ path: join(root, '.dck', 'standards', 'branch-format.md') }])
+  })
+
+  it('should refuse to share when AGENTS.md is a link', async () => {
+    await writeFile(join(directory, 'notes.md'), '# Notes\n')
+    await symlink(join(directory, 'notes.md'), join(root, 'AGENTS.md'))
+
+    const result = await make().shareWithAgents(root, true)
+
+    expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-STD-002' } } })
+    expect(await readFile(join(directory, 'notes.md'), 'utf8')).toBe('# Notes\n')
   })
 })
 

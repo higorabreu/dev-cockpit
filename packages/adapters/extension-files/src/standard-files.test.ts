@@ -1,7 +1,8 @@
+import { execFileSync } from 'node:child_process'
 import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { BUILT_IN_STANDARDS, formatStandardFile, resolveStandards } from '@dck/core'
+import { BUILT_IN_STANDARDS, formatStandardFile, resolveStandards, silentLogger } from '@dck/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createStandardFiles } from './standard-files.ts'
 
@@ -19,7 +20,7 @@ describe('createStandardFiles', () => {
   it('should give back every built-in example unchanged when it is written, read and resolved', async () => {
     const folder = join(root, 'backend', '.dck', 'standards')
     for (const { standard } of BUILT_IN_STANDARDS) {
-      await files.writeText(join(folder, `${standard.id}.md`), formatStandardFile(standard))
+      await files.writeText(join(folder, `${standard.id}.md`), formatStandardFile(standard), root)
     }
 
     const read = await files.list(folder)
@@ -65,15 +66,16 @@ describe('createStandardFiles', () => {
   })
 
   it('should be undefined when the file to read does not exist', async () => {
-    expect(await files.readText(join(root, 'AGENTS.md'))).toBeUndefined()
+    expect(await files.readText(join(root, 'AGENTS.md'))).toEqual({ ok: true, value: undefined })
   })
 
   it('should create the folder and leave no temporary file when writing', async () => {
     const path = join(root, 'new', 'standards', 'branch-format.md')
 
-    await files.writeText(path, 'first')
-    await files.writeText(path, 'second')
+    await files.writeText(path, 'first', root)
+    const result = await files.writeText(path, 'second', root)
 
+    expect(result).toEqual({ ok: true, value: undefined })
     expect(await readFile(path, 'utf8')).toBe('second')
     expect(await readdir(join(root, 'new', 'standards'))).toEqual(['branch-format.md'])
   })
@@ -85,7 +87,7 @@ describe('createStandardFiles', () => {
     await mkdir(join(root, 'acme'))
     await symlink(outside, `${path}.tmp`)
 
-    await files.writeText(path, 'the block\n')
+    await files.writeText(path, 'the block\n', root)
 
     expect(await readFile(outside, 'utf8')).toBe('alias ls=ls\n')
     expect(await readFile(path, 'utf8')).toBe('the block\n')
@@ -95,27 +97,99 @@ describe('createStandardFiles', () => {
     const path = join(root, 'acme', 'AGENTS.md')
     await mkdir(join(path, 'inside'), { recursive: true })
 
-    await expect(files.writeText(path, 'the block\n')).rejects.toThrow()
+    const result = await files.writeText(path, 'the block\n', root)
 
+    expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-STD-002' } } })
     expect(await readdir(join(root, 'acme'))).toEqual(['AGENTS.md'])
   })
 
-  it('should go through the given file access when one is passed in', async () => {
-    const written: string[] = []
-    const memory = createStandardFiles({
-      fs: {
-        readDir: async () => [{ name: 'a.md', isDirectory: false }],
-        readFile: async () => '---\nenabled: false\n---\n',
-        writeFile: async (path) => void written.push(path),
-      },
+  it('should refuse to write when the file is a link, leaving its target as it was', async () => {
+    const outside = join(root, 'bashrc')
+    await writeFile(outside, 'alias ls=ls\n')
+    const repository = join(root, 'acme')
+    await mkdir(repository)
+    await symlink(outside, join(repository, 'AGENTS.md'))
+
+    const result = await files.writeText(join(repository, 'AGENTS.md'), 'the block\n', repository)
+
+    expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-STD-002' } } })
+    expect(await readFile(outside, 'utf8')).toBe('alias ls=ls\n')
+  })
+
+  it.each([['.dck'], ['.dck/standards']])(
+    'should refuse to write when the folder %s is a link',
+    async (linked) => {
+      const elsewhere = join(root, 'elsewhere')
+      await mkdir(join(elsewhere, 'standards'), { recursive: true })
+      const repository = join(root, 'acme')
+      await mkdir(join(repository, linked, '..'), { recursive: true })
+      await symlink(join(elsewhere, linked === '.dck' ? '' : 'standards'), join(repository, linked))
+      const path = join(repository, '.dck', 'standards', 'branch-format.md')
+
+      const result = await files.writeText(path, 'text', repository)
+
+      expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-STD-002' } } })
+      expect(await readdir(join(elsewhere, 'standards'))).toEqual([])
+    },
+  )
+
+  it('should refuse to read a file when it is a link, a pipe or larger than 256 KB', async () => {
+    await writeFile(join(root, 'secret'), 'token\n')
+    await symlink(join(root, 'secret'), join(root, 'linked.md'))
+    await symlink('/dev/zero', join(root, 'zero.md'))
+    execFileSync('mkfifo', [join(root, 'pipe.md')])
+    await writeFile(join(root, 'large.md'), 'a'.repeat(256 * 1024 + 1))
+
+    const reads = await Promise.all(
+      ['linked.md', 'zero.md', 'pipe.md', 'large.md'].map((name) =>
+        files.readText(join(root, name)),
+      ),
+    )
+
+    expect(reads.map((read) => read.ok)).toEqual([false, false, false, false])
+  })
+
+  it('should report a link, a pipe and a large file of a folder as unusable with their paths', async () => {
+    await writeFile(join(root, 'secret'), '---\nid: secret\n---\n')
+    await symlink(join(root, 'secret'), join(root, 'linked.md'))
+    await symlink('/dev/zero', join(root, 'zero.md'))
+    execFileSync('mkfifo', [join(root, 'pipe.md')])
+    await writeFile(join(root, 'large.md'), 'a'.repeat(256 * 1024 + 1))
+    const problem = 'not a regular file of at most 256 KB'
+
+    const read = await files.list(root)
+
+    expect(read).toEqual(
+      ['large.md', 'linked.md', 'pipe.md', 'zero.md'].map((name) => ({
+        path: join(root, name),
+        frontMatter: undefined,
+        body: '',
+        problem,
+      })),
+    )
+  })
+
+  it('should list nothing when the standards folder is a link', async () => {
+    await mkdir(join(root, 'elsewhere'))
+    await writeFile(join(root, 'elsewhere', 'team.md'), '---\nid: team\n---\n')
+    await symlink(join(root, 'elsewhere'), join(root, 'standards'))
+
+    expect(await files.list(join(root, 'standards'))).toEqual([])
+  })
+
+  it('should read the first 200 files and warn once when the folder holds more', async () => {
+    const names = Array.from({ length: 201 }, (_, index) => `s${String(index).padStart(3, '0')}.md`)
+    await Promise.all(names.map((name) => writeFile(join(root, name), '---\nid: s\n---\n')))
+    const warnings: string[] = []
+    const logged = createStandardFiles({
+      logger: { ...silentLogger, warn: (message) => void warnings.push(message) },
     })
 
-    const read = await memory.list('standards')
-    await memory.writeText('standards/b.md', 'text')
+    const read = await logged.list(root)
 
-    expect(read).toEqual([
-      { path: join('standards', 'a.md'), frontMatter: { enabled: false }, body: '' },
-    ])
-    expect(written).toEqual(['standards/b.md'])
+    expect(read.map((file) => file.path)).toEqual(
+      names.slice(0, 200).map((name) => join(root, name)),
+    )
+    expect(warnings).toEqual(['standards folder holds too many files'])
   })
 })

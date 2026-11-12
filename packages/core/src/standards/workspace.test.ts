@@ -3,7 +3,9 @@ import { parse } from 'yaml'
 import { EXTENSION_API_VERSION } from '../extensions/built-in.ts'
 import { type ImplicitSource, implicitManifest } from '../extensions/implicit.ts'
 import type { ExtensionCandidate } from '../extensions/load.ts'
+import { errorBody } from '../ipc/protocol.ts'
 import type { ExtensionFinder } from '../ports/extension-finder.ts'
+import { fail, ok } from '../result.ts'
 import { MemoryStandardFiles } from '../testing/fakes.ts'
 import { checkText } from './check.ts'
 import { BUILT_IN_STANDARDS } from './examples.ts'
@@ -319,6 +321,39 @@ describe('createStandardsWorkspace, agents', () => {
 
     expect(created).toContain('  Details: `dck guide review`\n<!-- dck:end -->\n')
     expect(files.texts.get(AGENTS)).toBe('')
+  })
+
+  it('should change nothing and pass the failure on when AGENTS.md cannot be read', async () => {
+    const { files, workspace } = arrange()
+    await workspace.setEnabled('branch-format', true, 'repository')
+    const refusal = fail(
+      errorBody('DCK-STD-002', `${AGENTS}: not a regular file of at most 256 KB`),
+    )
+    files.readText = async () => refusal
+    const written: string[] = []
+    files.writeText = async (path) => {
+      written.push(path)
+      return ok(undefined)
+    }
+
+    const result = await workspace.shareWithAgents(true)
+
+    expect(result).toBe(refusal)
+    expect(written).toEqual([])
+  })
+
+  it('should write under the repository root so a link on the way is refused', async () => {
+    const { files, workspace } = arrange()
+    const roots: string[] = []
+    files.writeText = async (_path, _text, root) => {
+      roots.push(root)
+      return ok(undefined)
+    }
+
+    await workspace.setEnabled('branch-format', true, 'repository')
+    await workspace.setEnabled('commit-message', true, 'global')
+
+    expect(roots).toEqual([ROOT, GLOBAL])
   })
 
   it('should not create the file when sharing is turned off and it does not exist', async () => {

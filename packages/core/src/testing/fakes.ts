@@ -1,3 +1,4 @@
+import type { ErrorBody } from '../ipc/protocol.ts'
 import type {
   Cancel,
   Clipboard,
@@ -16,7 +17,7 @@ import type {
   StandardFiles,
 } from '../ports/index.ts'
 import { silentLogger } from '../ports/logger.ts'
-import { ok } from '../result.ts'
+import { ok, type Result } from '../result.ts'
 import { splitStandardFile } from '../standards/format.ts'
 import { createViewsService } from '../views/views-service.ts'
 
@@ -91,11 +92,12 @@ export class MemoryStandardFiles implements StandardFiles {
         return { path, frontMatter: yaml === undefined ? undefined : this.parse(yaml), body }
       })
   }
-  async readText(path: string) {
-    return this.texts.get(path)
+  async readText(path: string): Promise<Result<string | undefined, ErrorBody>> {
+    return ok(this.texts.get(path))
   }
-  async writeText(path: string, text: string) {
+  async writeText(path: string, text: string, _root: string): Promise<Result<void, ErrorBody>> {
     this.texts.set(path, text)
+    return ok(undefined)
   }
 
   private parse(yaml: string): unknown {

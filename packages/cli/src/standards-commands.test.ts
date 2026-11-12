@@ -3,6 +3,8 @@ import {
   createTranslator,
   EXTENSION_API_VERSION,
   type ExtensionCandidate,
+  errorBody,
+  fail,
   type ImplicitSource,
   implicitManifest,
   type Locale,
@@ -262,13 +264,13 @@ describe('dck standards enable and disable', () => {
   })
 
   it.each([
-    ['en', 'Could not write: Error: EACCES: permission denied\n'],
-    ['pt-BR', 'Não foi possível gravar: Error: EACCES: permission denied\n'],
+    ['en', 'Could not write the file: EACCES: permission denied\n'],
+    ['pt-BR', 'Não foi possível gravar o arquivo: EACCES: permission denied\n'],
   ] as const)(
     'should print a translated error and exit as an internal error when the write fails (%s)',
     async (locale, message) => {
       const { run, out, err, files } = setup({ locale })
-      files.writeText = () => Promise.reject(new Error('EACCES: permission denied'))
+      files.writeText = async () => fail(errorBody('DCK-STD-002', 'EACCES: permission denied'))
 
       const code = await run('standards', 'enable', 'branch-format')
 

@@ -146,7 +146,7 @@ dck check commit "$1"
 | 0 | Success, including a passing check and a listing with invalid files |
 | 1 | A failed check, or an unknown standard id |
 | 64 | Incorrect usage, or an input file that cannot be read |
-| 70 | A file could not be written |
+| 70 | A file could not be written, or it or a folder on its way is a link |
 
 ## A standard file
 
@@ -230,7 +230,10 @@ A standard can come from four places, from the lowest to the highest precedence:
 | global | `<config directory>/standards/`, the user's own |
 | repository | `.dck/standards/` at the root of the repository, which can be versioned with the team |
 
-Every `*.md` file directly inside the folder is read. Files with the same `id` are layered from the lowest
+Every `*.md` file directly inside the folder is read, up to 200 in name order. A file that is a link, a pipe,
+a device or larger than 256 KB is reported as invalid instead of read, and a folder that is a link is not
+read at all. Nothing is written through a link either: when `AGENTS.md`, `CLAUDE.md`, `.dck`,
+`.dck/standards` or the file itself is one, the change is refused and the command exits with 70. Files with the same `id` are layered from the lowest
 source to the highest: a higher file replaces each front matter field it declares, the `check` list as a
 whole, and the body when it has one. So one field can be changed without copying the original, and a rule
 is never half merged. `dck standards` shows the source that had the last word and the ones it overrides.

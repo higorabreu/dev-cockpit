@@ -9,7 +9,7 @@ import {
   type Translate,
 } from '@dck/core'
 import { runInit } from './init-command.ts'
-import { align, EXIT, type Io, printable, rejection } from './output.ts'
+import { align, EXIT, type Io, printable, refused, rejection } from './output.ts'
 
 export interface StandardsDeps {
   readonly workspace: StandardsWorkspace
@@ -82,10 +82,7 @@ async function switchStandard(
     return usage(io, 'cli.standards.usage', args)
   }
   const changed = await deps.workspace.setEnabled(id, enabled, target)
-  if (!changed.ok) {
-    io.err(`${rejection(changed.error, io.t)}\n`)
-    return EXIT.failed
-  }
+  if (!changed.ok) return refused(io, changed.error)
   const { standards, agents } = await deps.workspace.load()
   const layers = standards.find((standard) => standard.id === id)?.layers ?? []
   const path = deps.relative(deps.workspace.fileFor({ id, layers }, target))
@@ -93,7 +90,8 @@ async function switchStandard(
   io.out(`${io.t(key, { id, path })}\n`)
   // The block is dck's own and was approved when it was created, so it follows the standards
   if (agents.stale) {
-    await deps.workspace.shareWithAgents(true)
+    const shared = await deps.workspace.shareWithAgents(true)
+    if (!shared.ok) return refused(io, shared.error)
     io.out(`${io.t('cli.standards.refreshed', { file: deps.relative(agents.file) })}\n`)
   }
   return EXIT.ok
@@ -174,11 +172,5 @@ export async function runStandardsCommand(
 ): Promise<number> {
   if (command === 'guide') return guide(args, io, deps)
   if (command === 'check') return check(args, io, deps)
-  try {
-    return command === 'init' ? await runInit(args, io, deps) : await standards(args, io, deps)
-  } catch (error) {
-    // The workspace only rejects when a file cannot be written
-    io.err(`${io.t('cli.standards.writeFailed', { detail: String(error) })}\n`)
-    return EXIT.software
-  }
+  return command === 'init' ? runInit(args, io, deps) : standards(args, io, deps)
 }
