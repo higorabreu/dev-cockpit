@@ -437,19 +437,22 @@ does not become a programming language.
 **How to revert:** the harness and packs contain no code loading, so they can be removed without touching the
 rest; the host contract is defined in phase 3 and is not frozen before it.
 
-## D36. The harness is used through one init, one block and one hook
+## D36. The harness is used in the window, and nothing blocks
 
-**Decision:** the daily use of the harness is kept to what a developer will really do. `dck init` asks which
-built-in examples to switch on, writes them into `.dck/standards/`, and offers a git hook and a marked block
-in `AGENTS.md`. After that nobody runs a command: the block states each rule for the agent, and one
-`commit-msg` hook checks the branch name and the commit message for people and agents alike. A standard is
-configured by editing its file. This replaces the `dck render --target` of D35, which generated a whole
-`CLAUDE.md` or `AGENTS.md`.
-**Reason:** a generated file competes with the one the team writes by hand; an agent told to run a command
-before every action often skips it; a hook recipe in the docs is rarely installed; and checking the branch
-only at the push is late. A git hook also keeps the harness free of any one agent vendor (D24).
-**Accepted cost:** the `dck` command exists only where the app is installed, so the check does not run in CI
-yet and the hook does nothing for a teammate without the app; a hook can be skipped with `--no-verify`.
-Publishing the CLI by itself is the way out and is not part of this phase.
-**How to revert:** `dck init --remove` takes the hook and the block out of a repository; the standards files
-are plain markdown and stay readable without the tool.
+**Decision:** the standards are used where the developer already is. The settings screen has a Standards
+page for the repository of the active tab: a switch per standard, its fields as plain inputs (the variables
+of its rules and its length limit, never the regular expression) and a switch that shares the rules with
+agents through a marked block in `AGENTS.md`. The Git section of the panel marks a branch or a commit
+outside a standard. The CLI offers the same through `dck init`, `dck standards`, `dck guide` and
+`dck check`, and both call one workspace in the core. The cockpit only shows: it installs no git hook.
+This replaces the `dck render --target` of D35, which generated a whole `CLAUDE.md` or `AGENTS.md`.
+**Reason:** a harness that is only commands and a hook is what any plugin does and uses nothing the cockpit
+has: it is always open, knows the repository of the active tab and already reads its branch and commits. A
+generated instruction file competes with the one the team writes by hand, and an agent told to run a command
+before every action often skips it, so the block states the rules themselves. `AGENTS.md` is read by the
+common agents, Claude Code included when there is no `CLAUDE.md` or when it imports the file (D24).
+**Accepted cost:** nothing enforces a standard; `dck check` is there for whoever wants a hook, and it cannot
+run in CI until the CLI is published by itself. A rule beyond its fields is still a regular expression
+edited in the file.
+**How to revert:** the page and the mark only read and write through the workspace, so they can be removed
+without touching the CLI; the standards files are plain markdown and stay readable without the tool.

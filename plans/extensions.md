@@ -93,17 +93,17 @@ Name the branch `<type>/<TICKET>-<short-slug>`. The ticket key comes first so th
 
 ### Commands (phase 1)
 
-Four commands, and configuring is editing a markdown file in `.dck/standards/`.
+The harness is used from the cockpit window and from the CLI, and both call the same code in the core (the
+standards workspace). Configuring is switching a standard on or off and editing its fields; the file in
+`.dck/standards/` is always the complete standard, so what is in the folder is what applies.
 
-- `dck init`: in a repository without standards, asks about each built-in example one by one, writes the
-  chosen ones enabled into `.dck/standards/`, then offers the git hook and the block in `AGENTS.md`. It shows
-  what it will write and asks once before writing. In a repository that already has standards it only
-  offers the hook, which is what a teammate needs after cloning. Running it again refreshes the block and
-  the hook. `--yes` takes the recommended answers (branch format and commit message on, hook and block on);
-  `--remove` takes the hook and the block out and leaves the standards files alone.
+- `dck init`: asks about each built-in example one by one, then whether to share the rules with agents
+  (the block in `AGENTS.md`). It shows what it will write and asks once before writing. `--yes` takes the
+  recommended answers (branch format and commit message on, sharing on); `--remove` takes the block out and
+  leaves the standards files alone.
 - `dck standards`: what is on, where each standard comes from and what it overrides, plus the files that
-  are invalid. `dck standards enable <id>` and `disable <id>` flip a standard in the repository
-  (`--global` in the user's folder) by writing only `id` and `enabled`.
+  are invalid. `dck standards enable <id>` and `disable <id>` switch a standard in the repository
+  (`--global` in the user's folder).
 - `dck guide <application>`: prints the full instruction of the enabled standards of that application,
   with its size in lines and estimated tokens on the error stream (characters divided by four, with no
   tokenizer dependency) and a warning above `--budget N`.
@@ -114,31 +114,34 @@ Four commands, and configuring is editing a markdown file in `.dck/standards/`.
 Exit codes follow the existing sysexits convention (0 success, 64 incorrect usage, 70 internal error) and 1
 for a failed check.
 
-### How it reaches the developer and the agent
+### The interface
 
-- **The block in `AGENTS.md`.** `dck` keeps a marked block (`<!-- dck:start -->` to `<!-- dck:end -->`) and
-  never touches the text around it. The block states each enabled standard in one or two lines, with the
-  rule itself, so an agent follows it without running anything. `dck guide` is for the long texts, such as
-  the review rubric. The block is fixed English text, so two teammates produce the same bytes.
-- **One git hook.** `commit-msg` runs `dck check branch` and `dck check commit`, so a wrong branch name
-  shows up at the first commit and not at the push. The hook is the same kind of marked block inside the
-  hook script, so an existing hook keeps working and `--remove` only deletes the block. When the `dck`
-  command is not installed the hook does nothing, so it never blocks a teammate. A repository with its own
-  `core.hooksPath` is left alone and the line to add is printed.
-- **A stale block.** When the standards changed and the block did not, `dck check` says so in one line and
-  does not fail because of it.
+- **A Standards page in the settings screen**, for the repository of the active tab. Each standard is a row
+  with its reason and a switch. An enabled standard shows its **fields**: the variables of its rules (for
+  example the accepted types) and its length limit, edited as plain inputs, never as a regular expression.
+  A rule message may name its own fields (`{types}`, `{maxLength}`), so it stays true after an edit.
+- **Agents.** A switch on the same page writes the rules into a marked block of `AGENTS.md`
+  (`<!-- dck:start -->` to `<!-- dck:end -->`), after a confirmation, and never touches the text around it.
+  The block states each rule itself, so an agent follows it without running anything; `dck guide` is for
+  the long texts. Claude Code reads `AGENTS.md` by itself when the repository has no `CLAUDE.md`; when it
+  has one that does not import it, the page says so and offers to add the `@AGENTS.md` line. It never
+  creates a `CLAUDE.md`. A block that no longer matches the standards is shown as out of date.
+- **The Git section of the panel** marks the branch and each commit not pushed yet that is outside a
+  standard, with the rule in the tooltip. For a commit only the first line rules are checked, because the
+  panel reads the subject.
+- **Nothing blocks.** The cockpit shows; it installs no git hook. `dck check` exists for whoever wants to
+  call it from a hook or a script of their own.
 
 Known limits, on purpose for now: the `dck` command only exists where the app is installed, so the check
-cannot run in CI until the CLI is published by itself; a hook can be skipped with `--no-verify`; a custom
-rule is a regular expression in a YAML front matter, so most people will switch standards on and off and
-copy from the examples.
+cannot run in CI until the CLI is published by itself; a custom rule is still a regular expression in a
+YAML front matter, the fields only cover what a rule exposes as a variable or a limit.
 
 ## Phases
 
 | Phase | Delivers | Needs |
 | --- | --- | --- |
 | **0. Foundation** | Manifest v1, a contribution point registry, extension sources with precedence, the extensions folder, `dck ext list`, the built-in extension | Pure `core` plus a files adapter |
-| **1. Harness** | The `standards` contribution point: standards files, `.dck/`, `dck init`, `dck standards`, `dck guide`, `dck check`, the git hook, the block in `AGENTS.md`, built-in examples | Phase 0 |
+| **1. Harness** | The `standards` contribution point: standards files, `.dck/`, `dck init`, `dck standards`, `dck guide`, `dck check`, the Standards page, the mark in the Git section, the block in `AGENTS.md`, built-in examples | Phase 0 |
 | **1b. Packs** | `dck ext install\|enable\|disable\|remove\|dev` and packs as the first installable extension kind | Phase 1 |
 | 2. Agent tools | Harness and project context as MCP tools (the old M2-T13), so an agent queries the same engine | An MCP server, planned in the roadmap |
 | 3. Connectors | An **extension host** (a dedicated Node process) that loads JavaScript or TypeScript extensions written against a dck API, permissions shown and approved at install, GitLab and Jira as the two reference connectors | The provider-neutral refactor of the core ports |
@@ -243,13 +246,13 @@ scanning and search, and system notifications.
 | C2 | The user enables a built-in example and changes one field in their own file; `guide` and `check` apply the change without editing the original | Test |
 | C3 | `dck check branch` exits 0 when the current branch matches, and non-zero with the failing rule and its message otherwise; nothing is printed on success | Test with a fake git |
 | C4 | `dck guide` prints lines and estimated tokens and warns above the budget; `dck init` shows what it will write and writes nothing without an explicit approval | Test |
-| C4b | `dck init` only changes its own marked block in `AGENTS.md` and in the hook script, running it twice changes nothing, and `--remove` leaves both files as they were | Test |
-| C4c | The hook rejects a commit with a wrong message or branch in a real repository, and does nothing when `dck` is not installed | Test with a real git repository |
+| C4b | Sharing with agents only changes its own marked block in `AGENTS.md`, doing it twice changes nothing, and removing it leaves the file as it was | Test |
+| C4c | On the Standards page a standard is switched on, a field is edited and the rules are shared with agents, and the Git section marks a branch outside the standard | Test, and screenshots in both themes checked against the design system |
 | C5 | Precedence holds: repository over global over packs over built-in, with the shadowed standards listed | Test |
 | C6 | An invalid standard file is reported with its path and field, the other standards still load, and the app does not crash | Test |
 | C7 | A pack installs with `dck ext install <folder>`, shows in `dck ext list`, applies its standards, disappears on `disable` and is deleted on `remove`; a manifest with unsupported fields is refused with a clear message | Test |
 | C8 | A contributor creates a pack from the guide and installs it in about 15 minutes | Manual, with a volunteer |
-| C9 | Measured budgets and cold start do not regress (the harness runs in the CLI only) | Gate and the existing checks |
+| C9 | Measured budgets and cold start do not regress (the window reads the standards only for the open panel and the Standards page, with a time limit on every expression) | Gate and the existing checks |
 
 ## Tasks
 
@@ -276,17 +279,19 @@ Phase 0, the foundation:
 
 Phase 1, the harness (the `standards` contribution point):
 
-- [ ] EXT-T4. `core`: the standard schema, the rule kinds, `{variable}` expansion, per-field replacement, and
+- [x] EXT-T4. `core`: the standard schema, the rule kinds, `{variable}` expansion, per-field replacement, and
   pure `guide` and `check` functions, plus the marked block and the file formatter. A new error domain
   `STD`. Tests for every rule kind and for precedence. (C1, C3, C5, C6)
-- [ ] EXT-T5. Register `standards` in the foundation; read the standard files of every source through the
-  files adapter (front matter parsed there, validated in the core); a `GitContext` port (current branch,
-  hooks folder) on the existing git adapter. (C3, C5)
-- [ ] EXT-T6. The built-in examples as data in the built-in extension: branch format, commit message, review
+- [x] EXT-T5. Register `standards` in the foundation; read the standard files of every source through the
+  files adapter (front matter parsed there, validated in the core); a `GitContext` port (current branch) on
+  the existing git adapter; the standards workspace the CLI and the window share; a timed matcher. (C3, C5)
+- [x] EXT-T6. The built-in examples as data in the built-in extension: branch format, commit message, review
   rubric, MR description, all disabled, plus a test that every example is valid. (C2)
-- [ ] EXT-T7. CLI: `dck init` (questions, the hook, the block, `--yes`, `--remove`), `dck standards`
+- [ ] EXT-T7. CLI: `dck init` (questions, sharing with agents, `--yes`, `--remove`), `dck standards`
   (`enable`, `disable`), `dck guide` (budget) and `dck check` with the exit codes above, translated through
-  the i18n catalogs. This repository uses it for its own branch and commit rules. (C2, C3, C4, C4b, C4c)
+  the i18n catalogs. (C2, C3, C4, C4b)
+- [ ] EXT-T7b. Interface: the Standards page (switches, fields, agents) and the mark in the Git section,
+  through new `HostApi` methods served by the same workspace. (C4c, C9)
 - [ ] EXT-T8. `docs/harness.md`: the daily use first, then the file format, the rule kinds and precedence,
   and the known limits. (C8)
 
@@ -314,9 +319,10 @@ Decided with the maintainer on 2026-11-12, after a review of the daily use (D36)
 | Id | Question | Decision |
 | --- | --- | --- |
 | Q6 | How does the instruction reach the agent? | A marked block in `AGENTS.md` with each rule stated in it; `dck guide` for the long texts. No generated `CLAUDE.md` |
-| Q7 | How does the check enter the daily flow? | `dck init` offers one git hook (`commit-msg`) that checks the branch and the message; it does nothing where `dck` is not installed |
-| Q8 | What does `dck init` switch on? | It asks about each example; `--yes` takes branch format and commit message |
-| Q9 | How is a standard configured? | By editing its file; `dck standards enable` and `disable` for the common case. No `edit`, `sync` or `hooks` command |
+| Q7 | Where is the harness used? | In the cockpit window (the Standards page and the Git section) and in the CLI, over one shared workspace |
+| Q8 | What happens when something is outside a standard? | The panel shows it. Nothing blocks and no git hook is installed |
+| Q9 | How is a standard configured? | A switch and the rule's fields (its variables and its length limit); the file written is always the complete standard |
+| Q10 | What does `dck init` switch on? | It asks about each example; `--yes` takes branch format and commit message |
 
 Still open, with a proposal:
 
@@ -331,7 +337,7 @@ Still open, with a proposal:
 | --- | --- | --- |
 | The rule language keeps growing | It becomes a programming language that nobody can read | Four rule kinds and nothing else until phase 3; new needs become a connector or a script with approval |
 | A user regular expression with catastrophic backtracking | `dck check` hangs, for example inside a git hook | Limit the pattern and input length and run the check with a time limit |
-| `dck init` damages a hand-written instruction file or an existing hook | The user loses their own text | It only writes inside its own marked block, shows what it will write and asks first |
+| Sharing with agents damages a hand-written instruction file | The user loses their own text | It only writes inside its own marked block and asks first |
 | Standards become long and cost context on every request | The agent follows the instructions worse | Show the size and a budget warning, and keep the examples short with a reason each |
 | Designing the extension API before the second connector exists | A contract that fits one provider only | Phases 1 and 1b contain no code loading; the host contract is extracted in phase 3 from GitLab and Jira |
 | Extension code runs with the user's rights in its host | A malicious or buggy extension can read files or the network | Say it plainly in the docs, show the declared permissions at install, mediate secrets and settings through the host API, and add a curated index and signing in phase 5 |
