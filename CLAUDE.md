@@ -131,6 +131,10 @@ plans/        contexto, roadmap, decisões e um plano por marco em andamento
   reticências mostra o conteúdo inteiro sozinho, sem marcação; `data-tip` mostra um texto sempre
   (ícones, contadores, setas) e `data-tip-full` dá o texto completo quando o visível é só parte dele.
   Ícone sem rótulo visível leva `data-tip` com o nome. Atalho vai em `data-tip-key`, nunca no texto.
+- **Barra de rolagem:** só a do DS, a classe `scroll` (trilho transparente, controle fino que engrossa ao passar o
+  mouse, tamanhos em `size.scrollbar` dos tokens). Toda lista que rola leva `scroll`; o terminal usa os mesmos
+  tokens. Única exceção: a faixa de abas rola na horizontal sem barra, com esmaecido na borda e a lista de abas
+  como apoio. Nada de `scrollbar-width` nem `::-webkit-scrollbar` fora do componente.
 - Termos de git e de ferramentas de desenvolvimento seguem o VS Code do autor, em português, e os
   verbos de git que o dev já usa (pull, push, commit, branch). Nada de tradução livre nem rótulos
   inventados como "para enviar"; Incoming e Outgoing também não, porque não são o que ele vê.
