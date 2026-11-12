@@ -41,8 +41,8 @@ packages/
   daemon/     local process: IPC server, views, cache
   cli/        the dck command (toggle, ping, agent)
   shell/      Electron: window, global shortcut, PTY host
-  adapters/   node-pty, node-git, node-net, node-fetch, gitlab, docker-cli, secret-tool,
-              gnome-shortcuts, linux-proc, agent-claude
+  adapters/   node-pty, node-git, node-net, node-fetch, node-vm, gitlab, docker-cli, secret-tool,
+              gnome-shortcuts, linux-proc, agent-claude, extension-files
 ```
 
 ## How the pieces fit

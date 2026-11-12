@@ -1,0 +1,16 @@
+{
+  "name": "@dck/adapter-node-vm",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@dck/core": "workspace:^"
+  },
+  "license": "AGPL-3.0-only"
+}
