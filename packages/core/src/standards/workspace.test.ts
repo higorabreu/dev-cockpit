@@ -374,6 +374,19 @@ describe('createStandardsWorkspace, agents', () => {
     expect(files.texts.has(AGENTS)).toBe(false)
   })
 
+  it('should remove the block when the last repository standard is switched off and it is refreshed', async () => {
+    const { files, workspace } = arrange()
+    files.texts.set(AGENTS, ORIGINAL)
+    await workspace.setEnabled('branch-format', true, 'repository')
+    await workspace.shareWithAgents(true)
+    await workspace.setEnabled('branch-format', false, 'repository')
+
+    const result = await workspace.shareWithAgents(true)
+
+    expect(result.ok).toBe(true)
+    expect(files.texts.get(AGENTS)).toBe(ORIGINAL)
+  })
+
   it('should restore the original text when sharing is turned off', async () => {
     const { files, workspace } = arrange()
     files.texts.set(AGENTS, ORIGINAL)

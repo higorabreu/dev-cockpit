@@ -174,9 +174,10 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
       if (!read.ok) return read
       const text = read.value ?? ''
       const block = on ? blockOf(await resolve('global')) : ''
-      // A block with no line would tell an agent nothing
-      if (on && block === '') return fail(errorBody('DCK-STD-004'))
-      const next = on ? upsertBlock(text, block) : removeBlock(text)
+      // A block with no line would tell an agent nothing: an existing one goes away, a new one is refused
+      const shared = blockText(text) !== undefined
+      if (on && block === '' && !shared) return fail(errorBody('DCK-STD-004'))
+      const next = on && block !== '' ? upsertBlock(text, block) : removeBlock(text)
       return next === text ? ok(undefined) : files.writeText(agentsFile, next, deps.repositoryRoot)
     },
 
