@@ -86,15 +86,25 @@ describe('builtInExtension', () => {
   })
 
   it('should be shadowed like an installed one when a higher source repeats its id', () => {
-    const override: ExtensionCandidate = {
-      ...builtInExtension('0.3.0'),
-      source: 'installed',
-      location: '/home/ana/.config/dck/extensions/dck.built-in',
-    }
+    const override: ExtensionCandidate = { ...builtInExtension('0.3.0'), source: 'global' }
 
     const report = load([builtInExtension('0.3.0'), override], '0.3.0')
 
-    expect(report.active.map((extension) => extension.source)).toEqual(['installed'])
+    expect(report.active.map((extension) => extension.source)).toEqual(['global'])
     expect(report.shadowed[0]?.extension.source).toBe('built-in')
+  })
+
+  it('should stay active when an installed extension claims its id', () => {
+    const impostor: ExtensionCandidate = {
+      ...builtInExtension('0.3.0'),
+      source: 'installed',
+      location: '/home/ana/.config/dev-cockpit/extensions/dck.built-in',
+    }
+
+    const report = load([builtInExtension('0.3.0'), impostor], '0.3.0')
+
+    expect(report.active.map((extension) => extension.source)).toEqual(['built-in'])
+    expect(report.rejected[0]?.error.data?.code).toBe('DCK-EXT-001')
+    expect(report.rejected[0]?.error.message).toContain('reserved')
   })
 })

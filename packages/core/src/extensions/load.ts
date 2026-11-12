@@ -51,6 +51,9 @@ export interface LoadOptions {
   readonly appVersion: string
 }
 
+// What ships with the app and the implicit folders use this owner, so an installed extension cannot replace them
+const RESERVED_OWNER = 'dck.'
+
 const rank = (source: ExtensionSource) => EXTENSION_SOURCES.indexOf(source)
 
 function validate(
@@ -60,6 +63,9 @@ function validate(
   const parsed = parseManifest(candidate.manifest)
   if (!parsed.ok) return parsed
   const manifest = parsed.value
+  if (candidate.source === 'installed' && manifest.id.startsWith(RESERVED_OWNER)) {
+    return fail(errorBody('DCK-EXT-001', `${manifest.id}: the dck owner is reserved`))
+  }
   if (manifest.apiVersion !== options.apiVersion) {
     const detail = `${manifest.id} needs API ${manifest.apiVersion}, this version supports ${options.apiVersion}`
     return fail(errorBody('DCK-EXT-003', detail))
