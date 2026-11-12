@@ -2,6 +2,7 @@ import '@xterm/xterm/css/xterm.css'
 import 'virtual:dck-tokens.css'
 import './styles.css'
 import { startApp } from './app.ts'
+import { installScrollbars } from './scrollbar.ts'
 import { createSettingsClient } from './settings-client.ts'
 import { installTooltips } from './tooltip.ts'
 
@@ -12,6 +13,7 @@ const element = (id: string) => {
 }
 
 installTooltips()
+installScrollbars()
 const settings = await createSettingsClient(window.dck)
 
 await startApp(

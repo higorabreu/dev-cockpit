@@ -622,7 +622,8 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   display: none !important;
 }
 
-/* Barra de rolagem do DS: trilho transparente e só o controle deslizante, que engrossa ao passar o mouse.
+/* Barra de rolagem do DS: trilho transparente e só o controle deslizante, visível ao rolar ou com o mouse sobre a
+   lista (`scrollbar.ts`) e mais grosso sob o mouse.
    Metade da diferença entre trilho e controle vira a folga de cada lado */
 :root {
   --scrollbar-gap: calc((var(--size-scrollbar) - var(--size-scrollbar-thumb)) / 2);
@@ -644,6 +645,12 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 .scroll::-webkit-scrollbar-thumb {
   border: var(--scrollbar-gap) solid transparent;
   border-radius: var(--radius-medium);
+  background: transparent;
+  background-clip: padding-box;
+}
+
+.scroll:hover::-webkit-scrollbar-thumb,
+.scroll[data-scrolling]::-webkit-scrollbar-thumb {
   background: var(--muted);
   background-clip: padding-box;
 }
