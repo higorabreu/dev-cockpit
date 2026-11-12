@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { checkText } from './check.ts'
 import { BUILT_IN_STANDARDS, builtInStandardFiles } from './examples.ts'
+import { ruleFields, withRuleField } from './fields.ts'
 import { renderGuide } from './guide.ts'
 import { resolveStandards, type StandardFile } from './resolve.ts'
 
@@ -90,6 +91,34 @@ describe('built-in standards', () => {
       'branch-format',
       'commit-message',
     ])
+  })
+
+  it('should expose the branch names, the types and the length as fields when listing the recommended examples', () => {
+    const fields = BUILT_IN_STANDARDS.filter((example) => example.recommended).flatMap(
+      ({ standard }) => ruleFields(standard).map((field) => [standard.id, field.name, field.value]),
+    )
+
+    expect(fields).toEqual([
+      ['branch-format', 'main', 'main|master|develop'],
+      ['branch-format', 'types', 'feat|fix|docs|refactor|test|chore|ci'],
+      ['commit-message', 'types', 'feat|fix|docs|refactor|test|chore|ci'],
+      ['commit-message', 'maxLength', 72],
+    ])
+  })
+
+  it('should accept a new branch type when the types field of the branch format changes', () => {
+    const branchFormat = allEnabled.find((standard) => standard.id === 'branch-format')
+    const check = withRuleField(branchFormat?.check ?? [], 0, 'types', 'feat|fix|hotfix')
+    const files = [
+      ...builtInStandardFiles(),
+      override({ id: 'branch-format', enabled: true, check: check.ok ? check.value : [] }),
+    ]
+
+    const { standards } = resolveStandards(files)
+
+    expect(checkText(standards, 'branch', 'hotfix/add-login')).toEqual([])
+    expect(checkText(standards, 'branch', 'main')).toEqual([])
+    expect(checkText(standards, 'branch', 'chore/add-login')).toHaveLength(1)
   })
 
   it('should guide a review without checking anything when the review rubric is enabled', () => {

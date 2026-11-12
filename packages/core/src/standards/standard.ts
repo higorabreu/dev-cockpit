@@ -16,7 +16,7 @@ const text = z.string().trim().min(1)
 // The length limit keeps a user expression cheap to compile and to run
 const expression = z.string().min(1).max(500)
 
-const ruleSchema = z
+export const ruleSchema = z
   .strictObject({
     pattern: expression.optional(),
     required: expression.optional(),

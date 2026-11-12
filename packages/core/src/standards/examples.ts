@@ -8,6 +8,10 @@ export interface BuiltInStandard {
   readonly standard: Standard
 }
 
+// Alternatives of an expression, kept as rule variables so a screen can edit them as fields
+const TYPES = 'feat|fix|docs|refactor|test|chore|ci'
+const MAIN_BRANCHES = 'main|master|develop'
+
 const branchFormat: Standard = {
   id: 'branch-format',
   title: 'Branch names',
@@ -17,16 +21,16 @@ const branchFormat: Standard = {
   enabled: false,
   check: [
     {
-      pattern: '^(main|master|develop|(feat|fix|docs|refactor|test|chore|ci)/[a-z0-9][a-z0-9-]*)$',
+      pattern: '^({main}|({types})/[a-z0-9][a-z0-9-]*)$',
+      variables: { main: MAIN_BRANCHES, types: TYPES },
       message: 'Use <type>/<short-slug> in lowercase, for example feat/add-login',
     },
   ],
   body: `Name a branch \`<type>/<short-slug>\`, in lowercase with hyphens, for example \`feat/add-login\`.
-The type is one of feat, fix, docs, refactor, test, chore or ci.
+The type is one of feat, fix, docs, refactor, test, chore or ci. The long-lived branches main, master
+and develop keep their names.
 
-To require a ticket key, replace \`check\` in your own file for this standard with a pattern like
-\`^(feat|fix|chore)/{ticket}-[a-z0-9-]+$\` and the variable \`ticket: '[A-Z]+-[0-9]+'\`, which accepts
-\`feat/ABC-12-add-login\`.`,
+To accept other types or other long-lived branches, change the fields \`types\` and \`main\` of the rule.`,
 }
 
 const commitMessage: Standard = {
@@ -39,8 +43,8 @@ const commitMessage: Standard = {
   check: [
     {
       // Git writes the merge and revert subjects itself
-      pattern:
-        '^(Merge .+|Revert ".+"|(feat|fix|docs|refactor|test|chore|ci)(\\([^()\\s]+\\))?!?: \\S.*)$',
+      pattern: '^(Merge .+|Revert ".+"|({types})(\\([^()\\s]+\\))?!?: \\S.*)$',
+      variables: { types: TYPES },
       scope: 'first-line',
       message:
         'Start with <type>(<optional scope>): <summary>, for example fix(cli): handle empty input',
@@ -53,7 +57,9 @@ const commitMessage: Standard = {
   ],
   body: `Write the first line as \`<type>(<optional scope>): <summary>\`, in the imperative and within 72
 characters, for example \`fix(cli): handle empty input\`. The type is one of feat, fix, docs, refactor,
-test, chore or ci. When the reason is not obvious, explain it in the body after a blank line.`,
+test, chore or ci. When the reason is not obvious, explain it in the body after a blank line.
+
+To accept other types or another length, change the fields \`types\` and \`maxLength\` of the rules.`,
 }
 
 const reviewRubric: Standard = {
@@ -98,7 +104,7 @@ const mrDescription: Standard = {
 - \`## Testing\`: how the change was verified (the commands run, the cases tried, what was not tested).`,
 }
 
-// All off by default: a user turns one on with a file of their own that sets `enabled: true`
+// All off by default: turning one on writes it, complete, into the user's own folder
 export const BUILT_IN_STANDARDS: readonly BuiltInStandard[] = [
   { recommended: true, standard: branchFormat },
   { recommended: true, standard: commitMessage },
