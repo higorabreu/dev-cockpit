@@ -84,6 +84,24 @@ export async function findRepositoryRoot(
   return undefined
 }
 
+const MAX_LEVELS = 32
+
+// The folder that holds `.git` (a folder, or a file in a linked worktree), walking up from the directory
+export async function findRepositoryRoot(
+  cwd: string,
+  files: ExtensionFiles = nodeFiles,
+): Promise<string | undefined> {
+  let directory = cwd
+  for (let level = 0; level < MAX_LEVELS; level++) {
+    const entries = (await files.readDir(directory)) ?? []
+    if (entries.some((entry) => entry.name === '.git')) return directory
+    const parent = dirname(directory)
+    if (parent === directory) return undefined
+    directory = parent
+  }
+  return undefined
+}
+
 export function createFileExtensionFinder(options: FileExtensionFinderOptions): ExtensionFinder {
   const files = options.fs ?? nodeFiles
   const logger = options.logger ?? silentLogger
