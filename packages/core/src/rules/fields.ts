@@ -60,10 +60,10 @@ export function withRuleField(
 
   // A list of names may be typed with commas or spaces, the way the window shows it
   const previous = current.variables?.[name]
-  const typed =
-    typeof value === 'string' && previous !== undefined && isNameList(previous)
-      ? listValue(value)
-      : value
+  const isList = typeof value === 'string' && previous !== undefined && isNameList(previous)
+  const typed = isList ? listValue(value) : value
+  // One typo must not turn a list into an expression for good
+  if (isList && !isNameList(typed)) return invalid('must be names separated by commas')
   // The schema refuses a wrong type or an out of range value, the compilation a broken expression
   const parsed = checkSchema.safeParse(
     isLimit

@@ -64,6 +64,14 @@ describe('withRuleField', () => {
     expect(result.ok && result.value[0]?.variables?.types).toBe('feat|fix|chore')
   })
 
+  it('should refuse the value and keep the list when a list of names gets something that is not a name', () => {
+    const result = withRuleField(check, 0, 'types', 'feat, fix.*')
+
+    expect(result.ok ? '' : result.error.message).toContain(
+      'check.0.types: must be names separated by commas',
+    )
+  })
+
   it('should keep the typed text as it is when the variable is not a list of names', () => {
     const result = withRuleField(check, 0, 'ticket', '[A-Z]{2,}-[0-9]+')
 
