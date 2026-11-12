@@ -305,6 +305,14 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     update(openTab(state, { id, label: options.label ?? i18n.t('tabs.default', { n: counter }) }))
   }
 
+  async function duplicate(id: string) {
+    const ptyId = sessions.get(id)?.ptyId
+    // Leitura nova: o vigia atrasa até um ciclo e o usuário pode ter acabado de dar cd
+    const fresh = ptyId === undefined ? undefined : await api.session.activity(ptyId)
+    const cwd = fresh?.cwd ?? watcher.get(id)?.cwd
+    await open(cwd ? { cwd } : {})
+  }
+
   function openProject(path: string) {
     api.projects.touch(path)
     // O host persiste a ordem; aqui sobe o projeto já, sem esperar a próxima leitura
@@ -368,7 +376,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
           [
             { label: i18n.t('tabs.close'), enabled: several, run: () => close(id) },
             { label: i18n.t('tabs.closeOthers'), enabled: several, run: () => closeOthers(id) },
-            { label: i18n.t('tabs.duplicate'), enabled: true, run: () => void open() },
+            { label: i18n.t('tabs.duplicate'), enabled: true, run: () => void duplicate(id) },
           ],
           x,
           y,
