@@ -41,7 +41,12 @@ rmSync(stage, { recursive: true, force: true })
 mkdirSync(root, { recursive: true })
 
 // 1. The Electron already installed in the project, with the binary renamed and only the used locales
-const electronDist = join(dirname(require.resolve('electron/package.json')), 'dist')
+const electronRoot = dirname(require.resolve('electron/package.json'))
+const electronDist = join(electronRoot, 'dist')
+// Electron downloads its binary on first run instead of on install, so a fresh checkout has no dist yet
+if (!existsSync(electronDist)) {
+  execFileSync(process.execPath, [join(electronRoot, 'install.js')], { stdio: 'inherit' })
+}
 cpSync(electronDist, root, { recursive: true, dereference: true })
 renameSync(join(root, 'electron'), join(root, NAME))
 rmSync(join(root, 'resources', 'default_app.asar'), { force: true })
