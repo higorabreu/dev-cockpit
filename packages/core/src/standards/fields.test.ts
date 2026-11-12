@@ -58,6 +58,18 @@ describe('withRuleField', () => {
     expect(check[0]?.variables?.types).toBe('feat|fix')
   })
 
+  it('should store a list typed with commas or spaces as names joined by bars when the variable is a list of names', () => {
+    const result = withRuleField(check, 0, 'types', 'feat, fix  chore')
+
+    expect(result.ok && result.value[0]?.variables?.types).toBe('feat|fix|chore')
+  })
+
+  it('should keep the typed text as it is when the variable is not a list of names', () => {
+    const result = withRuleField(check, 0, 'ticket', '[A-Z]{2,}-[0-9]+')
+
+    expect(result.ok && result.value[0]?.variables?.ticket).toBe('[A-Z]{2,}-[0-9]+')
+  })
+
   it('should change the limit when the field is the length limit of the rule', () => {
     const result = withRuleField(check, 1, 'maxLength', 100)
 

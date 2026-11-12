@@ -58,11 +58,17 @@ export function withRuleField(
   const isLimit = name === MAX_LENGTH && current.maxLength !== undefined
   if (!isLimit && !Object.hasOwn(current.variables ?? {}, name)) return invalid('no such field')
 
+  // A list of names may be typed with commas or spaces, the way the window shows it
+  const previous = current.variables?.[name]
+  const typed =
+    typeof value === 'string' && previous !== undefined && isNameList(previous)
+      ? listValue(value)
+      : value
   // The schema refuses a wrong type or an out of range value, the compilation a broken expression
   const parsed = ruleSchema.safeParse(
     isLimit
       ? { ...current, maxLength: value }
-      : { ...current, variables: { ...current.variables, [name]: value } },
+      : { ...current, variables: { ...current.variables, [name]: typed } },
   )
   if (!parsed.success) return invalid(parsed.error.issues[0]?.message ?? 'invalid')
   const compiled = compileRule(parsed.data, where)
