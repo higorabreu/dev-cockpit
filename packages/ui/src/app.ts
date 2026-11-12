@@ -40,6 +40,7 @@ import { createTabBar } from './tab-bar.ts'
 import { createTabMenu } from './tab-menu.ts'
 import { createTerminalSession, type TerminalSession } from './terminal-session.ts'
 import { applyTheme, themeFor, watchSystemTheme } from './theme.ts'
+import { createViewsView } from './views-view.ts'
 
 export interface AppElements {
   readonly bar: HTMLElement
@@ -59,6 +60,7 @@ export interface AppElements {
   readonly searchInput: HTMLInputElement
   readonly searchResults: HTMLElement
   readonly searchHint: HTMLElement
+  readonly views: HTMLElement
   readonly settings: HTMLElement
   readonly settingsBody: HTMLElement
 }
@@ -131,6 +133,13 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       previewOpacity: applyOpacity,
     },
   )
+
+  const viewsView = createViewsView(elements.views, {
+    api,
+    i18n,
+    onClose: () => activeSession()?.focus(),
+    openSettings: () => settingsView.open(),
+  })
 
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
 
@@ -315,6 +324,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       translateStatic(i18n)
       panel.retranslate()
       search.retranslate()
+      viewsView.retranslate()
       settingsView.rerender()
       tabBar.render(state, new Set(attention.unseenIds()))
     }
@@ -363,6 +373,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     goToTab: (index: number) => update(activateTabAt(state, index)),
     toggleTheme,
     openSettings: () => settingsView.open(),
+    openViews: () => void viewsView.open(),
     searchProjects,
     togglePanel,
     toggleFullHeight: () => api.window.toggleFullHeight(),

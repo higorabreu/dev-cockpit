@@ -30,6 +30,7 @@ await startApp(
     searchInput: element('search-input') as HTMLInputElement,
     searchResults: element('search-results'),
     searchHint: element('search-hint'),
+    views: element('views'),
     settings: element('settings'),
     settingsBody: element('settings-body'),
     scrim: element('menu'),

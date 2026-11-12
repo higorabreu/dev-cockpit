@@ -49,6 +49,7 @@ const REFERENCE: ReadonlyArray<readonly [string, string]> = [
   ['tabs.previous', 'Ctrl+Shift+Tab'],
   ['tabs.nextFinished', 'Ctrl+Shift+J'],
   ['projects.search', 'Ctrl+Shift+O'],
+  ['views.open', 'Ctrl+Shift+M'],
   ['menu.system.panel', 'Ctrl+Shift+B'],
   ['menu.system.theme', 'Ctrl+Shift+L'],
   ['menu.system.fullHeight', 'F11'],

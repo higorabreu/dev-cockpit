@@ -7,6 +7,7 @@ export interface ShortcutActions {
   goToTab(index: number): void
   toggleTheme(): void
   openSettings(): void
+  openViews(): void
   searchProjects(): void
   togglePanel(): void
   toggleFullHeight(): void
@@ -46,6 +47,7 @@ export function bindShortcuts(actions: ShortcutActions): () => void {
       if (key === 'w') return run(actions.closeTab)
       if (key === 'l') return run(actions.toggleTheme)
       if (key === 'o') return run(actions.searchProjects)
+      if (key === 'm') return run(actions.openViews)
       if (key === 'b') return run(actions.togglePanel)
       if (key === 'j') return run(actions.nextFinished)
     }

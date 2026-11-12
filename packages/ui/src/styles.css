@@ -1546,3 +1546,283 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   color: var(--muted);
   font-size: 12px;
 }
+
+#views {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 5vh 12px 0;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) ease;
+}
+
+#views.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#views-box {
+  width: min(860px, 100%);
+  height: min(88vh, 560px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-large);
+}
+
+.vhead {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.vtabs {
+  display: flex;
+  gap: 4px;
+  margin-right: auto;
+}
+
+.vtab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.vtab:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.vtab[aria-selected="true"] {
+  background: var(--hover);
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--fg);
+}
+
+.vcount {
+  color: var(--muted);
+  font: 11px var(--font-mono);
+}
+
+.vstatus {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.vbtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.vbtn:hover {
+  background: var(--hover);
+}
+
+.vbtn[aria-pressed="true"] {
+  background: var(--hover);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--fg);
+}
+
+.vk {
+  padding: 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+  font: 10.5px var(--font-mono);
+}
+
+.vbtn:focus-visible,
+.vtab:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
+.vbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.vinput {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-medium);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  outline: none;
+}
+
+.vinput::placeholder {
+  color: var(--muted);
+}
+
+.vinput:focus-visible {
+  border-color: var(--fg);
+}
+
+.vnotice {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.vnotice[hidden] {
+  display: none;
+}
+
+.vlist {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  outline: none;
+}
+
+.vlist::-webkit-scrollbar {
+  display: none;
+}
+
+.vinner {
+  position: relative;
+}
+
+.vrow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.vrow:hover {
+  background: var(--hover);
+}
+
+.vrow[aria-selected="true"] {
+  background: var(--list-selected);
+  box-shadow: inset 2px 0 0 var(--fg);
+}
+
+.vmain {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vrow[aria-selected="true"] .vtitle {
+  font-weight: 600;
+}
+
+.vmeta {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.vref,
+.vbranch {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono);
+}
+
+.vbranch {
+  max-width: 200px;
+}
+
+.vflags {
+  flex: none;
+  display: flex;
+  gap: 6px;
+}
+
+.vflag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.vflag[data-kind="muted"] {
+  color: var(--muted);
+}
+
+.vflag[data-kind="warning"] {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.vflag[data-kind="critical"] {
+  border-color: var(--critical);
+  color: var(--critical);
+  font-weight: 600;
+}
+
+.vhint {
+  flex: none;
+  display: flex;
+  gap: 14px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
