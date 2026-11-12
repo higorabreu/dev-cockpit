@@ -8,11 +8,17 @@ with AI agents, so the product ships an engine and a few built-in defaults, and 
 
 The work starts small, in a deliberate order, and each step must be useful on its own:
 
-1. **The AI agent harness** (this plan, phase 1): standards written as files, rendered into the
-   instructions an agent reads and checked automatically. No code is loaded from anywhere.
+0. **The foundation** (phase 0): a manifest, contribution points, the sources an extension can come from and
+   the extensions folder. No code is loaded from anywhere and no extension kind exists yet.
+1. **The AI agent harness** (phase 1): the first contribution point. Standards written as files, rendered into
+   the instructions an agent reads and checked automatically.
 2. **Standards packs** (phase 1b): the first installable extension, a folder of standards with a manifest.
-3. **Connectors in separate processes** (phase 3), then **interface contributions** and a **shared index**
+3. **Connectors in an extension host** (phase 3), then **interface contributions** and a **shared index**
    (phases 4 and 5). Sketched below, not designed in detail until the earlier phases exist.
+
+The foundation comes first because the harness must be born as a contribution of the same mechanism every
+later extension uses, not as a special case to retrofit. The hard parts (the host, permissions, a stable API
+for third-party code) stay in phase 3, where D5 wants them: after two real connectors.
 
 This follows D5 (an external contract only after two real connectors) and D24 (agents without coupling to
 one vendor). The decision record is D35 in `docs/decisions.md`.
@@ -23,9 +29,9 @@ one vendor). The decision record is D35 in `docs/decisions.md`.
   the engine, the user brings the standards.
 - **Nothing is mandatory.** With no standard installed everything works as it did.
 - **Small and declarative first.** A rule language that grows becomes a programming language, so rules stay
-  few and declarative; code only arrives in phase 3, in a separate process, with approved permissions.
+  few and declarative; code only arrives in phase 3, in a dedicated extension host, with permissions the user approves.
 - **Built-in and installed things use the same contracts.** The built-in examples are not special: they are
-  a pack that ships with the app.
+  a pack that ships with the app and goes through the same registry as an installed one.
 - **The user stays in control.** Every file the tool writes outside its own folder needs approval (D7).
 
 Background from earlier research notes, not re-verified here: guidance given before an action and checks run
@@ -103,34 +109,58 @@ for a failed check.
 
 | Phase | Delivers | Needs |
 | --- | --- | --- |
-| **1. Harness** | Standards files, `.dck/`, `dck init`, `dck standards`, `dck render`, `dck check`, built-in examples | Nothing external: pure `core` plus a files adapter |
-| **1b. Packs** | A manifest, `dck ext install\|list\|enable\|disable\|remove\|dev`, packs as the first extension kind | Phase 1 |
+| **0. Foundation** | Manifest v1, a contribution point registry, extension sources with precedence, the extensions folder, `dck ext list`, the built-in extension | Pure `core` plus a files adapter |
+| **1. Harness** | The `standards` contribution point: standards files, `.dck/`, `dck init`, `dck standards`, `dck render`, `dck check`, built-in examples | Phase 0 |
+| **1b. Packs** | `dck ext install\|enable\|disable\|remove\|dev` and packs as the first installable extension kind | Phase 1 |
 | 2. Agent tools | Harness and project context as MCP tools (the old M2-T13), so an agent queries the same engine | An MCP server, planned in the roadmap |
 | 3. Connectors | An **extension host** (a dedicated Node process) that loads JavaScript or TypeScript extensions written against a dck API, permissions shown and approved at install, GitLab and Jira as the two reference connectors | The provider-neutral refactor of the core ports |
 | 4. Interface | Declarative contributions (panel sections, hold menu items, settings fields, themes as token overrides) drawn by the host | Phase 3 |
 | 5. Sharing | A curated index in a repository (id, repository, pinned hash), then possibly a store with signing | Phase 3 |
 
+### Phase 0 in more detail: the foundation
+
+Three small, shared pieces, all in the pure `core` with the file access behind a port.
+
+- **The manifest (`dck-extension.json`, version 1).** Validated by zod. `apiVersion` is an integer the app
+  compares with the one it supports, and `engines.dck` is a version range. `contributes` is an object keyed by
+  **contribution point**:
+
+  ```json
+  {
+    "id": "acme.conventional-commits",
+    "name": "Conventional commits",
+    "version": "1.0.0",
+    "apiVersion": 1,
+    "engines": { "dck": ">=0.3.0" },
+    "contributes": { "standards": "standards/" }
+  }
+  ```
+
+- **The contribution point registry.** A contribution point is a name, a zod schema for what an extension
+  declares under it, and a consumer that receives the validated declarations with their source. The harness
+  registers `standards` in phase 1; later phases add `connectors`, `themes` and `sections`. A manifest that
+  contributes to a point this version does not know is **refused with a clear message**, never half-loaded, and
+  a manifest with an entry that would need code (a `run` or `main` field, permissions) is refused the same way
+  until phase 3.
+- **Sources and precedence.** An extension can come from four places, from the lowest to the highest
+  precedence: **built-in** (shipped with the app), **installed** (the user's extensions folder), **global**
+  (the user's own files in the app's config directory) and the **repository** (`.dck/`). A repository or
+  global folder is treated as an implicit extension without a manifest. The registry lists what each source
+  contributed and what a higher source shadowed, which is what `dck ext list` prints.
+- **Lifecycle state.** Which extensions are disabled lives in the settings (a new `extensions.disabled` list,
+  default empty), through the existing settings model and not in a separate file.
+- **The built-in extension.** The app ships one built-in extension (empty at first, it carries the harness
+  examples in phase 1) loaded through the same path, which proves that built-in and installed share a contract.
+
 ### Phase 1b in more detail: packs
 
-A **pack** is a folder with a `dck-extension.json` manifest:
-
-```json
-{
-  "id": "acme.conventional-commits",
-  "name": "Conventional commits",
-  "version": "1.0.0",
-  "apiVersion": 1,
-  "engines": { "dck": ">=0.3.0" },
-  "contributes": { "standards": "standards/" }
-}
-```
+A **pack** is an extension whose only contribution is `standards`, so the manifest above is already a pack.
 
 - Installed in the user's extensions folder (`<config dir>/extensions/<id>/`), from a local folder or a git
   URL. Because a pack holds no code, installing it needs no permissions; the install shows what it contains
   and asks for approval before writing.
-- A manifest that declares things this version cannot run (a `run` entry, permissions, connectors) is
-  **refused with a clear message**, never half-loaded.
 - `dck ext dev <folder>` links a folder under development so the author edits and uses it right away.
+- The refusal rules from phase 0 apply: a pack that declares anything this version cannot run is refused.
 
 ### Later phases, sketched
 
@@ -156,6 +186,9 @@ A **pack** is a folder with a `dck-extension.json` manifest:
 
 | Id | Criterion | Verification |
 | --- | --- | --- |
+| F1 | A valid manifest loads; an invalid one is reported with its path and field and the others still load; an unknown contribution point, or an entry that needs code, is refused with a clear message | Test |
+| F2 | Extensions from the four sources are found, ordered by precedence, with the shadowed ones listed, and a disabled extension contributes nothing | Test |
+| F3 | The built-in extension goes through the same registry as an installed one and shows in `dck ext list` with its source | Test |
 | C1 | With no standard anywhere, the app and the CLI behave as before, and `dck render` says there is nothing to render | Test |
 | C2 | The user enables a built-in example and changes one field in their own file; `render` and `check` apply the change without editing the original | Test |
 | C3 | `dck check branch` exits 0 when the current branch matches, and non-zero with the failing rule and its message otherwise; nothing is printed on success | Test with a fake git |
@@ -168,31 +201,40 @@ A **pack** is a folder with a `dck-extension.json` manifest:
 
 ## Tasks
 
-Phase 1, the harness:
+Phase 0, the foundation:
 
-- [ ] EXT-T1. `core`: the standard schema (zod), the rule kinds, `{variable}` expansion, source precedence and
-  per-field replacement, and pure `render` and `check` functions. A new error domain `STD` (invalid standard
-  file, unknown application) with its catalog entries. Tests for every rule kind and for precedence. (C1,
-  C3, C5, C6)
-- [ ] EXT-T2. Ports and adapters: a `StandardsSource` port in the core and a files adapter that reads
-  `.dck/standards/` and the global folder, with the directory and file access passed in. A `GitContext` port
-  (current branch, commit message) on the existing git adapter. (C3, C5)
-- [ ] EXT-T3. The built-in examples as data: branch format, commit message, review rubric, MR description, all
-  disabled and commented, plus a test that every example is valid. (C2)
-- [ ] EXT-T4. CLI: `dck init`, `dck standards list`, `dck render` (budget, `--target`, approval to write) and
+- [ ] EXT-T1. `core`: the manifest schema (v1, zod) with `apiVersion` and `engines`, the contribution point
+  registry (register a point, load manifests, hand the validated declarations to the consumer with their
+  source), the refusal rules, and source precedence with shadowing. A new error domain `EXT` with its
+  catalog entries (invalid manifest, unsupported contribution, incompatible version). Tests for every
+  refusal and for precedence. (F1, F2)
+- [ ] EXT-T2. Ports and adapters: an `ExtensionSource` port in the core and a files adapter that reads the
+  extensions folder, the global folder and `.dck/`, with the directory access passed in, plus the
+  `extensions.disabled` setting through the existing settings model. (F2)
+- [ ] EXT-T3. The built-in extension, the `dck ext list` command (source, state, shadowed entries, translated
+  through the catalogs) and `docs/extensions.md` with the manifest and contribution point reference. (F3)
+
+Phase 1, the harness (the `standards` contribution point):
+
+- [ ] EXT-T4. `core`: the standard schema, the rule kinds, `{variable}` expansion, per-field replacement, and
+  pure `render` and `check` functions. A new error domain `STD`. Tests for every rule kind and for
+  precedence. (C1, C3, C5, C6)
+- [ ] EXT-T5. Register `standards` in the foundation; a `GitContext` port (current branch, commit message) on
+  the existing git adapter; read the standards from every source through the registry. (C3, C5)
+- [ ] EXT-T6. The built-in examples as data in the built-in extension: branch format, commit message, review
+  rubric, MR description, all disabled and commented, plus a test that every example is valid. (C2)
+- [ ] EXT-T7. CLI: `dck init`, `dck standards list`, `dck render` (budget, `--target`, approval to write) and
   `dck check` with the exit codes above, translated through the i18n catalogs. (C2, C3, C4)
-- [ ] EXT-T5. `docs/harness.md`: the file format reference, the rule kinds, precedence, and recipes for a git
+- [ ] EXT-T8. `docs/harness.md`: the file format reference, the rule kinds, precedence, and recipes for a git
   `commit-msg` hook and a CI step. (C8)
 
 Phase 1b, packs:
 
-- [ ] EXT-T6. The manifest schema (v1) with `apiVersion` and `engines`, the pack loader and the refusal of
-  unsupported fields. (C7)
-- [ ] EXT-T7. The extensions folder and `dck ext install|list|enable|disable|remove|dev`, installing from a
-  folder or a git URL with an approval step. (C7)
-- [ ] EXT-T8. A template repository for a pack, one real example pack kept in the repository, and
-  `docs/extensions.md` for authors. (C8)
-- [ ] EXT-T9. Close: update `docs/decisions.md` and `docs/roadmap.md`, and check the full gate. (C9)
+- [ ] EXT-T9. The extensions folder lifecycle: `dck ext install` from a folder or a git URL with an approval
+  step, `enable`, `disable`, `remove` and `dev`. (C7)
+- [ ] EXT-T10. A template repository for a pack, one real example pack kept in the repository, and the
+  authors' guide in `docs/extensions.md`. (C8)
+- [ ] EXT-T11. Close: update `docs/decisions.md` and `docs/roadmap.md`, and check the full gate. (C9)
 
 ## Decisions and open questions
 

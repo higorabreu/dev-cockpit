@@ -416,7 +416,9 @@ message shown to a user belongs in the translation catalog, not in a code regist
 
 ## D35. Extensions: standards first, code in a dedicated host later
 
-**Decision:** the product becomes extensible in small, ordered steps (`plans/extensions.md`). First the AI agent
+**Decision:** the product becomes extensible in small, ordered steps (`plans/extensions.md`). First a small
+foundation (a manifest, contribution points, the sources an extension can come from and the extensions folder,
+with no code loading), so everything after is born as a contribution of the same mechanism. Then the AI agent
 harness: standards written as Markdown files with a validated front matter, rendered into agent instructions
 (`dck render`) and checked automatically (`dck check`), with built-in examples that are all off. Then
 **packs**, the first installable extension kind (a folder with a `dck-extension.json` manifest and standards,
