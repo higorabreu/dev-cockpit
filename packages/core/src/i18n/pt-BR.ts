@@ -166,7 +166,7 @@ export const ptBR = {
   'settings.resetAll': 'Restaurar todos os padrões',
   'settings.resetAll.hint': 'Volta as preferências ao padrão. As conexões continuam.',
   'settings.resetAllConfirm': 'Clique de novo para confirmar',
-  'settings.language': 'Linguagem',
+  'settings.language': 'Idioma',
   'settings.language.auto': 'Automática (do sistema)',
   'settings.language.pt': 'Português',
   'settings.language.en': 'English',
