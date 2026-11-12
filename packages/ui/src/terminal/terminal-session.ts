@@ -2,8 +2,8 @@ import type { HostApi } from '@dck/core'
 import { type ThemeName, tokens } from '@dck/design'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
+import { terminalTheme } from '../platform/theme.ts'
 import { attachClipboard } from './clipboard-behavior.ts'
-import { terminalTheme } from './theme.ts'
 
 export interface TerminalSession {
   readonly element: HTMLElement

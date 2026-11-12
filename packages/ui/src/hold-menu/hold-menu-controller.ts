@@ -15,7 +15,7 @@ import {
   stepSwitcher,
   type Translate,
 } from '@dck/core'
-import { inputGate } from './input-gate.ts'
+import { inputGate } from '../platform/input-gate.ts'
 import { type MenuMarkup, switcherMarkup, wheelMarkup } from './menu-view.ts'
 
 export interface MenuTab {

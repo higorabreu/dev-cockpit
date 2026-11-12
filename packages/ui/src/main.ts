@@ -2,9 +2,9 @@ import '@xterm/xterm/css/xterm.css'
 import 'virtual:dck-tokens.css'
 import './styles.css'
 import { startApp } from './app.ts'
-import { installScrollbars } from './scrollbar.ts'
-import { createSettingsClient } from './settings-client.ts'
-import { installTooltips } from './tooltip.ts'
+import { installScrollbars } from './kit/scrollbar.ts'
+import { installTooltips } from './kit/tooltip.ts'
+import { createSettingsClient } from './settings/settings-client.ts'
 
 const element = (id: string) => {
   const found = document.getElementById(id)

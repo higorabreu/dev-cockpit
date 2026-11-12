@@ -1,5 +1,5 @@
 import type { Translate } from '@dck/core'
-import { h, icon } from './panel/dom.ts'
+import { h, icon } from '../panel/dom.ts'
 
 export function closeButton(
   t: Translate,

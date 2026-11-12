@@ -1,6 +1,6 @@
 import { searchItems, type Translate } from '@dck/core'
-import { h } from './panel/dom.ts'
-import { closeButton, keyHint } from './panel-frame.ts'
+import { closeButton, keyHint } from '../kit/panel-frame.ts'
+import { h } from '../panel/dom.ts'
 
 export interface SearchEntry {
   readonly path: string

@@ -10,9 +10,9 @@ import {
   type SettingsPatch,
   type Translator,
 } from '@dck/core'
-import { inputGate } from './input-gate.ts'
-import { h } from './panel/dom.ts'
-import { closeButton } from './panel-frame.ts'
+import { closeButton } from '../kit/panel-frame.ts'
+import { h } from '../panel/dom.ts'
+import { inputGate } from '../platform/input-gate.ts'
 import type { SettingsClient } from './settings-client.ts'
 
 type Child = Node | string | false | undefined

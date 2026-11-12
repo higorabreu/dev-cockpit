@@ -8,9 +8,9 @@ import {
   type ViewSnapshot,
   visibleRange,
 } from '@dck/core'
-import { h, icon } from './panel/dom.ts'
-import { agoText } from './panel/format.ts'
-import { actionHint, closeButton, hintBar, keyHint } from './panel-frame.ts'
+import { actionHint, closeButton, hintBar, keyHint } from '../kit/panel-frame.ts'
+import { h, icon } from '../panel/dom.ts'
+import { agoText } from '../panel/format.ts'
 
 const ROW_HEIGHT = 46
 const OVERSCAN = 4

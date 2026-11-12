@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { resolveTheme } from '../platform/theme.ts'
 import { legacyPatch } from './settings-client.ts'
-import { resolveTheme } from './theme.ts'
 
 const reader = (values: Record<string, string>) => (key: string) => values[key] ?? null
 

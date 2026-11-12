@@ -1,5 +1,5 @@
 import { searchItems, type Translate } from '@dck/core'
-import { h, icon } from './panel/dom.ts'
+import { h, icon } from '../panel/dom.ts'
 
 export interface TabListEntry {
   readonly id: string
