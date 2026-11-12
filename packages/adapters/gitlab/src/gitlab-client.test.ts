@@ -8,7 +8,7 @@ import {
   type Result,
 } from '@dck/core'
 import { describe, expect, it } from 'vitest'
-import { createGitLabClient, normalizeBaseUrl } from './gitlab-client.ts'
+import { createGitLabClient } from './gitlab-client.ts'
 
 type Reply = HttpResponse | 'network'
 
@@ -62,13 +62,6 @@ const client = (replies: Reply[]) => {
     source: createGitLabClient({ http: fake.http, baseUrl: 'https://gl.test/', token: 'glpat-x' }),
   }
 }
-
-describe('normalizeBaseUrl', () => {
-  it('should drop the trailing slash and the api path when normalizing', () => {
-    expect(normalizeBaseUrl(' https://gl.test/api/v4/ ')).toBe('https://gl.test')
-    expect(normalizeBaseUrl('https://gl.test/gitlab/')).toBe('https://gl.test/gitlab')
-  })
-})
 
 describe('currentUser', () => {
   it('should return the user and send the token in the header when the token is valid', async () => {

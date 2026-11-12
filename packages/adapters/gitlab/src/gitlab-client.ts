@@ -6,6 +6,7 @@ import {
   type HttpClient,
   type HttpResponse,
   type MergeRequestSummary,
+  normalizeBaseUrl,
   ok,
   type PipelineState,
   type Result,
@@ -21,14 +22,6 @@ export interface GitLabOptions {
   readonly http: HttpClient
   readonly baseUrl: string
   readonly token: string
-}
-
-// Aceita o endereço com ou sem /api/v4 e com barra no fim
-export function normalizeBaseUrl(input: string): string {
-  return input
-    .trim()
-    .replace(/\/+$/, '')
-    .replace(/\/api\/v4$/, '')
 }
 
 const PIPELINES: Readonly<Record<string, PipelineState>> = {

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { parseServerUrl } from '../connections/url.ts'
 
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
 export const THEMES = ['dark', 'light', 'system'] as const
@@ -46,6 +47,17 @@ export const settingsSchema = z.preprocess(
       // Indefinida: usa a pasta `projetos` da home
       root: z.string().trim().min(1).max(1024).nullable().catch(null),
       depth: bounded(LIMITS.depth.min, LIMITS.depth.max, 2, true),
+    }),
+    connections: section({
+      gitlab: section({
+        // Sem padrão: é o endereço do ambiente do usuário. Valor que não é um endereço seguro vira nulo.
+        url: z
+          .preprocess(
+            (value) => (typeof value === 'string' ? (parseServerUrl(value) ?? null) : null),
+            z.string().nullable(),
+          )
+          .catch(null),
+      }),
     }),
     system: section({
       notifyAfterSeconds: bounded(

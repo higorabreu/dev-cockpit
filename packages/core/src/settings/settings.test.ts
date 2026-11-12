@@ -19,6 +19,7 @@ describe('parseSettings', () => {
       window: { heightRatio: 0.5, panelOnFullHeight: true },
       shortcuts: { toggleWindow: 'F12', holdTrigger: 'ControlRight' },
       projects: { root: null, depth: 2 },
+      connections: { gitlab: { url: null } },
       system: { notifyAfterSeconds: 30 },
     })
   })
@@ -156,4 +157,25 @@ describe('acceleratorFromEvent', () => {
   it('should call the windows key Super when it is held', () => {
     expect(press('d', { metaKey: true })).toEqual({ type: 'accelerator', value: 'Super+D' })
   })
+})
+
+describe('connections.gitlab.url', () => {
+  it('should default to no address when the settings are empty', () => {
+    expect(parseSettings({}).connections.gitlab.url).toBeNull()
+  })
+
+  it('should keep the normalized address when it is https', () => {
+    const settings = parseSettings({ connections: { gitlab: { url: 'https://gl.test/' } } })
+
+    expect(settings.connections.gitlab.url).toBe('https://gl.test')
+  })
+
+  it.each(['http://gl.test', 'gitlab', 42, 'https://u:p@gl.test'])(
+    'should fall back to no address when the value is %s',
+    (value) => {
+      const settings = parseSettings({ connections: { gitlab: { url: value } } })
+
+      expect(settings.connections.gitlab.url).toBeNull()
+    },
+  )
 })
