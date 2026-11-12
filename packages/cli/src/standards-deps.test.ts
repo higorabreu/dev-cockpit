@@ -92,7 +92,7 @@ describe('createStandardsDeps', () => {
     expect(texts).toEqual(['from the input', 'from the input', 'from the file', undefined])
   })
 
-  it('should check the branch of a real repository and have nothing to check outside one', async () => {
+  it('should check the branch when inside a real repository and pass when outside one', async () => {
     const { run, err } = setup()
     await run('standards', 'enable', 'branch-format')
 
@@ -104,7 +104,7 @@ describe('createStandardsDeps', () => {
     expect(err()).toMatch(/^Branch names: Use <type>\/<short-slug> in lowercase.*\n$/)
   })
 
-  it('should set up, check, follow a hand edit and remove the block over real files (C2, C4b)', async () => {
+  it('should set up, check, follow a hand edit and remove the block when working over real files (C2, C4b)', async () => {
     const agents = join(repository, 'AGENTS.md')
     const standard = join(repository, '.dck', 'standards', 'commit-message.md')
     const message = join(root, 'message.txt')

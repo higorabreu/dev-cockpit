@@ -1,8 +1,7 @@
 import { ruleMessage } from './rules.ts'
 import { enabledFor, type Standard } from './standard.ts'
 
-// The text here is written into repository files that agents read, so it is fixed English and not i18n:
-// two teammates with different locales must produce the same bytes
+// Fixed English, not i18n: these files are shared, so teammates in other locales must write the same bytes
 
 export interface Guide {
   readonly text: string

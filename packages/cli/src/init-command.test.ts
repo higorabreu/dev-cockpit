@@ -386,7 +386,7 @@ describe('dck init --yes', () => {
 })
 
 describe('dck init --remove', () => {
-  it('should take the block out after one confirmation and leave the standards and the rest of the file alone (C4b)', async () => {
+  it('should take the block out and leave the standards and the rest of the file alone when the removal is confirmed (C4b)', async () => {
     const { run, questions, written, out, files } = setup(['yes'])
     files.texts.set(AGENTS, HANDWRITTEN)
     await run('--yes')
