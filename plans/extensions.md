@@ -182,6 +182,28 @@ A **pack** is an extension whose only contribution is `standards`, so the manife
   derivative work of the AGPL core and its author may choose any license. This is not legal advice; state it in
   the docs and have it reviewed before relying on it.
 
+## What becomes an extension
+
+The rule: **core** if the product does not work without it; a **platform adapter** if it depends on the
+operating system and is chosen at boot, not installed; an **extension** if a reasonable user may not have it or
+may want another one. Nothing below is converted now; each conversion happens in its own phase, and the
+first-party ones ship built in through the same registry as an installed extension.
+
+| Today | Destination | Phase |
+| --- | --- | --- |
+| Standards of the harness and the built-in examples | Extension (built-in pack) | 1 |
+| GitLab connector (adapter, connection, merge request views) | Extension (connector, built in) | 3, after the provider-neutral refactor |
+| Jira (not built yet) | Extension from day one, as the second connector | 3 |
+| Claude agent adapter (dormant, D26) and any other agent | Extension (agent) | 3 |
+| Environment panel section (compose containers) | Extension candidate, not everyone uses Docker | 4 |
+| Dark and light themes | Extension (themes, built in), more as packs | 4 |
+| The hold menu's Agent category and the connection fields in settings | Contributed by the agent and connector extensions | 4 |
+| Terminal (xterm, node-pty), tabs, window and dock, settings, daemon and IPC, i18n, design tokens, the mechanisms of the hold menu and of the panel | Core | stays |
+| Secret store, global shortcut, process inspection, autostart, work area | Platform adapter (Keychain on macOS, `secret-tool` on Linux) | stays |
+
+Border cases left in the core for now and reviewed in phase 4: the Git and Sessions panel sections, project
+scanning and search, and system notifications.
+
 ## Acceptance criteria
 
 | Id | Criterion | Verification |
