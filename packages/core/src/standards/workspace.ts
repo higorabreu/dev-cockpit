@@ -9,7 +9,7 @@ import { type ErrorBody, errorBody } from '../ipc/protocol.ts'
 import type { ExtensionFinder } from '../ports/extension-finder.ts'
 import type { StandardFiles } from '../ports/standard-files.ts'
 import { fail, ok, type Result } from '../result.ts'
-import { hasBlock, removeBlock, upsertBlock } from './block.ts'
+import { blockText, removeBlock, upsertBlock } from './block.ts'
 import { builtInStandardFiles } from './examples.ts'
 import { withRuleField } from './fields.ts'
 import { formatStandardFile } from './format.ts'
@@ -135,14 +135,14 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
       const resolved = await resolve()
       const text = (await readIfPossible(agentsFile)) ?? ''
       const claude = await readIfPossible(claudeFile)
-      const shared = hasBlock(text)
-      const current = upsertBlock(text, blockOf(resolved))
+      const current = blockText(text)
+      const shared = current !== undefined
       return {
         ...resolved,
         agents: {
           file: agentsFile,
           shared,
-          stale: shared && current !== text,
+          stale: shared && current !== blockOf(resolved).trim(),
           claudeImportMissing: claude !== undefined && !claude.includes(CLAUDE_IMPORT),
         },
       }

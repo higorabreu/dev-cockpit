@@ -19,7 +19,16 @@ function find(lines: readonly string[]) {
 
 const endWithOneNewline = (text: string) => text.replace(/\n*$/, '\n')
 
-export const hasBlock = (text: string) => find(text.split('\n')) !== undefined
+// The lines between the markers, without carriage returns; undefined when the file has no block
+export function blockText(text: string): string | undefined {
+  const lines = text.split('\n')
+  const found = find(lines)
+  if (found === undefined) return undefined
+  return lines
+    .slice(found.start + 1, found.end)
+    .map((line) => line.replace(/\r$/, ''))
+    .join('\n')
+}
 
 export function upsertBlock(text: string, block: string): string {
   const managed = [START, block.trim(), END]

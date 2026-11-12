@@ -279,8 +279,9 @@ does not exist):
   after it, and a start marker with no end after it is left alone (the block is then appended). Markers
   inside a fenced code block are ignored. Sharing twice changes nothing, and removing the block leaves the
   text around it as it was.
-- The block is **out of date** when it no longer says what the standards say, for example after a file was
-  edited by hand. `dck standards` and `dck check` say so; `dck init` and `dck standards enable` or
+- The block is **out of date** when the lines between its markers no longer say what the standards say, for
+  example after a standard file was edited by hand. The text around the block and its line endings do not
+  count. `dck standards` and `dck check` say so; `dck init` and `dck standards enable` or
   `disable` refresh it.
 
 Claude Code reads `AGENTS.md` by itself when the repository has no `CLAUDE.md`. When there is a `CLAUDE.md`,

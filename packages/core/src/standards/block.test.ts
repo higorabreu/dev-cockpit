@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hasBlock, removeBlock, upsertBlock } from './block.ts'
+import { blockText, removeBlock, upsertBlock } from './block.ts'
 
 const START = '<!-- dck:start -->'
 const END = '<!-- dck:end -->'
@@ -117,12 +117,15 @@ describe('removeBlock', () => {
   })
 })
 
-describe('hasBlock', () => {
-  it('should tell a file with a block from one without when asked', () => {
-    const withBlock = upsertBlock('# Agents\n', 'New')
+describe('blockText', () => {
+  it('should give the lines between the markers without carriage returns when the file has a block', () => {
+    const text = `# Agents\r\n${START}\r\nOne\r\nTwo\r\n${END}`
 
-    expect(hasBlock(withBlock)).toBe(true)
-    expect(hasBlock(`# Agents\n${START}\n`)).toBe(false)
-    expect(hasBlock(`\`\`\`\n${START}\n${END}\n\`\`\`\n`)).toBe(false)
+    expect(blockText(text)).toBe('One\nTwo')
+  })
+
+  it('should be undefined when the file has no complete block or only one in a fence', () => {
+    expect(blockText(`# Agents\n${START}\n`)).toBeUndefined()
+    expect(blockText(`\`\`\`\n${START}\n${END}\n\`\`\`\n`)).toBeUndefined()
   })
 })

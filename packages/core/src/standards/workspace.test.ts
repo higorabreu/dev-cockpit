@@ -418,6 +418,21 @@ describe('createStandardsWorkspace, agents', () => {
     expect(agents.claudeImportMissing).toBe(missing)
   })
 
+  it('should not report the block as stale when only the text around it or its line endings differ', async () => {
+    const { files, workspace } = arrange()
+    await workspace.setEnabled('branch-format', true, 'repository')
+    await workspace.shareWithAgents(true)
+    const shared = files.texts.get(AGENTS) ?? ''
+    files.texts.set(
+      AGENTS,
+      `# Agents\r\n\r\n${shared.trimEnd().replaceAll('\n', '\r\n')}\r\n\r\n\r\n## Mine`,
+    )
+
+    const { agents } = await workspace.load()
+
+    expect(agents).toMatchObject({ shared: true, stale: false })
+  })
+
   it('should append the import to an existing CLAUDE.md once when it lacks it', async () => {
     const { files, workspace } = arrange()
     files.texts.set(CLAUDE, '# Claude\n\nPersonal notes go elsewhere.')
