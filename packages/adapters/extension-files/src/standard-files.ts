@@ -1,4 +1,5 @@
-import { mkdir, rename, writeFile } from 'node:fs/promises'
+import { randomBytes } from 'node:crypto'
+import { mkdir, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { type StandardFiles, splitStandardFile } from '@dck/core'
 import { parse } from 'yaml'
@@ -17,9 +18,13 @@ const nodeWritableFiles: WritableFiles = {
   ...nodeFiles,
   async writeFile(path, text) {
     await mkdir(dirname(path), { recursive: true })
-    const temporary = `${path}.tmp`
-    await writeFile(temporary, text)
-    await rename(temporary, path)
+    // A unique name created exclusively, so a link planted at the temporary name is never followed
+    const temporary = `${path}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`
+    await writeFile(temporary, text, { flag: 'wx' })
+    await rename(temporary, path).catch(async (error: unknown) => {
+      await rm(temporary, { force: true })
+      throw error
+    })
   },
 }
 

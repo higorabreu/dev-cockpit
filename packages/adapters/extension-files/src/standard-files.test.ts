@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { BUILT_IN_STANDARDS, formatStandardFile, resolveStandards } from '@dck/core'
@@ -76,6 +76,28 @@ describe('createStandardFiles', () => {
 
     expect(await readFile(path, 'utf8')).toBe('second')
     expect(await readdir(join(root, 'new', 'standards'))).toEqual(['branch-format.md'])
+  })
+
+  it('should leave the target of a planted link alone when the temporary name is a link', async () => {
+    const outside = join(root, 'bashrc')
+    await writeFile(outside, 'alias ls=ls\n')
+    const path = join(root, 'acme', 'AGENTS.md')
+    await mkdir(join(root, 'acme'))
+    await symlink(outside, `${path}.tmp`)
+
+    await files.writeText(path, 'the block\n')
+
+    expect(await readFile(outside, 'utf8')).toBe('alias ls=ls\n')
+    expect(await readFile(path, 'utf8')).toBe('the block\n')
+  })
+
+  it('should remove the temporary file when the rename fails', async () => {
+    const path = join(root, 'acme', 'AGENTS.md')
+    await mkdir(join(path, 'inside'), { recursive: true })
+
+    await expect(files.writeText(path, 'the block\n')).rejects.toThrow()
+
+    expect(await readdir(join(root, 'acme'))).toEqual(['AGENTS.md'])
   })
 
   it('should go through the given file access when one is passed in', async () => {
