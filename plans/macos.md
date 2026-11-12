@@ -71,7 +71,7 @@ The order is meant to bring the tester in as late as possible and once per batch
   `pnpm dev`, and four questions: (a) does a `type: 'panel'` window at a high level open over a fullscreen
   app and receive the keyboard? (b) do F12, `Ctrl+Backtick` and `Option+Space` reach `globalShortcut`
   without asking for Accessibility? (c) does `node-pty` open `zsh`? (d) does `security -i` write an item
-  with a quoted value and does `find-generic-password -w` read it back? The result becomes decision D35
+  with a quoted value and does `find-generic-password -w` read it back? The result becomes decision D36
   in `docs/decisions.md` and closes Q2. If (a) fails, MAC-T5 changes design before any code is written.
   (C5, C6)
 - [ ] MAC-T2. Platform choice at boot. A `selectPlatform(process.platform)` function in the shell's
@@ -148,7 +148,7 @@ The order is meant to bring the tester in as late as possible and once per batch
   monitor, restart and check autostart, close and `dck toggle`. Measurements with `DCK_LOG_DOCK=1`,
   `ps -o rss` of the app and the daemon and the cold start time. Problems come back grouped by round.
   (C5, C6, C9, C10)
-- [ ] MAC-T13. Close: decision D35 in `docs/decisions.md` (the port, window, secret store and PATH choices), the
+- [ ] MAC-T13. Close: decision D36 in `docs/decisions.md` (the port, window, secret store and PATH choices), the
   "macOS packaging" item leaves the backlog of `docs/roadmap.md`, a Mac section in the `README` and check
   the full gate. (C11)
 - [ ] MAC-T14. Optional, only if Q4 asks for distribution: a Developer ID certificate, signing with the hardened

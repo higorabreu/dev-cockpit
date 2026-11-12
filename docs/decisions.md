@@ -413,3 +413,26 @@ entry; the CLI prints the entry in the user's language. Connection errors keep t
 **Reason:** the registry's Portuguese messages broke the rule that code and logs are in English, and a
 message shown to a user belongs in the translation catalog, not in a code registry.
 **How to revert:** put a `message` field back in `error-codes.json` and read it in `errors.ts`.
+
+## D35. Extensions: standards first, code in a dedicated host later
+
+**Decision:** the product becomes extensible in small, ordered steps (`plans/extensions.md`). First a small
+foundation (a manifest, contribution points, the sources an extension can come from and the extensions folder,
+with no code loading), so everything after is born as a contribution of the same mechanism. Then the AI agent
+harness: standards written as Markdown files with a validated front matter, rendered into agent instructions
+(`dck render`) and checked automatically (`dck check`), with built-in examples that are all off. Then
+**packs**, the first installable extension kind (a folder with a `dck-extension.json` manifest and standards,
+no code). Extensions with code come later and run in **a dedicated extension host process with a JavaScript API**
+(the VS Code model), separate from the window and the daemon, talking to the product over JSON-RPC.
+Connectors (GitLab, Jira) will use that same API, and the contract is extracted from the first two real ones,
+as D5 requires. Standards come from four sources with this precedence: repository, the user's global folder,
+installed packs, built-in. A higher source replaces the fields it declares, and the `check` list and the body
+as a whole.
+**Reason:** not everyone uses GitLab or Jira, and everyone works with AI agents differently. A standard is
+data, so it can be shared safely first; code is added only once the data model proved itself. A dedicated
+host keeps the cockpit alive when an extension fails and gives authors an editor-like experience.
+**Accepted cost:** extension code in the host runs with the user's rights, so permissions are a declaration the
+user approves and the host API honors, not a sandbox. The rule language stays small (four rule kinds) so it
+does not become a programming language.
+**How to revert:** the harness and packs contain no code loading, so they can be removed without touching the
+rest; the host contract is defined in phase 3 and is not frozen before it.
