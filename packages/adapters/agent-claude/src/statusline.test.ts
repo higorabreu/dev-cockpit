@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { normalizeStatusline } from './statusline.ts'
 
-// Exemplo da documentação oficial do statusLine do Claude Code
+// Example from the official Claude Code statusLine documentation
 const payload = {
   session_id: 'abc123',
   transcript_path: '/home/u/.claude/projects/-p-app/abc123.jsonl',

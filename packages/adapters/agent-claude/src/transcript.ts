@@ -36,8 +36,8 @@ function parse(line: string): unknown {
   }
 }
 
-// Lê o final de um arquivo de sessão do Claude Code, do mais novo para o mais antigo, e fica só com
-// o que a tela usa: nunca guarda nem repassa o conteúdo da conversa
+// Reads the tail of a Claude Code session file, newest to oldest, and keeps only
+// what the screen uses: never stores or forwards the conversation content
 export function summarizeTranscriptTail(text: string): TranscriptSummary {
   let model: string | undefined
   let contextTokens: number | undefined
@@ -48,7 +48,7 @@ export function summarizeTranscriptTail(text: string): TranscriptSummary {
   const lines = text.split('\n')
   for (let index = lines.length - 1; index >= 0; index--) {
     const line = lines[index] ?? ''
-    // Linhas enormes de outros tipos (corpos de requisição) nem precisam ser lidas como JSON
+    // Huge lines of other types (request bodies) need not even be read as JSON
     const wanted =
       line.includes('"type":"assistant"') ||
       line.includes('"type":"ai-title"') ||
@@ -60,7 +60,7 @@ export function summarizeTranscriptTail(text: string): TranscriptSummary {
     if (assistant.success && contextTokens === undefined) {
       const { message, isSidechain, timestamp } = assistant.data
       const usage = message.usage
-      // Respostas de subagentes e as sintéticas não dizem o contexto da conversa principal
+      // Subagent and synthetic responses do not tell the main conversation's context
       if (!isSidechain && usage && message.model !== '<synthetic>') {
         model = message.model
         contextTokens =

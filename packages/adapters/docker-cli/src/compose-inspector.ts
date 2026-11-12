@@ -9,9 +9,9 @@ const MAX_LEVELS = 8
 const CACHE_MS = 1500
 
 export interface ComposeInspectorOptions {
-  // Pasta onde a busca para, normalmente a home do usuário
+  // Folder where the search stops, normally the user's home
   readonly stopAt?: string
-  // Roda `docker compose ... ps`; indefinido quando o comando falha
+  // Runs `docker compose ... ps`; undefined when the command fails
   readonly run?: (file: string) => Promise<string | undefined>
   readonly now?: () => number
 }
@@ -22,7 +22,7 @@ const exists = (path: string) =>
     () => false,
   )
 
-// Sobe a partir do diretório procurando o arquivo compose do projeto
+// Walks up from the directory looking for the project's compose file
 export async function findComposeFile(cwd: string, stopAt?: string): Promise<string | undefined> {
   let directory = cwd
   for (let level = 0; level < MAX_LEVELS; level++) {

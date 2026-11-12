@@ -2,8 +2,8 @@ import { readFile, readlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { ProcessInfo, ProcessInspector } from '@dck/core'
 
-// Em /proc/<pid>/stat o nome do processo vem entre parênteses e pode conter espaços e ")";
-// os campos úteis começam depois do último ")": estado, ppid, pgrp, sessão, tty e tpgid
+// In /proc/<pid>/stat the process name comes in parentheses and may contain spaces and ")";
+// the useful fields start after the last ")": state, ppid, pgrp, session, tty and tpgid
 export function parseForegroundGroup(stat: string): number | undefined {
   const rest = stat
     .slice(stat.lastIndexOf(')') + 1)
@@ -13,7 +13,7 @@ export function parseForegroundGroup(stat: string): number | undefined {
   return Number.isInteger(tpgid) && tpgid > 0 ? tpgid : undefined
 }
 
-// O campo 22 de /proc/<pid>/stat, o início do processo em ticks desde o boot
+// Field 22 of /proc/<pid>/stat, the process start in ticks since boot
 export function parseStartTime(stat: string): string | undefined {
   const rest = stat
     .slice(stat.lastIndexOf(')') + 1)

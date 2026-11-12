@@ -23,7 +23,7 @@ export const mergeRequestSchema = z.object({
   blocking_discussions_resolved: z.boolean().catch(true),
 })
 
-// A listagem não traz o pipeline; só a consulta de uma MR traz o `head_pipeline`
+// The listing does not include the pipeline; only the query for a single MR returns `head_pipeline`
 export const mergeRequestDetailSchema = z.object({ head_pipeline: pipelineSchema })
 
 export const mergeRequestsSchema = z.array(mergeRequestSchema)

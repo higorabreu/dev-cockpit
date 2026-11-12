@@ -15,9 +15,9 @@ import type { z } from 'zod'
 import { mergeRequestDetailSchema, mergeRequestsSchema, userSchema } from './schemas.ts'
 
 const PAGE_SIZE = 100
-// Teto de segurança: 1000 itens por consulta bastam para uma visão do dia a dia
+// Safety ceiling: 1000 items per query is enough for a day-to-day view
 const MAX_PAGES = 10
-// Consultas de pipeline em paralelo: poucas, para não pesar no servidor
+// Pipeline queries in parallel: few, so as not to burden the server
 const DETAIL_CONCURRENCY = 5
 
 export interface GitLabOptions {
@@ -145,7 +145,7 @@ export function createGitLabClient(options: GitLabOptions): CodeReviewSource {
     return ok(summaries)
   }
 
-  // Falha ao consultar uma MR não derruba a lista: o pipeline dela fica `unknown`
+  // A failure to query one MR does not bring down the list: its pipeline becomes `unknown`
   async function pipelineOf(projectId: number, number: number): Promise<PipelineState> {
     const response = await fetchPage(
       `/projects/${projectId}/merge_requests/${number}`,

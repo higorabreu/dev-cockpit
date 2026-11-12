@@ -6,7 +6,7 @@ export interface StatusLineSetting {
 }
 
 export interface CommandParts {
-  // Caminhos absolutos: o Claude Code roda o comando sem o ambiente do terminal do usuário
+  // Absolute paths: Claude Code runs the command without the user's terminal environment
   readonly node: string
   readonly script: string
 }
@@ -25,7 +25,7 @@ export function reportCommand(parts: CommandParts, forward?: string): string {
 export const isOurCommand = (command: string) =>
   command.includes(`${MARKER} `) || command.endsWith(MARKER)
 
-// Devolve o comando original que o nosso encadeia, para restaurar na remoção
+// Returns the original command that ours chains, to restore on removal
 export function forwardedCommand(command: string): string | undefined {
   const match = /--forward '((?:[^']|'\\'')*)'$/.exec(command)
   return match?.[1]?.replace(/'\\''/g, "'")
@@ -51,7 +51,7 @@ export type InstallPlan =
       readonly next: Settings
       readonly before: StatusLineSetting | undefined
       readonly after: StatusLineSetting
-      // O statusLine que o usuário já tinha e agora é encadeado
+      // The statusLine the user already had and which is now chained
       readonly chained: string | undefined
     }
 

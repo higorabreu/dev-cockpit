@@ -7,7 +7,7 @@ export interface EndpointEnvironment {
   readonly uid: number | undefined
 }
 
-// Unix usa um socket em arquivo; o Windows usa um named pipe, que o módulo net aceita da mesma forma
+// Unix uses a socket file; Windows uses a named pipe, which the net module accepts the same way
 export function defaultEndpoint(
   environment: EndpointEnvironment = {
     platform: process.platform,
@@ -29,7 +29,7 @@ export interface StateDirEnvironment {
   readonly localAppData: string | undefined
 }
 
-// Onde ficam dados que sobrevivem ao logout, como o cache das visões
+// Where data that survives logout lives, such as the views cache
 export function defaultStateDir(
   environment: StateDirEnvironment = {
     platform: process.platform,

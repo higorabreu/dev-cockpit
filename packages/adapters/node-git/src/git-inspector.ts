@@ -22,7 +22,7 @@ export interface GitInspectorOptions {
 
 function git(cwd: string, args: readonly string[]): Promise<string | undefined> {
   return new Promise((resolve) => {
-    // Sem bloqueio opcional: a leitura periódica não pode disputar o índice com o git do usuário
+    // No optional lock: the periodic read must not compete for the index with the user's git
     execFile(
       'git',
       ['--no-optional-locks', '-C', cwd, ...args],
@@ -45,11 +45,11 @@ interface OwnStatus {
   readonly behind: number
 }
 
-// Falha do git (fora de repositório, sem git instalado, tempo esgotado) significa sem informação
+// A git failure (outside a repository, git not installed, timeout) means no information
 export function createGitInspector(options: GitInspectorOptions = {}): GitInspector {
   const ttl = options.submoduleTtlMs ?? DEFAULT_SUBMODULE_TTL_MS
   const now = options.now ?? Date.now
-  // Ler o estado de cada submódulo a cada ciclo seria caro; vale por alguns segundos
+  // Reading each submodule's state every cycle would be expensive; it holds for a few seconds
   const cache = new Map<string, { at: number; value: OwnStatus | undefined }>()
 
   async function ownStatus(directory: string): Promise<OwnStatus | undefined> {

@@ -2,15 +2,15 @@ import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 export interface ScanQuery {
-  // Caminho que deve aparecer entre os argumentos do processo
+  // Path that must appear among the process arguments
   readonly argument: string
-  // Valor de DCK_ENDPOINT do processo procurado; indefinido para o endpoint padrão
+  // DCK_ENDPOINT value of the searched process; undefined for the default endpoint
   readonly endpoint: string | undefined
   readonly exclude?: number
 }
 
-// Acha processos pelo que foi passado na linha de comando, por exemplo um daemon antigo que
-// continua vivo depois de uma atualização
+// Finds processes by what was passed on the command line, for example an old daemon that
+// is still alive after an update
 export function createProcessScanner(procRoot = '/proc') {
   const text = (path: string) => readFile(path, 'utf8').catch(() => undefined)
 

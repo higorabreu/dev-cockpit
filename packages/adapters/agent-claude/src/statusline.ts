@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 const number = z.number().nullish()
 
-// Só o que a tela usa do JSON que o Claude Code manda ao statusLine; o resto é ignorado
+// Only what the screen uses from the JSON Claude Code sends to the statusLine; the rest is ignored
 const statusline = z.object({
   transcript_path: z.string().nullish(),
   model: z.object({ id: z.string().nullish() }).nullish(),
@@ -42,7 +42,7 @@ export function normalizeStatusline(payload: unknown): AgentReportData | undefin
   } = parsed.data
 
   const usage = window?.current_usage
-  // Mesma conta do Claude Code: só entrada, cache criado e cache lido; a saída não conta
+  // Same arithmetic as Claude Code: input only, cache created and cache read; output does not count
   const contextTokens = usage
     ? (usage.input_tokens ?? 0) +
       (usage.cache_creation_input_tokens ?? 0) +

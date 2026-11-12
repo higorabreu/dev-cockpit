@@ -12,11 +12,11 @@ export const claudeProfile: AgentProfile = {
   processes: ['claude'],
 }
 
-// Tamanhos de leitura do final do arquivo: cresce só se o trecho não tiver uma resposta com uso
+// Sizes of the tail read of the file: grows only if the chunk has no response with usage
 const TAIL_STEPS = [256 * 1024, 1024 * 1024, 4 * 1024 * 1024]
 
-// O Claude Code grava as sessões em ~/.claude/projects/<diretório com tudo que não é letra
-// ou número trocado por hífen>/<id>.jsonl
+// Claude Code writes sessions in ~/.claude/projects/<directory with everything that is not a letter
+// or digit replaced by a hyphen>/<id>.jsonl
 export function projectDirectoryName(cwd: string): string {
   return cwd.replace(/[^A-Za-z0-9]/g, '-')
 }
@@ -29,7 +29,7 @@ async function readTail(path: string, bytes: number): Promise<string> {
     const buffer = Buffer.alloc(length)
     await handle.read(buffer, 0, length, size - length)
     const text = buffer.toString('utf8')
-    // Começar no meio do arquivo corta a primeira linha; ela é descartada
+    // Starting mid-file cuts the first line; it is discarded
     return length < size ? text.slice(text.indexOf('\n') + 1) : text
   } finally {
     await handle.close()
@@ -37,11 +37,11 @@ async function readTail(path: string, bytes: number): Promise<string> {
 }
 
 export interface ClaudeSourceOptions {
-  // Pasta de configuração do Claude Code, normalmente ~/.claude
+  // Claude Code configuration folder, normally ~/.claude
   readonly claudeDir?: string
 }
 
-// O Claude Code registra cada processo vivo em ~/.claude/sessions/<pid>.json
+// Claude Code records each live process in ~/.claude/sessions/<pid>.json
 const registryEntry = z.object({
   sessionId: z.string().min(1),
   cwd: z.string(),
@@ -61,15 +61,15 @@ async function readRegistry(claudeDir: string, pid: number) {
   }
 }
 
-// Só lê arquivos de sessão que estão dentro da pasta de projetos do Claude: o caminho vem de um
-// processo externo e não pode apontar para qualquer arquivo
+// Only reads session files inside Claude's projects folder: the path comes from an
+// external process and must not point to just any file
 function insideProjects(claudeDir: string, path: string): boolean {
   const root = `${resolve(claudeDir, 'projects')}${sep}`
   const resolved = resolve(path)
   return resolved.startsWith(root) && resolved.endsWith('.jsonl')
 }
 
-// O que o próprio Claude informou (statusLine) vale mais; sem isso, o registro do processo
+// What Claude itself reported (statusLine) wins; without it, the process record
 async function transcriptFor(
   claudeDir: string,
   context: AgentContext,
@@ -77,11 +77,11 @@ async function transcriptFor(
   if (context.transcriptPath && insideProjects(claudeDir, context.transcriptPath)) {
     return resolve(context.transcriptPath)
   }
-  // Sem o processo exato não há como saber qual sessão é: melhor nada que a sessão errada
+  // Without the exact process there is no way to tell which session it is: better nothing than the wrong session
   if (context.pid === undefined) return undefined
   const entry = await readRegistry(claudeDir, context.pid)
   if (!entry) return undefined
-  // O início do processo tem de bater, senão o registro é de um PID que foi reaproveitado
+  // The process start must match, otherwise the record belongs to a reused PID
   if (context.processStart && entry.procStart && entry.procStart !== context.processStart) {
     return undefined
   }
@@ -100,7 +100,7 @@ export function createClaudeSource(options: ClaudeSourceOptions = {}): AgentSour
       let summary = summarizeTranscriptTail('')
       for (const bytes of TAIL_STEPS) {
         const text = await readTail(file, bytes).catch(() => undefined)
-        // A sessão ainda não gravou nada (antes da primeira mensagem o arquivo não existe)
+        // The session has not written anything yet (before the first message the file does not exist)
         if (text === undefined) break
         summary = summarizeTranscriptTail(text)
         if (summary.contextTokens !== undefined) break

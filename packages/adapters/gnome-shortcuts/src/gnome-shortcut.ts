@@ -7,7 +7,7 @@ const ENTRY_SCHEMA = `${MEDIA_KEYS}.custom-keybinding`
 const ENTRY_PATH = '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/dev-cockpit/'
 
 export interface GsettingsRun {
-  // `missing` quando o executável não existe
+  // `missing` when the executable does not exist
   readonly status: number | 'missing'
   readonly stdout: string
 }
@@ -62,7 +62,7 @@ const KEYS: Readonly<Record<string, string>> = {
   right: 'Right',
 }
 
-// Acelerador do Electron ("Ctrl+Shift+K", "F12") para o formato do GNOME ("<Control><Shift>k")
+// Electron accelerator ("Ctrl+Shift+K", "F12") to GNOME format ("<Control><Shift>k")
 export function toGnomeBinding(accelerator: string): string | undefined {
   const parts = accelerator.split('+').map((part) => part.trim())
   const key = parts.pop()
