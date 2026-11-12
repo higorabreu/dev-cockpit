@@ -95,7 +95,7 @@ An extension comes from one of four sources, from the lowest to the highest prec
 | `built-in` | Shipped with the app |
 | `installed` | A subfolder of `<config directory>/extensions/` that holds a `dck-extension.json` |
 | `global` | The user's own files in the app's config directory |
-| `repository` | The `.dck/` folder at the root of the current repository (the folder that holds `.git`), or of the current directory outside a repository |
+| `repository` | The `.dck/` folder at the root of the current repository (the folder that holds `.git`); outside a repository there is none |
 
 The config directory is `~/.config/dev-cockpit` on Linux (or under `XDG_CONFIG_HOME`),
 `~/Library/Application Support/Dev Cockpit` on macOS and `%APPDATA%\\Dev Cockpit` on Windows. The window and
@@ -157,12 +157,12 @@ system language; the detail after the message is always in English.
 
 ```
 $ dck ext list
-dck.built-in  0.3.0  built-in   active
+dck.built-in  0.2.0  built-in   active
 acme.commits  1.0.0  installed  active
 acme.reviews  0.4.1  installed  disabled
 
 Rejected:
-  /home/ana/.config/dev-cockpit/extensions/acme.old     installed  Extension not compatible with this version: acme.old needs dck <0.2.0, this is 0.3.0
+  /home/ana/.config/dev-cockpit/extensions/acme.old     installed  Extension not compatible with this version: acme.old needs dck <0.2.0, this is 0.2.0
   /home/ana/.config/dev-cockpit/extensions/acme.runner  installed  Extension feature not supported by this version: this version cannot run code: main
   /home/ana/.config/dev-cockpit/extensions/broken       installed  Invalid extension manifest: the manifest must be a JSON object
 ```
@@ -180,16 +180,16 @@ With nothing installed, only the built-in extension shows:
 
 ```
 $ dck ext list
-dck.built-in  0.3.0  built-in  active
+dck.built-in  0.2.0  built-in  active
 ```
 
 A `standards/` folder in the config directory or in the repository's `.dck/` adds its implicit extension:
 
 ```
 $ dck ext list
-dck.built-in    0.3.0  built-in    active
-dck.global      0.3.0  global      active
-dck.repository  0.3.0  repository  active
+dck.built-in    0.2.0  built-in    active
+dck.global      0.2.0  global      active
+dck.repository  0.2.0  repository  active
 ```
 
 The command reads files and never talks to the daemon. It exits with 0 even when an extension is refused,

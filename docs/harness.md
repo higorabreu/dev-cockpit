@@ -14,9 +14,9 @@ The commands read and write files only. They never talk to the daemon, so they w
 The repository is the folder that holds `.git`, found by walking up from the current directory. Outside a
 repository `dck standards`, `dck guide` and `dck check` use only the built-in examples and your own folder,
 and `dck init` or a change without `--global` says the folder is not inside a git repository and exits
-with 64. Labels and questions follow the system language; the text of a
-standard is printed as it was written, except that a control character or a bidirectional control in it
-or in a path shows as `?`, and the detail after an error message is always in English.
+with 64. Labels and questions follow the system language; the text of a standard is printed as it was written,
+except that a control character or a bidirectional control in it or in a path shows as `?`, and the detail
+after an error message is always in English.
 
 The Standards page of the settings screen and the Git section of the panel offer the same through the same
 code (the standards workspace in the core): a switch per standard, its fields, the sharing with agents and
@@ -83,12 +83,13 @@ AGENTS.md updated with the current rules
 ```
 
 `dck standards enable <id>` and `disable <id>` write the complete standard into `.dck/standards/`, or into
-the user's own folder with `--global`. The standard written to the repository is built without the files
-of your own folder, so personal text never reaches the team's file, and the one written with `--global`
-without the files of the repository. When `AGENTS.md` already has the block, it is refreshed in the same
-command. An unknown id exits with 1, and so does a change whose file, `<id>.md`, already holds an invalid
-file or another standard: that file is never overwritten. A standard switched on with `--global` stays off while a file of the
-repository says it is off, because the repository has the last word; the command says so in one more line.
+the user's own folder with `--global`. The standard written to the repository is built without the files of
+your own folder, so personal text never reaches the team's file, and the one written with `--global` without
+the files of the repository. When `AGENTS.md` already has the block, it is refreshed in the same command. An
+unknown id exits with 1, and so does a change whose file, `<id>.md`, already holds an invalid file or
+another standard: that file is never overwritten. A standard switched on with `--global` stays off while a
+file of the repository says it is off, because the repository has the last word; the command says so in one
+more line.
 
 To change a rule, edit the file that was written: it is the whole standard, so what is in the folder is
 what applies. The built-in examples keep their accepted types and their length limit in fields made for
@@ -247,10 +248,10 @@ whole, and the body when it has one. So one field can be changed without copying
 is never half merged. `dck standards` shows the source that had the last word and the ones it overrides.
 
 A file that cannot be used (no front matter, a YAML error, given by its first line, an unknown field, a
-broken expression, a required field missing after the merge) is reported with its path and the problem,
-as `DCK-STD-001`. The other standards
-still load. An extension listed in the `extensions.disabled` setting contributes no standard, and that
-includes the built-in examples (`dck.built-in`) and the two folders (`dck.global`, `dck.repository`).
+broken expression, a required field missing after the merge) is reported with its path and the problem, as
+`DCK-STD-001`. The other standards still load. An extension listed in the `extensions.disabled` setting
+contributes no standard, and that includes the built-in examples (`dck.built-in`) and the two folders
+(`dck.global`, `dck.repository`).
 
 ## The block in `AGENTS.md`
 
@@ -269,10 +270,10 @@ does not exist):
 ```
 
 - One line per enabled standard that the repository itself holds in `.dck/standards/` (the block is
-  versioned with the team, so a standard only your own folder switches on stays out of it): its title and the messages of its rules, or its reason
-  when it has no rule. The rules are stated in the block, so an agent follows them without running
-  anything. A standard with no rule also points to `dck guide` when it has a body, and a standard with
-  rules when its body is longer than five lines.
+  versioned with the team, so a standard only your own folder switches on stays out of it): its title and
+  the messages of its rules, or its reason when it has no rule. The rules are stated in the block, so an
+  agent follows them without running anything. A standard with no rule also points to `dck guide` when it
+  has a body, and a standard with rules when its body is longer than five lines.
 - With no standard of the repository on there is nothing to share: no empty block is written, and the
   window or the command says so.
 - The block is always in English and has the same bytes for the same standards, whatever the language of
@@ -288,9 +289,9 @@ does not exist):
   `disable` refresh it.
 
 Claude Code reads `AGENTS.md` by itself when the repository has no `CLAUDE.md`. When there is a `CLAUDE.md`,
-it reads the block only if that file imports the other with `@AGENTS.md` or `@./AGENTS.md`, on a line of
-its own or within a sentence; `dck init` notices the
-missing line and offers to add it. The app never creates a `CLAUDE.md`, and `--yes` never changes one.
+it reads the block only if that file imports the other with `@AGENTS.md` or `@./AGENTS.md`, on a line of its
+own or within a sentence; `dck init` notices the missing line and offers to add it. The app never creates a
+`CLAUDE.md`, and `--yes` never changes one.
 
 ## Known limits
 
