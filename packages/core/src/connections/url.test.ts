@@ -10,7 +10,7 @@ describe('normalizeBaseUrl', () => {
 
 describe('parseServerUrl', () => {
   it('should return the normalized address when it is https', () => {
-    expect(parseServerUrl('https://gitlab.empresa.com/')).toBe('https://gitlab.empresa.com')
+    expect(parseServerUrl('https://gitlab.example.com/')).toBe('https://gitlab.example.com')
   })
 
   it('should accept plain http when the host is the own machine', () => {
@@ -18,11 +18,11 @@ describe('parseServerUrl', () => {
   })
 
   it.each([
-    ['plain http to a remote host', 'http://gitlab.empresa.com'],
+    ['plain http to a remote host', 'http://gitlab.example.com'],
     ['not an address', 'gitlab'],
-    ['credentials in the address', 'https://user:pass@gitlab.empresa.com'],
-    ['a query string', 'https://gitlab.empresa.com?x=1'],
-    ['another protocol', 'ftp://gitlab.empresa.com'],
+    ['credentials in the address', 'https://user:pass@gitlab.example.com'],
+    ['a query string', 'https://gitlab.example.com?x=1'],
+    ['another protocol', 'ftp://gitlab.example.com'],
     ['an empty text', ''],
   ])('should reject the address when it has %s', (_label, input) => {
     expect(parseServerUrl(input)).toBeUndefined()

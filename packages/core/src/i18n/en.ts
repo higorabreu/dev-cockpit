@@ -234,7 +234,7 @@ export const en: Record<MessageKey, string> = {
   'settings.group.connections': 'Connections',
   'connections.gitlab': 'GitLab',
   'connections.url': 'Address',
-  'connections.url.placeholder': 'https://gitlab.yourcompany.com',
+  'connections.url.placeholder': 'https://gitlab.example.com',
   'connections.token': 'Personal access token',
   'connections.token.hint': 'read_api scope. Kept in the system keyring, never in a file.',
   'connections.token.placeholder': 'Paste the token to connect',

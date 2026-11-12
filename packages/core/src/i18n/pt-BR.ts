@@ -233,7 +233,7 @@ export const ptBR = {
   'settings.group.connections': 'Conexões',
   'connections.gitlab': 'GitLab',
   'connections.url': 'Endereço',
-  'connections.url.placeholder': 'https://gitlab.suaempresa.com',
+  'connections.url.placeholder': 'https://gitlab.example.com',
   'connections.token': 'Token de acesso pessoal',
   'connections.token.hint': 'Escopo read_api. Fica no cofre do sistema, nunca em arquivo.',
   'connections.token.placeholder': 'Cole o token para conectar',
