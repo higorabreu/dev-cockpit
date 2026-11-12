@@ -1,2 +1,2 @@
 export * from './extension-finder.ts'
-export * from './standard-files.ts'
+export * from './rule-files.ts'

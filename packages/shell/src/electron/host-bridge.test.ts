@@ -2,7 +2,7 @@ import {
   defaultSettings,
   hostChannels,
   ok,
-  type StandardsView,
+  type RulesView,
   silentLogger,
   type TabNotification,
 } from '@dck/core'
@@ -10,9 +10,9 @@ import { FakePtyHost, MemoryClipboard } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
 import { type IpcMainApi, registerHostBridge } from './host-bridge.ts'
 
-const standardsView = (root: string): StandardsView => ({
+const rulesView = (root: string): RulesView => ({
   root,
-  standards: [],
+  rules: [],
   invalid: [],
   agents: { file: `${root}/AGENTS.md`, shared: false, stale: false, claudeImportMissing: false },
 })
@@ -33,10 +33,10 @@ function setup() {
   const gitlabConnects: { url: string; token: string }[] = []
   const viewRefreshes: { view: string; maxAgeMs: number | undefined }[] = []
   const opened: string[] = []
-  const standardsCalls: unknown[][] = []
-  const changeStandards = async (name: string, cwd: string, ...args: unknown[]) => {
-    standardsCalls.push([name, cwd, ...args])
-    return ok(standardsView(cwd))
+  const rulesCalls: unknown[][] = []
+  const changeRules = async (name: string, cwd: string, ...args: unknown[]) => {
+    rulesCalls.push([name, cwd, ...args])
+    return ok(rulesView(cwd))
   }
   const bridge = registerHostBridge({
     ipcMain,
@@ -102,13 +102,13 @@ function setup() {
       touch: async (path: string) => void touched.push(path),
       toggleFavorite: async (path: string) => !path.endsWith('/pinned'),
     },
-    standards: {
-      view: async (cwd) => standardsView(cwd),
-      setEnabled: (cwd, id, enabled) => changeStandards('setEnabled', cwd, id, enabled),
-      setField: (cwd, id, rule, name, value) =>
-        changeStandards('setField', cwd, id, rule, name, value),
-      shareWithAgents: (cwd, on) => changeStandards('shareWithAgents', cwd, on),
-      addClaudeImport: (cwd) => changeStandards('addClaudeImport', cwd),
+    rules: {
+      view: async (cwd) => rulesView(cwd),
+      setEnabled: (cwd, id, enabled) => changeRules('setEnabled', cwd, id, enabled),
+      setField: (cwd, id, check, name, value) =>
+        changeRules('setField', cwd, id, check, name, value),
+      shareWithAgents: (cwd, on) => changeRules('shareWithAgents', cwd, on),
+      addClaudeImport: (cwd) => changeRules('addClaudeImport', cwd),
     },
     shell: '/bin/zsh',
     home: '/home/usuario',
@@ -131,7 +131,7 @@ function setup() {
     gitlabConnects,
     viewRefreshes,
     opened,
-    standardsCalls,
+    rulesCalls,
     fullHeights: () => fullHeightToggles,
   }
 }
@@ -422,54 +422,54 @@ describe('registerHostBridge external', () => {
   })
 })
 
-describe('registerHostBridge standards', () => {
-  it('should return the standards of the directory the tab is in when the interface asks', async () => {
+describe('registerHostBridge rules', () => {
+  it('should return the rules of the directory the tab is in when the interface asks', async () => {
     const { call, ptyHost } = setup()
     const id = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
 
-    const view = await call(hostChannels.standardsGet, id)
+    const view = await call(hostChannels.rulesGet, id)
 
-    expect(view).toEqual(standardsView(`/pid/${ptyHost.sessions[0]?.pid}`))
+    expect(view).toEqual(rulesView(`/pid/${ptyHost.sessions[0]?.pid}`))
   })
 
   it.each([
     ['the session does not exist', 99],
     ['the id is not a number', 'tab-1'],
-  ])('should return nothing when %s and the standards are asked', async (_label, id) => {
+  ])('should return nothing when %s and the rules are asked', async (_label, id) => {
     const { call } = setup()
 
-    expect(await call(hostChannels.standardsGet, id)).toBeUndefined()
+    expect(await call(hostChannels.rulesGet, id)).toBeUndefined()
   })
 
   it('should pass each change with the directory of the tab when the request is valid', async () => {
-    const { call, ptyHost, standardsCalls } = setup()
+    const { call, ptyHost, rulesCalls } = setup()
     const ptyId = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
     const cwd = `/pid/${ptyHost.sessions[0]?.pid}`
 
-    const result = await call(hostChannels.standardsSetEnabled, {
+    const result = await call(hostChannels.rulesSetEnabled, {
       ptyId,
       id: 'branch-format',
       enabled: true,
     })
-    await call(hostChannels.standardsSetField, {
+    await call(hostChannels.rulesSetField, {
       ptyId,
       id: 'commit-message',
-      rule: 1,
+      check: 1,
       name: 'maxLength',
       value: 50,
     })
-    await call(hostChannels.standardsSetField, {
+    await call(hostChannels.rulesSetField, {
       ptyId,
       id: 'branch-format',
-      rule: 0,
+      check: 0,
       name: 'types',
       value: 'feat|fix',
     })
-    await call(hostChannels.standardsShareWithAgents, { ptyId, on: true })
-    await call(hostChannels.standardsAddClaudeImport, { ptyId })
+    await call(hostChannels.rulesShareWithAgents, { ptyId, on: true })
+    await call(hostChannels.rulesAddClaudeImport, { ptyId })
 
-    expect(result).toEqual({ ok: true, value: standardsView(cwd) })
-    expect(standardsCalls).toEqual([
+    expect(result).toEqual({ ok: true, value: rulesView(cwd) })
+    expect(rulesCalls).toEqual([
       ['setEnabled', cwd, 'branch-format', true],
       ['setField', cwd, 'commit-message', 1, 'maxLength', 50],
       ['setField', cwd, 'branch-format', 0, 'types', 'feat|fix'],
@@ -481,50 +481,50 @@ describe('registerHostBridge standards', () => {
   it.each([
     [
       'a switch that is not a boolean',
-      hostChannels.standardsSetEnabled,
+      hostChannels.rulesSetEnabled,
       { ptyId: 1, id: 'branch-format', enabled: 'yes' },
     ],
     [
       'an id that is too long',
-      hostChannels.standardsSetEnabled,
+      hostChannels.rulesSetEnabled,
       { ptyId: 1, id: 'x'.repeat(65), enabled: true },
     ],
     [
-      'a rule that is not a position',
-      hostChannels.standardsSetField,
-      { ptyId: 1, id: 'branch-format', rule: -1, name: 'types', value: 'feat' },
+      'a check that is not a position',
+      hostChannels.rulesSetField,
+      { ptyId: 1, id: 'branch-format', check: -1, name: 'types', value: 'feat' },
     ],
     [
       'a value that is an object',
-      hostChannels.standardsSetField,
-      { ptyId: 1, id: 'branch-format', rule: 0, name: 'types', value: { text: 'feat' } },
+      hostChannels.rulesSetField,
+      { ptyId: 1, id: 'branch-format', check: 0, name: 'types', value: { text: 'feat' } },
     ],
     [
       'a value that is too long',
-      hostChannels.standardsSetField,
-      { ptyId: 1, id: 'branch-format', rule: 0, name: 'types', value: 'x'.repeat(501) },
+      hostChannels.rulesSetField,
+      { ptyId: 1, id: 'branch-format', check: 0, name: 'types', value: 'x'.repeat(501) },
     ],
-    ['no answer to share or not', hostChannels.standardsShareWithAgents, { ptyId: 1 }],
-    ['a payload that is not an object', hostChannels.standardsAddClaudeImport, 1],
+    ['no answer to share or not', hostChannels.rulesShareWithAgents, { ptyId: 1 }],
+    ['a payload that is not an object', hostChannels.rulesAddClaudeImport, 1],
   ])(
     'should refuse the change without writing when it has %s',
     async (_label, channel, payload) => {
-      const { call, standardsCalls } = setup()
+      const { call, rulesCalls } = setup()
       await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
 
       const result = await call(channel, payload)
 
       expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-IPC-003' } } })
-      expect(standardsCalls).toEqual([])
+      expect(rulesCalls).toEqual([])
     },
   )
 
   it('should fail the change without writing when the session does not exist', async () => {
-    const { call, standardsCalls } = setup()
+    const { call, rulesCalls } = setup()
 
-    const result = await call(hostChannels.standardsShareWithAgents, { ptyId: 99, on: true })
+    const result = await call(hostChannels.rulesShareWithAgents, { ptyId: 99, on: true })
 
-    expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-STD-003' } } })
-    expect(standardsCalls).toEqual([])
+    expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-RUL-003' } } })
+    expect(rulesCalls).toEqual([])
   })
 })

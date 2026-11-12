@@ -3,8 +3,8 @@ import {
   createTranslator,
   type GitStatus,
   type Locale,
+  type RuleMarks,
   type SessionSnapshot,
-  type StandardMarks,
 } from '@dck/core'
 import { describe, expect, it } from 'vitest'
 import { createGitSection } from './git-section.ts'
@@ -27,13 +27,13 @@ const git: GitStatus = {
   submodulesClean: 0,
 }
 
-function bodyOf(standards?: StandardMarks, locale: Locale = 'en'): HTMLElement {
+function bodyOf(rules?: RuleMarks, locale: Locale = 'en'): HTMLElement {
   const snapshot: SessionSnapshot = {
     cwd: git.root,
     process: 'zsh',
     activity: 'idle',
     git,
-    ...(standards ? { standards } : {}),
+    ...(rules ? { rules } : {}),
   }
   const section = createGitSection(
     { snapshot: () => snapshot, requestRender() {} },
@@ -43,11 +43,11 @@ function bodyOf(standards?: StandardMarks, locale: Locale = 'en'): HTMLElement {
 }
 
 const marksIn = (element: Element | null | undefined) => [
-  ...(element?.querySelectorAll('.std-mark') ?? []),
+  ...(element?.querySelectorAll('.rule-mark') ?? []),
 ]
 
-describe('createGitSection standards marks', () => {
-  it('should mark the branch with the failed rules in its tooltip when it is outside a standard', () => {
+describe('createGitSection rules marks', () => {
+  it('should mark the branch with the failed checks in its tooltip when it is outside a rule', () => {
     const body = bodyOf({ branch: ['Use <type>/<short-slug>', 'No capitals'], commits: {} })
 
     const [mark, ...others] = marksIn(body.querySelector('.brow'))
@@ -55,11 +55,11 @@ describe('createGitSection standards marks', () => {
     expect(others).toEqual([])
     expect(mark?.previousElementSibling?.textContent).toBe('Feature/Login')
     expect(mark?.getAttribute('data-tip')).toBe(
-      'Outside the standards: Use <type>/<short-slug>; No capitals',
+      'Outside the rules: Use <type>/<short-slug>; No capitals',
     )
   })
 
-  it('should mark only the commit that fails when one commit not pushed yet is outside a standard', () => {
+  it('should mark only the commit that fails when one commit not pushed yet is outside a rule', () => {
     const body = bodyOf({ branch: [], commits: { e9be7eb: ['Start with <type>: <summary>'] } })
 
     const rows = [...body.querySelectorAll('.frow')]
@@ -67,7 +67,7 @@ describe('createGitSection standards marks', () => {
     expect(marksIn(body.querySelector('.brow'))).toEqual([])
     expect(rows.map((row) => marksIn(row).length)).toEqual([0, 1])
     expect(marksIn(rows[1])[0]?.getAttribute('data-tip')).toBe(
-      'Outside the standards: Start with <type>: <summary>',
+      'Outside the rules: Start with <type>: <summary>',
     )
   })
 
@@ -82,7 +82,7 @@ describe('createGitSection standards marks', () => {
     expect(mark?.hasAttribute('title')).toBe(false)
   })
 
-  it('should draw the section as before when the snapshot carries no standards', () => {
+  it('should draw the section as before when the snapshot carries no rules', () => {
     const body = bodyOf()
 
     expect(marksIn(body)).toEqual([])
@@ -95,7 +95,7 @@ describe('createGitSection standards marks', () => {
     const body = bodyOf({ branch: ['Use <type>/<short-slug>'], commits: {} }, 'pt-BR')
 
     expect(marksIn(body)[0]?.getAttribute('data-tip')).toBe(
-      'Fora dos padrões: Use <type>/<short-slug>',
+      'Fora das regras: Use <type>/<short-slug>',
     )
   })
 })

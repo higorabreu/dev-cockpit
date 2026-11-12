@@ -33,11 +33,11 @@ export function createExtDeps(options: ExtDepsOptions): ExtDeps {
       installedDir: join(configDir, 'extensions'),
       globalDir: configDir,
       repositoryDir: options.inRepository ? join(options.repositoryRoot, '.dck') : undefined,
-      // A `standards` folder in the config directory or in `.dck` is an implicit extension
+      // A `rules` folder in the config directory or in `.dck` is an implicit extension
       implicit: {
         apiVersion: EXTENSION_API_VERSION,
         appVersion,
-        points: { standards: 'standards' },
+        points: { rules: 'rules' },
       },
       logger,
     }),

@@ -1,0 +1,37 @@
+.scheck,
+.sfield {
+  padding-left: 16px;
+}
+
+.scheck {
+  padding-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.scheck.serror {
+  padding-top: 0;
+  padding-bottom: 6px;
+}
+
+.sfield .smono,
+.sfield input[type="text"],
+.spath {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.sfield input[type="text"] {
+  width: 280px;
+}
+
+.spath {
+  max-width: 360px;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sintro {
+  margin: 0 0 4px;
+}

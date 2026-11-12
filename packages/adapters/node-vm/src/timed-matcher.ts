@@ -3,7 +3,7 @@ import type { Matcher } from '@dck/core'
 
 const DEFAULT_TIMEOUT_MS = 100
 
-// A standard from a repository file may carry an expression that backtracks forever; the vm stops it
+// A rule from a repository file may carry an expression that backtracks forever; the vm stops it
 export function createTimedMatcher(milliseconds = DEFAULT_TIMEOUT_MS): Matcher {
   return (expression, text) => {
     try {

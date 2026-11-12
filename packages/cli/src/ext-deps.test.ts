@@ -59,9 +59,9 @@ describe('createExtDeps', () => {
     expect(lines).toEqual(['dck.built-in  0.3.0  built-in  active'])
   })
 
-  it('should list the global and the repository folders as extensions when each has a standards folder', async () => {
-    await mkdir(join(root, 'standards'), { recursive: true })
-    await mkdir(join(root, 'project', '.dck', 'standards'), { recursive: true })
+  it('should list the global and the repository folders as extensions when each has a rules folder', async () => {
+    await mkdir(join(root, 'rules'), { recursive: true })
+    await mkdir(join(root, 'project', '.dck', 'rules'), { recursive: true })
 
     const { lines } = await list()
 
@@ -73,7 +73,7 @@ describe('createExtDeps', () => {
   })
 
   it('should leave out the .dck folder of the current directory when it is not inside a repository', async () => {
-    await mkdir(join(root, 'project', '.dck', 'standards'), { recursive: true })
+    await mkdir(join(root, 'project', '.dck', 'rules'), { recursive: true })
 
     const { lines } = await list(false)
 

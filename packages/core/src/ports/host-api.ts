@@ -5,8 +5,8 @@ import type { ComposeStatus } from './environment.ts'
 import type { TabNotification } from './notifier.ts'
 import type { Project } from './projects.ts'
 import type { PtyExit, Unsubscribe } from './pty.ts'
+import type { RulesChange, RulesView } from './rules.ts'
 import type { SessionActivityInfo, SessionSnapshot } from './session.ts'
-import type { StandardsChange, StandardsView } from './standards.ts'
 import type { ViewSnapshot } from './views.ts'
 
 export interface PtyCreateOptions {
@@ -68,20 +68,20 @@ export interface HostApi {
     activity(ptyId: number): Promise<SessionActivityInfo | undefined>
     inspect(ptyId: number): Promise<SessionSnapshot | undefined>
   }
-  // The standards of the repository the tab is in; every change is written in that repository
-  readonly standards: {
+  // The rules of the repository the tab is in; every change is written in that repository
+  readonly rules: {
     // Undefined when the tab is not inside a git repository
-    get(ptyId: number): Promise<StandardsView | undefined>
-    setEnabled(ptyId: number, id: string, enabled: boolean): Promise<StandardsChange>
+    get(ptyId: number): Promise<RulesView | undefined>
+    setEnabled(ptyId: number, id: string, enabled: boolean): Promise<RulesChange>
     setField(
       ptyId: number,
       id: string,
-      rule: number,
+      check: number,
       name: string,
       value: string | number,
-    ): Promise<StandardsChange>
-    shareWithAgents(ptyId: number, on: boolean): Promise<StandardsChange>
-    addClaudeImport(ptyId: number): Promise<StandardsChange>
+    ): Promise<RulesChange>
+    shareWithAgents(ptyId: number, on: boolean): Promise<RulesChange>
+    addClaudeImport(ptyId: number): Promise<RulesChange>
   }
   readonly projects: {
     list(): Promise<readonly Project[]>
@@ -123,11 +123,11 @@ export const hostChannels = {
   autostartSet: 'autostart:set',
   sessionActivity: 'session:activity',
   sessionInspect: 'session:inspect',
-  standardsGet: 'standards:get',
-  standardsSetEnabled: 'standards:set-enabled',
-  standardsSetField: 'standards:set-field',
-  standardsShareWithAgents: 'standards:share-with-agents',
-  standardsAddClaudeImport: 'standards:add-claude-import',
+  rulesGet: 'rules:get',
+  rulesSetEnabled: 'rules:set-enabled',
+  rulesSetField: 'rules:set-field',
+  rulesShareWithAgents: 'rules:share-with-agents',
+  rulesAddClaudeImport: 'rules:add-claude-import',
   projectsList: 'projects:list',
   projectsTouch: 'projects:touch',
   projectsToggleFavorite: 'projects:toggle-favorite',

@@ -13,13 +13,13 @@ import {
   type PtyCreateOptions,
   type PtyHost,
   type PtySession,
+  type RulesChange,
+  type RulesView,
   type SessionActivityInfo,
   type SessionSnapshot,
   type SettingsPatch,
   type SettingsUpdate,
   type SettingsView,
-  type StandardsChange,
-  type StandardsView,
 } from '@dck/core'
 import { z } from 'zod'
 import type { ViewsGateway } from '../daemon/views-gateway.ts'
@@ -45,15 +45,15 @@ const notificationSchema = z.object({
 })
 
 const ptyId = z.number().int().nonnegative()
-// The limits are the ones of the standard model: an id, a variable name and an expression
-const standardId = z.string().min(1).max(64)
+// The limits are the ones of the rule model: an id, a variable name and an expression
+const ruleId = z.string().min(1).max(64)
 
-const standardSwitchSchema = z.object({ ptyId, id: standardId, enabled: z.boolean() })
+const ruleSwitchSchema = z.object({ ptyId, id: ruleId, enabled: z.boolean() })
 
-const standardFieldSchema = z.object({
+const ruleFieldSchema = z.object({
   ptyId,
-  id: standardId,
-  rule: z.number().int().nonnegative(),
+  id: ruleId,
+  check: z.number().int().nonnegative(),
   name: z.string().min(1).max(64),
   value: z.union([z.string().max(500), z.number()]),
 })
@@ -99,18 +99,18 @@ export interface BridgeOptions {
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
   }
   // Keyed by the directory the tab is in; every change goes to that repository
-  readonly standards: {
-    view(cwd: string): Promise<StandardsView | undefined>
-    setEnabled(cwd: string, id: string, enabled: boolean): Promise<StandardsChange>
+  readonly rules: {
+    view(cwd: string): Promise<RulesView | undefined>
+    setEnabled(cwd: string, id: string, enabled: boolean): Promise<RulesChange>
     setField(
       cwd: string,
       id: string,
-      rule: number,
+      check: number,
       name: string,
       value: string | number,
-    ): Promise<StandardsChange>
-    shareWithAgents(cwd: string, on: boolean): Promise<StandardsChange>
-    addClaudeImport(cwd: string): Promise<StandardsChange>
+    ): Promise<RulesChange>
+    shareWithAgents(cwd: string, on: boolean): Promise<RulesChange>
+    addClaudeImport(cwd: string): Promise<RulesChange>
   }
   readonly shell: string
   readonly home: string
@@ -221,38 +221,38 @@ export function registerHostBridge(options: BridgeOptions) {
     return session && (await options.sessions.activity(session.pid))?.cwd
   }
 
-  function handleStandards<Request extends { readonly ptyId: number }>(
+  function handleRules<Request extends { readonly ptyId: number }>(
     channel: string,
     schema: z.ZodType<Request>,
-    change: (cwd: string, request: Request) => Promise<StandardsChange>,
+    change: (cwd: string, request: Request) => Promise<RulesChange>,
   ) {
-    ipcMain.handle(channel, async (_event, payload: unknown): Promise<StandardsChange> => {
+    ipcMain.handle(channel, async (_event, payload: unknown): Promise<RulesChange> => {
       const parsed = schema.safeParse(payload)
       if (!parsed.success) {
-        logger.warn('invalid standards request ignored', { channel })
+        logger.warn('invalid rules request ignored', { channel })
         return fail(errorBody('DCK-IPC-003'))
       }
       const cwd = await cwdOf(parsed.data.ptyId)
-      return cwd === undefined ? fail(errorBody('DCK-STD-003')) : change(cwd, parsed.data)
+      return cwd === undefined ? fail(errorBody('DCK-RUL-003')) : change(cwd, parsed.data)
     })
   }
 
-  ipcMain.handle(hostChannels.standardsGet, async (_event, id: unknown) => {
+  ipcMain.handle(hostChannels.rulesGet, async (_event, id: unknown) => {
     const parsed = ptyId.safeParse(id)
     const cwd = parsed.success ? await cwdOf(parsed.data) : undefined
-    return cwd === undefined ? undefined : options.standards.view(cwd)
+    return cwd === undefined ? undefined : options.rules.view(cwd)
   })
-  handleStandards(hostChannels.standardsSetEnabled, standardSwitchSchema, (cwd, request) =>
-    options.standards.setEnabled(cwd, request.id, request.enabled),
+  handleRules(hostChannels.rulesSetEnabled, ruleSwitchSchema, (cwd, request) =>
+    options.rules.setEnabled(cwd, request.id, request.enabled),
   )
-  handleStandards(hostChannels.standardsSetField, standardFieldSchema, (cwd, request) =>
-    options.standards.setField(cwd, request.id, request.rule, request.name, request.value),
+  handleRules(hostChannels.rulesSetField, ruleFieldSchema, (cwd, request) =>
+    options.rules.setField(cwd, request.id, request.check, request.name, request.value),
   )
-  handleStandards(hostChannels.standardsShareWithAgents, agentsShareSchema, (cwd, request) =>
-    options.standards.shareWithAgents(cwd, request.on),
+  handleRules(hostChannels.rulesShareWithAgents, agentsShareSchema, (cwd, request) =>
+    options.rules.shareWithAgents(cwd, request.on),
   )
-  handleStandards(hostChannels.standardsAddClaudeImport, tabSchema, (cwd) =>
-    options.standards.addClaudeImport(cwd),
+  handleRules(hostChannels.rulesAddClaudeImport, tabSchema, (cwd) =>
+    options.rules.addClaudeImport(cwd),
   )
   ipcMain.handle(hostChannels.projectsList, () => options.projects.list())
   ipcMain.handle(hostChannels.projectsToggleFavorite, (_event, path: string) =>

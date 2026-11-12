@@ -11,9 +11,9 @@ export const BUILT_IN_EXTENSION_ID = 'dck.built-in'
 const isInside = (folder: string) =>
   !/^\/|^[A-Za-z]:|\\/.test(folder) && !folder.split('/').includes('..')
 
-// The declaration is the folder that holds the standard files, relative to the extension
-export const STANDARDS_POINT = defineContributionPoint(
-  'standards',
+// The declaration is the folder that holds the rule files, relative to the extension
+export const RULES_POINT = defineContributionPoint(
+  'rules',
   z
     .string()
     .min(1)
@@ -22,7 +22,7 @@ export const STANDARDS_POINT = defineContributionPoint(
 )
 
 // Every contribution point this build knows
-export const CONTRIBUTION_POINTS: readonly ContributionPoint<unknown>[] = [STANDARDS_POINT]
+export const CONTRIBUTION_POINTS: readonly ContributionPoint<unknown>[] = [RULES_POINT]
 
 // Shipped as data and loaded like any other candidate, so built-in and installed share one contract
 export function builtInExtension(appVersion: string): ExtensionCandidate {
@@ -37,7 +37,7 @@ export function builtInExtension(appVersion: string): ExtensionCandidate {
       apiVersion: EXTENSION_API_VERSION,
       engines: { dck: `=${releaseOf(appVersion)}` },
       // The examples are data in the core, so this folder is only a name
-      contributes: { [STANDARDS_POINT.id]: 'standards' },
+      contributes: { [RULES_POINT.id]: 'rules' },
     },
   }
 }

@@ -1,5 +1,5 @@
 import {
-  createStandardsWorkspace,
+  createRulesWorkspace,
   createTranslator,
   EXTENSION_API_VERSION,
   errorBody,
@@ -7,14 +7,14 @@ import {
   implicitManifest,
   type Locale,
 } from '@dck/core'
-import { MemoryStandardFiles } from '@dck/core/testing'
+import { MemoryRuleFiles } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 import { EXIT, runCli } from './cli.ts'
 
 const ROOT = '/home/ana/acme/backend'
 const GLOBAL = '/home/ana/.config/dev-cockpit'
-const STANDARDS = `${ROOT}/.dck/standards`
+const RULES = `${ROOT}/.dck/rules`
 const AGENTS = `${ROOT}/AGENTS.md`
 const CLAUDE = `${ROOT}/CLAUDE.md`
 const APP_VERSION = '0.3.0'
@@ -24,8 +24,8 @@ const HANDWRITTEN = '# Agents\n\nRun the tests before a commit.\n'
 type Answer = 'yes' | 'no' | 'enter'
 
 function setup(answers: readonly Answer[] = [], locale: Locale = 'en', inRepository = true) {
-  const files = new MemoryStandardFiles(parse)
-  const workspace = createStandardsWorkspace({
+  const files = new MemoryRuleFiles(parse)
+  const workspace = createRulesWorkspace({
     // Like the files adapter: a folder is an implicit extension only while it has files
     finder: {
       find: async () =>
@@ -36,7 +36,7 @@ function setup(answers: readonly Answer[] = [], locale: Locale = 'en', inReposit
           ] as const
         )
           .filter(([, location]) =>
-            [...files.texts.keys()].some((path) => path.startsWith(`${location}/standards/`)),
+            [...files.texts.keys()].some((path) => path.startsWith(`${location}/rules/`)),
           )
           .map(([source, location]) => ({
             source,
@@ -45,7 +45,7 @@ function setup(answers: readonly Answer[] = [], locale: Locale = 'en', inReposit
               source,
               apiVersion: EXTENSION_API_VERSION,
               appVersion: APP_VERSION,
-              contributes: { standards: 'standards' },
+              contributes: { rules: 'rules' },
             }),
           })),
     },
@@ -67,7 +67,7 @@ function setup(answers: readonly Answer[] = [], locale: Locale = 'en', inReposit
       connect: () => Promise.reject(new Error('invariant: init must not reach the daemon')),
       out: (text) => void out.push(text),
       err: (text) => void err.push(text),
-      standards: {
+      rules: {
         workspace,
         inRepository,
         currentBranch: async () => undefined,
@@ -125,16 +125,16 @@ describe('dck init', () => {
     ])
     expect(lines(out())).toEqual([
       'Files to write:',
-      '  .dck/standards/branch-format.md',
-      '  .dck/standards/commit-message.md',
-      '  .dck/standards/review-rubric.md',
+      '  .dck/rules/branch-format.md',
+      '  .dck/rules/commit-message.md',
+      '  .dck/rules/review-rubric.md',
       '  AGENTS.md',
-      'Done. See what is on with: dck standards',
+      'Done. See what is on with: dck rules',
     ])
     expect(written()).toEqual([
-      '.dck/standards/branch-format.md',
-      '.dck/standards/commit-message.md',
-      '.dck/standards/review-rubric.md',
+      '.dck/rules/branch-format.md',
+      '.dck/rules/commit-message.md',
+      '.dck/rules/review-rubric.md',
       'AGENTS.md',
     ])
     expect(files.texts.get(AGENTS)).toMatch(
@@ -156,8 +156,8 @@ describe('dck init', () => {
       expect(code).toBe(EXIT.ok)
       expect(lines(out())).toEqual([
         heading,
-        '  .dck/standards/branch-format.md',
-        '  .dck/standards/commit-message.md',
+        '  .dck/rules/branch-format.md',
+        '  .dck/rules/commit-message.md',
         '  AGENTS.md',
         closing,
       ])
@@ -208,7 +208,7 @@ describe('dck init', () => {
     ])
     expect(lines(out()).slice(0, 3)).toEqual([
       'Files to write:',
-      '  .dck/standards/commit-message.md',
+      '  .dck/rules/commit-message.md',
       '  AGENTS.md',
     ])
     expect(files.texts.get(AGENTS)).toContain('- Commit messages: ')
@@ -226,10 +226,10 @@ describe('dck init', () => {
     expect((await workspace.load()).agents.stale).toBe(false)
   })
 
-  it('should list the file that already holds a standard and ask with its own reason when the repository overrides an example', async () => {
+  it('should list the file that already holds a rule and ask with its own reason when the repository overrides an example', async () => {
     const { run, questions, out, files } = setup(['yes', 'no', 'no', 'no', 'no', 'no'])
     files.texts.set(
-      `${STANDARDS}/branches.md`,
+      `${RULES}/branches.md`,
       '---\nid: branch-format\nwhy: Our releases read the branch name.\nenabled: false\n---\n',
     )
 
@@ -238,7 +238,7 @@ describe('dck init', () => {
     expect(questions[0]).toBe('Branch names: Our releases read the branch name. Switch on? [Y/n] ')
     expect(lines(out())).toEqual([
       'Files to write:',
-      '  .dck/standards/branches.md',
+      '  .dck/rules/branches.md',
       'Nothing was written.',
     ])
   })
@@ -301,7 +301,7 @@ describe('dck init', () => {
     'should print a translated error and exit as an internal error when a write fails (%s)',
     async (locale, message) => {
       const { run, err, files } = setup([], locale)
-      files.writeText = async () => fail(errorBody('DCK-STD-002', 'EROFS: read-only file system'))
+      files.writeText = async () => fail(errorBody('DCK-RUL-002', 'EROFS: read-only file system'))
 
       const code = await run('--yes')
 
@@ -336,8 +336,8 @@ describe('dck init --yes', () => {
 
     expect(code).toBe(EXIT.ok)
     expect(written()).toEqual([
-      '.dck/standards/branch-format.md',
-      '.dck/standards/commit-message.md',
+      '.dck/rules/branch-format.md',
+      '.dck/rules/commit-message.md',
       'AGENTS.md',
     ])
     expect(files.texts.get(AGENTS)).toContain('- Branch names:')
@@ -348,25 +348,26 @@ describe('dck init --yes', () => {
 
     const code = await run('--yes')
 
-    const { standards, agents } = await workspace.load()
+    const { rules, agents } = await workspace.load()
     expect(code).toBe(EXIT.ok)
     expect(questions).toEqual([])
     expect(lines(out())).toEqual([
       'Files to write:',
-      '  .dck/standards/branch-format.md',
-      '  .dck/standards/commit-message.md',
+      '  .dck/rules/branch-format.md',
+      '  .dck/rules/commit-message.md',
       '  AGENTS.md',
-      'Done. See what is on with: dck standards',
+      'Done. See what is on with: dck rules',
     ])
     expect(written()).toEqual([
-      '.dck/standards/branch-format.md',
-      '.dck/standards/commit-message.md',
+      '.dck/rules/branch-format.md',
+      '.dck/rules/commit-message.md',
       'AGENTS.md',
       'CLAUDE.md',
     ])
-    expect(standards.filter((standard) => standard.enabled).map((standard) => standard.id)).toEqual(
-      ['branch-format', 'commit-message'],
-    )
+    expect(rules.filter((rule) => rule.enabled).map((rule) => rule.id)).toEqual([
+      'branch-format',
+      'commit-message',
+    ])
     expect(agents).toMatchObject({ shared: true, stale: false, claudeImportMissing: true })
     expect(files.texts.get(CLAUDE)).toBe('# Claude\n')
   })
@@ -386,7 +387,7 @@ describe('dck init --yes', () => {
 })
 
 describe('dck init --remove', () => {
-  it('should take the block out and leave the standards and the rest of the file alone when the removal is confirmed (C4b)', async () => {
+  it('should take the block out and leave the rules and the rest of the file alone when the removal is confirmed (C4b)', async () => {
     const { run, questions, written, out, files } = setup(['yes'])
     files.texts.set(AGENTS, HANDWRITTEN)
     await run('--yes')
@@ -396,12 +397,12 @@ describe('dck init --remove', () => {
     expect(code).toBe(EXIT.ok)
     expect(questions).toEqual(['Remove the dck block from AGENTS.md? [y/N] '])
     expect(lines(out()).at(-1)).toBe(
-      'Block removed from AGENTS.md. The standards files were left alone.',
+      'Block removed from AGENTS.md. The rule files were left alone.',
     )
     expect(files.texts.get(AGENTS)).toBe(HANDWRITTEN)
     expect(written()).toEqual([
-      '.dck/standards/branch-format.md',
-      '.dck/standards/commit-message.md',
+      '.dck/rules/branch-format.md',
+      '.dck/rules/commit-message.md',
       'AGENTS.md',
     ])
   })

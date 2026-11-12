@@ -4,9 +4,9 @@ import {
   type GitInspector,
   type GitStatus,
   type ProcessInspector,
+  type RuleMarks,
   type SessionActivityInfo,
   type SessionSnapshot,
-  type StandardMarks,
 } from '@dck/core'
 
 export interface SessionInspectorDeps {
@@ -14,8 +14,8 @@ export interface SessionInspectorDeps {
   readonly git: GitInspector
   // Known agents, to recognize one of them in the foreground
   readonly agents?: readonly AgentProfile[]
-  // What the branch and the commits not pushed yet fail of the repository's standards
-  readonly standards?: { marks(git: GitStatus): Promise<StandardMarks | undefined> }
+  // What the branch and the commits not pushed yet fail of the repository's rules
+  readonly rules?: { marks(git: GitStatus): Promise<RuleMarks | undefined> }
 }
 
 export function createSessionInspector(deps: SessionInspectorDeps) {
@@ -40,8 +40,8 @@ export function createSessionInspector(deps: SessionInspectorDeps) {
       if (!info) return undefined
       const status = await git.status(info.cwd)
       if (!status) return info
-      const marks = await deps.standards?.marks(status)
-      return { ...info, git: status, ...(marks ? { standards: marks } : {}) }
+      const marks = await deps.rules?.marks(status)
+      return { ...info, git: status, ...(marks ? { rules: marks } : {}) }
     },
   }
 }

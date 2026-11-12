@@ -11,14 +11,14 @@ import type {
   PtyOptions,
   PtySession,
   Rectangle,
+  RuleFiles,
   Scheduler,
   Screen,
   SecretStore,
-  StandardFiles,
 } from '../ports/index.ts'
 import { silentLogger } from '../ports/logger.ts'
 import { ok, type Result } from '../result.ts'
-import { splitStandardFile } from '../standards/format.ts'
+import { splitRuleFile } from '../rules/format.ts'
 import { createViewsService } from '../views/views-service.ts'
 
 export class FakeClock implements Clock {
@@ -74,7 +74,7 @@ export class MemorySecretStore implements SecretStore {
 }
 
 // Files in memory, with `/` between the folders; the YAML parser comes in because the core has none
-export class MemoryStandardFiles implements StandardFiles {
+export class MemoryRuleFiles implements RuleFiles {
   readonly texts = new Map<string, string>()
 
   constructor(private readonly parseYaml: (text: string) => unknown) {}
@@ -88,7 +88,7 @@ export class MemoryStandardFiles implements StandardFiles {
       .filter(inside)
       .sort()
       .map(([path, text]) => {
-        const { yaml, body } = splitStandardFile(text)
+        const { yaml, body } = splitRuleFile(text)
         return { path, frontMatter: yaml === undefined ? undefined : this.parse(yaml), body }
       })
   }

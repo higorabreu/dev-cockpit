@@ -3,8 +3,8 @@ import {
   type GitFile,
   type GitStatus,
   type GitSubmodule,
+  type RuleMarks,
   type SessionSnapshot,
-  type StandardMarks,
   type Translator,
   ticketFromBranch,
 } from '@dck/core'
@@ -67,13 +67,13 @@ function fileRow(file: GitFile) {
   )
 }
 
-// Marks what is outside an enabled standard, with the rules that failed in the tooltip
-function standardMark(i18n: Translator, rules: readonly string[] | undefined) {
-  if (!rules || rules.length === 0) return false
-  const tip = i18n.t('git.standardTip', { rules: rules.join('; ') })
+// Marks what is outside an enabled rule, with the checks that failed in the tooltip
+function ruleMark(i18n: Translator, checks: readonly string[] | undefined) {
+  if (!checks || checks.length === 0) return false
+  const tip = i18n.t('git.ruleTip', { checks: checks.join('; ') })
   return h(
     'span',
-    { class: 'std-mark', role: 'img', 'aria-label': tip, 'data-tip': tip },
+    { class: 'rule-mark', role: 'img', 'aria-label': tip, 'data-tip': tip },
     activityGlyph('warning'),
   )
 }
@@ -88,7 +88,7 @@ function commitRow(
     'div',
     { class: 'frow' },
     h('span', { class: 'fname', 'data-tip-full': commit.subject }, commit.subject),
-    standardMark(i18n, failed),
+    ruleMark(i18n, failed),
     h(
       'span',
       { class: 'fs hash', 'data-tip': agoText(i18n, nowSeconds, commit.time) },
@@ -167,7 +167,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
     return h('div', { class: 'group' }, head, open && wrap)
   }
 
-  function body(git: GitStatus, marks: StandardMarks | undefined): HTMLElement {
+  function body(git: GitStatus, marks: RuleMarks | undefined): HTMLElement {
     const nowSeconds = Date.now() / 1000
     const ticket = ticketFromBranch(git.branch)
     // Long lists show the first rows and a button to see the rest
@@ -215,7 +215,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
           { class: 'brow' },
           icon(BRANCH_ICON, 14, 'branch-icon'),
           h('b', { class: 'branch' }, git.branch ?? i18n.t('git.detached')),
-          standardMark(i18n, marks?.branch),
+          ruleMark(i18n, marks?.branch),
           sync(i18n, git.ahead, git.behind),
         ),
         (ticket || git.upstream) &&
@@ -286,7 +286,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
       const snapshot = source.snapshot()
       if (!snapshot) return h('p', { class: 'muted' }, i18n.t('sessions.noInfo'))
       if (!snapshot.git) return h('p', { class: 'muted' }, i18n.t('git.notRepository'))
-      return body(snapshot.git, snapshot.standards)
+      return body(snapshot.git, snapshot.rules)
     },
   }
 }

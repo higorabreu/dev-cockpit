@@ -4,7 +4,7 @@ import {
   builtInExtension,
   CONTRIBUTION_POINTS,
   EXTENSION_API_VERSION,
-  STANDARDS_POINT,
+  RULES_POINT,
 } from './built-in.ts'
 import { contributionsFor, type ExtensionCandidate, loadExtensions } from './load.ts'
 
@@ -33,24 +33,24 @@ const installed: ExtensionCandidate = {
   },
 }
 
-const pack = (standards: unknown): ExtensionCandidate => ({
+const pack = (rules: unknown): ExtensionCandidate => ({
   ...installed,
-  manifest: { ...(installed.manifest as object), contributes: { standards } },
+  manifest: { ...(installed.manifest as object), contributes: { rules } },
 })
 
-describe('STANDARDS_POINT', () => {
-  it.each(['standards', 'team/standards'])(
+describe('RULES_POINT', () => {
+  it.each(['rules', 'team/rules'])(
     'should accept the folder %s when it is inside the extension',
     (folder) => {
       const report = load([pack(folder)], '0.3.0')
 
-      expect(contributionsFor(report, STANDARDS_POINT).map((item) => item.declaration)).toEqual([
+      expect(contributionsFor(report, RULES_POINT).map((item) => item.declaration)).toEqual([
         folder,
       ])
     },
   )
 
-  it.each(['', '..', '../standards', 'a/../../b', '/etc/standards', 'C:/standards', 'a\\b', 7])(
+  it.each(['', '..', '../rules', 'a/../../b', '/etc/rules', 'C:/rules', 'a\\b', 7])(
     'should refuse the folder %j when it is not a folder inside the extension',
     (folder) => {
       const report = load([pack(folder)], '0.3.0')
@@ -62,11 +62,11 @@ describe('STANDARDS_POINT', () => {
 })
 
 describe('builtInExtension', () => {
-  it('should contribute its standards folder when it goes through the loader', () => {
+  it('should contribute its rules folder when it goes through the loader', () => {
     const report = load([builtInExtension('0.3.0')], '0.3.0')
 
-    expect(contributionsFor(report, STANDARDS_POINT)).toMatchObject([
-      { extension: { source: 'built-in' }, declaration: 'standards' },
+    expect(contributionsFor(report, RULES_POINT)).toMatchObject([
+      { extension: { source: 'built-in' }, declaration: 'rules' },
     ])
   })
 

@@ -1,5 +1,5 @@
 import type { AgentProfile } from './agent.ts'
-import type { StandardMarks } from './standards.ts'
+import type { RuleMarks } from './rules.ts'
 
 // File state letter, as in Source Control: M modified, A new in the index, D deleted,
 // R renamed, U untracked, ! conflicted
@@ -73,6 +73,6 @@ export interface SessionActivityInfo {
 
 export interface SessionSnapshot extends SessionActivityInfo {
   readonly git?: GitStatus
-  // Present only when the branch or a commit not pushed yet is outside an enabled standard
-  readonly standards?: StandardMarks
+  // Present only when the branch or a commit not pushed yet is outside an enabled rule
+  readonly rules?: RuleMarks
 }

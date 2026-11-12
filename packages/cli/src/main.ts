@@ -16,7 +16,7 @@ import { createGitLabViews, startDaemon } from '@dck/daemon'
 import packageJson from '../package.json' with { type: 'json' }
 import { runCli } from './cli.ts'
 import { createExtDeps } from './ext-deps.ts'
-import { createStandardsDeps } from './standards-deps.ts'
+import { createRulesDeps } from './rules-deps.ts'
 
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
 const args = process.argv.slice(2)
@@ -89,7 +89,7 @@ if (args[0] === 'daemon') {
     out: (text) => process.stdout.write(text),
     err: (text) => process.stderr.write(text),
     ext: createExtDeps(extensions),
-    standards: createStandardsDeps({ ...extensions, readStdin, ask }),
+    rules: createRulesDeps({ ...extensions, readStdin, ask }),
     // In the package the CLI runs inside Electron: the command `install` would write would not work
     agent:
       process.env.DCK_PACKAGED === '1'
