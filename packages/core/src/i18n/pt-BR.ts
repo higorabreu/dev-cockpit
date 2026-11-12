@@ -169,6 +169,8 @@ export const ptBR = {
   'settings.language.auto': 'Automática (do sistema)',
   'settings.language.pt': 'Português',
   'settings.language.en': 'English',
+  'settings.tab.general': 'Geral',
+  'settings.tabs': 'Seções das configurações',
   'settings.group.appearance': 'Aparência',
   'settings.theme': 'Tema',
   'settings.theme.dark': 'Escuro',

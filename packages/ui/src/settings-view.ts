@@ -57,6 +57,16 @@ const REFERENCE: ReadonlyArray<readonly [string, string]> = [
   ['settings.ref.settings', 'Ctrl+,'],
 ]
 
+const TABS = [
+  { id: 'general', label: 'settings.tab.general' },
+  { id: 'shortcuts', label: 'settings.group.shortcuts' },
+  { id: 'projects', label: 'settings.group.projects' },
+  { id: 'connections', label: 'settings.group.connections' },
+  { id: 'system', label: 'settings.group.system' },
+] as const
+
+type TabId = (typeof TABS)[number]['id']
+
 export function createSettingsView(
   elements: SettingsViewElements,
   deps: {
@@ -74,6 +84,7 @@ export function createSettingsView(
   let recording = false
   let autostart = false
   let confirmingReset = false
+  let activeTab: TabId = TABS[0].id
   let gitlab: ConnectionStatus | 'checking' = { kind: 'none' }
   // O token só existe aqui entre digitar e conectar, e a tela nunca o recebe de volta
   let draftUrl: string | undefined
@@ -426,8 +437,64 @@ export function createSettingsView(
     return h('header', { class: 'shead2' }, h('h1', {}, t('settings.title')), close)
   }
 
-  const group = (title: string, ...rows: Child[]) =>
-    h('section', { class: 'sgroup' }, h('h2', {}, title), ...rows)
+  function selectTab(id: TabId, focus = false) {
+    activeTab = id
+    render()
+    if (focus) body.querySelector<HTMLElement>(`#settings-tab-${id}`)?.focus()
+  }
+
+  function tabList(): HTMLElement {
+    const list = h('div', {
+      class: 'snav',
+      role: 'tablist',
+      'aria-orientation': 'vertical',
+      'aria-label': t('settings.tabs'),
+    })
+    for (const tab of TABS) {
+      const selected = tab.id === activeTab
+      const button = h(
+        'button',
+        {
+          type: 'button',
+          class: 'snav-item',
+          role: 'tab',
+          id: `settings-tab-${tab.id}`,
+          'aria-selected': String(selected),
+          'aria-controls': 'settings-panel',
+          tabindex: selected ? '0' : '-1',
+          'data-focus': `set-tab-${tab.id}`,
+        },
+        t(tab.label),
+      )
+      button.addEventListener('click', () => selectTab(tab.id))
+      list.append(button)
+    }
+    list.addEventListener('keydown', (event) => {
+      const index = TABS.findIndex((tab) => tab.id === activeTab)
+      const last = TABS.length - 1
+      const next =
+        event.key === 'ArrowDown'
+          ? index === last
+            ? 0
+            : index + 1
+          : event.key === 'ArrowUp'
+            ? index === 0
+              ? last
+              : index - 1
+            : event.key === 'Home'
+              ? 0
+              : event.key === 'End'
+                ? last
+                : undefined
+      if (next === undefined) return
+      event.preventDefault()
+      selectTab(TABS[next]?.id ?? activeTab, true)
+    })
+    return list
+  }
+
+  const group = (title: string | undefined, ...rows: Child[]) =>
+    h('section', { class: 'sgroup' }, title && h('h2', {}, title), ...rows)
 
   function render() {
     const focused = document.activeElement?.getAttribute('data-focus')
@@ -450,110 +517,136 @@ export function createSettingsView(
       void commit(defaultSettings as SettingsPatch, 'shortcuts.toggleWindow').then(render)
     })
 
+    const panels: Record<TabId, Node[]> = {
+      general: [
+        group(
+          t('settings.language'),
+          row(
+            'language',
+            t('settings.language'),
+            select('language', [
+              ['auto', t('settings.language.auto')],
+              ['pt-BR', t('settings.language.pt')],
+              ['en', t('settings.language.en')],
+            ]),
+          ),
+        ),
+        group(
+          t('settings.group.appearance'),
+          row(
+            'theme',
+            t('settings.theme'),
+            select('theme', [
+              ['dark', t('settings.theme.dark')],
+              ['light', t('settings.theme.light')],
+              ['system', t('settings.theme.system')],
+            ]),
+          ),
+          row(
+            'opacity',
+            t('settings.opacity'),
+            percent('opacity', LIMITS.opacity, (fraction) => deps.previewOpacity(fraction)),
+          ),
+          row(
+            'fontSize',
+            t('settings.fontSize'),
+            number('fontSize', LIMITS.fontSize.min, LIMITS.fontSize.max, 'px'),
+          ),
+        ),
+        group(
+          t('settings.group.window'),
+          row(
+            'window.heightRatio',
+            t('settings.heightRatio'),
+            percent('window.heightRatio', LIMITS.heightRatio),
+            t('settings.heightRatio.hint'),
+          ),
+          row(
+            'window.panelOnFullHeight',
+            t('settings.panelOnFullHeight'),
+            checkbox('window.panelOnFullHeight'),
+          ),
+        ),
+      ],
+      shortcuts: [
+        group(
+          undefined,
+          row(
+            'shortcuts.toggleWindow',
+            t('settings.toggleWindow'),
+            shortcutControl(),
+            t('settings.toggleWindow.hint'),
+          ),
+          row(
+            'shortcuts.holdTrigger',
+            t('settings.holdTrigger'),
+            select('shortcuts.holdTrigger', holdOptions),
+          ),
+        ),
+        h(
+          'section',
+          { class: 'sgroup' },
+          h('h2', {}, t('settings.group.reference')),
+          ...REFERENCE.map(([label, keys]) =>
+            h(
+              'div',
+              { class: 'sref' },
+              h('span', {}, t(label as never)),
+              h('kbd', { class: 'skbd' }, keys),
+            ),
+          ),
+        ),
+      ],
+      projects: [
+        group(
+          undefined,
+          row('projects.root', t('settings.projectsRoot'), rootInput()),
+          row(
+            'projects.depth',
+            t('settings.depth'),
+            number('projects.depth', LIMITS.depth.min, LIMITS.depth.max),
+            t('settings.depth.hint'),
+          ),
+        ),
+      ],
+      connections: [group(undefined, ...gitlabRows())],
+      system: [
+        group(
+          undefined,
+          row(
+            'autostart',
+            t('settings.autostart'),
+            checkbox('autostart', (checked) => void changeAutostart(checked), autostart),
+          ),
+          row(
+            'system.notifyAfterSeconds',
+            t('settings.notifyAfter'),
+            number(
+              'system.notifyAfterSeconds',
+              LIMITS.notifyAfterSeconds.min,
+              LIMITS.notifyAfterSeconds.max,
+              t('settings.notifyAfter.unit'),
+            ),
+          ),
+        ),
+      ],
+    }
+
     body.replaceChildren(
       header(),
-      group(
-        t('settings.language'),
-        row(
-          'language',
-          t('settings.language'),
-          select('language', [
-            ['auto', t('settings.language.auto')],
-            ['pt-BR', t('settings.language.pt')],
-            ['en', t('settings.language.en')],
-          ]),
-        ),
-      ),
-      group(
-        t('settings.group.appearance'),
-        row(
-          'theme',
-          t('settings.theme'),
-          select('theme', [
-            ['dark', t('settings.theme.dark')],
-            ['light', t('settings.theme.light')],
-            ['system', t('settings.theme.system')],
-          ]),
-        ),
-        row(
-          'opacity',
-          t('settings.opacity'),
-          percent('opacity', LIMITS.opacity, (fraction) => deps.previewOpacity(fraction)),
-        ),
-        row(
-          'fontSize',
-          t('settings.fontSize'),
-          number('fontSize', LIMITS.fontSize.min, LIMITS.fontSize.max, 'px'),
-        ),
-      ),
-      group(
-        t('settings.group.window'),
-        row(
-          'window.heightRatio',
-          t('settings.heightRatio'),
-          percent('window.heightRatio', LIMITS.heightRatio),
-          t('settings.heightRatio.hint'),
-        ),
-        row(
-          'window.panelOnFullHeight',
-          t('settings.panelOnFullHeight'),
-          checkbox('window.panelOnFullHeight'),
-        ),
-      ),
-      group(
-        t('settings.group.shortcuts'),
-        row(
-          'shortcuts.toggleWindow',
-          t('settings.toggleWindow'),
-          shortcutControl(),
-          t('settings.toggleWindow.hint'),
-        ),
-        row(
-          'shortcuts.holdTrigger',
-          t('settings.holdTrigger'),
-          select('shortcuts.holdTrigger', holdOptions),
-        ),
-      ),
-      group(
-        t('settings.group.projects'),
-        row('projects.root', t('settings.projectsRoot'), rootInput()),
-        row(
-          'projects.depth',
-          t('settings.depth'),
-          number('projects.depth', LIMITS.depth.min, LIMITS.depth.max),
-          t('settings.depth.hint'),
-        ),
-      ),
-      group(t('settings.group.connections'), ...gitlabRows()),
-      group(
-        t('settings.group.system'),
-        row(
-          'autostart',
-          t('settings.autostart'),
-          checkbox('autostart', (checked) => void changeAutostart(checked), autostart),
-        ),
-        row(
-          'system.notifyAfterSeconds',
-          t('settings.notifyAfter'),
-          number(
-            'system.notifyAfterSeconds',
-            LIMITS.notifyAfterSeconds.min,
-            LIMITS.notifyAfterSeconds.max,
-            t('settings.notifyAfter.unit'),
-          ),
-        ),
-      ),
       h(
-        'section',
-        { class: 'sgroup' },
-        h('h2', {}, t('settings.group.reference')),
-        ...REFERENCE.map(([label, keys]) =>
-          h(
-            'div',
-            { class: 'sref' },
-            h('span', {}, t(label as never)),
-            h('kbd', { class: 'skbd' }, keys),
-          ),
+        'div',
+        { class: 'sbody' },
+        tabList(),
+        h(
+          'div',
+          {
+            class: 'spanel',
+            role: 'tabpanel',
+            id: 'settings-panel',
+            'aria-labelledby': `settings-tab-${activeTab}`,
+          },
+          ...panels[activeTab],
         ),
       ),
       h('footer', { class: 'sfoot' }, resetAll),
@@ -564,10 +657,11 @@ export function createSettingsView(
 
   function open() {
     confirmingReset = false
+    activeTab = TABS[0].id
     errors.clear()
     overlay.classList.add('open')
     render()
-    body.querySelector<HTMLElement>('select, input, button')?.focus()
+    body.querySelector<HTMLElement>('.snav-item[aria-selected="true"]')?.focus()
     void loadGitLab()
     void api.autostart.isEnabled().then((on) => {
       autostart = on

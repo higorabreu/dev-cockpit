@@ -170,6 +170,8 @@ export const en: Record<MessageKey, string> = {
   'settings.language.auto': 'Automatic (from the system)',
   'settings.language.pt': 'Português',
   'settings.language.en': 'English',
+  'settings.tab.general': 'General',
+  'settings.tabs': 'Settings sections',
   'settings.group.appearance': 'Appearance',
   'settings.theme': 'Theme',
   'settings.theme.dark': 'Dark',
