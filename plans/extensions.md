@@ -288,12 +288,12 @@ Phase 1, the harness (the `rules` contribution point):
   the existing git adapter; the rules workspace the CLI and the window share; a timed matcher. (C3, C5)
 - [x] EXT-T6. The built-in examples as data in the built-in extension: branch format, commit message, review
   rubric, MR description, all disabled, plus a test that every example is valid. (C2)
-- [ ] EXT-T7. CLI: `dck init` (questions, sharing with agents, `--yes`, `--remove`), `dck rules`
+- [x] EXT-T7. CLI: `dck init` (questions, sharing with agents, `--yes`, `--remove`), `dck rules`
   (`enable`, `disable`), `dck guide` (budget) and `dck check` with the exit codes above, translated through
   the i18n catalogs. (C2, C3, C4, C4b)
-- [ ] EXT-T7b. Interface: the Harness page (switches, fields, agents) and the mark in the Git section,
+- [x] EXT-T7b. Interface: the Harness page (switches, fields, agents) and the mark in the Git section,
   through new `HostApi` methods served by the same workspace. (C4c, C9)
-- [ ] EXT-T8. `docs/harness.md`: the daily use first, then the file format, the check kinds and precedence,
+- [x] EXT-T8. `docs/harness.md`: the daily use first, then the file format, the check kinds and precedence,
   and the known limits. (C8)
 
 Phase 1b, packs:
