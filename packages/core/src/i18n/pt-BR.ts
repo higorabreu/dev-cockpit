@@ -153,7 +153,7 @@ export const ptBR = {
   'tray.quit': 'Sair',
 
   'cli.usage':
-    'Uso: dck <comando>\n\nComandos:\n  toggle     Mostra ou esconde a janela\n  ping       Confere se o daemon está respondendo\n  daemon     Roda o daemon em primeiro plano\n  agent      Liga um agente de código ao cockpit (report, install, uninstall)\n  ext        Lista as extensões e de onde vem cada uma (list)\n  standards  Lista os padrões e liga ou desliga um deles (enable, disable)\n  guide      Mostra as instruções dos padrões de branch, commit, pr ou review\n  check      Confere a branch atual (check branch) ou um texto (check commit <arquivo>)\n',
+    'Uso: dck <comando>\n\nComandos:\n  toggle     Mostra ou esconde a janela\n  ping       Confere se o daemon está respondendo\n  daemon     Roda o daemon em primeiro plano\n  agent      Liga um agente de código ao cockpit (report, install, uninstall)\n  ext        Lista as extensões e de onde vem cada uma (list)\n  init       Configura os padrões deste repositório (--yes, --remove)\n  standards  Lista os padrões e liga ou desliga um deles (enable, disable)\n  guide      Mostra as instruções dos padrões de branch, commit, pr ou review\n  check      Confere a branch atual (check branch) ou um texto (check commit <arquivo>)\n',
   'cli.startDaemon': 'Inicie o daemon com: dck daemon',
   'cli.noWindow': 'Nenhuma janela está conectada ao daemon.',
   'cli.ext.usage': 'Uso: dck ext list',
@@ -165,6 +165,21 @@ export const ptBR = {
   'cli.ext.state.disabled': 'desativada',
   'cli.ext.state.shadowed': 'sobreposta por {source}',
   'cli.ext.rejected': 'Recusadas:',
+  'cli.init.usage': 'Uso: dck init [--yes] [--remove]',
+  'cli.init.switchOn': '{title}: {why}. Ligar?',
+  'cli.init.share': 'Compartilhar as regras com os agentes em {file}?',
+  'cli.init.claudeImport':
+    'O Claude Code lê o CLAUDE.md, que não importa o AGENTS.md. Adicionar a linha @AGENTS.md a ele?',
+  'cli.init.yesDefault': '[S/n]',
+  'cli.init.noDefault': '[s/N]',
+  'cli.init.files': 'Arquivos a gravar:',
+  'cli.init.apply': 'Aplicar?',
+  'cli.init.cancelled': 'Nada foi gravado.',
+  'cli.init.done': 'Pronto. Veja o que está ligado com: dck standards',
+  'cli.init.nothing': 'Tudo já está configurado.',
+  'cli.init.noBlock': '{file} não tem o bloco do dck. Nada a remover.',
+  'cli.init.remove': 'Remover o bloco do dck de {file}?',
+  'cli.init.removed': 'Bloco removido de {file}. Os arquivos dos padrões não foram alterados.',
   'cli.standards.usage':
     'Uso: dck standards [list]\n     dck standards enable|disable <id> [--global]',
   'cli.standards.on': 'ligado',

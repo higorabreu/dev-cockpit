@@ -102,4 +102,40 @@ describe('createStandardsDeps', () => {
     expect([outside, inside]).toEqual([EXIT.ok, EXIT.failed])
     expect(err()).toMatch(/^Branch names: Use <type>\/<short-slug> in lowercase.*\n$/)
   })
+
+  it('should set up, check, follow a hand edit and remove the block over real files (C2, C4b)', async () => {
+    const agents = join(repository, 'AGENTS.md')
+    const standard = join(repository, '.dck', 'standards', 'commit-message.md')
+    const message = join(root, 'message.txt')
+    const handwritten = '# Agents\n\nRun the tests before a commit.\n'
+    await writeFile(agents, handwritten)
+    const { run, err } = setup({ answers: ['y'] })
+
+    const init = await run('init', '--yes')
+    await writeFile(message, 'fix(cli): handle empty input\n')
+    const passing = await run('check', 'commit', message)
+    await writeFile(message, 'hotfix: stop the leak\n')
+    const failing = await run('check', 'commit', message)
+    const text = await readFile(standard, 'utf8')
+    await writeFile(standard, text.replace("types: 'feat|", "types: 'hotfix|feat|"))
+    const edited = await run('check', 'commit', message)
+    const shared = await readFile(agents, 'utf8')
+    const removed = await run('init', '--remove')
+
+    expect([init, passing, failing, edited, removed]).toEqual([
+      EXIT.ok,
+      EXIT.ok,
+      EXIT.failed,
+      EXIT.ok,
+      EXIT.ok,
+    ])
+    expect(err().trimEnd().split('\n')).toEqual([
+      expect.stringMatching(/^Commit messages: Start with .* a type from feat, fix, /),
+      'AGENTS.md is out of date with the standards. Refresh it with: dck init',
+    ])
+    expect(shared.startsWith(`${handwritten}\n<!-- dck:start -->\n`)).toBe(true)
+    expect(shared).toContain('- Commit messages: ')
+    expect(await readFile(agents, 'utf8')).toBe(handwritten)
+    expect(await readFile(standard, 'utf8')).toContain("types: 'hotfix|feat|")
+  })
 })

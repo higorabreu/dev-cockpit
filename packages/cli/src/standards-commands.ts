@@ -8,6 +8,7 @@ import {
   type StandardsWorkspace,
   type Translate,
 } from '@dck/core'
+import { runInit } from './init-command.ts'
 import { align, EXIT, type Io, printable, rejection } from './output.ts'
 
 export interface StandardsDeps {
@@ -24,7 +25,7 @@ export interface StandardsDeps {
   relative(path: string): string
 }
 
-export const STANDARDS_COMMANDS = ['standards', 'guide', 'check'] as const
+export const STANDARDS_COMMANDS = ['init', 'standards', 'guide', 'check'] as const
 export type StandardsCommand = (typeof STANDARDS_COMMANDS)[number]
 
 const DEFAULT_BUDGET = 1500
@@ -174,7 +175,7 @@ export async function runStandardsCommand(
   if (command === 'guide') return guide(args, io, deps)
   if (command === 'check') return check(args, io, deps)
   try {
-    return await standards(args, io, deps)
+    return command === 'init' ? await runInit(args, io, deps) : await standards(args, io, deps)
   } catch (error) {
     // The workspace only rejects when a file cannot be written
     io.err(`${io.t('cli.standards.writeFailed', { detail: String(error) })}\n`)

@@ -154,7 +154,7 @@ export const en: Record<MessageKey, string> = {
   'tray.quit': 'Quit',
 
   'cli.usage':
-    'Usage: dck <command>\n\nCommands:\n  toggle     Show or hide the window\n  ping       Check that the daemon is answering\n  daemon     Run the daemon in the foreground\n  agent      Connect a code agent to the cockpit (report, install, uninstall)\n  ext        List the extensions and where each one comes from (list)\n  standards  List the standards and switch one on or off (enable, disable)\n  guide      Print the instructions of the standards for branch, commit, pr or review\n  check      Check the current branch (check branch) or a text (check commit <file>)\n',
+    'Usage: dck <command>\n\nCommands:\n  toggle     Show or hide the window\n  ping       Check that the daemon is answering\n  daemon     Run the daemon in the foreground\n  agent      Connect a code agent to the cockpit (report, install, uninstall)\n  ext        List the extensions and where each one comes from (list)\n  init       Set up the standards of this repository (--yes, --remove)\n  standards  List the standards and switch one on or off (enable, disable)\n  guide      Print the instructions of the standards for branch, commit, pr or review\n  check      Check the current branch (check branch) or a text (check commit <file>)\n',
   'cli.startDaemon': 'Start the daemon with: dck daemon',
   'cli.noWindow': 'No window is connected to the daemon.',
   'cli.ext.usage': 'Usage: dck ext list',
@@ -166,6 +166,21 @@ export const en: Record<MessageKey, string> = {
   'cli.ext.state.disabled': 'disabled',
   'cli.ext.state.shadowed': 'shadowed by {source}',
   'cli.ext.rejected': 'Rejected:',
+  'cli.init.usage': 'Usage: dck init [--yes] [--remove]',
+  'cli.init.switchOn': '{title}: {why}. Switch on?',
+  'cli.init.share': 'Share the rules with agents in {file}?',
+  'cli.init.claudeImport':
+    'Claude Code reads CLAUDE.md, which does not import AGENTS.md. Add the @AGENTS.md line to it?',
+  'cli.init.yesDefault': '[Y/n]',
+  'cli.init.noDefault': '[y/N]',
+  'cli.init.files': 'Files to write:',
+  'cli.init.apply': 'Apply?',
+  'cli.init.cancelled': 'Nothing was written.',
+  'cli.init.done': 'Done. See what is on with: dck standards',
+  'cli.init.nothing': 'Everything is already set up.',
+  'cli.init.noBlock': '{file} has no dck block. Nothing to remove.',
+  'cli.init.remove': 'Remove the dck block from {file}?',
+  'cli.init.removed': 'Block removed from {file}. The standards files were left alone.',
   'cli.standards.usage':
     'Usage: dck standards [list]\n       dck standards enable|disable <id> [--global]',
   'cli.standards.on': 'on',
