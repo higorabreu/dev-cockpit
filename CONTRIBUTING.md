@@ -65,3 +65,16 @@ see [SECURITY.md](SECURITY.md).
 
 By contributing you agree that your contribution is licensed under the
 [GNU Affero General Public License v3.0](LICENSE), the license of the project.
+
+## Releases (maintainers)
+
+Releases are automated with [release-please](https://github.com/googleapis/release-please). Every push to
+`main` updates a pull request named `chore: release x.y.z` with the version and the changelog computed
+from the Conventional Commits since the last release. Merging that pull request creates the tag and the
+GitHub release, and the workflow then builds the `.deb` packages and attaches them with `SHA256SUMS` and a
+build provenance attestation. While the version is 0.x, a breaking change bumps the minor number and
+nothing goes to 1.0 by itself.
+
+The release pull request is opened by a bot, and pull requests opened with the default `GITHUB_TOKEN` do
+not trigger CI. Add a personal access token (or a GitHub App token) as the repository secret
+`RELEASE_PLEASE_TOKEN` so the checks run on it.
