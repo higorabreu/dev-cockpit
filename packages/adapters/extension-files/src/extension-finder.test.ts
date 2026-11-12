@@ -118,6 +118,16 @@ describe('createFileExtensionFinder, installed', () => {
     expect(await finder().find()).toEqual([])
   })
 
+  it('should read the manifest when the file starts with a byte order mark', async () => {
+    const location = await install('acme.commits', '\uFEFF{ "id": "acme.commits" }')
+
+    const candidates = await finder().find()
+
+    expect(candidates).toEqual([
+      { source: 'installed', location, manifest: { id: 'acme.commits' } },
+    ])
+  })
+
   it('should keep the candidate and warn when the manifest is not valid json', async () => {
     const location = await install('acme.broken', '{ "id": ')
     const { logger, warnings } = recordingLogger()

@@ -35,7 +35,7 @@ app reads the manifests, validates them, decides which ones win and reports the 
 
 | Field | Required | Rule |
 | --- | --- | --- |
-| `id` | yes | `owner.name`: two parts joined by one dot, each starting with a lowercase letter and then lowercase letters, digits or hyphens |
+| `id` | yes | `owner.name`: two parts joined by one dot, each starting with a lowercase letter and then lowercase letters, digits or hyphens; up to 100 characters |
 | `name` | yes | Text, 1 to 100 characters |
 | `version` | yes | `major.minor.patch`, with an optional pre-release suffix (`1.2.0-beta.1`) |
 | `description` | no | Text, up to 300 characters |
@@ -109,8 +109,10 @@ listed. Because no contribution point is registered yet, **neither shows up toda
 
 The setting `extensions.disabled` in `settings.json` is a list of extension ids, empty by default. A
 disabled extension is still loaded and listed, and contributes nothing. An entry that is not a valid id is
-dropped when the settings are read. The commands `dck ext enable` and `dck ext disable` that will manage
-the list are planned (phase 1b); until then it is edited by hand.
+dropped when the settings are read, and the list holds up to 200 ids. The commands `dck ext enable` and
+`dck ext disable` that will manage the list are planned (phase 1b); until then it is edited by hand, **with
+the window closed**: a running window keeps the settings in memory and writes them back on its next change,
+which would undo the edit.
 
 ```json
 { "extensions": { "disabled": ["acme.conventional-commits"] } }
@@ -136,20 +138,25 @@ the highest source, then the shadowed copies with the source that replaced them 
 the refused ones with their location, source and reason. The labels and the error message follow the
 system language; the detail after the message is always in English.
 
-The sample below is illustrative and shows every kind of row at once:
-
 ```
 $ dck ext list
-dck.built-in  0.3.0  built-in    active
-acme.reviews  0.4.1  installed   disabled
-acme.commits  1.1.0  repository  active
-acme.commits  1.0.0  installed   shadowed by repository  /home/ana/.config/Dev Cockpit/extensions/acme.commits
+dck.built-in  0.3.0  built-in   active
+acme.commits  1.0.0  installed  active
+acme.reviews  0.4.1  installed  disabled
 
 Rejected:
   /home/ana/.config/Dev Cockpit/extensions/acme.old     installed  Extension not compatible with this version: acme.old needs dck <0.2.0, this is 0.3.0
   /home/ana/.config/Dev Cockpit/extensions/acme.runner  installed  Extension feature not supported by this version: this version cannot run code: main
   /home/ana/.config/Dev Cockpit/extensions/broken       installed  Invalid extension manifest: the manifest must be a JSON object
 ```
+
+A shadowed copy is one more row, with the source that replaced it and its own location:
+
+```
+acme.commits  0.9.0  built-in  shadowed by installed  built-in
+```
+
+Control characters in a manifest or in a folder name are printed as `?`.
 
 With nothing installed, only the built-in extension shows:
 

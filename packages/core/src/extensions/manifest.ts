@@ -6,10 +6,14 @@ import { isVersion, isVersionRange } from './version.ts'
 // Fields that would need code, which this version of the product never runs
 const CODE_FIELDS = ['run', 'main', 'permissions', 'activationEvents'] as const
 
+export const EXTENSION_ID_MAX = 100
 export const EXTENSION_ID_PATTERN = /^[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*$/
 
 const manifestSchema = z.strictObject({
-  id: z.string().regex(EXTENSION_ID_PATTERN, 'must look like owner.name, in lowercase'),
+  id: z
+    .string()
+    .max(EXTENSION_ID_MAX)
+    .regex(EXTENSION_ID_PATTERN, 'must look like owner.name, in lowercase'),
   name: z.string().min(1).max(100),
   version: z.string().refine(isVersion, 'must be a version like 1.2.3'),
   description: z.string().max(300).optional(),

@@ -33,8 +33,13 @@ const byPrecedence = (a: LoadedExtension, b: LoadedExtension) =>
   EXTENSION_SOURCES.indexOf(a.source) - EXTENSION_SOURCES.indexOf(b.source) ||
   a.manifest.id.localeCompare(b.manifest.id)
 
+// A manifest and a folder name are third-party text: a control character could clear the screen or forge a row
+const printable = (text: string) =>
+  [...text].map((char) => (char < ' ' || char === '\u007f' ? '?' : char)).join('')
+
 // Pads every column but the last to its widest cell, so the rows line up without a frame
-function align(rows: readonly (readonly string[])[]): string[] {
+function align(table: readonly (readonly string[])[]): string[] {
+  const rows = table.map((row) => row.map(printable))
   const widths: number[] = []
   for (const row of rows) {
     row.forEach((cell, column) => {
@@ -91,7 +96,8 @@ export function formatExtensionList(report: LoadReport, t: Translate): string[] 
   const rejected = align(
     report.rejected.map((entry) => [entry.location, source(entry), rejection(entry.error, t)]),
   )
-  return [...lines, '', t('cli.ext.rejected'), ...rejected.map((line) => `  ${line}`)]
+  const separator = lines.length === 0 ? [] : ['']
+  return [...lines, ...separator, t('cli.ext.rejected'), ...rejected.map((line) => `  ${line}`)]
 }
 
 async function list(io: Io, deps: ExtDeps): Promise<number> {
@@ -116,5 +122,5 @@ export async function runExtCommand(
   const [subcommand, ...rest] = args
   if (subcommand === 'list' && rest.length === 0) return list(io, deps)
   io.err(`${io.t('cli.ext.usage')}\n`)
-  return EXIT_USAGE
+  return subcommand === '--help' ? EXIT_OK : EXIT_USAGE
 }

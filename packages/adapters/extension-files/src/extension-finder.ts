@@ -77,7 +77,8 @@ export function createFileExtensionFinder(options: FileExtensionFinderOptions): 
       return undefined
     }
     try {
-      return JSON.parse(text)
+      // Editors on Windows save a byte order mark that JSON.parse refuses
+      return JSON.parse(text.replace(/^\uFEFF/, ''))
     } catch (error) {
       logger.warn('extension manifest is not valid json', { file, error: String(error) })
       return undefined

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { parseServerUrl } from '../connections/url.ts'
-import { EXTENSION_ID_PATTERN } from '../extensions/manifest.ts'
+import { EXTENSION_ID_MAX, EXTENSION_ID_PATTERN } from '../extensions/manifest.ts'
 
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
 export const THEMES = ['dark', 'light', 'system'] as const
@@ -12,7 +12,7 @@ export const LIMITS = {
   heightRatio: { min: 0.3, max: 1 },
   depth: { min: 1, max: 4 },
   notifyAfterSeconds: { min: 5, max: 600 },
-  disabledExtensions: { max: 200, idLength: 100 },
+  disabledExtensions: { max: 200 },
 } as const
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -32,9 +32,7 @@ const section = <T extends z.ZodRawShape>(shape: T) => z.preprocess(asObject, z.
 
 // An entry that could never match a manifest id is dropped
 const isExtensionId = (value: unknown): value is string =>
-  typeof value === 'string' &&
-  value.length <= LIMITS.disabledExtensions.idLength &&
-  EXTENSION_ID_PATTERN.test(value)
+  typeof value === 'string' && value.length <= EXTENSION_ID_MAX && EXTENSION_ID_PATTERN.test(value)
 
 // A set kept as a sorted list: bad entries are dropped one by one instead of losing the whole list
 const extensionIds = z.preprocess(

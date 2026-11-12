@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseManifest } from '../extensions/manifest.ts'
+import { EXTENSION_ID_MAX, parseManifest } from '../extensions/manifest.ts'
 import { acceleratorFromEvent } from './accelerator.ts'
 import { changedKeys, defaultSettings, LIMITS, mergeSettings, parseSettings } from './settings.ts'
 
@@ -120,7 +120,7 @@ describe('parseSettings, extensions.disabled', () => {
 
   it('should cut the list and drop an overlong id when they pass the limits', () => {
     const many = Array.from({ length: LIMITS.disabledExtensions.max + 50 }, (_, i) => `acme.e${i}`)
-    const long = `acme.${'x'.repeat(LIMITS.disabledExtensions.idLength)}`
+    const long = `acme.${'x'.repeat(EXTENSION_ID_MAX)}`
 
     const settings = parseSettings({ extensions: { disabled: [long, ...many] } })
 

@@ -171,7 +171,44 @@ describe('formatExtensionList', () => {
   })
 })
 
+describe('formatExtensionList with hostile text', () => {
+  it('should replace control characters when a manifest or a folder name carries them', () => {
+    const forged = '\u001b[2J\nacme.fake  1.0.0  built-in  active'
+    const hostile = candidate('installed', '/home/ana/extensions/bad\nfolder', { [forged]: true })
+
+    const lines = formatExtensionList(report([hostile]), createTranslator('en').t)
+
+    expect(lines).toHaveLength(4)
+    expect([...lines.join('')].every((char) => char >= ' ' && char !== '\u007f')).toBe(true)
+    expect(lines.at(-1)).toContain('/home/ana/extensions/bad?folder')
+  })
+
+  it('should start at the rejected title when no extension loaded', () => {
+    const broken = { source: 'installed' as const, location: '/home/ana/extensions/x', manifest: 1 }
+    const empty = loadExtensions({
+      candidates: [broken],
+      points: CONTRIBUTION_POINTS,
+      disabled: new Set(),
+      apiVersion: EXTENSION_API_VERSION,
+      appVersion: APP_VERSION,
+    })
+
+    const lines = formatExtensionList(empty, createTranslator('en').t)
+
+    expect(lines[0]).toBe('Rejected:')
+  })
+})
+
 describe('runExtCommand', () => {
+  it('should print the usage and succeed when help is asked', async () => {
+    const { run, err } = setup([])
+
+    const code = await run(['--help'])
+
+    expect(code).toBe(EXIT.ok)
+    expect(err.join('')).toBe('Usage: dck ext list\n')
+  })
+
   it('should show only the built-in extension with its source when nothing else is found', async () => {
     const cli = setup([])
 

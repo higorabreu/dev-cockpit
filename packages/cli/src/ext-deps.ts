@@ -15,7 +15,7 @@ export interface ExtDepsOptions {
 function parseJson(text: string | undefined): unknown {
   if (text === undefined) return undefined
   try {
-    return JSON.parse(text)
+    return JSON.parse(text.replace(/^\uFEFF/, ''))
   } catch {
     // A corrupted settings file reads as the defaults, the same way the window treats it
     return undefined
