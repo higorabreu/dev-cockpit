@@ -24,21 +24,21 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
   const iconIdle = mix(fg, surface, share(tokens.mix.iconIdle))
 
   const pairs: ReadonlyArray<readonly [string, Rgb, Rgb, number]> = [
-    ['texto principal sobre a janela', fg, rgb(color.bg), TEXT],
-    ['texto principal sobre a superfície', fg, surface, TEXT],
-    ['texto secundário sobre a janela', rgb(color.muted), rgb(color.bg), TEXT],
-    ['texto secundário sobre a superfície', rgb(color.muted), surface, TEXT],
-    ['aba ativa', fg, rgb(color.tabActive), TEXT],
-    ['rótulo do setor inativo', fg, sectorIdle, TEXT],
-    ['rótulo do setor selecionado', fg, sectorSelected, TEXT],
-    ['ícone do setor inativo', iconIdle, sectorIdle, GRAPHIC],
-    ['ícone do setor selecionado', fg, sectorSelected, GRAPHIC],
-    ['contorno do setor selecionado', rgb(color.muted), surface, GRAPHIC],
-    ['item da lista selecionado', fg, listSelected, TEXT],
-    ['texto do botão principal', rgb(color.accentInk), rgb(color.accent), TEXT],
-    ['sucesso sobre a superfície', rgb(color.success), surface, TEXT],
-    ['aviso sobre a superfície', rgb(color.warning), surface, TEXT],
-    ['crítico sobre a superfície', rgb(color.critical), surface, TEXT],
+    ['primary text on the window', fg, rgb(color.bg), TEXT],
+    ['primary text on the surface', fg, surface, TEXT],
+    ['secondary text on the window', rgb(color.muted), rgb(color.bg), TEXT],
+    ['secondary text on the surface', rgb(color.muted), surface, TEXT],
+    ['active tab', fg, rgb(color.tabActive), TEXT],
+    ['idle sector label', fg, sectorIdle, TEXT],
+    ['selected sector label', fg, sectorSelected, TEXT],
+    ['idle sector icon', iconIdle, sectorIdle, GRAPHIC],
+    ['selected sector icon', fg, sectorSelected, GRAPHIC],
+    ['selected sector outline', rgb(color.muted), surface, GRAPHIC],
+    ['selected list item', fg, listSelected, TEXT],
+    ['primary button text', rgb(color.accentInk), rgb(color.accent), TEXT],
+    ['success on the surface', rgb(color.success), surface, TEXT],
+    ['warning on the surface', rgb(color.warning), surface, TEXT],
+    ['critical on the surface', rgb(color.critical), surface, TEXT],
   ]
 
   // The dark theme's black serves as background for colored text and is not read as text
@@ -46,7 +46,7 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
   const ansi = Object.entries(terminal)
     .filter(([name]) => !exempt.has(name))
     .map(
-      ([name, hex]) => [`terminal ${name} sobre a janela`, rgb(hex), rgb(color.bg), TEXT] as const,
+      ([name, hex]) => [`terminal ${name} on the window`, rgb(hex), rgb(color.bg), TEXT] as const,
     )
 
   return [...pairs, ...ansi].map(([name, foreground, background, minimum]) => {

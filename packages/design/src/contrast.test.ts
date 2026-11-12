@@ -9,7 +9,7 @@ describe('contrastChecks', () => {
 
       const failures = checks
         .filter((check) => !check.passes)
-        .map((check) => `${check.name}: ${check.ratio.toFixed(2)}:1, mínimo ${check.minimum}:1`)
+        .map((check) => `${check.name}: ${check.ratio.toFixed(2)}:1, minimum ${check.minimum}:1`)
 
       expect(failures).toEqual([])
     })
@@ -19,7 +19,7 @@ describe('contrastChecks', () => {
     const names = contrastChecks(tokens, 'dark').map((check) => check.name)
 
     expect(names.filter((name) => name.startsWith('terminal '))).toHaveLength(15)
-    expect(names).not.toContain('terminal black sobre a janela')
+    expect(names).not.toContain('terminal black on the window')
   })
 
   it('should report a failure when a color does not reach the minimum', () => {
@@ -33,6 +33,6 @@ describe('contrastChecks', () => {
 
     const failures = contrastChecks(weak, 'dark').filter((check) => !check.passes)
 
-    expect(failures.map((check) => check.name)).toContain('texto secundário sobre a janela')
+    expect(failures.map((check) => check.name)).toContain('secondary text on the window')
   })
 })

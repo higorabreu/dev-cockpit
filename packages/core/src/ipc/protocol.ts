@@ -68,7 +68,7 @@ function parseLine(line: string): Result<Message, ErrorBody> {
   try {
     json = JSON.parse(line)
   } catch {
-    return fail(errorBody('DCK-IPC-004', 'JSON inválido'))
+    return fail(errorBody('DCK-IPC-004', 'invalid JSON'))
   }
   const parsed = messageSchema.safeParse(json)
   return parsed.success ? ok(parsed.data) : fail(errorBody('DCK-IPC-004'))

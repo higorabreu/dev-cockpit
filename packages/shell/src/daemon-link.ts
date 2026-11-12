@@ -112,7 +112,7 @@ export function startDaemonLink(options: DaemonLinkOptions): DaemonLink {
 
   return {
     request: async (method, params) =>
-      ready ? ready.request(method, params) : fail(errorBody('DCK-DMN-002', 'sem conexão')),
+      ready ? ready.request(method, params) : fail(errorBody('DCK-DMN-002', 'no connection')),
     stop() {
       stopped = true
       cancelRetry?.()

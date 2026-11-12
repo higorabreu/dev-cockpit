@@ -58,7 +58,7 @@ function parseBody<S extends z.ZodType>(schema: S, body: string): Result<z.outpu
   try {
     json = JSON.parse(body)
   } catch {
-    return fail(errorBody('DCK-GLB-006', 'JSON inválido'))
+    return fail(errorBody('DCK-GLB-006', 'invalid JSON'))
   }
   const parsed = schema.safeParse(json)
   return parsed.success ? ok(parsed.data) : fail(errorBody('DCK-GLB-006'))

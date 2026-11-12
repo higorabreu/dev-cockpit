@@ -34,7 +34,7 @@ export function connectTo(endpoint: string, logger: Logger): Promise<Result<Tran
     const socket = connect(endpoint)
     socket.once('connect', () => resolve(ok(transportFromSocket(socket, logger))))
     socket.once('error', (error: NodeJS.ErrnoException) =>
-      resolve(fail(errorBody('DCK-DMN-002', `${endpoint} (${error.code ?? 'erro'})`))),
+      resolve(fail(errorBody('DCK-DMN-002', `${endpoint} (${error.code ?? 'error'})`))),
     )
   })
 }
@@ -59,7 +59,7 @@ export async function listenOn(
 
   return new Promise((resolve) => {
     server.once('error', (error: NodeJS.ErrnoException) =>
-      resolve(fail(errorBody('DCK-DMN-002', `${endpoint} (${error.code ?? 'erro'})`))),
+      resolve(fail(errorBody('DCK-DMN-002', `${endpoint} (${error.code ?? 'error'})`))),
     )
     server.listen(endpoint, () =>
       resolve(
