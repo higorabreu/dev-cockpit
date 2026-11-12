@@ -38,7 +38,7 @@ if (args[0] === 'daemon') {
   process.on('SIGINT', stopDaemon)
   process.on('SIGTERM', stopDaemon)
 } else {
-  // DCK_CLAUDE_SETTINGS existe para ensaiar a instalação numa cópia, sem tocar no arquivo real
+  // DCK_CLAUDE_SETTINGS exists to rehearse the install on a copy, without touching the real file
   const settingsPath =
     process.env.DCK_CLAUDE_SETTINGS ?? join(homedir(), '.claude', 'settings.json')
   const readStdin = async () => {
@@ -60,7 +60,7 @@ if (args[0] === 'daemon') {
     connect: (target) => connectTo(target, silentLogger),
     out: (text) => process.stdout.write(text),
     err: (text) => process.stderr.write(text),
-    // No pacote o CLI roda dentro do Electron: o comando que `install` gravaria não funcionaria
+    // In the package the CLI runs inside Electron: the command `install` would write would not work
     agent:
       process.env.DCK_PACKAGED === '1'
         ? undefined
@@ -83,13 +83,13 @@ if (args[0] === 'daemon') {
                 'dck',
                 'agent-report.log',
               )
-              // Falha ao gravar o log não pode atrapalhar o Claude: vai para stderr e segue
+              // A failure to write the log must not get in Claude's way: it goes to stderr and moves on
               void mkdir(dirname(file), { recursive: true })
                 .then(() => appendFile(file, `${line}\n`))
                 .catch((error: unknown) => process.stderr.write(`dck: ${String(error)}\n`))
             },
             readSettings: (path) => readFile(path, 'utf8').catch(() => undefined),
-            // Escreve num arquivo ao lado e renomeia, para nunca deixar o settings.json pela metade
+            // Writes to a file beside it and renames, so settings.json is never left half-written
             writeSettings: async (path, text) => {
               await mkdir(dirname(path), { recursive: true })
               const temporary = `${path}.dck-tmp`

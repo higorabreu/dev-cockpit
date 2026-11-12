@@ -36,7 +36,7 @@ function sharedDeclarations(tokens: Tokens): string[] {
 const block = (selector: string, declarations: readonly string[], indent = '') =>
   `${indent}${selector} {\n${declarations.map((line) => `${indent}  ${line}`).join('\n')}\n${indent}}`
 
-// Escuro primeiro: é o padrão, e o claro entra pelo sistema ou pela escolha explícita
+// Dark first: it is the default, and light comes in through the system or an explicit choice
 export function buildCss(tokens: Tokens): string {
   const dark = themeDeclarations(tokens, 'dark')
   const light = themeDeclarations(tokens, 'light')

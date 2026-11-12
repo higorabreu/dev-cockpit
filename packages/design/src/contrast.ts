@@ -11,7 +11,7 @@ export interface ContrastCheck {
 const TEXT = 4.5
 const GRAPHIC = 3
 
-// Os preenchimentos derivados seguem a mesma mistura que o CSS faz com color-mix
+// Derived fills follow the same mix CSS does with color-mix
 export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly ContrastCheck[] {
   const { color, terminal } = tokens.themes[theme]
   const rgb = (hex: string): Rgb => parseHex(hex)
@@ -41,7 +41,7 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     ['crítico sobre a superfície', rgb(color.critical), surface, TEXT],
   ]
 
-  // O preto do tema escuro serve de fundo para texto colorido e não é lido como texto
+  // The dark theme's black serves as background for colored text and is not read as text
   const exempt = new Set(theme === 'dark' ? ['black'] : [])
   const ansi = Object.entries(terminal)
     .filter(([name]) => !exempt.has(name))

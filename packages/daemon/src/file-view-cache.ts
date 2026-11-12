@@ -15,7 +15,7 @@ const dataSchema = z.object({
   views: z.object({ review: cachedView.optional(), mine: cachedView.optional() }),
 })
 
-// Arquivo ilegível ou de outra forma vira "sem cache": o servidor é a fonte, o arquivo só acelera
+// An unreadable or otherwise broken file becomes "no cache": the server is the source, the file only speeds things up
 export function createFileViewCache(file: string, logger: Logger): ViewCache {
   return {
     async load() {

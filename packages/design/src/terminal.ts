@@ -9,7 +9,7 @@ export interface TerminalTheme extends TerminalPalette {
   readonly scrollbarSliderActiveBackground: string
 }
 
-// O fundo fica a cargo da interface, que decide a opacidade da janela
+// The background is left to the interface, which decides the window opacity
 export function buildTerminalTheme(tokens: Tokens, theme: ThemeName): TerminalTheme {
   const { color, overlay, terminal } = tokens.themes[theme]
   return {

@@ -18,16 +18,16 @@ export interface AgentDeps {
   readonly env: Readonly<Record<string, string | undefined>>
   readonly t: Translator['t']
   readStdin(): Promise<string>
-  // Roda o statusLine que o usuário já tinha, com a mesma entrada, e devolve o que ele imprimiu
+  // Runs the statusLine the user already had, with the same input, and returns what it printed
   forward(command: string, input: string): Promise<string>
   readonly settingsPath: string
-  // Pasta do usuário, para abreviar caminhos como ~/.claude
+  // User's home folder, to abbreviate paths like ~/.claude
   readonly home?: string
-  // Registro de falhas que não devem aparecer na tela do Claude
+  // Log of failures that must not appear on Claude's screen
   log(line: string): void
   readSettings(path: string): Promise<string | undefined>
   writeSettings(path: string, text: string): Promise<void>
-  // Copia o arquivo antes de alterar e diz onde ficou a cópia
+  // Copies the file before changing it and says where the copy went
   backup(path: string): Promise<string>
   confirm(question: string): Promise<boolean>
   readonly commandParts: CommandParts
@@ -57,7 +57,7 @@ function parseJson(text: string): unknown {
   }
 }
 
-// Sempre sai com 0: o Claude Code chama isto a cada resposta e não pode ser incomodado
+// Always exits with 0: Claude Code calls this on every response and must not be bothered
 async function report(args: readonly string[], io: Io, deps: AgentDeps): Promise<number> {
   const input = await deps.readStdin()
   const forward = flag(args, '--forward')
@@ -65,7 +65,7 @@ async function report(args: readonly string[], io: Io, deps: AgentDeps): Promise
 
   const agent = flag(args, '--agent')
   const ptyId = Number(deps.env.DCK_PTY_ID)
-  // Fora de um terminal do cockpit não há aba a que ligar o dado
+  // Outside a cockpit terminal there is no tab to attach the data to
   if (!agent || !Number.isInteger(ptyId)) return EXIT_OK
 
   const payload = parseJson(input)
@@ -74,13 +74,13 @@ async function report(args: readonly string[], io: Io, deps: AgentDeps): Promise
     return EXIT_OK
   }
   const connected = await io.connect(io.endpoint)
-  // Sem daemon o cockpit está fechado: é o caso normal, não um erro
+  // Without a daemon the cockpit is closed: that is the normal case, not an error
   if (!connected.ok) return EXIT_OK
   const client = createClient(connected.value)
   try {
     const reply = await client.request('agent.report', { agent, ptyId, payload })
     if (!reply.ok) {
-      // Fica num arquivo e não na tela: o Claude Code mostra o que o comando imprime
+      // Goes to a file and not the screen: Claude Code shows what the command prints
       deps.log(
         JSON.stringify({
           time: new Date().toISOString(),

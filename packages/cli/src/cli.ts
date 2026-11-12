@@ -14,11 +14,11 @@ export interface CliDeps {
   out(text: string): void
   err(text: string): void
   readonly t?: Translate
-  // Presente quando o comando `agent` está disponível
+  // Present when the `agent` command is available
   readonly agent?: AgentDeps
 }
 
-// Códigos de saída do sysexits.h, a convenção BSD para ferramentas de linha de comando
+// Exit codes from sysexits.h, the BSD convention for command-line tools
 export const EXIT = { ok: 0, failed: 1, usage: 64, unavailable: 69, software: 70 } as const
 
 export function exitCodeFor(error: ErrorBody): number {
@@ -34,7 +34,7 @@ export function exitCodeFor(error: ErrorBody): number {
   }
 }
 
-// A linha do comando `agent` só aparece quando ele está disponível (no pacote ele fica parado)
+// The `agent` command line only shows up when it is available (in the package it stays dormant)
 const usage = (text: string, withAgent: boolean) =>
   withAgent
     ? text

@@ -21,7 +21,7 @@ const agentReport = z.object({
 
 const viewParams = z.object({
   view: z.enum(['review', 'mine']),
-  // Com idade máxima, só busca no servidor se o que está guardado for mais velho
+  // With a max age, only fetches from the server if what is stored is older
   maxAgeMs: z.number().int().nonnegative().optional(),
 })
 
@@ -31,7 +31,7 @@ export interface DaemonOptions {
   readonly endpoint: string
   readonly logger: Logger
   readonly views: ViewsService
-  // Chamado quando um cliente pede para o daemon encerrar, por exemplo para trocá-lo por um mais novo
+  // Called when a client asks the daemon to shut down, for example to replace it with a newer one
   onShutdown?(): void
 }
 
@@ -49,12 +49,12 @@ export async function startDaemon(
       ping: () => 'pong',
       info: () => ({ protocol: DAEMON_PROTOCOL }),
       shutdown: () => {
-        // Responde antes de encerrar, para o cliente receber a confirmação
+        // Answers before shutting down, so the client receives the confirmation
         setTimeout(() => options.onShutdown?.(), 50)
         return { stopping: true }
       },
       'window.toggle': () => ({ delivered: hub.publish('window', { action: 'toggle' }) }),
-      // O agente (por exemplo pelo statusLine) empurra dados de uma aba; o daemon só repassa
+      // The agent (for example through the statusLine) pushes data for a tab; the daemon just relays it
       'agent.report': (params) => ({ delivered: hub.publish('agent', agentReport.parse(params)) }),
       'views.configure': async (params) => {
         await views.configure(configureParams.parse(params).url ?? undefined)

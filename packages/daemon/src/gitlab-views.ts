@@ -5,11 +5,11 @@ import { createSecretToolStore } from '@dck/adapter-secret-tool'
 import { createViewsService, gitlabTokenKey, type Logger, type ViewsService } from '@dck/core'
 import { createFileViewCache } from './file-view-cache.ts'
 
-// O token vem do cofre a cada busca, nunca fica guardado no processo
+// The token comes from the keyring on every fetch and is never kept in the process
 export function createGitLabViews(options: {
   stateDir: string
   logger: Logger
-  // Mesmo perfil do shell, para os dois lerem a mesma chave do cofre
+  // Same profile as the shell, so both read the same keyring key
   profile?: string
 }): ViewsService {
   const { stateDir, logger } = options
