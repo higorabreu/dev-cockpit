@@ -139,6 +139,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       settings,
       api,
       i18n,
+      activePtyId: () => activeSession()?.ptyId,
       onClose: () => activeSession()?.focus(),
       previewOpacity: applyOpacity,
     },

@@ -13,6 +13,7 @@ import {
 import { closeButton } from '../kit/panel-frame.ts'
 import { h } from '../panel/dom.ts'
 import { inputGate } from '../platform/input-gate.ts'
+import { createStandardsPage } from '../standards/standards-page.ts'
 import type { SettingsClient } from './settings-client.ts'
 
 type Child = Node | string | false | undefined
@@ -62,6 +63,7 @@ const TABS = [
   { id: 'general', label: 'settings.tab.general' },
   { id: 'shortcuts', label: 'settings.group.shortcuts' },
   { id: 'projects', label: 'settings.group.projects' },
+  { id: 'standards', label: 'settings.group.standards' },
   { id: 'connections', label: 'settings.group.connections' },
   { id: 'system', label: 'settings.group.system' },
 ] as const
@@ -74,6 +76,8 @@ export function createSettingsView(
     readonly settings: SettingsClient
     readonly api: HostApi
     readonly i18n: Translator
+    // The terminal of the active tab, whose repository the Standards page is about
+    activePtyId(): number | undefined
     onClose(): void
     // Shows the opacity while the control is dragged, before saving
     previewOpacity(value: number): void
@@ -96,6 +100,15 @@ export function createSettingsView(
   let local = 0
 
   const isOpen = () => overlay.classList.contains('open')
+
+  const standards = createStandardsPage({
+    api: api.standards,
+    i18n,
+    ptyId: deps.activePtyId,
+    requestRender: () => {
+      if (isOpen() && activeTab === 'standards') render()
+    },
+  })
 
   async function commit(patch: SettingsPatch, errorKey?: string) {
     local += 1
@@ -434,6 +447,8 @@ export function createSettingsView(
   function selectTab(id: TabId, focus = false) {
     activeTab = id
     confirmingReset = false
+    // Before the redraw, so the page of another repository never flashes while this one is read
+    if (id === 'standards') void standards.refresh()
     render()
     if (focus) body.querySelector<HTMLElement>(`#settings-tab-${id}`)?.focus()
   }
@@ -613,6 +628,7 @@ export function createSettingsView(
           ),
         ),
       ],
+      standards: standards.render(),
       connections: [group(undefined, ...gitlabRows())],
       system: [
         group(
@@ -672,6 +688,7 @@ export function createSettingsView(
     activeTab = tab
     errors.clear()
     overlay.classList.add('open')
+    if (tab === 'standards') void standards.refresh()
     render()
     body.querySelector<HTMLElement>('.snav-item[aria-selected="true"]')?.focus()
     void loadGitLab()
