@@ -93,7 +93,7 @@ export function wheelMarkup(state: HoldMenuState, t: Translate): MenuMarkup {
     .join('')
   const hub = category
     ? `<svg x="-9" y="-16" width="18" height="18" ${ICON_ATTRS} style="color:var(--fg)"><path d="${PATHS[category.icon] ?? ''}"/></svg><text class="hubt" y="14">${escapeHtml(t('menu.hub.count', { index: selectedIndex(state) + 1, total: category.items.length }))}</text>`
-    : `<text class="hubt" y="-2">${escapeHtml(t('menu.hub.line1'))}</text><text class="hubt" y="12">${escapeHtml(t('menu.hub.line2'))}</text>`
+    : ''
   const rows = category?.items.length
     ? visibleWindow(category.items.length, selectedIndex(state), maxRows(state.category, count))
         .map((index) => {

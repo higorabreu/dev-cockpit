@@ -118,8 +118,6 @@ export const ptBR = {
   'menu.system.fullHeight': 'Altura total',
   'menu.system.panel': 'Painel lateral',
   'menu.system.theme': 'Tema claro ou escuro',
-  'menu.hub.line1': 'Use as',
-  'menu.hub.line2': 'setas',
   'menu.hub.count': '{index} de {total}',
   'menu.empty': 'Nada por aqui',
   'menu.hint.navigate': 'navegar',

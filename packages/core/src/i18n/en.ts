@@ -119,8 +119,6 @@ export const en: Record<MessageKey, string> = {
   'menu.system.fullHeight': 'Full height',
   'menu.system.panel': 'Side panel',
   'menu.system.theme': 'Light or dark theme',
-  'menu.hub.line1': 'Use the',
-  'menu.hub.line2': 'arrows',
   'menu.hub.count': '{index} of {total}',
   'menu.empty': 'Nothing here',
   'menu.hint.navigate': 'navigate',
