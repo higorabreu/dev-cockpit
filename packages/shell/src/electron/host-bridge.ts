@@ -18,7 +18,7 @@ import {
   type SettingsView,
 } from '@dck/core'
 import { z } from 'zod'
-import type { ViewsGateway } from './views-gateway.ts'
+import type { ViewsGateway } from '../daemon/views-gateway.ts'
 
 // Each field's value is validated and corrected by the settings model itself
 const patchSchema = z.record(z.string(), z.unknown())

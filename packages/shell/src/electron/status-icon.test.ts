@@ -1,10 +1,6 @@
 import type { StatusMenuEntry } from '@dck/core'
 import { describe, expect, it } from 'vitest'
-import {
-  createElectronStatusIcon,
-  type MenuTemplateItem,
-  toMenuTemplate,
-} from './electron-status-icon.ts'
+import { createElectronStatusIcon, type MenuTemplateItem, toMenuTemplate } from './status-icon.ts'
 
 describe('toMenuTemplate', () => {
   it('should map an action to a normal item that runs it when clicked', () => {

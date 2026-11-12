@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createElectronScreen } from './electron-screen.ts'
+import { createElectronScreen } from '../../electron/screen.ts'
 import { createGtkWorkareas, parseGtkWorkareas } from './x11-workareas.ts'
 
 const output =

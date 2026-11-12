@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createElectronNotifier, type NotificationHandle } from './electron-notifier.ts'
+import { createElectronNotifier, type NotificationHandle } from './notifier.ts'
 
 function setup(supported = true) {
   const created: Array<{ title: string; body: string }> = []

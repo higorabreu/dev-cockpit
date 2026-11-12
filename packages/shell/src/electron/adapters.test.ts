@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { createElectronDockWindow } from './electron-dock-window.ts'
-import { createElectronScreen } from './electron-screen.ts'
-import { createElectronShortcuts } from './electron-shortcuts.ts'
+import { createElectronDockWindow } from './dock-window.ts'
+import { createElectronScreen } from './screen.ts'
+import { createElectronShortcuts } from './shortcuts.ts'
 
 describe('createElectronScreen', () => {
   it('should return the display of the point with a string id when asking for the nearest display', () => {
