@@ -110,7 +110,7 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
   ): Promise<Result<void, ErrorBody>> {
     const leftOut = target === 'repository' ? 'global' : 'repository'
     const standard = (await resolve(leftOut)).standards.find((candidate) => candidate.id === id)
-    if (standard === undefined) return fail(errorBody('DCK-STD-001', `${id}: no such standard`))
+    if (standard === undefined) return fail(errorBody('DCK-STD-005', id))
     const edited = edit(standard)
     if (!edited.ok) return edited
     const path = fileFor(standard, target)

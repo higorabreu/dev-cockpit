@@ -209,6 +209,19 @@ describe('dck standards enable and disable', () => {
     expect([...files.texts.keys()]).toEqual([`${GLOBAL_STANDARDS}/commit-message.md`])
   })
 
+  it('should say the repository keeps it off when --global switches on a standard the repository switched off', async () => {
+    const { run, out } = setup()
+    await run('standards', 'disable', 'commit-message')
+
+    const code = await run('standards', 'enable', '--global', 'commit-message')
+
+    expect(code).toBe(EXIT.ok)
+    expect(lines(out()).slice(-2)).toEqual([
+      `commit-message switched on in ${GLOBAL_STANDARDS}/commit-message.md`,
+      'The repository keeps commit-message off and has the last word',
+    ])
+  })
+
   it('should rewrite the file with the standard off when disabling', async () => {
     const { run, out, files } = setup()
     await run('standards', 'enable', 'branch-format')
@@ -221,8 +234,8 @@ describe('dck standards enable and disable', () => {
   })
 
   it.each([
-    ['en', 'Invalid standard: no-such-standard: no such standard\n'],
-    ['pt-BR', 'Padrão inválido: no-such-standard: no such standard\n'],
+    ['en', 'No standard has this id: no-such-standard\n'],
+    ['pt-BR', 'Nenhum padrão tem este id: no-such-standard\n'],
   ] as const)(
     'should print the translated error and fail when the id is unknown (%s)',
     async (locale, message) => {
@@ -508,6 +521,7 @@ describe('dck check', () => {
     [['check'], EXIT.usage],
     [['check', 'commit', 'one.txt', 'two.txt'], EXIT.usage],
     [['check', '--help'], EXIT.ok],
+    [['check', 'commit', '--help'], EXIT.ok],
   ])('should print the usage when the arguments are %j', async (argv, exit) => {
     const { run, out, err } = setup()
 

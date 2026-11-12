@@ -32,7 +32,7 @@ const DEFAULT_BUDGET = 1500
 
 function usage(io: Io, key: MessageKey, args: readonly string[]): number {
   io.err(`${io.t(key)}\n`)
-  return args[0] === '--help' ? EXIT.ok : EXIT.usage
+  return args.includes('--help') ? EXIT.ok : EXIT.usage
 }
 
 const staleLine = (loaded: LoadedStandards, t: Translate, relative: (path: string) => string) =>
@@ -84,10 +84,13 @@ async function switchStandard(
   const changed = await deps.workspace.setEnabled(id, enabled, target)
   if (!changed.ok) return refused(io, changed.error)
   const { standards, agents } = await deps.workspace.load()
-  const layers = standards.find((standard) => standard.id === id)?.layers ?? []
-  const path = deps.relative(deps.workspace.fileFor({ id, layers }, target))
+  const standard = standards.find((candidate) => candidate.id === id)
+  const path = deps.relative(deps.workspace.fileFor({ id, layers: standard?.layers ?? [] }, target))
   const key = enabled ? 'cli.standards.switchedOn' : 'cli.standards.switchedOff'
   io.out(`${printable(io.t(key, { id, path }))}\n`)
+  if (enabled && standard?.enabled === false) {
+    io.out(`${printable(io.t('cli.standards.repositoryOff', { id }))}\n`)
+  }
   // The block is dck's own and was approved when it was created, so it follows the standards
   if (agents.stale) {
     const shared = await deps.workspace.shareWithAgents(true)
@@ -146,7 +149,8 @@ async function report(
 
 async function check(args: readonly string[], io: Io, deps: StandardsDeps): Promise<number> {
   const [application, file, ...extra] = args
-  if (application === undefined || application.startsWith('-') || extra.length > 0) {
+  const invalid = application === undefined || application.startsWith('-') || extra.length > 0
+  if (invalid || args.includes('--help')) {
     return usage(io, 'cli.check.usage', args)
   }
   if (application === 'branch' && file === undefined) {

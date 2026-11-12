@@ -86,7 +86,7 @@ of your own folder, so personal text never reaches the team's file, and the one 
 without the files of the repository. When `AGENTS.md` already has the block, it is refreshed in the same
 command. An unknown id exits with 1, and so does a change whose file, `<id>.md`, already holds an invalid
 file or another standard: that file is never overwritten. A standard switched on with `--global` stays off while a file of the
-repository says it is off, because the repository has the last word.
+repository says it is off, because the repository has the last word; the command says so in one more line.
 
 To change a rule, edit the file that was written: it is the whole standard, so what is in the folder is
 what applies. The built-in examples keep their accepted types and their length limit in fields made for
@@ -246,8 +246,9 @@ source to the highest: a higher file replaces each front matter field it declare
 whole, and the body when it has one. So one field can be changed without copying the original, and a rule
 is never half merged. `dck standards` shows the source that had the last word and the ones it overrides.
 
-A file that cannot be used (no front matter, an unknown field, a broken expression, a required field
-missing after the merge) is reported with its path and the problem, as `DCK-STD-001`. The other standards
+A file that cannot be used (no front matter, a YAML error, given by its first line, an unknown field, a
+broken expression, a required field missing after the merge) is reported with its path and the problem,
+as `DCK-STD-001`. The other standards
 still load. An extension listed in the `extensions.disabled` setting contributes no standard, and that
 includes the built-in examples (`dck.built-in`) and the two folders (`dck.global`, `dck.repository`).
 

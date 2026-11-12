@@ -294,7 +294,6 @@ describe('createStandardsWorkspace, changes', () => {
   })
 
   it.each([
-    ['the standard does not exist', 'no-such-standard', 0, 'types', 'feat'],
     ['the field does not exist', 'branch-format', 0, 'ticket', 'feat'],
     ['the value breaks the rule', 'branch-format', 0, 'types', 'feat|(fix'],
   ] as const)(
@@ -309,12 +308,12 @@ describe('createStandardsWorkspace, changes', () => {
     },
   )
 
-  it('should fail with DCK-STD-001 when enabling a standard that does not exist', async () => {
+  it('should fail with DCK-STD-005 when enabling a standard that does not exist', async () => {
     const { workspace } = arrange()
 
     const result = await workspace.setEnabled('no-such-standard', true, 'repository')
 
-    expect(result.ok ? undefined : result.error.data?.code).toBe('DCK-STD-001')
+    expect(result.ok ? undefined : result.error.data?.code).toBe('DCK-STD-005')
   })
 })
 

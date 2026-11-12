@@ -192,6 +192,7 @@ export const en: Record<MessageKey, string> = {
   'cli.standards.switchedOn': '{id} switched on in {path}',
   'cli.standards.switchedOff': '{id} switched off in {path}',
   'cli.standards.refreshed': '{file} updated with the current rules',
+  'cli.standards.repositoryOff': 'The repository keeps {id} off and has the last word',
   'cli.guide.usage': 'Usage: dck guide <application> [--budget N]',
   'cli.guide.empty': 'No standard is on for {application}. Nothing to show.',
   'cli.guide.size': 'standards: {count}, lines: {lines}, estimated tokens: {tokens}',
@@ -364,4 +365,5 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-STD-002': 'Could not write the file',
   'error.DCK-STD-003': 'Not inside a git repository',
   'error.DCK-STD-004': 'Nothing to share: no standard of the repository is on',
+  'error.DCK-STD-005': 'No standard has this id',
 }

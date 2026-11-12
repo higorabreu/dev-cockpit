@@ -191,6 +191,7 @@ export const ptBR = {
   'cli.standards.switchedOn': '{id} ligado em {path}',
   'cli.standards.switchedOff': '{id} desligado em {path}',
   'cli.standards.refreshed': '{file} atualizado com as regras atuais',
+  'cli.standards.repositoryOff': 'O repositório mantém {id} desligado e tem a palavra final',
   'cli.guide.usage': 'Uso: dck guide <aplicação> [--budget N]',
   'cli.guide.empty': 'Nenhum padrão ligado para {application}. Nada a mostrar.',
   'cli.guide.size': 'padrões: {count}, linhas: {lines}, tokens estimados: {tokens}',
@@ -362,6 +363,7 @@ export const ptBR = {
   'error.DCK-STD-002': 'Não foi possível gravar o arquivo',
   'error.DCK-STD-003': 'Fora de um repositório git',
   'error.DCK-STD-004': 'Nada a compartilhar: nenhum padrão do repositório está ligado',
+  'error.DCK-STD-005': 'Nenhum padrão tem este id',
 } as const
 
 export type MessageKey = keyof typeof ptBR

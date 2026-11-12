@@ -83,7 +83,7 @@ async function remove(
 export async function runInit(args: readonly string[], io: Io, deps: StandardsDeps) {
   if (args.some((arg) => arg !== '--yes' && arg !== '--remove')) {
     io.err(`${io.t('cli.init.usage')}\n`)
-    return args[0] === '--help' ? EXIT.ok : EXIT.usage
+    return args.includes('--help') ? EXIT.ok : EXIT.usage
   }
   const yes = args.includes('--yes')
   let asked = false
