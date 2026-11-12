@@ -44,7 +44,7 @@ describe('error code registry', () => {
   it('should follow the DCK-DOMAIN-SEQ format when listing the codes', () => {
     const malformed = entries
       .map(([code]) => code)
-      .filter((code) => !/^DCK-[A-Z]+-\d{3}$/.test(code))
+      .filter((code) => !/^DCK-[A-Z]{3}-\d{3}$/.test(code))
 
     expect(malformed).toEqual([])
   })
