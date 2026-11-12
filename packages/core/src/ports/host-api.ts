@@ -6,6 +6,7 @@ import type { TabNotification } from './notifier.ts'
 import type { Project } from './projects.ts'
 import type { PtyExit, Unsubscribe } from './pty.ts'
 import type { SessionActivityInfo, SessionSnapshot } from './session.ts'
+import type { StandardsChange, StandardsView } from './standards.ts'
 import type { ViewSnapshot } from './views.ts'
 
 export interface PtyCreateOptions {
@@ -67,6 +68,21 @@ export interface HostApi {
     activity(ptyId: number): Promise<SessionActivityInfo | undefined>
     inspect(ptyId: number): Promise<SessionSnapshot | undefined>
   }
+  // The standards of the repository the tab is in; every change is written in that repository
+  readonly standards: {
+    // Undefined when the tab is not inside a git repository
+    get(ptyId: number): Promise<StandardsView | undefined>
+    setEnabled(ptyId: number, id: string, enabled: boolean): Promise<StandardsChange>
+    setField(
+      ptyId: number,
+      id: string,
+      rule: number,
+      name: string,
+      value: string | number,
+    ): Promise<StandardsChange>
+    shareWithAgents(ptyId: number, on: boolean): Promise<StandardsChange>
+    addClaudeImport(ptyId: number): Promise<StandardsChange>
+  }
   readonly projects: {
     list(): Promise<readonly Project[]>
     touch(path: string): void
@@ -107,6 +123,11 @@ export const hostChannels = {
   autostartSet: 'autostart:set',
   sessionActivity: 'session:activity',
   sessionInspect: 'session:inspect',
+  standardsGet: 'standards:get',
+  standardsSetEnabled: 'standards:set-enabled',
+  standardsSetField: 'standards:set-field',
+  standardsShareWithAgents: 'standards:share-with-agents',
+  standardsAddClaudeImport: 'standards:add-claude-import',
   projectsList: 'projects:list',
   projectsTouch: 'projects:touch',
   projectsToggleFavorite: 'projects:toggle-favorite',

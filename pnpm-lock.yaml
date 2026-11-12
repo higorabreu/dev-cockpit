@@ -175,6 +175,9 @@ importers:
       '@dck/adapter-docker-cli':
         specifier: workspace:^
         version: link:../adapters/docker-cli
+      '@dck/adapter-extension-files':
+        specifier: workspace:^
+        version: link:../adapters/extension-files
       '@dck/adapter-gitlab':
         specifier: workspace:^
         version: link:../adapters/gitlab
@@ -196,6 +199,9 @@ importers:
       '@dck/adapter-node-pty':
         specifier: workspace:^
         version: link:../adapters/node-pty
+      '@dck/adapter-node-vm':
+        specifier: workspace:^
+        version: link:../adapters/node-vm
       '@dck/adapter-secret-tool':
         specifier: workspace:^
         version: link:../adapters/secret-tool

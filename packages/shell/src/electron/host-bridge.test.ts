@@ -1,7 +1,21 @@
-import { defaultSettings, hostChannels, silentLogger, type TabNotification } from '@dck/core'
+import {
+  defaultSettings,
+  hostChannels,
+  ok,
+  type StandardsView,
+  silentLogger,
+  type TabNotification,
+} from '@dck/core'
 import { FakePtyHost, MemoryClipboard } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
 import { type IpcMainApi, registerHostBridge } from './host-bridge.ts'
+
+const standardsView = (root: string): StandardsView => ({
+  root,
+  standards: [],
+  invalid: [],
+  agents: { file: `${root}/AGENTS.md`, shared: false, stale: false, claudeImportMissing: false },
+})
 
 function setup() {
   const handlers = new Map<string, (...args: never[]) => unknown>()
@@ -19,6 +33,11 @@ function setup() {
   const gitlabConnects: { url: string; token: string }[] = []
   const viewRefreshes: { view: string; maxAgeMs: number | undefined }[] = []
   const opened: string[] = []
+  const standardsCalls: unknown[][] = []
+  const changeStandards = async (name: string, cwd: string, ...args: unknown[]) => {
+    standardsCalls.push([name, cwd, ...args])
+    return ok(standardsView(cwd))
+  }
   const bridge = registerHostBridge({
     ipcMain,
     ptyHost,
@@ -83,6 +102,14 @@ function setup() {
       touch: async (path: string) => void touched.push(path),
       toggleFavorite: async (path: string) => !path.endsWith('/pinned'),
     },
+    standards: {
+      view: async (cwd) => standardsView(cwd),
+      setEnabled: (cwd, id, enabled) => changeStandards('setEnabled', cwd, id, enabled),
+      setField: (cwd, id, rule, name, value) =>
+        changeStandards('setField', cwd, id, rule, name, value),
+      shareWithAgents: (cwd, on) => changeStandards('shareWithAgents', cwd, on),
+      addClaudeImport: (cwd) => changeStandards('addClaudeImport', cwd),
+    },
     shell: '/bin/zsh',
     home: '/home/usuario',
     logger: silentLogger,
@@ -104,6 +131,7 @@ function setup() {
     gitlabConnects,
     viewRefreshes,
     opened,
+    standardsCalls,
     fullHeights: () => fullHeightToggles,
   }
 }
@@ -391,5 +419,112 @@ describe('registerHostBridge external', () => {
     call(hostChannels.externalOpen, url)
 
     expect(opened).toEqual([])
+  })
+})
+
+describe('registerHostBridge standards', () => {
+  it('should return the standards of the directory the tab is in when the interface asks', async () => {
+    const { call, ptyHost } = setup()
+    const id = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+
+    const view = await call(hostChannels.standardsGet, id)
+
+    expect(view).toEqual(standardsView(`/pid/${ptyHost.sessions[0]?.pid}`))
+  })
+
+  it.each([
+    ['the session does not exist', 99],
+    ['the id is not a number', 'tab-1'],
+  ])('should return nothing when %s and the standards are asked', async (_label, id) => {
+    const { call } = setup()
+
+    expect(await call(hostChannels.standardsGet, id)).toBeUndefined()
+  })
+
+  it('should pass each change with the directory of the tab when the request is valid', async () => {
+    const { call, ptyHost, standardsCalls } = setup()
+    const ptyId = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+    const cwd = `/pid/${ptyHost.sessions[0]?.pid}`
+
+    const result = await call(hostChannels.standardsSetEnabled, {
+      ptyId,
+      id: 'branch-format',
+      enabled: true,
+    })
+    await call(hostChannels.standardsSetField, {
+      ptyId,
+      id: 'commit-message',
+      rule: 1,
+      name: 'maxLength',
+      value: 50,
+    })
+    await call(hostChannels.standardsSetField, {
+      ptyId,
+      id: 'branch-format',
+      rule: 0,
+      name: 'types',
+      value: 'feat|fix',
+    })
+    await call(hostChannels.standardsShareWithAgents, { ptyId, on: true })
+    await call(hostChannels.standardsAddClaudeImport, { ptyId })
+
+    expect(result).toEqual({ ok: true, value: standardsView(cwd) })
+    expect(standardsCalls).toEqual([
+      ['setEnabled', cwd, 'branch-format', true],
+      ['setField', cwd, 'commit-message', 1, 'maxLength', 50],
+      ['setField', cwd, 'branch-format', 0, 'types', 'feat|fix'],
+      ['shareWithAgents', cwd, true],
+      ['addClaudeImport', cwd],
+    ])
+  })
+
+  it.each([
+    [
+      'a switch that is not a boolean',
+      hostChannels.standardsSetEnabled,
+      { ptyId: 1, id: 'branch-format', enabled: 'yes' },
+    ],
+    [
+      'an id that is too long',
+      hostChannels.standardsSetEnabled,
+      { ptyId: 1, id: 'x'.repeat(65), enabled: true },
+    ],
+    [
+      'a rule that is not a position',
+      hostChannels.standardsSetField,
+      { ptyId: 1, id: 'branch-format', rule: -1, name: 'types', value: 'feat' },
+    ],
+    [
+      'a value that is an object',
+      hostChannels.standardsSetField,
+      { ptyId: 1, id: 'branch-format', rule: 0, name: 'types', value: { text: 'feat' } },
+    ],
+    [
+      'a value that is too long',
+      hostChannels.standardsSetField,
+      { ptyId: 1, id: 'branch-format', rule: 0, name: 'types', value: 'x'.repeat(501) },
+    ],
+    ['no answer to share or not', hostChannels.standardsShareWithAgents, { ptyId: 1 }],
+    ['a payload that is not an object', hostChannels.standardsAddClaudeImport, 1],
+  ])(
+    'should refuse the change without writing when it has %s',
+    async (_label, channel, payload) => {
+      const { call, standardsCalls } = setup()
+      await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+
+      const result = await call(channel, payload)
+
+      expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-IPC-003' } } })
+      expect(standardsCalls).toEqual([])
+    },
+  )
+
+  it('should fail the change without writing when the session does not exist', async () => {
+    const { call, standardsCalls } = setup()
+
+    const result = await call(hostChannels.standardsShareWithAgents, { ptyId: 99, on: true })
+
+    expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-STD-003' } } })
+    expect(standardsCalls).toEqual([])
   })
 })

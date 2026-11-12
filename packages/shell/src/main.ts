@@ -10,6 +10,7 @@ import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import { createGitInspector } from '@dck/adapter-node-git'
 import { connectTo, defaultConfigDir, defaultEndpoint } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
+import { createTimedMatcher } from '@dck/adapter-node-vm'
 import { createSecretToolStore } from '@dck/adapter-secret-tool'
 import {
   createDockController,
@@ -56,6 +57,7 @@ import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
+import { createStandardsService } from './standards/standards-service.ts'
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
@@ -193,6 +195,14 @@ app.whenReady().then(async () => {
   const configureViews = () =>
     void views.configure(settingsStore.get().settings.connections.gitlab.url)
 
+  const standards = createStandardsService({
+    configDir: app.getPath('userData'),
+    appVersion: app.getVersion(),
+    disabled: () => settingsStore.get().settings.extensions.disabled,
+    match: createTimedMatcher(),
+    logger,
+  })
+
   const bridge = registerHostBridge({
     ipcMain: createElectronIpc(ipcMain),
     ptyHost: createNodePtyHost(),
@@ -219,7 +229,9 @@ app.whenReady().then(async () => {
     sessions: createSessionInspector({
       processes: createProcessInspector(),
       git: createGitInspector(),
+      standards,
     }),
+    standards,
 
     environment: createEnvironmentInspector({
       processes: createProcessInspector(),

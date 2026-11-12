@@ -48,6 +48,56 @@ describe('createSessionInspector', () => {
     expect(snapshot?.agent).toEqual(agent)
   })
 
+  it('should carry the standards marks when the branch or a commit is outside a standard', async () => {
+    const marks = { branch: ['Use <type>/<short-slug>'], commits: {} }
+    const asked: GitStatus[] = []
+    const marked = createSessionInspector({
+      processes: { inspect: async () => ({ cwd: '/p/app', foreground: 'zsh' }) },
+      git: { status: async () => status },
+      standards: {
+        marks: async (git) => {
+          asked.push(git)
+          return marks
+        },
+      },
+    })
+
+    const snapshot = await marked.snapshot(1)
+
+    expect(snapshot?.standards).toEqual(marks)
+    expect(asked).toEqual([status])
+  })
+
+  it('should carry no standards entry when nothing is outside a standard', async () => {
+    const clean = createSessionInspector({
+      processes: { inspect: async () => ({ cwd: '/p/app', foreground: 'zsh' }) },
+      git: { status: async () => status },
+      standards: { marks: async () => undefined },
+    })
+
+    const snapshot = await clean.snapshot(1)
+
+    expect(snapshot).toEqual({ cwd: '/p/app', process: 'zsh', activity: 'idle', git: status })
+  })
+
+  it('should not ask for the standards when the directory is not a repository', async () => {
+    let asked = false
+    const outside = createSessionInspector({
+      processes: { inspect: async () => ({ cwd: '/p/app', foreground: 'zsh' }) },
+      git: { status: async () => undefined },
+      standards: {
+        marks: async () => {
+          asked = true
+          return undefined
+        },
+      },
+    })
+
+    await outside.snapshot(1)
+
+    expect(asked).toBe(false)
+  })
+
   it('should be undefined when the process is gone', async () => {
     expect(await inspector(undefined, status).snapshot(1)).toBeUndefined()
   })

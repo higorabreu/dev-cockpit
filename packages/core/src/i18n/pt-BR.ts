@@ -340,6 +340,8 @@ export const ptBR = {
   'error.DCK-EXT-002': 'Recurso de extensão não suportado por esta versão',
   'error.DCK-EXT-003': 'Extensão incompatível com esta versão',
   'error.DCK-STD-001': 'Padrão inválido',
+  'error.DCK-STD-002': 'Não foi possível gravar o arquivo',
+  'error.DCK-STD-003': 'Fora de um repositório git',
 } as const
 
 export type MessageKey = keyof typeof ptBR

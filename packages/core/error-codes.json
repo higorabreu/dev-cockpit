@@ -103,5 +103,15 @@
     "category": "invalid_argument",
     "retryable": false,
     "rpc": -32017
+  },
+  "DCK-STD-002": {
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32018
+  },
+  "DCK-STD-003": {
+    "category": "not_found",
+    "retryable": false,
+    "rpc": -32019
   }
 }

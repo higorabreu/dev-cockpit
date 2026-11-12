@@ -341,4 +341,6 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-EXT-002': 'Extension feature not supported by this version',
   'error.DCK-EXT-003': 'Extension not compatible with this version',
   'error.DCK-STD-001': 'Invalid standard',
+  'error.DCK-STD-002': 'Could not write the file',
+  'error.DCK-STD-003': 'Not inside a git repository',
 }

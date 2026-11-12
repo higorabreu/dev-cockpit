@@ -60,6 +60,17 @@ const api: HostApi = {
     activity: (ptyId) => ipcRenderer.invoke(hostChannels.sessionActivity, ptyId),
     inspect: (ptyId) => ipcRenderer.invoke(hostChannels.sessionInspect, ptyId),
   },
+  standards: {
+    get: (ptyId) => ipcRenderer.invoke(hostChannels.standardsGet, ptyId),
+    setEnabled: (ptyId, id, enabled) =>
+      ipcRenderer.invoke(hostChannels.standardsSetEnabled, { ptyId, id, enabled }),
+    setField: (ptyId, id, rule, name, value) =>
+      ipcRenderer.invoke(hostChannels.standardsSetField, { ptyId, id, rule, name, value }),
+    shareWithAgents: (ptyId, on) =>
+      ipcRenderer.invoke(hostChannels.standardsShareWithAgents, { ptyId, on }),
+    addClaudeImport: (ptyId) =>
+      ipcRenderer.invoke(hostChannels.standardsAddClaudeImport, { ptyId }),
+  },
   projects: {
     list: () => ipcRenderer.invoke(hostChannels.projectsList),
     touch: (path) => ipcRenderer.send(hostChannels.projectsTouch, path),
