@@ -49,7 +49,7 @@ describe('createSessionInspector', () => {
   })
 
   it('should carry the rules marks when the branch or a commit is outside a rule', async () => {
-    const marks = { branch: ['Use <type>/<short-slug>'], commits: {} }
+    const marks = { branch: { failed: ['Use <type>/<short-slug>'], slow: [] }, commits: {} }
     const asked: GitStatus[] = []
     const marked = createSessionInspector({
       processes: { inspect: async () => ({ cwd: '/p/app', foreground: 'zsh' }) },

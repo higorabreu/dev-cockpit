@@ -36,6 +36,7 @@ export const ptBR = {
   'git.pushTip': 'Commits locais que ainda faltam enviar para {upstream}',
   'git.ticketTip': 'Ticket extraído do nome da branch',
   'git.ruleTip': 'Fora das regras: {checks}',
+  'git.ruleSlow': 'Não conferido, lento demais: {checks}',
 
   'env.label': 'Ambiente',
   'env.summary.one': '{count} container',

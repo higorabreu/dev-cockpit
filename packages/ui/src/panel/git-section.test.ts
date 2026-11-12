@@ -27,7 +27,9 @@ const git: GitStatus = {
   submodulesClean: 0,
 }
 
-function bodyOf(rules?: RuleMarks, locale: Locale = 'en'): HTMLElement {
+const failed = (...messages: string[]) => ({ failed: messages, slow: [] })
+
+function bodyOf(rules?: RuleMarks, locale: Locale = 'en', opened: string[] = []): HTMLElement {
   const snapshot: SessionSnapshot = {
     cwd: git.root,
     process: 'zsh',
@@ -36,7 +38,7 @@ function bodyOf(rules?: RuleMarks, locale: Locale = 'en'): HTMLElement {
     ...(rules ? { rules } : {}),
   }
   const section = createGitSection(
-    { snapshot: () => snapshot, requestRender() {} },
+    { snapshot: () => snapshot, requestRender() {}, openRules: () => opened.push('harness') },
     createTranslator(locale),
   )
   return section.body()
@@ -48,7 +50,7 @@ const marksIn = (element: Element | null | undefined) => [
 
 describe('createGitSection rules marks', () => {
   it('should mark the branch with the failed checks in its tooltip when it is outside a rule', () => {
-    const body = bodyOf({ branch: ['Use <type>/<short-slug>', 'No capitals'], commits: {} })
+    const body = bodyOf({ branch: failed('Use <type>/<short-slug>', 'No capitals'), commits: {} })
 
     const [mark, ...others] = marksIn(body.querySelector('.brow'))
 
@@ -60,7 +62,7 @@ describe('createGitSection rules marks', () => {
   })
 
   it('should mark only the commit that fails when one commit not pushed yet is outside a rule', () => {
-    const body = bodyOf({ branch: [], commits: { e9be7eb: ['Start with <type>: <summary>'] } })
+    const body = bodyOf({ commits: { e9be7eb: failed('Start with <type>: <summary>') } })
 
     const rows = [...body.querySelectorAll('.frow')]
 
@@ -72,14 +74,42 @@ describe('createGitSection rules marks', () => {
   })
 
   it('should say the state as a drawing with a text for readers, not by color alone, when it marks', () => {
-    const body = bodyOf({ branch: ['Use <type>/<short-slug>'], commits: {} })
+    const body = bodyOf({ branch: failed('Use <type>/<short-slug>'), commits: {} })
 
     const mark = marksIn(body)[0]
 
     expect(mark?.querySelector('svg.glyph-warning')).not.toBeNull()
-    expect(mark?.getAttribute('role')).toBe('img')
     expect(mark?.getAttribute('aria-label')).toBe(mark?.getAttribute('data-tip'))
     expect(mark?.hasAttribute('title')).toBe(false)
+  })
+
+  it('should be a button that keeps its focus key and opens the rules when it is pressed', () => {
+    const opened: string[] = []
+    const body = bodyOf({ branch: failed('Use <type>/<short-slug>'), commits: {} }, 'en', opened)
+    const mark = marksIn(body)[0]
+
+    ;(mark as HTMLButtonElement | undefined)?.click()
+
+    expect(mark?.tagName).toBe('BUTTON')
+    expect(mark?.getAttribute('type')).toBe('button')
+    expect(mark?.getAttribute('data-focus')).toBe('git-mark-branch')
+    expect(opened).toEqual(['harness'])
+  })
+
+  it('should say a check was not checked instead of failed when it ran out of time', () => {
+    const body = bodyOf({
+      branch: { failed: ['No capitals'], slow: ['Use <type>/<short-slug>'] },
+      commits: { e9be7eb: { failed: [], slow: ['Start with <type>: <summary>'] } },
+    })
+
+    const [branch, commit] = marksIn(body)
+
+    expect(branch?.getAttribute('data-tip')).toBe(
+      'Outside the rules: No capitals. Not checked, too slow: Use <type>/<short-slug>',
+    )
+    expect(commit?.getAttribute('data-tip')).toBe(
+      'Not checked, too slow: Start with <type>: <summary>',
+    )
   })
 
   it('should draw the section as before when the snapshot carries no rules', () => {
@@ -92,7 +122,7 @@ describe('createGitSection rules marks', () => {
   })
 
   it('should write the tooltip in Portuguese when that is the language', () => {
-    const body = bodyOf({ branch: ['Use <type>/<short-slug>'], commits: {} }, 'pt-BR')
+    const body = bodyOf({ branch: failed('Use <type>/<short-slug>'), commits: {} }, 'pt-BR')
 
     expect(marksIn(body)[0]?.getAttribute('data-tip')).toBe(
       'Fora das regras: Use <type>/<short-slug>',

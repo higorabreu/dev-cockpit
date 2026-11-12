@@ -5,10 +5,12 @@ import {
   findRepositoryRoot,
 } from '@dck/adapter-extension-files'
 import {
+  type CompiledCheck,
   checkText,
   createRulesWorkspace,
   type ErrorBody,
   EXTENSION_API_VERSION,
+  enabledFor,
   errorBody,
   fail,
   type GitStatus,
@@ -18,6 +20,7 @@ import {
   ok,
   type ResolvedRule,
   type Result,
+  type RuleMark,
   type RuleMarks,
   type RulesChange,
   type RulesView,
@@ -46,7 +49,9 @@ interface CacheEntry {
   // The checks as text: while they stay the same, a text already checked is not checked again
   readonly signature: string
   readonly rules: readonly ResolvedRule[]
-  readonly checked: Map<string, readonly string[]>
+  readonly checked: Map<string, RuleMark>
+  // Expressions that ran out of time once: the panel polls, so they are not run again for this entry
+  readonly slow: Set<RegExp>
 }
 
 // The failure detail already names the file, and the page shows the path beside it
@@ -112,8 +117,14 @@ export function createRulesService(options: RulesServiceOptions) {
       loaded.rules.map(({ id, applies, enabled, check }) => [id, applies, enabled, check]),
     )
     const previous = cache.get(root)
-    const checked = previous?.signature === signature ? previous.checked : new Map()
-    const entry: CacheEntry = { at: now(), signature, rules: loaded.rules, checked }
+    const same = previous?.signature === signature
+    const entry: CacheEntry = {
+      at: now(),
+      signature,
+      rules: loaded.rules,
+      checked: same ? previous.checked : new Map(),
+      slow: same ? previous.slow : new Set(),
+    }
     cache.set(root, entry)
     return { loaded, entry }
   }
@@ -132,31 +143,54 @@ export function createRulesService(options: RulesServiceOptions) {
     return ok(toView(root, (await load(root)).loaded))
   }
 
-  function failuresOf(entry: CacheEntry, application: string, text: string, firstLineOnly = false) {
+  const isSlow = (entry: CacheEntry, check: CompiledCheck) =>
+    check.kind !== 'maxLength' && entry.slow.has(check.expression)
+
+  function markOf(entry: CacheEntry, application: string, text: string, firstLineOnly = false) {
     const key = `${application}\n${text}`
     const known = entry.checked.get(key)
     if (known) return known
-    const messages = checkText(entry.rules, application, text, { match, firstLineOnly }).map(
-      (failure) => failure.message,
+    const timed: Matcher = (expression, value) => {
+      const result = match(expression, value)
+      if (result === 'timeout') entry.slow.add(expression)
+      return result
+    }
+    const applies = (check: CompiledCheck) => !firstLineOnly || check.scope === 'first-line'
+    const skipped = enabledFor(entry.rules, application).flatMap((rule) =>
+      rule.checks.filter((check) => applies(check) && isSlow(entry, check)),
     )
+    const rules = entry.rules.map((rule) => ({
+      ...rule,
+      checks: rule.checks.filter((check) => !isSlow(entry, check)),
+    }))
+    const failures = checkText(rules, application, text, { match: timed, firstLineOnly })
+    const mark: RuleMark = {
+      failed: failures.filter(({ kind }) => kind !== 'timeout').map(({ message }) => message),
+      slow: [
+        ...skipped.map(({ message }) => message),
+        ...failures.filter(({ kind }) => kind === 'timeout').map(({ message }) => message),
+      ],
+    }
     if (entry.checked.size >= CHECKED_MAX) entry.checked.clear()
-    entry.checked.set(key, messages)
-    return messages
+    entry.checked.set(key, mark)
+    return mark
   }
+
+  const isEmpty = (mark: RuleMark) => mark.failed.length === 0 && mark.slow.length === 0
 
   async function marksOf(git: Pick<GitStatus, 'root' | 'branch' | 'outgoing'>) {
     const cached = cache.get(git.root)
     const entry = cached && now() - cached.at < ttl ? cached : (await load(git.root)).entry
-    const branch = git.branch === undefined ? [] : failuresOf(entry, 'branch', git.branch)
+    const branch = git.branch === undefined ? undefined : markOf(entry, 'branch', git.branch)
     // The panel only has the subject of a commit, so only the first line checks can judge it
     const commits = Object.fromEntries(
       git.outgoing
-        .map((commit) => [commit.hash, failuresOf(entry, 'commit', commit.subject, true)] as const)
-        .filter(([, messages]) => messages.length > 0),
+        .map((commit) => [commit.hash, markOf(entry, 'commit', commit.subject, true)] as const)
+        .filter(([, mark]) => !isEmpty(mark)),
     )
-    return branch.length === 0 && Object.keys(commits).length === 0
-      ? undefined
-      : { branch, commits }
+    const marked = branch !== undefined && !isEmpty(branch)
+    if (!marked && Object.keys(commits).length === 0) return undefined
+    return marked ? { branch, commits } : { commits }
   }
 
   return {

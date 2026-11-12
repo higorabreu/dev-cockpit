@@ -37,6 +37,7 @@ export const en: Record<MessageKey, string> = {
   'git.pushTip': 'Local commits not pushed to {upstream} yet',
   'git.ticketTip': 'Ticket taken from the branch name',
   'git.ruleTip': 'Outside the rules: {checks}',
+  'git.ruleSlow': 'Not checked, too slow: {checks}',
 
   'env.label': 'Environment',
   'env.summary.one': '{count} container',

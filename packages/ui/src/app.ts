@@ -232,7 +232,11 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         i18n,
       ),
       createGitSection(
-        { snapshot: () => activeSnapshot, requestRender: () => panel.render() },
+        {
+          snapshot: () => activeSnapshot,
+          requestRender: () => panel.render(),
+          openRules: () => settingsView.open('harness'),
+        },
         i18n,
       ),
       createEnvironmentSection({ status: () => environment }, i18n),

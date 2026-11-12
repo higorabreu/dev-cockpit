@@ -29,7 +29,8 @@
 }
 
 .gh:focus-visible,
-.more:focus-visible {
+.more:focus-visible,
+.rule-mark:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 2px;
 }
@@ -167,8 +168,13 @@
 
 .rule-mark {
   flex: none;
+  padding: 0;
   display: flex;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: none;
   color: var(--warning);
+  cursor: pointer;
 }
 
 /* The tooltip only anchors to HTML elements, so the hover must land on the mark and not on its drawing */

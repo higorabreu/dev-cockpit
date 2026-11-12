@@ -31,9 +31,16 @@ export interface RulesView {
 // The view after a change, or the failure the page shows beside the control
 export type RulesChange = Result<RulesView, ErrorBody>
 
-// What the Git section marks, as the messages of the checks that failed
+// What one branch or commit fails, as check messages
+export interface RuleMark {
+  readonly failed: readonly string[]
+  // Ran out of time, so they were not judged
+  readonly slow: readonly string[]
+}
+
+// What the Git section marks; a branch or commit inside every enabled rule is left out
 export interface RuleMarks {
-  readonly branch: readonly string[]
+  readonly branch?: RuleMark
   // Keyed by the hash of a commit not pushed yet
-  readonly commits: Readonly<Record<string, readonly string[]>>
+  readonly commits: Readonly<Record<string, RuleMark>>
 }

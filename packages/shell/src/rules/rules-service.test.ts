@@ -271,9 +271,15 @@ describe('createRulesService marks', () => {
       git('Feature/Login', 'updated things', 'fix: handle empty input'),
     )
 
-    expect(marks?.branch).toEqual([expect.stringContaining('Use <type>/<short-slug>')])
+    expect(marks?.branch).toEqual({
+      failed: [expect.stringContaining('Use <type>/<short-slug>')],
+      slow: [],
+    })
     expect(marks?.commits).toEqual({
-      a1b2c30: [expect.stringContaining('Start with <type>(<optional scope>): <summary>')],
+      a1b2c30: {
+        failed: [expect.stringContaining('Start with <type>(<optional scope>): <summary>')],
+        slow: [],
+      },
     })
   })
 
@@ -309,7 +315,7 @@ describe('createRulesService marks', () => {
 
     const marks = await make().marks(git('main', 'fix: handle empty input'))
 
-    expect(marks?.commits).toEqual({ a1b2c30: ['Keep the subject short'] })
+    expect(marks?.commits).toEqual({ a1b2c30: { failed: ['Keep the subject short'], slow: [] } })
   })
 
   it('should keep what it read for a few seconds when the files change behind it', async () => {
@@ -324,7 +330,7 @@ describe('createRulesService marks', () => {
     time += 2000
     const fresh = await service.marks(git('Feature/Login'))
 
-    expect(cached?.branch).toHaveLength(1)
+    expect(cached?.branch?.failed).toHaveLength(1)
     expect(fresh).toBeUndefined()
   })
 
@@ -336,7 +342,7 @@ describe('createRulesService marks', () => {
     await service.setEnabled(root, 'branch-format', false)
     const after = await service.marks(git('Feature/Login'))
 
-    expect(before?.branch).toHaveLength(1)
+    expect(before?.branch?.failed).toHaveLength(1)
     expect(after).toBeUndefined()
   })
 
@@ -353,7 +359,25 @@ describe('createRulesService marks', () => {
     const first = await service.marks(git('feat/add-login'))
     await service.marks(git('feat/add-login'))
 
-    expect(first?.branch).toHaveLength(1)
+    expect(first?.branch).toEqual({ failed: [], slow: [expect.stringContaining('Use <type>/')] })
     expect(texts).toEqual(['feat/add-login'])
+  })
+
+  it('should not run a check again and say it was not checked when it ran out of time once', async () => {
+    const texts: string[] = []
+    const service = make({
+      match: (expression, text) => {
+        texts.push(text)
+        return text === 'slow' ? 'timeout' : plainMatch(expression, text)
+      },
+    })
+    await service.setEnabled(root, 'branch-format', true)
+
+    const first = await service.marks(git('slow'))
+    const next = await service.marks(git('Feature/Login'))
+
+    expect(texts).toEqual(['slow'])
+    expect(first?.branch).toEqual({ failed: [], slow: [expect.stringContaining('Use <type>/')] })
+    expect(next?.branch).toEqual({ failed: [], slow: [expect.stringContaining('Use <type>/')] })
   })
 })
