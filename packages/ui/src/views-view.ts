@@ -107,7 +107,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     overlay.setAttribute('aria-label', t('views.title'))
     pendingButton.textContent = t('views.pending')
     pendingButton.dataset.tip = t('views.pending')
-    pendingButton.dataset.tipKey = 'Alt+P'
+    pendingButton.dataset.tipKey = 'Ctrl+P'
     input.placeholder = t('views.filter.placeholder')
     hint.replaceChildren(
       keyHint('↑↓', t('views.hint.navigate')),
@@ -346,7 +346,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       const step = key === 'ArrowRight' ? 1 : -1
       switchView(VIEWS[(VIEWS.indexOf(current) + step + VIEWS.length) % VIEWS.length] ?? current)
     } else if (event.ctrlKey && key.toLowerCase() === 'r') refresh()
-    else if (event.altKey && key.toLowerCase() === 'p') {
+    else if (event.ctrlKey && !event.shiftKey && key.toLowerCase() === 'p') {
       onlyPending = !onlyPending
       refilter()
     } else return

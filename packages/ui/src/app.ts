@@ -494,7 +494,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
           { id: 'tab:close', label: i18n.t('tabs.close'), shortcut: 'Ctrl+Shift+W' },
           { id: 'tab:next', label: i18n.t('tabs.next'), shortcut: 'Ctrl+Tab' },
           { id: 'tab:previous', label: i18n.t('tabs.previous'), shortcut: 'Ctrl+Shift+Tab' },
-          { id: 'tab:finished', label: i18n.t('tabs.nextFinished'), shortcut: 'Ctrl+Shift+J' },
+          { id: 'tab:finished', label: i18n.t('tabs.nextFinished') },
         ],
       },
       {
@@ -505,7 +505,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
           {
             id: 'project:search',
             label: `${i18n.t('projects.search')}…`,
-            shortcut: 'Ctrl+Shift+O',
+            shortcut: 'Ctrl+Shift+P',
           },
           { id: 'views:open', label: i18n.t('views.open'), shortcut: 'Ctrl+Shift+M' },
           ...projects.map((project) => ({
