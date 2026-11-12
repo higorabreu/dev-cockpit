@@ -1,5 +1,7 @@
 import {
   acceleratorFromEvent,
+  type ConnectionStatus,
+  connectionErrorKey,
   defaultSettings,
   HOLD_TRIGGERS,
   type HostApi,
@@ -72,6 +74,10 @@ export function createSettingsView(
   let recording = false
   let autostart = false
   let confirmingReset = false
+  let gitlab: ConnectionStatus | 'checking' = { kind: 'none' }
+  // O token só existe aqui entre digitar e conectar, e a tela nunca o recebe de volta
+  let draftUrl: string | undefined
+  let draftToken = ''
   // Mensagem de erro por chave, mostrada junto ao controle
   const errors = new Map<string, string>()
   // Mudanças feitas aqui não precisam redesenhar tudo: o controle já está no valor certo
@@ -125,7 +131,13 @@ export function createSettingsView(
     }
   }
 
-  function row(key: string, label: string, control: Child, hint?: string): HTMLElement {
+  function row(
+    key: string,
+    label: string,
+    control: Child,
+    hint?: string,
+    resettable = true,
+  ): HTMLElement {
     const locked = settings.locked().includes(key)
     const error = errors.get(key)
     return h(
@@ -139,7 +151,7 @@ export function createSettingsView(
           h('span', { class: 'shint' }, locked ? t('settings.locked') : (hint ?? '')),
         error && h('span', { class: 'serror', role: 'alert' }, error),
       ),
-      h('div', { class: 'scontrol' }, control, resetButton(key)),
+      h('div', { class: 'scontrol' }, control, resettable && resetButton(key)),
     )
   }
 
@@ -287,6 +299,117 @@ export function createSettingsView(
     render()
   }
 
+  async function loadGitLab() {
+    gitlab = 'checking'
+    if (isOpen()) render()
+    gitlab = await api.connections.gitlab.status()
+    if (isOpen()) render()
+  }
+
+  async function connectGitLab() {
+    const url = draftUrl ?? settings.current().connections.gitlab.url ?? ''
+    const token = draftToken
+    draftToken = ''
+    gitlab = 'checking'
+    render()
+    gitlab = await api.connections.gitlab.connect(url, token)
+    if (gitlab.kind === 'connected') draftUrl = undefined
+    render()
+  }
+
+  async function disconnectGitLab() {
+    draftUrl = undefined
+    gitlab = await api.connections.gitlab.disconnect()
+    render()
+  }
+
+  function gitlabStatusText(): string {
+    if (gitlab === 'checking') return t('connections.checking')
+    if (gitlab.kind === 'connected')
+      return t('connections.connectedAs', { user: gitlab.user.username })
+    if (gitlab.kind === 'error') return t(connectionErrorKey(gitlab.code))
+    return t('connections.none')
+  }
+
+  function gitlabRows(): HTMLElement[] {
+    const state = gitlab === 'checking' ? 'checking' : gitlab.kind
+    const busy = gitlab === 'checking'
+    const urlInput = h('input', {
+      type: 'text',
+      spellcheck: 'false',
+      autocomplete: 'off',
+      placeholder: t('connections.url.placeholder'),
+      'data-focus': 'conn-url',
+      disabled: busy,
+    })
+    urlInput.value = draftUrl ?? settings.current().connections.gitlab.url ?? ''
+    urlInput.addEventListener('input', () => {
+      draftUrl = urlInput.value
+    })
+
+    const tokenInput = h('input', {
+      type: 'password',
+      spellcheck: 'false',
+      autocomplete: 'off',
+      placeholder: t('connections.token.placeholder'),
+      'data-focus': 'conn-token',
+      disabled: busy,
+    })
+    tokenInput.value = draftToken
+    const connect = h(
+      'button',
+      {
+        type: 'button',
+        class: 'srecord',
+        'data-focus': 'conn-connect',
+        disabled: busy || draftToken === '',
+      },
+      t('connections.connect'),
+    )
+    tokenInput.addEventListener('input', () => {
+      draftToken = tokenInput.value
+      connect.disabled = busy || draftToken.trim() === ''
+    })
+    tokenInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !connect.disabled) void connectGitLab()
+    })
+    connect.addEventListener('click', () => void connectGitLab())
+
+    const connected = gitlab !== 'checking' && gitlab.kind === 'connected'
+    const disconnect = connected
+      ? h(
+          'button',
+          { type: 'button', class: 'srecord', 'data-focus': 'conn-disconnect' },
+          t('connections.disconnect'),
+        )
+      : undefined
+    disconnect?.addEventListener('click', () => void disconnectGitLab())
+
+    const status = h(
+      'span',
+      { class: 'sconn-status', 'data-state': state, role: 'status' },
+      gitlabStatusText(),
+    )
+    return [
+      row('connections.gitlab', t('connections.gitlab'), status, undefined, false),
+      row('connections.gitlab.url', t('connections.url'), urlInput, undefined, false),
+      row(
+        'connections.gitlab.token',
+        t('connections.token'),
+        tokenInput,
+        t('connections.token.hint'),
+        false,
+      ),
+      row(
+        'connections.gitlab.actions',
+        '',
+        h('span', { class: 'sconn-actions' }, connect, disconnect),
+        undefined,
+        false,
+      ),
+    ]
+  }
+
   function header(): HTMLElement {
     const close = h(
       'button',
@@ -401,6 +524,7 @@ export function createSettingsView(
           t('settings.depth.hint'),
         ),
       ),
+      group(t('settings.group.connections'), ...gitlabRows()),
       group(
         t('settings.group.system'),
         row(
@@ -444,6 +568,7 @@ export function createSettingsView(
     overlay.classList.add('open')
     render()
     body.querySelector<HTMLElement>('select, input, button')?.focus()
+    void loadGitLab()
     void api.autostart.isEnabled().then((on) => {
       autostart = on
       if (isOpen()) render()
@@ -452,6 +577,8 @@ export function createSettingsView(
 
   function closeView() {
     if (recording) stopRecording()
+    draftToken = ''
+    draftUrl = undefined
     overlay.classList.remove('open')
     deps.onClose()
   }

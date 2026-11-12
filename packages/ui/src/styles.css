@@ -1323,6 +1323,7 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
 
 .scontrol select,
 .scontrol input[type="text"],
+.scontrol input[type="password"],
 .scontrol input[type="number"] {
   padding: 5px 8px;
   border: 1px solid var(--line);
@@ -1332,8 +1333,32 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   font: inherit;
 }
 
-.scontrol input[type="text"] {
+.scontrol input[type="text"],
+.scontrol input[type="password"] {
   width: 200px;
+}
+
+.sconn-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sconn-status {
+  max-width: 280px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.sconn-status[data-state="connected"] {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.sconn-status[data-state="error"] {
+  color: var(--critical);
+  font-weight: 500;
 }
 
 .scontrol input[type="number"] {
@@ -1389,6 +1414,12 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   color: var(--fg);
   font: inherit;
   cursor: pointer;
+}
+
+.srecord:disabled {
+  border-style: dashed;
+  color: var(--muted);
+  cursor: default;
 }
 
 .srecord:hover,
