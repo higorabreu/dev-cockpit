@@ -37,9 +37,12 @@ const goodCommits = [
   'docs: explain the branch format\n\nThe body may be long, with lines well over the limit of the first line.',
   "Merge branch 'main' into feat/x",
   'Revert "feat: add the login form"',
+  'fixup! feat: add the login form',
+  'squash! fix(cli): handle empty input',
 ]
 const badCommits = [
   'fixed stuff',
+  'fixup!feat: add the login form',
   'Fix: handle empty input',
   'fix:handle empty input',
   'feat(): add the login form',

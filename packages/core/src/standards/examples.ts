@@ -42,8 +42,8 @@ const commitMessage: Standard = {
   enabled: false,
   check: [
     {
-      // Git writes the merge and revert subjects itself
-      pattern: '^(Merge .+|Revert ".+"|({types})(\\([^()\\s]+\\))?!?: \\S.*)$',
+      // Git writes the merge, revert, fixup and squash subjects itself
+      pattern: '^(Merge .+|Revert ".+"|(fixup|squash)! .+|({types})(\\([^()\\s]+\\))?!?: \\S.*)$',
       variables: { types: TYPES },
       scope: 'first-line',
       message:

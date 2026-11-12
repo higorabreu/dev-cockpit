@@ -169,7 +169,7 @@ paths: []
 why: 'The history reads as a changelog and release notes can be generated from it'
 enabled: true
 check:
-  - pattern: '^(Merge .+|Revert ".+"|({types})(\([^()\s]+\))?!?: \S.*)$'
+  - pattern: '^(Merge .+|Revert ".+"|(fixup|squash)! .+|({types})(\([^()\s]+\))?!?: \S.*)$'
     variables:
       types: 'feat|fix|docs|refactor|test|chore|ci'
     scope: 'first-line'
