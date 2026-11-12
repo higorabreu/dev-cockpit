@@ -79,3 +79,45 @@ describe('project conventions', () => {
     expect(wrong).toEqual([])
   })
 })
+
+const repositoryRoot = join(packagesRoot, '..')
+const commentedExtensions = ['.ts', '.tsx', '.mjs', '.css', '.sh']
+
+function commentedFilesUnder(directory: string): string[] {
+  return readdirSync(directory).flatMap((name) => {
+    const path = join(directory, name)
+    if (['node_modules', 'dist', 'release', 'local'].includes(name)) return []
+    if (statSync(path).isDirectory()) return commentedFilesUnder(path)
+    return commentedExtensions.some((extension) => path.endsWith(extension)) ? [path] : []
+  })
+}
+
+const commentText = (line: string): string | undefined =>
+  line.match(/(?:^|\s)(?:\/\/+|\/\*+|\*|#)\s(.*)$/)?.[1]
+
+// Comments are English; Portuguese lives only in the pt-BR catalog
+const portuguese =
+  /[ãõçáéíóúâêôà]|\b(não|para|que|uma|com|dos|das|isso|quando|porque|também|segredos)\b/i
+
+describe('project language', () => {
+  it('should keep every comment in English when listing the source and script files', () => {
+    const files = [
+      ...commentedFilesUnder(packagesRoot),
+      ...commentedFilesUnder(join(repositoryRoot, 'scripts')),
+      join(repositoryRoot, '.gitignore'),
+    ]
+
+    const found = files.flatMap((path) =>
+      readFileSync(path, 'utf8')
+        .split('\n')
+        .flatMap((line, index) => {
+          const text = commentText(line)
+          return text !== undefined && portuguese.test(text)
+            ? [`${relative(repositoryRoot, path)}:${index + 1}`]
+            : []
+        }),
+    )
+
+    expect(found).toEqual([])
+  })
+})
