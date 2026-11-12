@@ -28,17 +28,16 @@ async function install(folder: string, content: string) {
   await writeFile(join(root, 'extensions', folder, 'dck-extension.json'), content)
 }
 
-const deps = (inRepository = true) =>
+const deps = () =>
   createExtDeps({
     configDir: root,
     repositoryRoot: join(root, 'project'),
-    inRepository,
     appVersion: '0.3.0',
     logger: silentLogger,
     readFile: (path) => readFile(path, 'utf8').catch(() => undefined),
   })
 
-async function list(inRepository = true) {
+async function list() {
   const out: string[] = []
   const code = await runCli(['ext', 'list'], {
     endpoint: '',
@@ -46,7 +45,7 @@ async function list(inRepository = true) {
     connect: () => Promise.reject(new Error('invariant: ext list must not reach the daemon')),
     out: (text) => out.push(text),
     err: (text) => out.push(text),
-    ext: deps(inRepository),
+    ext: deps(),
   })
   return { code, lines: out.join('').trimEnd().split('\n') }
 }
@@ -56,27 +55,6 @@ describe('createExtDeps', () => {
     const { code, lines } = await list()
 
     expect(code).toBe(0)
-    expect(lines).toEqual(['dck.built-in  0.3.0  built-in  active'])
-  })
-
-  it('should list the global and the repository folders as extensions when each has a rules folder', async () => {
-    await mkdir(join(root, 'rules'), { recursive: true })
-    await mkdir(join(root, 'project', '.dck', 'rules'), { recursive: true })
-
-    const { lines } = await list()
-
-    expect(lines).toEqual([
-      'dck.built-in    0.3.0  built-in    active',
-      'dck.global      0.3.0  global      active',
-      'dck.repository  0.3.0  repository  active',
-    ])
-  })
-
-  it('should leave out the .dck folder of the current directory when it is not inside a repository', async () => {
-    await mkdir(join(root, 'project', '.dck', 'rules'), { recursive: true })
-
-    const { lines } = await list(false)
-
     expect(lines).toEqual(['dck.built-in  0.3.0  built-in  active'])
   })
 

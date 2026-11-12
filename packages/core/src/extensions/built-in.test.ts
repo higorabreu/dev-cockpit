@@ -4,9 +4,8 @@ import {
   builtInExtension,
   CONTRIBUTION_POINTS,
   EXTENSION_API_VERSION,
-  RULES_POINT,
 } from './built-in.ts'
-import { contributionsFor, type ExtensionCandidate, loadExtensions } from './load.ts'
+import { type ExtensionCandidate, loadExtensions } from './load.ts'
 
 const load = (
   candidates: readonly ExtensionCandidate[],
@@ -33,43 +32,7 @@ const installed: ExtensionCandidate = {
   },
 }
 
-const pack = (rules: unknown): ExtensionCandidate => ({
-  ...installed,
-  manifest: { ...(installed.manifest as object), contributes: { rules } },
-})
-
-describe('RULES_POINT', () => {
-  it.each(['rules', 'team/rules'])(
-    'should accept the folder %s when it is inside the extension',
-    (folder) => {
-      const report = load([pack(folder)], '0.3.0')
-
-      expect(contributionsFor(report, RULES_POINT).map((item) => item.declaration)).toEqual([
-        folder,
-      ])
-    },
-  )
-
-  it.each(['', '..', '../rules', 'a/../../b', '/etc/rules', 'C:/rules', 'a\\b', 7])(
-    'should refuse the folder %j when it is not a folder inside the extension',
-    (folder) => {
-      const report = load([pack(folder)], '0.3.0')
-
-      expect(report.active).toEqual([])
-      expect(report.rejected[0]?.error.data?.code).toBe('DCK-EXT-001')
-    },
-  )
-})
-
 describe('builtInExtension', () => {
-  it('should contribute its rules folder when it goes through the loader', () => {
-    const report = load([builtInExtension('0.3.0')], '0.3.0')
-
-    expect(contributionsFor(report, RULES_POINT)).toMatchObject([
-      { extension: { source: 'built-in' }, declaration: 'rules' },
-    ])
-  })
-
   it('should load as an active extension from the built-in source when it goes through the loader', () => {
     const candidate = builtInExtension('0.3.0')
 

@@ -139,7 +139,6 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       settings,
       api,
       i18n,
-      activePtyId: () => activeSession()?.ptyId,
       onClose: () => activeSession()?.focus(),
       previewOpacity: applyOpacity,
     },
@@ -232,11 +231,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         i18n,
       ),
       createGitSection(
-        {
-          snapshot: () => activeSnapshot,
-          requestRender: () => panel.render(),
-          openRules: () => settingsView.open('harness'),
-        },
+        { snapshot: () => activeSnapshot, requestRender: () => panel.render() },
         i18n,
       ),
       createEnvironmentSection({ status: () => environment }, i18n),
@@ -265,12 +260,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     panel.toggle()
   }
 
-  let shownTabId: string | undefined
   function render() {
-    if (state.activeId !== shownTabId) {
-      shownTabId = state.activeId
-      settingsView.activeTabChanged()
-    }
     tabBar.render(state, new Set(attention.unseenIds()))
     for (const [id, session] of sessions) {
       session.element.classList.toggle('active', id === state.activeId)

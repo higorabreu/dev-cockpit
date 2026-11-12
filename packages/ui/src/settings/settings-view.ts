@@ -10,8 +10,6 @@ import {
   type SettingsPatch,
   type Translator,
 } from '@dck/core'
-import { createHarnessPage } from '../harness/harness-page.ts'
-import { createFocusKeeper } from '../kit/focus-keeper.ts'
 import { trapFocus } from '../kit/focus-trap.ts'
 import { closeButton } from '../kit/panel-frame.ts'
 import { h } from '../panel/dom.ts'
@@ -65,7 +63,6 @@ const TABS = [
   { id: 'general', label: 'settings.tab.general' },
   { id: 'shortcuts', label: 'settings.group.shortcuts' },
   { id: 'projects', label: 'settings.group.projects' },
-  { id: 'harness', label: 'settings.group.harness' },
   { id: 'connections', label: 'settings.group.connections' },
   { id: 'system', label: 'settings.group.system' },
 ] as const
@@ -78,8 +75,6 @@ export function createSettingsView(
     readonly settings: SettingsClient
     readonly api: HostApi
     readonly i18n: Translator
-    // The terminal of the active tab, whose repository the Harness page is about
-    activePtyId(): number | undefined
     onClose(): void
     // Shows the opacity while the control is dragged, before saving
     previewOpacity(value: number): void
@@ -102,16 +97,6 @@ export function createSettingsView(
   let local = 0
 
   const isOpen = () => overlay.classList.contains('open')
-  const keeper = createFocusKeeper(body)
-
-  const harness = createHarnessPage({
-    api: api.rules,
-    i18n,
-    ptyId: deps.activePtyId,
-    requestRender: () => {
-      if (isOpen() && activeTab === 'harness') render()
-    },
-  })
 
   async function commit(patch: SettingsPatch, errorKey?: string) {
     local += 1
@@ -450,8 +435,6 @@ export function createSettingsView(
   function selectTab(id: TabId, focus = false) {
     activeTab = id
     confirmingReset = false
-    // Before the redraw, so the page of another repository never flashes while this one is read
-    if (id === 'harness') void harness.refresh()
     render()
     if (focus) body.querySelector<HTMLElement>(`#settings-tab-${id}`)?.focus()
   }
@@ -510,10 +493,7 @@ export function createSettingsView(
     h('section', { class: 'sgroup' }, title && h('h2', {}, title), ...rows)
 
   function render() {
-    keeper.redraw(draw)
-  }
-
-  function draw() {
+    const focused = document.activeElement?.getAttribute('data-focus')
     const value = settings.current()
     const holdOptions = HOLD_TRIGGERS.map(
       (id) => [id, t(`settings.holdTrigger.${id}` as const)] as const,
@@ -634,7 +614,6 @@ export function createSettingsView(
           ),
         ),
       ],
-      harness: harness.render(),
       connections: [group(undefined, ...gitlabRows())],
       system: [
         group(
@@ -686,6 +665,7 @@ export function createSettingsView(
       ),
     )
     void value
+    if (focused) body.querySelector<HTMLElement>(`[data-focus="${focused}"]`)?.focus()
   }
 
   function open(tab: TabId = TABS[0].id) {
@@ -693,7 +673,6 @@ export function createSettingsView(
     activeTab = tab
     errors.clear()
     overlay.classList.add('open')
-    if (tab === 'harness') void harness.refresh()
     render()
     body.querySelector<HTMLElement>('.snav-item[aria-selected="true"]')?.focus()
     void loadGitLab()
@@ -737,10 +716,6 @@ export function createSettingsView(
     isOpen,
     // After switching language, rebuilds the open screen with the new texts
     rerender: () => (isOpen() ? render() : undefined),
-    // The Harness page is about the active tab's repository, so it is read again when the tab changes
-    activeTabChanged() {
-      if (isOpen() && activeTab === 'harness') void harness.refresh()
-    },
     toggle: () => (isOpen() ? closeView() : open()),
   }
 }

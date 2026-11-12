@@ -45,8 +45,6 @@ export function installTooltips() {
   document.body.append(tip)
 
   let current: HTMLElement | undefined
-  // What the anchor was described by before the tooltip, so its own hint is given back
-  let describedBy: string | null = null
   let showTimer: ReturnType<typeof setTimeout> | undefined
   let checkTimer: ReturnType<typeof setInterval> | undefined
   let hiddenAt = 0
@@ -55,8 +53,7 @@ export function installTooltips() {
     clearTimeout(showTimer)
     clearInterval(checkTimer)
     if (current) {
-      if (describedBy) current.setAttribute('aria-describedby', describedBy)
-      else current.removeAttribute('aria-describedby')
+      current.removeAttribute('aria-describedby')
       hiddenAt = Date.now()
     }
     current = undefined
@@ -85,8 +82,7 @@ export function installTooltips() {
     tip.style.left = `${Math.round(placement.x)}px`
     tip.style.top = `${Math.round(placement.y)}px`
     tip.dataset.open = 'true'
-    describedBy = anchor.getAttribute('aria-describedby')
-    anchor.setAttribute('aria-describedby', describedBy ? `${describedBy} tooltip` : 'tooltip')
+    anchor.setAttribute('aria-describedby', 'tooltip')
     current = anchor
     // The panel redraws what changed; if the element left the screen, the tooltip goes with it
     checkTimer = setInterval(() => {

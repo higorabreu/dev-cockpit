@@ -29,8 +29,7 @@
 }
 
 .gh:focus-visible,
-.more:focus-visible,
-.rule-mark:focus-visible {
+.more:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 2px;
 }
@@ -164,31 +163,6 @@
   flex: none;
   margin-top: 1px;
   color: var(--warning);
-}
-
-.rule-mark {
-  flex: none;
-  padding: 0;
-  display: flex;
-  border: 0;
-  border-radius: var(--radius-small);
-  background: none;
-  color: var(--warning);
-  cursor: pointer;
-}
-
-/* The tooltip only anchors to HTML elements, so the hover must land on the mark and not on its drawing */
-.rule-mark svg {
-  pointer-events: none;
-}
-
-/* With a mark the name gives up the spare room, so the mark sits beside it */
-.branch:has(+ .rule-mark) {
-  flex: 0 1 auto;
-}
-
-.rule-mark + .syncs {
-  margin-left: auto;
 }
 
 .fs.tag {

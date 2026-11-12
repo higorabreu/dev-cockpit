@@ -9,13 +9,6 @@ import {
 } from '@dck/core'
 import { type AgentDeps, runAgentCommand } from './agent-commands.ts'
 import { type ExtDeps, runExtCommand } from './ext-commands.ts'
-import { EXIT } from './output.ts'
-import {
-  RULES_COMMANDS,
-  type RulesCommand,
-  type RulesDeps,
-  runRulesCommand,
-} from './rules-commands.ts'
 
 export interface CliDeps {
   readonly endpoint: string
@@ -27,11 +20,10 @@ export interface CliDeps {
   readonly agent?: AgentDeps
   // Present when the `ext` command is available
   readonly ext?: ExtDeps
-  // Present when the commands of the rules are available
-  readonly rules?: RulesDeps
 }
 
-export { EXIT } from './output.ts'
+// Exit codes from sysexits.h, the BSD convention for command-line tools
+export const EXIT = { ok: 0, failed: 1, usage: 64, unavailable: 69, software: 70 } as const
 
 export function exitCodeFor(error: ErrorBody): number {
   switch (error.data?.category) {
@@ -53,9 +45,6 @@ const usage = (text: string, unavailable: readonly string[]) =>
     .filter((line) => !unavailable.some((command) => line.startsWith(`  ${command} `)))
     .join('\n')
 
-const isRulesCommand = (command: string | undefined): command is RulesCommand =>
-  RULES_COMMANDS.some((known) => known === command)
-
 export async function runCli(argv: readonly string[], deps: CliDeps): Promise<number> {
   const t = deps.t ?? createTranslator('pt-BR').t
   const [command, ...rest] = argv
@@ -65,15 +54,8 @@ export async function runCli(argv: readonly string[], deps: CliDeps): Promise<nu
   if (command === 'ext' && deps.ext) {
     return runExtCommand(rest, { out: deps.out, err: deps.err, t }, deps.ext)
   }
-  if (deps.rules && isRulesCommand(command)) {
-    return runRulesCommand(command, rest, { out: deps.out, err: deps.err, t }, deps.rules)
-  }
   if (command !== 'toggle' && command !== 'ping') {
-    const unavailable = [
-      ...(deps.agent ? [] : ['agent']),
-      ...(deps.ext ? [] : ['ext']),
-      ...(deps.rules ? [] : RULES_COMMANDS),
-    ]
+    const unavailable = [...(deps.agent ? [] : ['agent']), ...(deps.ext ? [] : ['ext'])]
     deps.err(usage(t('cli.usage'), unavailable))
     return command === undefined || command === '--help' ? EXIT.ok : EXIT.usage
   }

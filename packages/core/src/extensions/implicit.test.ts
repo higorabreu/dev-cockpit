@@ -11,7 +11,7 @@ describe('implicitManifest', () => {
       source: 'global',
       apiVersion: 1,
       appVersion: '0.3.0',
-      contributes: { rules: 'rules' },
+      contributes: { standards: 'standards' },
     })
 
     const parsed = parseManifest(manifest)
@@ -21,7 +21,7 @@ describe('implicitManifest', () => {
       id: 'dck.global',
       apiVersion: 1,
       engines: { dck: '>=0.3.0' },
-      contributes: { rules: 'rules' },
+      contributes: { standards: 'standards' },
     })
   })
 
@@ -39,12 +39,12 @@ describe('implicitManifest', () => {
   })
 
   it('should load in the running app when its version has a pre-release suffix', () => {
-    const point = defineContributionPoint('rules', z.string())
+    const point = defineContributionPoint('standards', z.string())
     const manifest = implicitManifest({
       source: 'repository',
       apiVersion: 2,
       appVersion: '1.4.0-beta.2',
-      contributes: { rules: 'rules' },
+      contributes: { standards: 'standards' },
     })
 
     const report = loadExtensions({
@@ -60,7 +60,7 @@ describe('implicitManifest', () => {
   })
 
   it('should not share the given record when building the manifest', () => {
-    const contributes = { rules: 'rules' }
+    const contributes = { standards: 'standards' }
 
     const manifest = implicitManifest({
       source: 'global',

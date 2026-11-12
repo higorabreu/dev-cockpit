@@ -3,7 +3,7 @@ import type { ContainerState, SessionActivity } from '@dck/core'
 const SVG = 'http://www.w3.org/2000/svg'
 
 // State is always shown as both shape and text: filled circle, hollow or arc
-export type GlyphKind = SessionActivity | 'done' | ContainerState | 'warning'
+export type GlyphKind = SessionActivity | 'done' | ContainerState
 
 const SHAPES: Record<GlyphKind, string> = {
   agent: '<circle cx="8" cy="8" r="5.2" fill="currentColor" stroke="none"/>',
@@ -14,8 +14,6 @@ const SHAPES: Record<GlyphKind, string> = {
   starting: '<path d="M8 3a5 5 0 1 1-5 5"/>',
   stopped: '<rect x="3.5" y="3.5" width="9" height="9" rx="1.5"/>',
   paused: '<path d="M6 4v8M10 4v8"/>',
-  warning:
-    '<path stroke-linejoin="round" d="M8 1.9l6.6 11.5H1.4z"/><path d="M8 6.4v3M8 11.3v.01"/>',
 }
 
 export function activityGlyph(activity: GlyphKind): SVGSVGElement {

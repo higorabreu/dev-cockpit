@@ -1,4 +1,3 @@
-import type { ErrorBody } from '../ipc/protocol.ts'
 import type {
   Cancel,
   Clipboard,
@@ -11,14 +10,12 @@ import type {
   PtyOptions,
   PtySession,
   Rectangle,
-  RuleFiles,
   Scheduler,
   Screen,
   SecretStore,
 } from '../ports/index.ts'
 import { silentLogger } from '../ports/logger.ts'
-import { ok, type Result } from '../result.ts'
-import { splitRuleFile } from '../rules/format.ts'
+import { ok } from '../result.ts'
 import { createViewsService } from '../views/views-service.ts'
 
 export class FakeClock implements Clock {
@@ -70,43 +67,6 @@ export class MemorySecretStore implements SecretStore {
   async delete(key: string) {
     this.entries.delete(key)
     return ok(undefined)
-  }
-}
-
-// Files in memory, with `/` between the folders; the YAML parser comes in because the core has none
-export class MemoryRuleFiles implements RuleFiles {
-  readonly texts = new Map<string, string>()
-
-  constructor(private readonly parseYaml: (text: string) => unknown) {}
-
-  async list(folder: string) {
-    const inside = ([path]: [string, string]) =>
-      path.startsWith(`${folder}/`) &&
-      path.endsWith('.md') &&
-      !path.includes('/', folder.length + 1)
-    return [...this.texts]
-      .filter(inside)
-      .sort()
-      .map(([path, text]) => {
-        const { yaml, body } = splitRuleFile(text)
-        return { path, frontMatter: yaml === undefined ? undefined : this.parse(yaml), body }
-      })
-  }
-  async readText(path: string): Promise<Result<string | undefined, ErrorBody>> {
-    return ok(this.texts.get(path))
-  }
-  async writeText(path: string, text: string, _root: string): Promise<Result<void, ErrorBody>> {
-    this.texts.set(path, text)
-    return ok(undefined)
-  }
-
-  private parse(yaml: string): unknown {
-    try {
-      return this.parseYaml(yaml)
-    } catch {
-      // Broken YAML reads as no front matter, the way the files adapter treats it
-      return undefined
-    }
   }
 }
 

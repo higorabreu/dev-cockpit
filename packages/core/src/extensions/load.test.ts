@@ -9,7 +9,7 @@ import {
   loadExtensions,
 } from './load.ts'
 
-const rules = defineContributionPoint('rules', z.string().startsWith('rules'))
+const standards = defineContributionPoint('standards', z.string().startsWith('standards'))
 
 const manifest = (overrides: Record<string, unknown> = {}) => ({
   id: 'acme.commits',
@@ -17,7 +17,7 @@ const manifest = (overrides: Record<string, unknown> = {}) => ({
   version: '1.0.0',
   apiVersion: 1,
   engines: { dck: '>=0.3.0' },
-  contributes: { rules: 'rules/' },
+  contributes: { standards: 'standards/' },
   ...overrides,
 })
 
@@ -30,7 +30,7 @@ const candidate = (
 const load = (candidates: readonly ExtensionCandidate[], disabled: string[] = []) =>
   loadExtensions({
     candidates,
-    points: [rules],
+    points: [standards],
     disabled: new Set(disabled),
     apiVersion: 1,
     appVersion: '0.3.0',
@@ -43,7 +43,7 @@ describe('loadExtensions', () => {
     const report = load([candidate('installed', '/ext/acme.commits')])
 
     expect(report.active.map((extension) => extension.manifest.id)).toEqual(['acme.commits'])
-    expect(report.active[0]?.declarations.get('rules')).toBe('rules/')
+    expect(report.active[0]?.declarations.get('standards')).toBe('standards/')
     expect(report.rejected).toEqual([])
   })
 
@@ -69,10 +69,12 @@ describe('loadExtensions', () => {
   })
 
   it('should reject the extension with DCK-EXT-001 when a declaration does not match the point', () => {
-    const report = load([candidate('installed', '/ext/x', { contributes: { rules: 'checks/' } })])
+    const report = load([
+      candidate('installed', '/ext/x', { contributes: { standards: 'rules/' } }),
+    ])
 
     expect(codeOf(report.rejected[0]?.error ?? {})).toBe('DCK-EXT-001')
-    expect(report.rejected[0]?.error.message).toContain('contributes.rules')
+    expect(report.rejected[0]?.error.message).toContain('contributes.standards')
   })
 
   it.each([
@@ -115,7 +117,7 @@ describe('loadExtensions', () => {
 
     expect(report.active).toEqual([])
     expect(report.disabled.map((extension) => extension.manifest.id)).toEqual(['acme.commits'])
-    expect(contributionsFor(report, rules)).toEqual([])
+    expect(contributionsFor(report, standards)).toEqual([])
   })
 
   it('should order the active extensions from the lowest to the highest precedence when listing', () => {
@@ -140,17 +142,17 @@ describe('contributionsFor', () => {
     const report = load([
       candidate('repository', '/repo', {
         id: 'repo.local',
-        contributes: { rules: 'rules/r' },
+        contributes: { standards: 'standards/r' },
       }),
       candidate('built-in', '/builtin', {
         id: 'dck.examples',
-        contributes: { rules: 'rules/b' },
+        contributes: { standards: 'standards/b' },
       }),
       candidate('installed', '/ext', { id: 'acme.commits', contributes: {} }),
     ])
 
-    const contributions = contributionsFor(report, rules)
+    const contributions = contributionsFor(report, standards)
 
-    expect(contributions.map((entry) => entry.declaration)).toEqual(['rules/b', 'rules/r'])
+    expect(contributions.map((entry) => entry.declaration)).toEqual(['standards/b', 'standards/r'])
   })
 })
