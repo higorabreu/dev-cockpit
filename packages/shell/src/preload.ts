@@ -44,6 +44,9 @@ const api: HostApi = {
       disconnect: () => ipcRenderer.invoke(hostChannels.connectionsGitlabDisconnect),
     },
   },
+  external: {
+    open: (url) => ipcRenderer.send(hostChannels.externalOpen, url),
+  },
   views: {
     snapshot: (view) => ipcRenderer.invoke(hostChannels.viewsSnapshot, view),
     refresh: (view, maxAgeMs) => ipcRenderer.invoke(hostChannels.viewsRefresh, { view, maxAgeMs }),

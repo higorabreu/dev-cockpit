@@ -40,6 +40,17 @@ const notificationSchema = z.object({
   tabId: z.string().max(100),
 })
 
+// Só endereços da origem do GitLab conectado; o dado vem do servidor, então não se confia nele
+function parseOwnUrl(input: string, origin: string | null): string | undefined {
+  if (origin === null) return undefined
+  try {
+    const url = new URL(input)
+    return url.origin === new URL(origin).origin ? url.href : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export interface IpcMainApi {
   handle(channel: string, listener: (event: unknown, ...args: never[]) => unknown): void
   on(channel: string, listener: (event: unknown, ...args: never[]) => void): void
@@ -58,6 +69,8 @@ export interface BridgeOptions {
   readonly autostart: Autostart
   readonly gitlab: GitLabConnection
   readonly views: ViewsGateway
+  // Abre no navegador do sistema; `allowedOrigin` é a origem do GitLab conectado, se houver
+  readonly external: { open(url: string): void; allowedOrigin(): string | null }
   readonly environment: { status(pid: number): Promise<ComposeStatus> }
   readonly sessions: {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
@@ -129,6 +142,12 @@ export function registerHostBridge(options: BridgeOptions) {
     return options.gitlab.connect(parsed.data.url, parsed.data.token)
   })
   ipcMain.handle(hostChannels.connectionsGitlabDisconnect, () => options.gitlab.disconnect())
+  ipcMain.on(hostChannels.externalOpen, (_event, url: unknown) => {
+    const origin = options.external.allowedOrigin()
+    const target = typeof url === 'string' ? parseOwnUrl(url, origin) : undefined
+    if (target) options.external.open(target)
+    else logger.warn('external address refused', { origin })
+  })
   ipcMain.handle(hostChannels.viewsSnapshot, (_event, view: unknown) => {
     const parsed = viewRequestSchema.shape.view.safeParse(view)
     return parsed.success ? options.views.snapshot(parsed.data) : undefined

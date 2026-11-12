@@ -18,6 +18,7 @@ function setup() {
   const notified: TabNotification[] = []
   const gitlabConnects: { url: string; token: string }[] = []
   const viewRefreshes: { view: string; maxAgeMs: number | undefined }[] = []
+  const opened: string[] = []
   const bridge = registerHostBridge({
     ipcMain,
     ptyHost,
@@ -75,6 +76,7 @@ function setup() {
       configure: async () => undefined,
       parse: () => undefined,
     },
+    external: { open: (url) => void opened.push(url), allowedOrigin: () => 'https://gl.test' },
     notifier: { notify: (notification) => void notified.push(notification) },
     projects: {
       list: async () => [{ name: 'alpha', path: '/p/alpha' }],
@@ -101,6 +103,7 @@ function setup() {
     notified,
     gitlabConnects,
     viewRefreshes,
+    opened,
     fullHeights: () => fullHeightToggles,
   }
 }
@@ -363,5 +366,30 @@ describe('registerHostBridge views', () => {
 
     expect(await call(hostChannels.viewsRefresh, payload)).toBeUndefined()
     expect(viewRefreshes).toEqual([])
+  })
+})
+
+describe('registerHostBridge external', () => {
+  it('should open the address when it belongs to the connected GitLab', () => {
+    const { call, opened } = setup()
+
+    call(hostChannels.externalOpen, 'https://gl.test/g/p/-/merge_requests/5')
+
+    expect(opened).toEqual(['https://gl.test/g/p/-/merge_requests/5'])
+  })
+
+  it.each([
+    ['another host', 'https://evil.test/g/p'],
+    ['a look alike host', 'https://gl.test.evil.test/x'],
+    ['another protocol', 'file:///etc/passwd'],
+    ['a plain http downgrade', 'http://gl.test/x'],
+    ['text that is not an address', 'nada'],
+    ['a value that is not text', 42],
+  ])('should refuse to open %s when it is not the connected origin', (_label, url) => {
+    const { call, opened } = setup()
+
+    call(hostChannels.externalOpen, url)
+
+    expect(opened).toEqual([])
   })
 })

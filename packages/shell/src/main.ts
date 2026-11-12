@@ -24,6 +24,7 @@ import {
   app,
   BrowserWindow,
   clipboard,
+  shell as electronShell,
   globalShortcut,
   ipcMain,
   Menu,
@@ -185,6 +186,10 @@ app.whenReady().then(async () => {
     settings: settingsStore,
     gitlab,
     views,
+    external: {
+      open: (url) => void electronShell.openExternal(url),
+      allowedOrigin: () => settingsStore.get().settings.connections.gitlab.url,
+    },
     autostart,
     projects: createProjectCatalog(
       () => {

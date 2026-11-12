@@ -54,6 +54,10 @@ export interface HostApi {
     refresh(view: MergeRequestView, maxAgeMs?: number): Promise<ViewSnapshot | undefined>
     onChange(listener: (snapshot: ViewSnapshot) => void): Unsubscribe
   }
+  readonly external: {
+    // Só abre endereços da origem do GitLab conectado; qualquer outro é ignorado
+    open(url: string): void
+  }
   readonly autostart: {
     isEnabled(): Promise<boolean>
     set(enabled: boolean): Promise<boolean>
@@ -95,6 +99,7 @@ export const hostChannels = {
   connectionsGitlabStatus: 'connections:gitlab:status',
   connectionsGitlabConnect: 'connections:gitlab:connect',
   connectionsGitlabDisconnect: 'connections:gitlab:disconnect',
+  externalOpen: 'external:open',
   viewsSnapshot: 'views:snapshot',
   viewsRefresh: 'views:refresh',
   viewsChanged: 'views:changed',
