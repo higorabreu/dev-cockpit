@@ -48,6 +48,7 @@ import { createViewsView } from './views-view.ts'
 export interface AppElements {
   readonly bar: HTMLElement
   readonly tabs: HTMLElement
+  readonly tabsNew: HTMLElement
   readonly tabsAll: HTMLElement
   readonly tabList: HTMLElement
   readonly panelToggle: HTMLElement
@@ -413,6 +414,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     },
     () => i18n.t('tabs.finished'),
   )
+
+  elements.tabsNew.addEventListener('click', () => void open())
 
   createTabList(elements.tabList, elements.tabsAll, {
     entries() {

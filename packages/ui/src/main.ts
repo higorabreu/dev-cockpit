@@ -18,6 +18,7 @@ await startApp(
   {
     bar: element('bar'),
     tabs: element('tabs'),
+    tabsNew: element('tabs-new'),
     tabsAll: element('tabs-all'),
     tabList: element('tab-list'),
     host: element('host'),
