@@ -165,6 +165,26 @@
   color: var(--warning);
 }
 
+.std-mark {
+  flex: none;
+  display: flex;
+  color: var(--warning);
+}
+
+/* The tooltip only anchors to HTML elements, so the hover must land on the mark and not on its drawing */
+.std-mark svg {
+  pointer-events: none;
+}
+
+/* With a mark the name gives up the spare room, so the mark sits beside it */
+.branch:has(+ .std-mark) {
+  flex: 0 1 auto;
+}
+
+.std-mark + .syncs {
+  margin-left: auto;
+}
+
 .fs.tag {
   width: auto;
   font-weight: 400;

@@ -38,6 +38,7 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     ['primary button text', rgb(color.accentInk), rgb(color.accent), TEXT],
     ['success on the surface', rgb(color.success), surface, TEXT],
     ['warning on the surface', rgb(color.warning), surface, TEXT],
+    ['warning on the window', rgb(color.warning), rgb(color.bg), TEXT],
     ['critical on the surface', rgb(color.critical), surface, TEXT],
   ]
 

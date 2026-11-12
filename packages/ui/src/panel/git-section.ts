@@ -4,12 +4,14 @@ import {
   type GitStatus,
   type GitSubmodule,
   type SessionSnapshot,
+  type StandardMarks,
   type Translator,
   ticketFromBranch,
 } from '@dck/core'
 import { collapseThen } from './collapse.ts'
 import { h, icon } from './dom.ts'
 import { agoText } from './format.ts'
+import { activityGlyph } from './glyphs.ts'
 import type { PanelSection } from './panel.ts'
 
 export interface GitSource {
@@ -65,11 +67,28 @@ function fileRow(file: GitFile) {
   )
 }
 
-function commitRow(i18n: Translator, commit: GitCommit, nowSeconds: number) {
+// Marks what is outside an enabled standard, with the rules that failed in the tooltip
+function standardMark(i18n: Translator, rules: readonly string[] | undefined) {
+  if (!rules || rules.length === 0) return false
+  const tip = i18n.t('git.standardTip', { rules: rules.join('; ') })
+  return h(
+    'span',
+    { class: 'std-mark', role: 'img', 'aria-label': tip, 'data-tip': tip },
+    activityGlyph('warning'),
+  )
+}
+
+function commitRow(
+  i18n: Translator,
+  commit: GitCommit,
+  nowSeconds: number,
+  failed?: readonly string[],
+) {
   return h(
     'div',
     { class: 'frow' },
     h('span', { class: 'fname', 'data-tip-full': commit.subject }, commit.subject),
+    standardMark(i18n, failed),
     h(
       'span',
       { class: 'fs hash', 'data-tip': agoText(i18n, nowSeconds, commit.time) },
@@ -148,7 +167,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
     return h('div', { class: 'group' }, head, open && wrap)
   }
 
-  function body(git: GitStatus): HTMLElement {
+  function body(git: GitStatus, marks: StandardMarks | undefined): HTMLElement {
     const nowSeconds = Date.now() / 1000
     const ticket = ticketFromBranch(git.branch)
     // Long lists show the first rows and a button to see the rest
@@ -196,6 +215,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
           { class: 'brow' },
           icon(BRANCH_ICON, 14, 'branch-icon'),
           h('b', { class: 'branch' }, git.branch ?? i18n.t('git.detached')),
+          standardMark(i18n, marks?.branch),
           sync(i18n, git.ahead, git.behind),
         ),
         (ticket || git.upstream) &&
@@ -233,7 +253,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
           git.ahead,
           () =>
             limited('outgoing', git.outgoing, i18n.t('git.commits'), (c) =>
-              commitRow(i18n, c, nowSeconds),
+              commitRow(i18n, c, nowSeconds, marks?.commits[c.hash]),
             ),
           i18n.t('git.pushTip', { upstream: git.upstream ?? 'origin' }),
         ),
@@ -266,7 +286,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
       const snapshot = source.snapshot()
       if (!snapshot) return h('p', { class: 'muted' }, i18n.t('sessions.noInfo'))
       if (!snapshot.git) return h('p', { class: 'muted' }, i18n.t('git.notRepository'))
-      return body(snapshot.git)
+      return body(snapshot.git, snapshot.standards)
     },
   }
 }

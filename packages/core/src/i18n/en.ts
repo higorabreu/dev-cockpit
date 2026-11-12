@@ -36,6 +36,7 @@ export const en: Record<MessageKey, string> = {
   'git.pullTip': 'Commits on {upstream} not pulled yet',
   'git.pushTip': 'Local commits not pushed to {upstream} yet',
   'git.ticketTip': 'Ticket taken from the branch name',
+  'git.standardTip': 'Outside the standards: {rules}',
 
   'env.label': 'Environment',
   'env.summary.one': '{count} container',
