@@ -18,12 +18,21 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
         run: |
+          # Bots cannot sign off. Only branches of this repository are trusted, because a fork can name its commits anything
+          if [ "$HEAD_REPO" = "$REPOSITORY" ]; then
+            case "$HEAD_REF" in
+              release-please--* | dependabot/*)
+                echo "Bot branch of this repository, nothing to sign off"
+                exit 0
+                ;;
+            esac
+          fi
           missing=0
           for sha in $(git rev-list --no-merges "$BASE..$HEAD"); do
-            author=$(git log -1 --format=%an "$sha")
-            # Dependency bots cannot sign off
-            if [ "$author" = "dependabot[bot]" ]; then continue; fi
             if ! git log -1 --format=%B "$sha" | grep -qE '^Signed-off-by: .+ <.+>$'; then
               echo "::error::Commit $sha has no Signed-off-by line. Amend it with 'git commit -s --amend' (or 'git rebase --signoff')."
               missing=1
