@@ -185,7 +185,7 @@
 .scontrol input[type="password"],
 .scontrol input[type="number"] {
   padding: 5px 8px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius-medium);
   background: var(--bg);
   color: var(--fg);
@@ -266,7 +266,7 @@
 
 .srecord {
   padding: 5px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius-medium);
   background: none;
   color: var(--fg);
