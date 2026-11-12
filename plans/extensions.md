@@ -239,8 +239,10 @@ Phase 0, the foundation:
 - [x] EXT-T3. The built-in extension, the `dck ext list` command (source, state, shadowed entries, translated
   through the catalogs) and `docs/extensions.md` with the manifest and contribution point reference. (F3) The built-in
   extension is data in `core/src/extensions/built-in.ts`, beside the list of known contribution points. The
-  CLI finds the window's data folder with `defaultConfigDir` (or `DCK_CONFIG_DIR`) and looks for `.dck/` in
-  the current directory only; walking up to the repository root waits for the `GitContext` port of EXT-T5.
+  CLI finds the window's data folder with `defaultConfigDir` (or `DCK_CONFIG_DIR`) and looks for `.dck/` at
+  the root of the current repository. Follow-ups after the review: the `dck` owner is reserved, the data
+  folder is `dev-cockpit` on Linux and set by the window itself, and the settings store reads the file again
+  before it saves, so an edit made by the CLI survives.
 
 Phase 1, the harness (the `standards` contribution point):
 
