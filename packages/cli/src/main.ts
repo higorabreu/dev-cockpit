@@ -52,6 +52,7 @@ if (args[0] === 'daemon') {
   process.exitCode = await runCli(args, {
     endpoint,
     t,
+    env: process.env,
     connect: (target) => connectTo(target, silentLogger),
     out: (text) => process.stdout.write(text),
     err: (text) => process.stderr.write(text),

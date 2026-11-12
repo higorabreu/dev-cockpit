@@ -293,6 +293,7 @@ app.whenReady().then(async () => {
 
   const link = startDaemonLink({
     onReady: configureViews,
+    onAgentSignal: (signal) => window.webContents.send(hostChannels.agentSignal, signal),
     onViews: (data) => {
       const snapshot = views.parse(data)
       if (snapshot) window.webContents.send(hostChannels.viewsChanged, snapshot)

@@ -95,7 +95,7 @@ export function registerHostBridge(options: BridgeOptions) {
       file: options.shell,
       args: [],
       cwd: create.cwd ?? options.home,
-      // Qualquer script rodando neste terminal, como o statusLine do Claude, sabe a qual aba pertence
+      // Anything running in this terminal, like an agent's hooks, knows which tab it belongs to
       env: { DCK_PTY_ID: String(id) },
       cols: create.cols,
       rows: create.rows,

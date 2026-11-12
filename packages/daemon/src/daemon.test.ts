@@ -69,6 +69,29 @@ describe('startDaemon', () => {
     expect(second.ok).toBe(false)
   })
 
+  it('should relay an agent signal to a subscriber when the cli signals', async () => {
+    const { newClient } = await boot()
+    const window = await newClient()
+    const received: unknown[] = []
+    await window.subscribe('agent', (data) => received.push(data))
+    const cli = await newClient()
+
+    const result = await cli.request('agent.signal', { ptyId: 3, state: 'needs-you' })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(result).toEqual({ ok: true, value: { delivered: 1 } })
+    expect(received).toEqual([{ ptyId: 3, state: 'needs-you' }])
+  })
+
+  it('should reject an agent signal when the state is unknown', async () => {
+    const { newClient } = await boot()
+    const cli = await newClient()
+
+    const result = await cli.request('agent.signal', { ptyId: 3, state: 'done' })
+
+    expect(result.ok).toBe(false)
+  })
+
   it('should report its protocol version when asked for info', async () => {
     const { newClient } = await boot()
     const client = await newClient()

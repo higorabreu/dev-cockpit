@@ -1,3 +1,4 @@
+import type { AgentSignal } from '../attention/agent-signal.ts'
 import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
 import type { MergeRequestView } from './code-review.ts'
 import type { ConnectionStatus } from './connections.ts'
@@ -67,6 +68,10 @@ export interface HostApi {
     activity(ptyId: number): Promise<SessionActivityInfo | undefined>
     inspect(ptyId: number): Promise<SessionSnapshot | undefined>
   }
+  readonly agent: {
+    // A coding agent in one of the terminals said what it is doing
+    onSignal(listener: (signal: AgentSignal) => void): Unsubscribe
+  }
   readonly projects: {
     list(): Promise<readonly Project[]>
     touch(path: string): void
@@ -107,6 +112,7 @@ export const hostChannels = {
   autostartSet: 'autostart:set',
   sessionActivity: 'session:activity',
   sessionInspect: 'session:inspect',
+  agentSignal: 'agent:signal',
   projectsList: 'projects:list',
   projectsTouch: 'projects:touch',
   projectsToggleFavorite: 'projects:toggle-favorite',

@@ -110,7 +110,8 @@ export const en: Record<MessageKey, string> = {
   'tray.quit': 'Quit',
 
   'cli.usage':
-    'Usage: dck <command>\n\nCommands:\n  toggle   Show or hide the window\n  ping     Check that the daemon is answering\n  daemon   Run the daemon in the foreground\n  ext      List the extensions and where each one comes from (list)\n',
+    'Usage: dck <command>\n\nCommands:\n  toggle   Show or hide the window\n  ping     Check that the daemon is answering\n  daemon   Run the daemon in the foreground\n  agent    Tell the cockpit what a coding agent in a tab is doing (signal)\n  ext      List the extensions and where each one comes from (list)\n',
+  'cli.agent.usage': 'Usage: dck agent signal <working|needs-you|your-turn|ended>',
   'cli.startDaemon': 'Start the daemon with: dck daemon',
   'cli.noWindow': 'No window is connected to the daemon.',
   'cli.ext.usage': 'Usage: dck ext list',

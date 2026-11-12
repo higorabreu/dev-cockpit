@@ -1,4 +1,6 @@
 import {
+  type AgentSignal,
+  agentSignalSchema,
   type Cancel,
   type Client,
   createClient,
@@ -22,6 +24,8 @@ export interface DaemonLinkOptions {
   onViews?(snapshot: unknown): void
   // Called on every ready daemon connection, for whoever needs to send the configuration
   onReady?(): void
+  // What a coding agent in a cockpit terminal said it is doing
+  onAgentSignal?(signal: AgentSignal): void
   // Called when the found daemon is older than this shell version; the caller
   // shuts it down (by `shutdown`, or by force if it does not know the method) and starts a new one
   replaceDaemon?(shutdown: () => Promise<boolean>): Promise<void>
@@ -100,6 +104,11 @@ export function startDaemonLink(options: DaemonLinkOptions): DaemonLink {
       if (windowEvent.safeParse(data).success) guard('window', onToggle)
     })
     if (subscribed.ok) logger.info('daemon connected')
+    await client.subscribe('agent', (data) => {
+      const signal = agentSignalSchema.safeParse(data)
+      if (signal.success) guard('agent', () => options.onAgentSignal?.(signal.data))
+      else logger.warn('invalid agent signal ignored')
+    })
     await client.subscribe('views', (data) => guard('views', () => options.onViews?.(data)))
     ready = client
     guard('ready', () => options.onReady?.())

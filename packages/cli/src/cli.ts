@@ -7,6 +7,7 @@ import {
   type Translate,
   type Transport,
 } from '@dck/core'
+import { signalAgent } from './agent-signal.ts'
 import { type ExtDeps, runExtCommand } from './ext-commands.ts'
 
 export interface CliDeps {
@@ -15,6 +16,8 @@ export interface CliDeps {
   out(text: string): void
   err(text: string): void
   readonly t?: Translate
+  // Where `agent signal` finds DCK_PTY_ID
+  readonly env?: Readonly<Record<string, string | undefined>>
   // Present when the `ext` command is available
   readonly ext?: ExtDeps
 }
@@ -45,6 +48,14 @@ const usage = (text: string, unavailable: readonly string[]) =>
 export async function runCli(argv: readonly string[], deps: CliDeps): Promise<number> {
   const t = deps.t ?? createTranslator('pt-BR').t
   const [command, ...rest] = argv
+  if (command === 'agent' && rest[0] === 'signal') {
+    await signalAgent(rest.slice(1), { ...deps, env: deps.env ?? {} })
+    return EXIT.ok
+  }
+  if (command === 'agent') {
+    deps.err(`${t('cli.agent.usage')}\n`)
+    return EXIT.usage
+  }
   if (command === 'ext' && deps.ext) {
     return runExtCommand(rest, { out: deps.out, err: deps.err, t }, deps.ext)
   }

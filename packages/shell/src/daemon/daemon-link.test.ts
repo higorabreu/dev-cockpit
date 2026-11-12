@@ -1,4 +1,5 @@
 import {
+  type AgentSignal,
   createHub,
   DAEMON_PROTOCOL,
   type ErrorBody,
@@ -20,9 +21,11 @@ type Attempt = () => Result<Transport, ErrorBody>
 function start(
   attempts: Attempt[],
   replaceDaemon?: (shutdown: () => Promise<boolean>) => Promise<void>,
+  onAgentSignal?: (signal: AgentSignal) => void,
 ) {
   const scheduler = new FakeScheduler()
   const toggles: number[] = []
+  const signals: AgentSignal[] = []
   const queue = [...attempts]
   let calls = 0
   const link = startDaemonLink({
@@ -35,10 +38,11 @@ function start(
     scheduler,
     logger: silentLogger,
     onToggle: () => toggles.push(1),
+    onAgentSignal: onAgentSignal ?? ((signal) => void signals.push(signal)),
     replaceDaemon,
     retryMs: 2000,
   })
-  return { scheduler, toggles, link, calls: () => calls }
+  return { scheduler, toggles, signals, link, calls: () => calls }
 }
 
 describe('startDaemonLink', () => {
@@ -137,6 +141,34 @@ describe('startDaemonLink', () => {
 
     expect(reports).toBe(1)
     expect(hub).toBeDefined()
+    link.stop()
+  })
+
+  it('should pass an agent signal to the handler when the daemon publishes a valid one', async () => {
+    const hub = createHub({}, silentLogger)
+    const { signals, link } = start([() => ok(connectLoopback(hub))])
+    await tick()
+
+    hub.publish('agent', { ptyId: 2, state: 'needs-you' })
+    hub.publish('agent', { ptyId: 2, state: 'unknown' })
+    await tick()
+
+    expect(signals).toEqual([{ ptyId: 2, state: 'needs-you' }])
+    link.stop()
+  })
+
+  it('should keep the link working when the agent signal handler throws', async () => {
+    const hub = createHub({}, silentLogger)
+    const { toggles, link } = start([() => ok(connectLoopback(hub))], undefined, () => {
+      throw new Error('boom')
+    })
+    await tick()
+
+    hub.publish('agent', { ptyId: 1, state: 'working' })
+    hub.publish('window', { action: 'toggle' })
+    await tick()
+
+    expect(toggles).toHaveLength(1)
     link.stop()
   })
 
