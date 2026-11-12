@@ -464,6 +464,29 @@ describe('createRulesWorkspace, agents', () => {
     expect((await workspace.load()).agents).toMatchObject({ shared: true, stale: false })
   })
 
+  it('should bring the shared block up to date and say so when a rule changes after sharing', async () => {
+    const { files, workspace } = arrange()
+    await workspace.setEnabled('branch-format', true, 'repository')
+    await workspace.shareWithAgents(true)
+    await workspace.setEnabled('commit-message', true, 'repository')
+
+    const refreshed = await workspace.refreshShared()
+
+    expect(refreshed).toEqual(ok(true))
+    expect(files.texts.get(AGENTS)).toContain('- Commit messages: ')
+    expect((await workspace.load()).agents).toMatchObject({ shared: true, stale: false })
+  })
+
+  it('should write nothing when the block is not shared and a rule changes', async () => {
+    const { files, workspace } = arrange()
+    await workspace.setEnabled('branch-format', true, 'repository')
+
+    const refreshed = await workspace.refreshShared()
+
+    expect(refreshed).toEqual(ok(false))
+    expect(files.texts.has(AGENTS)).toBe(false)
+  })
+
   it.each([
     ['no CLAUDE.md exists', undefined, false],
     ['CLAUDE.md does not import the file', '# Claude\n', true],

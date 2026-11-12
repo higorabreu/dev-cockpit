@@ -125,25 +125,47 @@ export function createRulesWorkspace(deps: RulesWorkspaceDeps) {
     return read.ok ? read.value : undefined
   }
 
+  async function load(): Promise<LoadedRules> {
+    const resolved = await resolve()
+    const text = (await readIfPossible(agentsFile)) ?? ''
+    const claude = await readIfPossible(claudeFile)
+    const current = blockText(text)
+    const shared = current !== undefined
+    return {
+      ...resolved,
+      agents: {
+        file: agentsFile,
+        shared,
+        stale: shared && current !== blockOf(await resolve('global')).trim(),
+        claudeImportMissing: claude !== undefined && !importsAgents(claude),
+      },
+    }
+  }
+
+  // On writes or refreshes the marked block of AGENTS.md, off removes it; the text around it is kept
+  async function shareWithAgents(on: boolean): Promise<Result<void, ErrorBody>> {
+    const read = await files.readText(agentsFile)
+    if (!read.ok) return read
+    const text = read.value ?? ''
+    const block = on ? blockOf(await resolve('global')) : ''
+    // A block with no line would tell an agent nothing: an existing one goes away, a new one is refused
+    const shared = blockText(text) !== undefined
+    if (on && block === '' && !shared) return fail(errorBody('DCK-RUL-004'))
+    const next = on && block !== '' ? upsertBlock(text, block) : removeBlock(text)
+    return next === text ? ok(undefined) : files.writeText(agentsFile, next, deps.repositoryRoot)
+  }
+
   return {
     // Where a change to the rule is written, so a caller can say it before it asks
     fileFor,
+    load,
+    shareWithAgents,
 
-    async load(): Promise<LoadedRules> {
-      const resolved = await resolve()
-      const text = (await readIfPossible(agentsFile)) ?? ''
-      const claude = await readIfPossible(claudeFile)
-      const current = blockText(text)
-      const shared = current !== undefined
-      return {
-        ...resolved,
-        agents: {
-          file: agentsFile,
-          shared,
-          stale: shared && current !== blockOf(await resolve('global')).trim(),
-          claudeImportMissing: claude !== undefined && !importsAgents(claude),
-        },
-      }
+    // The block is dck's own and was approved when shared, so it follows a rule change; true when written
+    async refreshShared(): Promise<Result<boolean, ErrorBody>> {
+      if (!(await load()).agents.stale) return ok(false)
+      const shared = await shareWithAgents(true)
+      return shared.ok ? ok(true) : shared
     },
 
     setEnabled: (id: string, enabled: boolean, target: RulesTarget) =>
@@ -160,19 +182,6 @@ export function createRulesWorkspace(deps: RulesWorkspaceDeps) {
         const edited = withRuleField(rule.check, check, name, value)
         return edited.ok ? ok({ ...rule, check: edited.value }) : edited
       }),
-
-    // On writes or refreshes the marked block of AGENTS.md, off removes it; the text around it is kept
-    async shareWithAgents(on: boolean): Promise<Result<void, ErrorBody>> {
-      const read = await files.readText(agentsFile)
-      if (!read.ok) return read
-      const text = read.value ?? ''
-      const block = on ? blockOf(await resolve('global')) : ''
-      // A block with no line would tell an agent nothing: an existing one goes away, a new one is refused
-      const shared = blockText(text) !== undefined
-      if (on && block === '' && !shared) return fail(errorBody('DCK-RUL-004'))
-      const next = on && block !== '' ? upsertBlock(text, block) : removeBlock(text)
-      return next === text ? ok(undefined) : files.writeText(agentsFile, next, deps.repositoryRoot)
-    },
 
     // Only an existing CLAUDE.md gets the import: creating one is the user's choice
     async addClaudeImport(): Promise<Result<void, ErrorBody>> {

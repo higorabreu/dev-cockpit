@@ -102,10 +102,9 @@ async function switchRule(
   if (enabled && rule?.enabled === false) {
     io.out(`${printable(io.t('cli.rules.repositoryOff', { id }))}\n`)
   }
-  // The block is dck's own and was approved when it was created, so it follows the rules
-  if (agents.stale) {
-    const shared = await deps.workspace.shareWithAgents(true)
-    if (!shared.ok) return refused(io, shared.error)
+  const refreshed = await deps.workspace.refreshShared()
+  if (!refreshed.ok) return refused(io, refreshed.error)
+  if (refreshed.value) {
     io.out(`${io.t('cli.rules.refreshed', { file: printable(deps.relative(agents.file)) })}\n`)
   }
   return EXIT.ok
