@@ -363,4 +363,5 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-STD-001': 'Invalid standard',
   'error.DCK-STD-002': 'Could not write the file',
   'error.DCK-STD-003': 'Not inside a git repository',
+  'error.DCK-STD-004': 'Nothing to share: no standard of the repository is on',
 }

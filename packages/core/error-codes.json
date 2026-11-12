@@ -113,5 +113,10 @@
     "category": "not_found",
     "retryable": false,
     "rpc": -32019
+  },
+  "DCK-STD-004": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32020
   }
 }

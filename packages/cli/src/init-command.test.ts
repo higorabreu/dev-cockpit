@@ -13,6 +13,7 @@ import { parse } from 'yaml'
 import { EXIT, runCli } from './cli.ts'
 
 const ROOT = '/home/ana/acme/backend'
+const GLOBAL = '/home/ana/.config/dev-cockpit'
 const STANDARDS = `${ROOT}/.dck/standards`
 const AGENTS = `${ROOT}/AGENTS.md`
 const CLAUDE = `${ROOT}/CLAUDE.md`
@@ -25,29 +26,34 @@ type Answer = 'yes' | 'no' | 'enter'
 function setup(answers: readonly Answer[] = [], locale: Locale = 'en') {
   const files = new MemoryStandardFiles(parse)
   const workspace = createStandardsWorkspace({
-    // Like the files adapter: the repository is an implicit extension only while its folder has files
+    // Like the files adapter: a folder is an implicit extension only while it has files
     finder: {
       find: async () =>
-        [...files.texts.keys()].some((path) => path.startsWith(STANDARDS))
-          ? [
-              {
-                source: 'repository',
-                location: `${ROOT}/.dck`,
-                manifest: implicitManifest({
-                  source: 'repository',
-                  apiVersion: EXTENSION_API_VERSION,
-                  appVersion: APP_VERSION,
-                  contributes: { standards: 'standards' },
-                }),
-              },
-            ]
-          : [],
+        (
+          [
+            ['global', GLOBAL],
+            ['repository', `${ROOT}/.dck`],
+          ] as const
+        )
+          .filter(([, location]) =>
+            [...files.texts.keys()].some((path) => path.startsWith(`${location}/standards/`)),
+          )
+          .map(([source, location]) => ({
+            source,
+            location,
+            manifest: implicitManifest({
+              source,
+              apiVersion: EXTENSION_API_VERSION,
+              appVersion: APP_VERSION,
+              contributes: { standards: 'standards' },
+            }),
+          })),
     },
     files,
     disabled: async () => new Set(),
     appVersion: APP_VERSION,
     repositoryRoot: ROOT,
-    globalDir: '/home/ana/.config/dev-cockpit',
+    globalDir: GLOBAL,
     join: (...parts) => parts.join('/'),
   })
   const pending = [...answers]
@@ -75,7 +81,11 @@ function setup(answers: readonly Answer[] = [], locale: Locale = 'en') {
         relative: (path) => path.slice(ROOT.length + 1),
       },
     })
-  const written = () => [...files.texts.keys()].map((path) => path.slice(ROOT.length + 1)).sort()
+  const written = () =>
+    [...files.texts.keys()]
+      .filter((path) => path.startsWith(ROOT))
+      .map((path) => path.slice(ROOT.length + 1))
+      .sort()
   return {
     files,
     workspace,
@@ -301,6 +311,21 @@ describe('dck init', () => {
 })
 
 describe('dck init --yes', () => {
+  it('should offer the examples for the repository and share them when the user folder already has them on', async () => {
+    const { run, written, files, workspace } = setup()
+    await workspace.setEnabled('branch-format', true, 'global')
+    await workspace.setEnabled('commit-message', true, 'global')
+
+    const code = await run('--yes')
+
+    expect(code).toBe(EXIT.ok)
+    expect(written()).toEqual([
+      '.dck/standards/branch-format.md',
+      '.dck/standards/commit-message.md',
+      'AGENTS.md',
+    ])
+    expect(files.texts.get(AGENTS)).toContain('- Branch names:')
+  })
   it('should switch on the recommended examples and share them without a question when --yes is given', async () => {
     const { run, questions, written, out, files, workspace } = setup()
     files.texts.set(CLAUDE, '# Claude\n')

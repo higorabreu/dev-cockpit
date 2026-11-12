@@ -361,6 +361,7 @@ export const ptBR = {
   'error.DCK-STD-001': 'Padrão inválido',
   'error.DCK-STD-002': 'Não foi possível gravar o arquivo',
   'error.DCK-STD-003': 'Fora de um repositório git',
+  'error.DCK-STD-004': 'Nada a compartilhar: nenhum padrão do repositório está ligado',
 } as const
 
 export type MessageKey = keyof typeof ptBR

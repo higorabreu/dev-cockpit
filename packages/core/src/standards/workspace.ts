@@ -168,7 +168,10 @@ export function createStandardsWorkspace(deps: StandardsWorkspaceDeps) {
       const read = await files.readText(agentsFile)
       if (!read.ok) return read
       const text = read.value ?? ''
-      const next = on ? upsertBlock(text, blockOf(await resolve())) : removeBlock(text)
+      const block = on ? blockOf(await resolve()) : ''
+      // A block with no line would tell an agent nothing
+      if (on && block === '') return fail(errorBody('DCK-STD-004'))
+      const next = on ? upsertBlock(text, block) : removeBlock(text)
       return next === text ? ok(undefined) : files.writeText(agentsFile, next, deps.repositoryRoot)
     },
 

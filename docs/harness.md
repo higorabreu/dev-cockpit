@@ -37,7 +37,9 @@ Apply? [y/N] y
 Done. See what is on with: dck standards
 ```
 
-- It asks about each built-in example that is not on yet, then whether to share the rules with agents.
+- It asks about each built-in example the repository does not have on yet (one on only in your own folder
+  is offered too, since the block states what the repository holds), then whether to share the rules with
+  agents. With nothing on in the repository there is nothing to share and it does not ask.
   When the repository has a `CLAUDE.md` that does not import `AGENTS.md`, it also offers to add the
   `@AGENTS.md` line to it.
 - Enter takes the answer in capitals. `y`, `yes`, `s` and `sim` mean yes in any case; anything else is no.
@@ -146,7 +148,7 @@ dck check commit "$1"
 | Code | Meaning |
 | --- | --- |
 | 0 | Success, including a passing check and a listing with invalid files |
-| 1 | A failed check, or an unknown standard id |
+| 1 | A failed check, an unknown standard id, a file that would be overwritten, or nothing to share |
 | 64 | Incorrect usage, or an input file that cannot be read |
 | 70 | A file could not be written, or it or a folder on its way is a link |
 
@@ -268,6 +270,8 @@ does not exist):
   when it has no rule. The rules are stated in the block, so an agent follows them without running
   anything. A standard with no rule also points to `dck guide` when it has a body, and a standard with
   rules when its body is longer than five lines.
+- With no standard of the repository on there is nothing to share: no empty block is written, and the
+  window or the command says so.
 - The block is always in English and has the same bytes for the same standards, whatever the language of
   the system.
 - Only the lines from one marker to the other are ever changed; the other lines keep their line endings.

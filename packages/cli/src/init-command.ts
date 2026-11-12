@@ -17,21 +17,23 @@ function cancelled(io: Io): number {
 }
 
 async function plan(loaded: LoadedStandards, choose: Choose, io: Io, file: string): Promise<Plan> {
+  // The block only states what the repository holds, so a standard on in the user's folder is offered too
+  const isOnHere = (standard: ResolvedStandard) =>
+    standard.enabled && standard.layers.at(-1)?.source === 'repository'
   const enable: ResolvedStandard[] = []
   for (const { recommended, standard: example } of BUILT_IN_STANDARDS) {
     const standard = loaded.standards.find((candidate) => candidate.id === example.id)
-    if (standard === undefined || standard.enabled) continue
+    if (standard === undefined || isOnHere(standard)) continue
     const { title, why } = standard
     const question = io.t('cli.init.switchOn', { title, why: why.replace(/\.$/, '') })
     if (await choose(printable(question), recommended)) enable.push(standard)
   }
   const { shared, stale, claudeImportMissing } = loaded.agents
-  const anyOn = enable.length > 0 || loaded.standards.some((standard) => standard.enabled)
+  const anyOn = enable.length > 0 || loaded.standards.some(isOnHere)
   // A current block is dck's own and already approved: it only follows what was just switched on
   const share =
-    shared && !stale
-      ? enable.length > 0
-      : (anyOn || shared) && (await choose(io.t('cli.init.share', { file }), true))
+    anyOn &&
+    (shared && !stale ? enable.length > 0 : await choose(io.t('cli.init.share', { file }), true))
   const claudeImport =
     claudeImportMissing && (share || shared) && (await choose(io.t('cli.init.claudeImport'), false))
   return { enable, share, claudeImport }

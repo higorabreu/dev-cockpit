@@ -317,6 +317,16 @@ describe('createStandardsWorkspace, agents', () => {
     expect(text).not.toContain('- Commit messages:')
   })
 
+  it('should write nothing and fail with DCK-STD-004 when only the user folder switched a standard on', async () => {
+    const { files, workspace } = arrange()
+    await workspace.setEnabled('commit-message', true, 'global')
+
+    const result = await workspace.shareWithAgents(true)
+
+    expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-STD-004' } } })
+    expect(files.texts.has(AGENTS)).toBe(false)
+  })
+
   it('should restore the original text when sharing is turned off', async () => {
     const { files, workspace } = arrange()
     files.texts.set(AGENTS, ORIGINAL)
