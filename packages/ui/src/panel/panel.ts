@@ -18,6 +18,7 @@ export interface PanelElements {
   readonly dock: HTMLElement
   readonly panel: HTMLElement
   readonly rail: HTMLElement
+  readonly toggle: HTMLElement
   readonly split: HTMLElement
 }
 
@@ -66,7 +67,7 @@ function load(sections: readonly PanelSection[]): Stored {
 }
 
 export function createPanel(options: PanelOptions) {
-  const { dock, panel, rail, split } = options.elements
+  const { dock, panel, rail, split, toggle } = options.elements
   const state = load(options.sections)
   let timer: ReturnType<typeof setInterval> | undefined
   let pending = false
@@ -156,25 +157,28 @@ export function createPanel(options: PanelOptions) {
     const content = h(
       'div',
       { class: 'pinner' },
+      h('div', { class: 'phead' }, options.title()),
       h(
         'div',
-        { class: 'phead' },
-        h('b', {}, options.t('panel.title')),
-        h('span', {}, options.title()),
+        { class: 'pscroll' },
+        open.length > 0 && h('div', { class: 'stack' }, ...open.map(sectionBlock)),
+        // Recolhidas ficam no fim da coluna, abaixo das abertas; sem nenhuma aberta, alinham no topo
+        closed.length > 0 &&
+          h(
+            'div',
+            { class: open.length > 0 ? 'collapsed pinned' : 'collapsed' },
+            ...closed.map(sectionBlock),
+          ),
       ),
-      open.length > 0 && h('div', { class: 'stack' }, ...open.map(sectionBlock)),
-      // Recolhidas ficam no fim da coluna, abaixo das abertas; sem nenhuma aberta, alinham no topo
-      closed.length > 0 &&
-        h(
-          'div',
-          { class: open.length > 0 ? 'collapsed pinned' : 'collapsed' },
-          ...closed.map(sectionBlock),
-        ),
     )
     // Só troca o DOM quando o conteúdo mudou, para não perder foco e hover a cada ciclo
     if (content.innerHTML === signature) return
     signature = content.innerHTML
+    // A lista é refeita a cada mudança; sem guardar, a rolagem volta ao topo
+    const scrolled = panel.querySelector('.pscroll')?.scrollTop ?? 0
     panel.replaceChildren(content)
+    const scroller = panel.querySelector('.pscroll')
+    if (scroller) scroller.scrollTop = scrolled
     settleEnter()
   }
 
@@ -235,6 +239,7 @@ export function createPanel(options: PanelOptions) {
 
   function render() {
     dock.dataset.open = String(state.open)
+    toggle.setAttribute('aria-expanded', String(state.open))
     panel.style.setProperty('--panel-width', `${state.width}px`)
     split.setAttribute('aria-valuenow', String(state.width))
     keepFocus(() => {
@@ -279,6 +284,11 @@ export function createPanel(options: PanelOptions) {
     if (state.open && state.sections[id] === true) toggleSection(id, false)
     else focusSection(id)
   }
+
+  toggle.addEventListener('click', (event) => {
+    setOpen(!state.open)
+    if (event.detail > 0) options.afterPointer?.()
+  })
 
   rail.addEventListener('click', (event) => {
     const button = (event.target as Element).closest<HTMLElement>('[data-section]')

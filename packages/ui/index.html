@@ -25,7 +25,12 @@
           <hr id="split" aria-orientation="vertical" data-i18n-aria="a11y.panelWidth" aria-valuemin="220" aria-valuemax="420" aria-valuenow="300" tabindex="0" />
           <aside id="panel" data-i18n-aria="a11y.panel"></aside>
           <nav id="rail" data-tip-side="left" data-i18n-aria="a11y.rail">
-            <div id="rail-sections"></div>
+            <div id="rail-top">
+              <button id="rail-panel" type="button" aria-controls="panel" aria-expanded="false" data-i18n-aria="panel.title" data-i18n-tip="panel.title" data-tip-key="Ctrl+Shift+B">
+                <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/><rect class="pfill" x="15" y="4" width="6" height="16" fill="currentColor" stroke="none"/></svg>
+              </button>
+              <div id="rail-sections"></div>
+            </div>
             <div id="rail-actions">
             <button id="rail-views" type="button" data-i18n-tip="views.open" data-tip-key="Ctrl+Shift+M">
               <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7.5" width="18" height="12" rx="2"/><path d="M9 7.5V6a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 6v1.5M3 12.5h18"/></svg>

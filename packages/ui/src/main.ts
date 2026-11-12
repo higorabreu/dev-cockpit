@@ -25,6 +25,7 @@ await startApp(
     dock: element('dock'),
     panel: element('panel'),
     rail: element('rail-sections'),
+    panelToggle: element('rail-panel'),
     settingsButton: element('rail-settings'),
     viewsButton: element('rail-views'),
     split: element('split'),

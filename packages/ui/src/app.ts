@@ -49,6 +49,7 @@ export interface AppElements {
   readonly tabs: HTMLElement
   readonly tabsAll: HTMLElement
   readonly tabList: HTMLElement
+  readonly panelToggle: HTMLElement
   readonly host: HTMLElement
   readonly main: HTMLElement
   readonly dock: HTMLElement
@@ -211,6 +212,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       dock: elements.dock,
       panel: elements.panel,
       rail: elements.rail,
+      toggle: elements.panelToggle,
       split: elements.split,
     },
     sections: [
