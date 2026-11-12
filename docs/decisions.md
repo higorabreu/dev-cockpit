@@ -436,3 +436,20 @@ user approves and the host API honors, not a sandbox. The rule language stays sm
 does not become a programming language.
 **How to revert:** the harness and packs contain no code loading, so they can be removed without touching the
 rest; the host contract is defined in phase 3 and is not frozen before it.
+
+## D36. The harness is used through one init, one block and one hook
+
+**Decision:** the daily use of the harness is kept to what a developer will really do. `dck init` asks which
+built-in examples to switch on, writes them into `.dck/standards/`, and offers a git hook and a marked block
+in `AGENTS.md`. After that nobody runs a command: the block states each rule for the agent, and one
+`commit-msg` hook checks the branch name and the commit message for people and agents alike. A standard is
+configured by editing its file. This replaces the `dck render --target` of D35, which generated a whole
+`CLAUDE.md` or `AGENTS.md`.
+**Reason:** a generated file competes with the one the team writes by hand; an agent told to run a command
+before every action often skips it; a hook recipe in the docs is rarely installed; and checking the branch
+only at the push is late. A git hook also keeps the harness free of any one agent vendor (D24).
+**Accepted cost:** the `dck` command exists only where the app is installed, so the check does not run in CI
+yet and the hook does nothing for a teammate without the app; a hook can be skipped with `--no-verify`.
+Publishing the CLI by itself is the way out and is not part of this phase.
+**How to revert:** `dck init --remove` takes the hook and the block out of a repository; the standards files
+are plain markdown and stay readable without the tool.
