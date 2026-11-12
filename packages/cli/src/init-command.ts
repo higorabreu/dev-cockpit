@@ -66,7 +66,7 @@ async function remove(
   deps: StandardsDeps,
 ) {
   const { agents } = await deps.workspace.load()
-  const file = deps.relative(agents.file)
+  const file = printable(deps.relative(agents.file))
   if (!agents.shared) {
     io.out(`${io.t('cli.init.noBlock', { file })}\n`)
     return EXIT.ok
@@ -96,7 +96,7 @@ export async function runInit(args: readonly string[], io: Io, deps: StandardsDe
   if (args.includes('--remove')) return remove(approve, io, deps)
 
   const loaded = await deps.workspace.load()
-  const agentsFile = deps.relative(loaded.agents.file)
+  const agentsFile = printable(deps.relative(loaded.agents.file))
   const chosen = await plan(loaded, choose, io, agentsFile)
   const files = filesOf(chosen, agentsFile, deps)
   if (files.length === 0) {

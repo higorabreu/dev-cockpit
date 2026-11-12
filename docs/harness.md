@@ -13,7 +13,8 @@ nothing to show, and the app installs no git hook.
 The commands read and write files only. They never talk to the daemon, so they work with the window closed.
 The repository is the folder that holds `.git`, found by walking up from the current directory; outside a
 repository it is the current directory. Labels and questions follow the system language; the text of a
-standard is printed as it was written, and the detail after an error message is always in English.
+standard is printed as it was written, except that a control character or a bidirectional control in it
+or in a path shows as `?`, and the detail after an error message is always in English.
 
 The Standards page of the settings screen and the Git section of the panel offer the same through the same
 code (the standards workspace in the core): a switch per standard, its fields, the sharing with agents and

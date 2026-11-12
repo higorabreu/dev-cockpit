@@ -10,9 +10,16 @@ export interface Io {
 // Exit codes from sysexits.h, the BSD convention for command-line tools
 export const EXIT = { ok: 0, failed: 1, usage: 64, unavailable: 69, software: 70 } as const
 
-// A manifest, a folder name and a standard are third-party text: a control character could clear the screen or forge a row
-export const printable = (text: string) =>
-  [...text].map((char) => (char < ' ' || char === '\u007f' ? '?' : char)).join('')
+// A manifest, a path and a standard are third-party text: a control or bidi character could clear the screen, forge a row or reorder it
+const isUnsafe = (char: string) => /[\p{Cc}\u202a-\u202e\u2066-\u2069]/u.test(char)
+
+const replaceUnsafe = (text: string, kept: string) =>
+  [...text].map((char) => (isUnsafe(char) && !kept.includes(char) ? '?' : char)).join('')
+
+export const printable = (text: string) => replaceUnsafe(text, '')
+
+// For a text of several lines, such as a guide, which keeps its line breaks and tabs
+export const printableText = (text: string) => replaceUnsafe(text, '\n\t')
 
 // Pads every column but the last to its widest cell, so the rows line up without a frame
 export function align(table: readonly (readonly string[])[]): string[] {
@@ -45,6 +52,6 @@ export function rejection(error: ErrorBody, t: Translate): string {
 
 // A file that could not be written is an internal error; an unknown id or a refused value is a failure
 export function refused(io: Io, error: ErrorBody): number {
-  io.err(`${rejection(error, io.t)}\n`)
+  io.err(`${printable(rejection(error, io.t))}\n`)
   return errorCodeOf(error) === 'DCK-STD-002' ? EXIT.software : EXIT.failed
 }

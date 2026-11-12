@@ -313,6 +313,23 @@ describe('dck guide', () => {
     )
   })
 
+  it('should replace the control and bidi characters of a standard when guide and check print it', async () => {
+    const { run, out, err, files } = setup({ stdin: 'anything' })
+    files.texts.set(
+      `${REPOSITORY_STANDARDS}/forged.md`,
+      '---\nid: forged\ntitle: "Forged\\e[2J"\napplies: commit\nwhy: Test\ncheck:\n  - required: \'never\'\n    message: "Fix \\u009b31m\\u202eit"\n---\nLine one\u001b[2J\n\tLine two\u202e\n',
+    )
+
+    await run('guide', 'commit')
+    const code = await run('check', 'commit')
+
+    expect(code).toBe(EXIT.failed)
+    expect(out()).toBe(
+      '## Forged?[2J\n\nLine one?[2J\n\tLine two?\n\nWhy: Test\n\nChecked automatically:\n- Fix ?31m?it\n',
+    )
+    expect(lines(err()).at(-1)).toBe('Forged?[2J: Fix ?31m?it')
+  })
+
   it.each([
     ['en', 'Above the budget of 20 tokens.'],
     ['pt-BR', 'Acima do orçamento de 20 tokens.'],

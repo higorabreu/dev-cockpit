@@ -9,7 +9,7 @@ import {
   type Translate,
 } from '@dck/core'
 import { runInit } from './init-command.ts'
-import { align, EXIT, type Io, printable, refused, rejection } from './output.ts'
+import { align, EXIT, type Io, printable, printableText, refused, rejection } from './output.ts'
 
 export interface StandardsDeps {
   readonly workspace: StandardsWorkspace
@@ -36,7 +36,7 @@ function usage(io: Io, key: MessageKey, args: readonly string[]): number {
 }
 
 const staleLine = (loaded: LoadedStandards, t: Translate, relative: (path: string) => string) =>
-  t('cli.standards.stale', { file: relative(loaded.agents.file) })
+  t('cli.standards.stale', { file: printable(relative(loaded.agents.file)) })
 
 export function formatStandardsList(
   loaded: LoadedStandards,
@@ -87,12 +87,12 @@ async function switchStandard(
   const layers = standards.find((standard) => standard.id === id)?.layers ?? []
   const path = deps.relative(deps.workspace.fileFor({ id, layers }, target))
   const key = enabled ? 'cli.standards.switchedOn' : 'cli.standards.switchedOff'
-  io.out(`${io.t(key, { id, path })}\n`)
+  io.out(`${printable(io.t(key, { id, path }))}\n`)
   // The block is dck's own and was approved when it was created, so it follows the standards
   if (agents.stale) {
     const shared = await deps.workspace.shareWithAgents(true)
     if (!shared.ok) return refused(io, shared.error)
-    io.out(`${io.t('cli.standards.refreshed', { file: deps.relative(agents.file) })}\n`)
+    io.out(`${io.t('cli.standards.refreshed', { file: printable(deps.relative(agents.file)) })}\n`)
   }
   return EXIT.ok
 }
@@ -122,7 +122,7 @@ async function guide(args: readonly string[], io: Io, deps: StandardsDeps): Prom
     return EXIT.ok
   }
   // The text goes to the standard output alone, so it can be piped into a file or an agent
-  io.out(`${text}\n`)
+  io.out(`${printableText(text)}\n`)
   io.err(`${io.t('cli.guide.size', { count, lines, tokens })}\n`)
   if (tokens > budget) io.err(`${io.t('cli.guide.overBudget', { budget })}\n`)
   return EXIT.ok
@@ -156,7 +156,7 @@ async function check(args: readonly string[], io: Io, deps: StandardsDeps): Prom
   }
   const text = await deps.readInput(file)
   if (text === undefined) {
-    io.err(`${io.t('cli.check.unreadable', { file: file ?? '-' })}\n`)
+    io.err(`${io.t('cli.check.unreadable', { file: printable(file ?? '-') })}\n`)
     return EXIT.usage
   }
   // A branch name that is piped in ends with a newline
