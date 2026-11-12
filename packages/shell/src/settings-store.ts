@@ -17,13 +17,13 @@ export interface SettingsStoreOptions {
   readonly file: string
   readonly logger: Logger
   readonly env: Readonly<Record<string, string | undefined>>
-  // Decide se uma mudança pode valer; devolve as chaves que devem voltar ao valor anterior
+  // Decides whether a change may take effect; returns the keys that must go back to the previous value
   veto?(next: Settings, changed: readonly string[]): Promise<readonly string[]> | readonly string[]
 }
 
 type Listener = (settings: Settings, changed: readonly string[]) => void
 
-// Monta um patch aninhado só com as chaves pedidas, tiradas de `source`
+// Builds a nested patch with only the requested keys, taken from `source`
 function pick(source: Settings, keys: readonly string[]): SettingsPatch {
   const patch: Record<string, unknown> = {}
   for (const key of keys) {
@@ -46,7 +46,7 @@ function pick(source: Settings, keys: readonly string[]): SettingsPatch {
 export function createSettingsStore(options: SettingsStoreOptions) {
   const { file, logger, env } = options
   const listeners = new Set<Listener>()
-  // O que está no arquivo; as variáveis de ambiente não são gravadas nele
+  // What is in the file; environment variables are not written to it
   let stored: Settings = defaultSettings
   let fresh = true
   let view: SettingsView = { settings: defaultSettings, locked: [], fresh: true }
@@ -59,7 +59,7 @@ export function createSettingsStore(options: SettingsStoreOptions) {
   async function persist() {
     try {
       await mkdir(dirname(file), { recursive: true })
-      // Escreve ao lado e renomeia, para nunca deixar o arquivo pela metade
+      // Writes beside it and renames, so the file is never left half-written
       const temporary = `${file}.tmp`
       await writeFile(temporary, `${JSON.stringify(stored, null, 2)}\n`)
       await rename(temporary, file)

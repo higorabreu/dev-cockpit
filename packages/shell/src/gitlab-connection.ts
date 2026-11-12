@@ -11,7 +11,7 @@ import {
 
 export interface GitLabConnectionDeps {
   readonly secrets: SecretStore
-  // Chave do token no cofre; vem do perfil, para o modo dev não mexer no token do app instalado
+  // Token key in the keyring; comes from the profile, so dev mode does not touch the installed app's token
   readonly tokenKey: string
   readonly createSource: (url: string, token: string) => CodeReviewSource
   readonly address: {
@@ -22,7 +22,7 @@ export interface GitLabConnectionDeps {
 }
 
 export interface GitLabConnectionService extends GitLabConnection {
-  // O endereço foi apagado por outro caminho (arquivo, restaurar tudo): o token não fica órfão
+  // The address was erased another way (file, restore all): the token is not left orphaned
   forgetToken(): Promise<void>
 }
 

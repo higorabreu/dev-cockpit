@@ -3,7 +3,7 @@ import type { Rectangle } from '@dck/core'
 
 const TIMEOUT_MS = 1000
 
-// O Mutter publica a área útil de cada monitor aqui; o Electron só enxerga a do primário
+// Mutter publishes each monitor's work area here; Electron only sees the primary's
 export function parseGtkWorkareas(output: string): Rectangle[] {
   const match = output.match(/=\s*([\d,\s-]+)$/m)
   if (!match?.[1]) return []
@@ -29,7 +29,7 @@ const readRoot = () =>
     )
   })
 
-// Leitura síncrona para quem pergunta e atualização em segundo plano para a próxima pergunta
+// Synchronous read for whoever asks and a background refresh for the next question
 export function createGtkWorkareas(read: () => Promise<string> = readRoot): () => Rectangle[] {
   let current: Rectangle[] = []
   const refresh = () => {

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Gera os PNG a partir dos SVG em assets (precisa do ImageMagick): `sh scripts/make-icons.sh`
+# Generates the PNGs from the SVGs in assets (needs ImageMagick): `sh scripts/make-icons.sh`
 set -e
 cd "$(dirname "$0")/../assets"
 for s in 48 128 256 512; do

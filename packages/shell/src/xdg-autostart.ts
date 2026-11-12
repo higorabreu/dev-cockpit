@@ -3,14 +3,14 @@ import { join } from 'node:path'
 import type { Autostart } from '@dck/core'
 
 export interface AutostartConfig {
-  // Diretório de autostart do XDG, normalmente ~/.config/autostart
+  // XDG autostart directory, normally ~/.config/autostart
   readonly directory: string
   readonly name: string
   readonly command: readonly string[]
   readonly env?: Readonly<Record<string, string>>
 }
 
-// Argumento do Exec de um .desktop: entre aspas, com o que o formato trata como especial escapado
+// Exec argument of a .desktop: quoted, with what the format treats as special escaped
 export function quoteExecArgument(argument: string): string {
   return `"${argument.replace(/%/g, '%%').replace(/(["`$\\])/g, '\\$1')}"`
 }

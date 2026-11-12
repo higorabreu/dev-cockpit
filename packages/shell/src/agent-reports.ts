@@ -1,7 +1,7 @@
 import type { AgentLimit, AgentReportData, AgentSource } from '@dck/core'
 import { z } from 'zod'
 
-// Uma leitura do agente vale por pouco tempo: a sessão pode ter acabado sem aviso
+// An agent reading is valid for a short time: the session may have ended without notice
 const MAX_AGE_MS = 15 * 60 * 1000
 
 export const reportMessage = z.object({
@@ -25,7 +25,7 @@ export interface ReportSummary {
   readonly transcript: boolean
 }
 
-// Só o que o relatório trouxe, nunca os valores: serve para ver por que a tela está vazia
+// Only what the report carried, never the values: lets you see why the screen is empty
 function summarize(agent: string, ptyId: number, data: AgentReportData): ReportSummary {
   return {
     agent,
@@ -38,13 +38,13 @@ function summarize(agent: string, ptyId: number, data: AgentReportData): ReportS
   }
 }
 
-// Guarda o que cada agente empurrou, por terminal, e os limites da conta, que valem para todos
+// Keeps what each agent pushed, per terminal, and the account limits, which apply to all
 export function createAgentReports(sources: readonly AgentSource[], now: () => number = Date.now) {
   const byTerminal = new Map<number, Stored>()
   const limitsByAgent = new Map<string, readonly AgentLimit[]>()
 
   return {
-    // Devolve o que o relatório trouxe (sem o conteúdo), ou indefinido se foi recusado
+    // Returns what the report carried (without the content), or undefined if it was refused
     accept(message: unknown): ReportSummary | undefined {
       const parsed = reportMessage.safeParse(message)
       if (!parsed.success) return undefined
@@ -55,7 +55,7 @@ export function createAgentReports(sources: readonly AgentSource[], now: () => n
       if (data.limits && data.limits.length > 0) limitsByAgent.set(agent, data.limits)
       return summarize(agent, ptyId, data)
     },
-    // Dado do terminal, com os limites mais recentes que qualquer terminal desse agente trouxe
+    // Terminal data, with the most recent limits that any terminal of this agent brought
     latest(ptyId: number, agentId: string): AgentReportData | undefined {
       const stored = byTerminal.get(ptyId)
       const fresh = stored && now() - stored.at <= MAX_AGE_MS ? stored.data : undefined

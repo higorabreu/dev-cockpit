@@ -13,8 +13,8 @@ function safeJson(text: string): unknown {
   }
 }
 
-// Lista de caminhos num arquivo JSON. Arquivo ilegível vira lista vazia: perder uma lista de
-// preferências não pode impedir o app de abrir
+// List of paths in a JSON file. An unreadable file becomes an empty list: losing a list of
+// preferences must not stop the app from opening
 export function createPathListFile(file: string, logger: Logger, label: string) {
   return {
     async load(): Promise<readonly string[]> {

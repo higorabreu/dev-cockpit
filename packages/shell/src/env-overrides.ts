@@ -2,11 +2,11 @@ import { mergeSettings, type Settings } from '@dck/core'
 
 export interface OverrideResult {
   readonly settings: Settings
-  // Chaves (com ponto) que uma variável de ambiente está fixando; a tela mostra como bloqueadas
+  // Keys (dotted) that an environment variable is pinning; the screen shows them as locked
   readonly locked: readonly string[]
 }
 
-// As variáveis DCK_* continuam valendo e vencem o arquivo: servem a testes, CI e quem prefere
+// DCK_* variables still apply and win over the file: they serve tests, CI and whoever prefers
 export function applyEnvOverrides(
   settings: Settings,
   env: Readonly<Record<string, string | undefined>>,

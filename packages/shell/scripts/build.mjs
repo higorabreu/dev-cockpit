@@ -47,9 +47,9 @@ await build({
 cpSync(join(root, '..', 'ui', 'dist'), join(dist, 'ui'), { recursive: true })
 cpSync(join(root, 'assets'), join(dist, 'assets'), { recursive: true })
 
-// O node-pty do Node (usado nos testes) e o do Electron têm ABIs diferentes: o do shell é uma cópia recompilada
+// Node's node-pty (used by tests) and Electron's have different ABIs: the shell's is a rebuilt copy
 const source = realpathSync(dirname(require.resolve('node-pty/package.json')))
-// As dependências do node-pty (como o node-addon-api) ficam ao lado dele na pasta do pnpm
+// node-pty's dependencies (like node-addon-api) sit next to it in the pnpm folder
 for (const name of readdirSync(dirname(source))) {
   cpSync(join(dirname(source), name), join(dist, 'node_modules', name), {
     recursive: true,

@@ -14,7 +14,7 @@ export interface LauncherDeps {
   readonly logFd: number | 'ignore'
 }
 
-// O daemon sobrevive à janela: sobe separado, em segundo plano, usando o próprio Electron como Node
+// The daemon outlives the window: it starts separately, in the background, using Electron itself as Node
 export function launchDaemon(deps: LauncherDeps, logger: Logger) {
   const child = deps.spawn(deps.execPath, [deps.script], {
     detached: true,

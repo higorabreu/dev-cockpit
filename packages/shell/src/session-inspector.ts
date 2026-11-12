@@ -10,7 +10,7 @@ import {
 export interface SessionInspectorDeps {
   readonly processes: ProcessInspector
   readonly git: GitInspector
-  // Agentes conhecidos, para reconhecer um deles em primeiro plano
+  // Known agents, to recognize one of them in the foreground
   readonly agents?: readonly AgentProfile[]
 }
 

@@ -16,8 +16,8 @@ const contains = (rectangle: Rectangle, point: Point) =>
   point.y >= rectangle.y &&
   point.y < rectangle.y + rectangle.height
 
-// A área útil do sistema vence a do Electron quando o monitor a informa, porque o gerenciador
-// de janelas desloca a janela que passa dela
+// The system work area beats Electron's when the monitor reports it, because the window
+// manager shifts a window that goes past it
 export function createElectronScreen(
   api: ScreenApi,
   systemWorkAreas: () => readonly Rectangle[] = () => [],

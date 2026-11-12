@@ -14,7 +14,7 @@ export function createElectronNotifier(
   api: NotificationApi,
   onClick: (tabId: string) => void,
 ): Notifier {
-  // O Electron descarta uma notificação sem referência antes do clique; guarda até ela fechar
+  // Electron discards a notification with no reference before the click; keeps it until it closes
   const alive = new Set<NotificationHandle>()
 
   return {

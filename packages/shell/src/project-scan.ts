@@ -17,7 +17,7 @@ async function mtime(path: string): Promise<number | undefined> {
   )
 }
 
-// O reflog do HEAD muda a cada commit ou troca de branch; sem ele vale o próprio marcador
+// The HEAD reflog changes on every commit or branch switch; without it the marker itself counts
 async function activityOf(directory: string): Promise<number | undefined> {
   return (await mtime(join(directory, '.git', 'logs', 'HEAD'))) ?? mtime(join(directory, '.git'))
 }
@@ -51,7 +51,7 @@ async function scan(directory: string, depth: number): Promise<Project[]> {
   return (await Promise.all(children)).flat()
 }
 
-// Um repositório é um projeto, e cada submódulo declarado no .gitmodules também
+// A repository is a project, and so is each submodule declared in .gitmodules
 export async function scanProjects(root: string, depth = 2): Promise<readonly Project[]> {
   return scan(root, depth)
 }

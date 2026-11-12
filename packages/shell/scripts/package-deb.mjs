@@ -1,6 +1,6 @@
-// Monta o pacote .deb do Dev Cockpit a partir do `dist` já construído (`pnpm --filter @dck/shell build`):
-// copia o Electron que o projeto já usa, põe o app em resources/app, empacota o CLI `dck` e chama o
-// dpkg-deb do sistema. Sem ferramenta de empacotamento extra e sem rede.
+// Builds the Dev Cockpit .deb package from the already built `dist` (`pnpm --filter @dck/shell build`):
+// copies the Electron the project already uses, puts the app in resources/app, packs the `dck` CLI and calls the
+// system dpkg-deb. No extra packaging tool and no network.
 import { execFileSync } from 'node:child_process'
 import {
   chmodSync,
@@ -40,7 +40,7 @@ const root = join(stage, INSTALL)
 rmSync(stage, { recursive: true, force: true })
 mkdirSync(root, { recursive: true })
 
-// 1. O Electron já instalado no projeto, com o binário renomeado e só as línguas usadas
+// 1. The Electron already installed in the project, with the binary renamed and only the used locales
 const electronDist = join(dirname(require.resolve('electron/package.json')), 'dist')
 cpSync(electronDist, root, { recursive: true, dereference: true })
 renameSync(join(root, 'electron'), join(root, NAME))
@@ -49,12 +49,12 @@ for (const file of readdirSync(join(root, 'locales'))) {
   if (!['en-US.pak', 'pt-BR.pak'].includes(file)) rmSync(join(root, 'locales', file))
 }
 
-// 2. O app: o dist sem mapas de código, com o package.json que o Electron lê ao abrir
+// 2. The app: dist without source maps, with the package.json Electron reads on start
 const app = join(root, 'resources', 'app')
 cpSync(dist, app, {
   recursive: true,
   dereference: true,
-  // O package.json do dist é só do build; o do node-pty e o das dependências dele ficam
+  // dist's package.json is for the build only; node-pty's and its dependencies' stay
   filter: (source) => !source.endsWith('.map') && source !== join(dist, 'package.json'),
 })
 writeFileSync(
@@ -72,7 +72,7 @@ writeFileSync(
   )}\n`,
 )
 
-// 3. O CLI `dck` empacotado, para rodar dentro do próprio Electron (sem o Node do nvm)
+// 3. The packaged `dck` CLI, to run inside Electron itself (without nvm's Node)
 await build({
   entryPoints: [join(repository, 'packages', 'cli', 'src', 'main.ts')],
   outfile: join(root, 'resources', 'dck.mjs'),
@@ -85,7 +85,7 @@ await build({
   },
 })
 
-// 4. Arquivos do sistema: comando, entrada no menu, ícones e scripts do dpkg
+// 4. System files: command, menu entry, icons and dpkg scripts
 const write = (path, content, mode = 0o644) => {
   mkdirSync(dirname(path), { recursive: true })
   writeFileSync(path, content)
@@ -155,7 +155,7 @@ Description: Terminal estilo Guake com painel de projetos
 `,
 )
 
-// O umask de quem monta não pode vazar para o pacote: nada fica gravável por grupo ou outros
+// The builder's umask must not leak into the package: nothing is group or world writable
 execFileSync('chmod', ['-R', 'go-w', stage])
 
 // 5. O pacote

@@ -20,10 +20,10 @@ import {
 import { z } from 'zod'
 import type { ViewsGateway } from './views-gateway.ts'
 
-// O valor de cada campo é validado e corrigido pelo próprio modelo das configurações
+// Each field's value is validated and corrected by the settings model itself
 const patchSchema = z.record(z.string(), z.unknown())
 
-// O token só passa por aqui, nunca é devolvido nem registrado
+// The token only passes through here, is never returned nor logged
 const connectSchema = z.object({
   url: z.string().max(512),
   token: z.string().trim().min(1).max(512),
@@ -40,7 +40,7 @@ const notificationSchema = z.object({
   tabId: z.string().max(100),
 })
 
-// Só endereços da origem do GitLab conectado; o dado vem do servidor, então não se confia nele
+// Only addresses from the connected GitLab's origin; the data comes from the server, so it is not trusted
 function parseOwnUrl(input: string, origin: string | null): string | undefined {
   if (origin === null) return undefined
   try {
@@ -69,7 +69,7 @@ export interface BridgeOptions {
   readonly autostart: Autostart
   readonly gitlab: GitLabConnection
   readonly views: ViewsGateway
-  // Abre no navegador do sistema; `allowedOrigin` é a origem do GitLab conectado, se houver
+  // Opens in the system browser; `allowedOrigin` is the connected GitLab's origin, if any
   readonly external: { open(url: string): void; allowedOrigin(): string | null }
   readonly environment: { status(pid: number): Promise<ComposeStatus> }
   readonly sessions: {
@@ -83,7 +83,7 @@ export interface BridgeOptions {
   toggleFullHeight(): void
 }
 
-// Liga os canais do preload às portas: PTY, clipboard e janela
+// Wires the preload channels to the ports: PTY, clipboard and window
 export function registerHostBridge(options: BridgeOptions) {
   const { ipcMain, ptyHost, clipboard, logger, send } = options
   const sessions = new Map<number, PtySession>()

@@ -6,7 +6,7 @@ export interface ToggleKeyBinder {
 }
 
 export interface ToggleKeyBinderDependencies {
-  // Quando há, é o caminho principal: o sistema restaura a tecla a cada login
+  // When there is one, it is the main path: the system restores the key on every login
   readonly desktop?: DesktopShortcut
   readonly electron: GlobalShortcuts
   readonly onToggle: () => void
@@ -21,7 +21,7 @@ export function createToggleKeyBinder(dependencies: ToggleKeyBinderDependencies)
     try {
       return electron.register(key, onToggle)
     } catch (error) {
-      // Um acelerador malformado faz o Electron lançar em vez de devolver falso
+      // A malformed accelerator makes Electron throw instead of returning false
       onInvalid(key, error)
       return false
     }

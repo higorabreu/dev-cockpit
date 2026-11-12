@@ -60,7 +60,7 @@ import { createXdgAutostart, defaultAutostartDirectory } from './xdg-autostart.t
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
 
-// Sem isto o Electron abre um diálogo atrás da janela translúcida; aqui o erro vai para o log
+// Without this Electron opens a dialog behind the translucent window; here the error goes to the log
 process.on('uncaughtException', (error) => {
   logger.error('uncaught exception in main', { error: String(error), stack: error.stack })
 })
@@ -99,7 +99,7 @@ app.whenReady().then(async () => {
     onInvalid: (key, error) => logger.warn('shortcut is not valid', { key, error: String(error) }),
   })
 
-  // Trocar a tecla da janela só vale se o sistema aceitar a nova; senão volta a antiga
+  // Changing the window key only holds if the system accepts the new one; otherwise the old one returns
   const settingsStore = createSettingsStore({
     file: join(app.getPath('userData'), 'settings.json'),
     logger,
@@ -164,7 +164,7 @@ app.whenReady().then(async () => {
     heightRatio: () => settingsStore.get().settings.window.heightRatio,
   })
 
-  // Abrir o app de novo pelo menu de aplicativos mostra a janela do que já está rodando
+  // Opening the app again from the application menu shows the window of the one already running
   app.on('second-instance', () => dock.show())
 
   logger.info('notifications available', { supported: Notification.isSupported() })
@@ -303,10 +303,10 @@ app.whenReady().then(async () => {
     },
     logger,
     onUnavailable: startDaemonProcess,
-    // Um daemon de uma versão anterior sobrevive à atualização e recusaria os métodos novos
+    // A daemon from a previous version survives the update and would refuse the new methods
     replaceDaemon: async (shutdown) => {
       if (!(await shutdown())) {
-        // Daemons antigos nem conhecem `shutdown`: acha os processos do nosso próprio script
+        // Old daemons do not even know `shutdown`: finds the processes of our own script
         const pids = await processScanner.find({
           argument: daemonScript,
           endpoint: process.env.DCK_ENDPOINT,
@@ -316,7 +316,7 @@ app.whenReady().then(async () => {
           try {
             process.kill(pid, 'SIGTERM')
           } catch (error) {
-            // O processo pode já ter saído entre achar e matar
+            // The process may have already exited between finding and killing
             logger.warn('could not stop stale daemon', { pid, error: String(error) })
           }
         }
@@ -339,7 +339,7 @@ app.whenReady().then(async () => {
     logger.info('window ready', { endpoint })
   })
 
-  // Só para conferir a interface sem olhar a tela: roda um script na página, grava uma captura e sai
+  // Only to check the interface without looking at the screen: runs a script in the page, saves a capture and exits
   const evalScript = process.env.DCK_EVAL
   const screenshotPath = process.env.DCK_SCREENSHOT
   if (evalScript || screenshotPath) {
@@ -360,7 +360,7 @@ app.whenReady().then(async () => {
     })
   }
 
-  // DCK_NO_TRAY existe para os testes automáticos não piscarem ícones na barra do usuário
+  // DCK_NO_TRAY exists so automated tests do not flash icons in the user's bar
   if (!process.env.DCK_NO_TRAY) {
     const statusIcons = createElectronStatusIcon(
       {
@@ -376,7 +376,7 @@ app.whenReady().then(async () => {
         window.webContents.send(hostChannels.windowOpenSettings)
       },
       autostart,
-      // Lido a cada montagem do menu: a língua pode mudar nas configurações com o app aberto
+      // Read on every menu build: the language can change in settings while the app is open
       t: ((key, params) => {
         const { language } = settingsStore.get().settings
         return createTranslator(

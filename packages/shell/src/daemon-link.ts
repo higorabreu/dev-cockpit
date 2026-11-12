@@ -18,28 +18,28 @@ export interface DaemonLinkOptions {
   readonly scheduler: Scheduler
   readonly logger: Logger
   onToggle(): void
-  // Estado novo de uma visão, publicado pelo daemon depois de uma busca
+  // New state of a view, published by the daemon after a fetch
   onViews?(snapshot: unknown): void
-  // Chamado a cada conexão com o daemon pronta, para quem precisa enviar a configuração
+  // Called on every ready daemon connection, for whoever needs to send the configuration
   onReady?(): void
-  // Dados que um agente empurrou pelo daemon (por exemplo o statusLine do Claude)
+  // Data an agent pushed through the daemon (for example Claude's statusLine)
   onAgentReport?(message: unknown): void
-  // Chamado quando o daemon encontrado é mais antigo que esta versão do shell; quem chama
-  // o encerra (por `shutdown`, ou à força se ele nem conhece o método) e sobe um novo
+  // Called when the found daemon is older than this shell version; the caller
+  // shuts it down (by `shutdown`, or by force if it does not know the method) and starts a new one
   replaceDaemon?(shutdown: () => Promise<boolean>): Promise<void>
-  // Chamado na primeira falha de conexão, para quem quiser subir o daemon
+  // Called on the first connection failure, for whoever wants to start the daemon
   onUnavailable?(): void
   readonly retryMs?: number
 }
 
 const windowEvent = z.object({ action: z.literal('toggle') })
 
-// Mantém a janela ligada ao daemon: assina o tópico "window" e reconecta quando a conexão cai
+// Keeps the window attached to the daemon: subscribes to the "window" topic and reconnects when the connection drops
 const MAX_REPLACEMENTS = 2
 
 export interface DaemonLink {
   stop(): void
-  // Falha com DCK-DMN-002 enquanto não há conexão
+  // Fails with DCK-DMN-002 while there is no connection
   request(method: string, params?: unknown): Promise<Result<unknown, ErrorBody>>
 }
 
@@ -86,11 +86,11 @@ export function startDaemonLink(options: DaemonLinkOptions): DaemonLink {
       replacements += 1
       logger.warn('daemon outdated, replacing it', { found: protocol ?? 'unknown' })
       await options.replaceDaemon(async () => (await client.request('shutdown')).ok)
-      // Fechar dispara a reconexão, que já encontra o daemon novo
+      // Closing triggers the reconnection, which finds the new daemon
       client.close()
       return
     }
-    // Um erro num tratador não pode subir até o processo principal: registra e segue
+    // An error in a handler must not bubble up to the main process: it logs and moves on
     const guard = (name: string, handler: () => void) => {
       try {
         handler()

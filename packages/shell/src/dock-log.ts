@@ -17,7 +17,7 @@ export function logScreen(screen: Screen, logger: Logger): Screen {
   }
 }
 
-// Mostra onde a janela realmente ficou depois de mostrar, para comparar com o que foi pedido
+// Shows where the window actually ended up after showing, to compare with what was requested
 export function logDockWindow(window: DockWindow, logger: Logger): DockWindow {
   return {
     ...window,

@@ -7,7 +7,7 @@ export interface EnvironmentInspectorDeps {
 
 export function createEnvironmentInspector({ processes, compose }: EnvironmentInspectorDeps) {
   return {
-    // O compose é o do diretório em que a aba está agora
+    // The compose is the one in the directory the tab is in right now
     async status(pid: number): Promise<ComposeStatus> {
       const info = await processes.inspect(pid)
       return info ? compose.status(info.cwd) : { kind: 'none' }

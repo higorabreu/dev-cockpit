@@ -8,7 +8,7 @@ export interface ProjectScanConfig {
   readonly depth: number
 }
 
-// A pasta e a profundidade são lidas a cada listagem: mudam nas configurações sem reiniciar
+// The folder and depth are read on every listing: they change in settings without restarting
 export function createProjectCatalog(
   config: ProjectScanConfig | (() => ProjectScanConfig),
   recency: RecencyStore,

@@ -6,7 +6,7 @@ export interface TrayMenuDeps {
   autostart: Autostart
   t: Translate
   quit(): void
-  // Pede o menu de novo depois de uma opção mudar
+  // Asks for the menu again after an option changes
   onChange(): void
 }
 

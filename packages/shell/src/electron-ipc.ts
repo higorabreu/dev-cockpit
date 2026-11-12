@@ -5,7 +5,7 @@ interface ElectronIpcMain {
   on(channel: string, listener: never): void
 }
 
-// Isola o tipo do Electron, que tem sobrecargas demais para servir de porta
+// Isolates the Electron type, which has too many overloads to serve as a port
 export function createElectronIpc(ipcMain: ElectronIpcMain): IpcMainApi {
   return {
     handle: (channel, listener) => ipcMain.handle(channel, listener as never),

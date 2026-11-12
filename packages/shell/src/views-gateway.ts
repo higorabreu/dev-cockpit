@@ -16,13 +16,13 @@ export interface ViewsGatewayDeps {
 export interface ViewsGateway {
   snapshot(view: MergeRequestView): Promise<ViewSnapshot | undefined>
   refresh(view: MergeRequestView, maxAgeMs?: number): Promise<ViewSnapshot | undefined>
-  // O endereço da conta; nulo quando não há conexão
+  // The account's address; null when there is no connection
   configure(url: string | null): Promise<void>
-  // Para o que o daemon publica sem ter sido pedido
+  // For what the daemon publishes without being asked
   parse(data: unknown): ViewSnapshot | undefined
 }
 
-// A interface só fala com o shell; o shell fala com o daemon e valida o que volta
+// The UI only talks to the shell; the shell talks to the daemon and validates what comes back
 export function createViewsGateway(deps: ViewsGatewayDeps): ViewsGateway {
   const { logger } = deps
 
