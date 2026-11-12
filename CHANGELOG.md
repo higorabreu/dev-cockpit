@@ -1,7 +1,7 @@
 # Changelog
 
-Newest first. Versions stay at 0.x while real use goes on. From the next release this file is generated
-from Conventional Commits.
+Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
+written by hand for a private build, before the first public release.
 
 ## [0.2.0](https://github.com/higorabreu/dev-cockpit/compare/v0.1.0...v0.2.0) (2026-11-12)
 
