@@ -277,4 +277,22 @@ export const en: Record<MessageKey, string> = {
 
   'notify.title': 'Dev Cockpit',
   'notify.finished': '{tab}: {process} finished in {duration}',
+
+  'error.DCK-IPC-001': 'Unknown method',
+  'error.DCK-IPC-002': 'The method failed',
+  'error.DCK-IPC-003': 'Invalid parameters',
+  'error.DCK-IPC-004': 'Invalid message',
+  'error.DCK-IPC-005': 'Connection closed before the response',
+  'error.DCK-DMN-001': 'A daemon is already running',
+  'error.DCK-DMN-002': 'Could not talk to the daemon',
+  'error.DCK-SEC-001': 'Secret store unavailable',
+  'error.DCK-SEC-002': 'The secret store refused the operation',
+  'error.DCK-NET-001': 'No response from the server',
+  'error.DCK-GLB-001': 'GitLab rejected the token',
+  'error.DCK-GLB-002': 'The token lacks permission for this query',
+  'error.DCK-GLB-003': 'GitLab address not found',
+  'error.DCK-GLB-004': 'GitLab rate limit reached',
+  'error.DCK-GLB-005': 'GitLab is not responding',
+  'error.DCK-GLB-006': 'Unexpected GitLab response',
+  'error.DCK-GLB-007': 'Invalid GitLab address',
 }

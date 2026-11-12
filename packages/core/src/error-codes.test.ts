@@ -2,6 +2,8 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import errorCodes from '../error-codes.json' with { type: 'json' }
+import { en } from './i18n/en.ts'
+import { ptBR } from './i18n/pt-BR.ts'
 
 function sourceFiles(directory: string): string[] {
   return readdirSync(directory).flatMap((name) => {
@@ -66,5 +68,13 @@ describe('error code registry', () => {
 
     expect(rpc.filter((code) => !standard(code) && !application(code))).toEqual([])
     expect(new Set(rpc).size).toBe(rpc.length)
+  })
+
+  it('should have a message in every language catalog when listing the codes', () => {
+    const missing = Object.keys(errorCodes).filter(
+      (code) => !(`error.${code}` in en) || !(`error.${code}` in ptBR),
+    )
+
+    expect(missing).toEqual([])
   })
 })

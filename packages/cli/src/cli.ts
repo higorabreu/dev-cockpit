@@ -2,6 +2,7 @@ import {
   createClient,
   createTranslator,
   type ErrorBody,
+  errorCodeOf,
   type Result,
   type Translate,
   type Transport,
@@ -56,7 +57,7 @@ export async function runCli(argv: readonly string[], deps: CliDeps): Promise<nu
 
   const connected = await deps.connect(deps.endpoint)
   if (!connected.ok) {
-    deps.err(`${connected.error.message}\n${t('cli.startDaemon')}\n`)
+    deps.err(`${t(`error.${errorCodeOf(connected.error)}`)}\n${t('cli.startDaemon')}\n`)
     return exitCodeFor(connected.error)
   }
 
@@ -64,7 +65,7 @@ export async function runCli(argv: readonly string[], deps: CliDeps): Promise<nu
   try {
     const reply = await client.request(command === 'ping' ? 'ping' : 'window.toggle')
     if (!reply.ok) {
-      deps.err(`${reply.error.message}\n`)
+      deps.err(`${t(`error.${errorCodeOf(reply.error)}`)}\n`)
       return exitCodeFor(reply.error)
     }
     if (command === 'ping') {

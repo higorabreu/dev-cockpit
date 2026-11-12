@@ -276,6 +276,24 @@ export const ptBR = {
 
   'notify.title': 'Dev Cockpit',
   'notify.finished': '{tab}: {process} terminou em {duration}',
+
+  'error.DCK-IPC-001': 'Método desconhecido',
+  'error.DCK-IPC-002': 'O método falhou',
+  'error.DCK-IPC-003': 'Parâmetros inválidos',
+  'error.DCK-IPC-004': 'Mensagem inválida',
+  'error.DCK-IPC-005': 'Conexão encerrada antes da resposta',
+  'error.DCK-DMN-001': 'Já existe um daemon em execução',
+  'error.DCK-DMN-002': 'Não foi possível falar com o daemon',
+  'error.DCK-SEC-001': 'Cofre de segredos indisponível',
+  'error.DCK-SEC-002': 'O cofre de segredos recusou a operação',
+  'error.DCK-NET-001': 'Sem resposta do servidor',
+  'error.DCK-GLB-001': 'O GitLab recusou o token',
+  'error.DCK-GLB-002': 'O token não tem permissão para esta consulta',
+  'error.DCK-GLB-003': 'Endereço do GitLab não encontrado',
+  'error.DCK-GLB-004': 'Limite de requisições do GitLab atingido',
+  'error.DCK-GLB-005': 'O GitLab não está respondendo',
+  'error.DCK-GLB-006': 'Resposta inesperada do GitLab',
+  'error.DCK-GLB-007': 'Endereço do GitLab inválido',
 } as const
 
 export type MessageKey = keyof typeof ptBR

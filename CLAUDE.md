@@ -90,8 +90,8 @@ plans/        contexto, roadmap, decisões e um plano por marco em andamento
     uma linha dizendo por que ignorar (ex.: `localStorage` indisponível).
   - Arquivo de configuração ou estado inválido volta ao padrão, avisa com `logger.warn` e não derruba o
     app. Escrita de arquivo é atômica (temporário e `rename`).
-- Códigos de erro `DCK-{DOMÍNIO}-{SEQ}` em `error-codes.json`, com a mensagem em português e uma faixa
-  RPC única. Domínio é o assunto em maiúsculas, sempre três letras, hoje `IPC`, `DMN`, `SEC`, `NET` e `GLB`. Código sem
+- Códigos de erro `DCK-{DOMÍNIO}-{SEQ}` em `error-codes.json`, com uma faixa RPC única e a mensagem
+  no catálogo `i18n` (`error.<código>`, em inglês e pt-BR). Domínio é o assunto em maiúsculas, sempre três letras, hoje `IPC`, `DMN`, `SEC`, `NET` e `GLB`. Código sem
   uso é removido, nunca marcado como obsoleto.
 - Logs pelo `Logger` injetado (`info`, `warn`, `error`), nunca `console` (só scripts de build). Mensagem em inglês, curta, sem
   ponto final, e o contexto num objeto (`{ file, key, pid }`); a causa de uma exceção vai em `error:

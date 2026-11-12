@@ -1,102 +1,85 @@
 {
   "DCK-IPC-001": {
-    "message": "Método desconhecido",
     "category": "not_found",
     "retryable": false,
     "rpc": -32601
   },
   "DCK-IPC-002": {
-    "message": "O método falhou",
     "category": "internal",
     "retryable": false,
     "rpc": -32603
   },
   "DCK-IPC-003": {
-    "message": "Parâmetros inválidos",
     "category": "invalid_argument",
     "retryable": false,
     "rpc": -32602
   },
   "DCK-IPC-004": {
-    "message": "Mensagem inválida",
     "category": "invalid_argument",
     "retryable": false,
     "rpc": -32600
   },
   "DCK-IPC-005": {
-    "message": "Conexão encerrada antes da resposta",
     "category": "unavailable",
     "retryable": true,
     "rpc": -32001
   },
   "DCK-DMN-001": {
-    "message": "Já existe um daemon em execução",
     "category": "already_exists",
     "retryable": false,
     "rpc": -32002
   },
   "DCK-DMN-002": {
-    "message": "Não foi possível falar com o daemon",
     "category": "unavailable",
     "retryable": true,
     "rpc": -32003
   },
   "DCK-SEC-001": {
-    "message": "Cofre de segredos indisponível",
     "category": "unavailable",
     "retryable": false,
     "rpc": -32004
   },
   "DCK-SEC-002": {
-    "message": "O cofre de segredos recusou a operação",
     "category": "internal",
     "retryable": false,
     "rpc": -32005
   },
   "DCK-NET-001": {
-    "message": "Sem resposta do servidor",
     "category": "unavailable",
     "retryable": true,
     "rpc": -32006
   },
   "DCK-GLB-001": {
-    "message": "O GitLab recusou o token",
     "category": "permission_denied",
     "retryable": false,
     "rpc": -32007
   },
   "DCK-GLB-002": {
-    "message": "O token não tem permissão para esta consulta",
     "category": "permission_denied",
     "retryable": false,
     "rpc": -32008
   },
   "DCK-GLB-003": {
-    "message": "Endereço do GitLab não encontrado",
     "category": "not_found",
     "retryable": false,
     "rpc": -32009
   },
   "DCK-GLB-004": {
-    "message": "Limite de requisições do GitLab atingido",
     "category": "unavailable",
     "retryable": true,
     "rpc": -32010
   },
   "DCK-GLB-005": {
-    "message": "O GitLab não está respondendo",
     "category": "unavailable",
     "retryable": true,
     "rpc": -32011
   },
   "DCK-GLB-006": {
-    "message": "Resposta inesperada do GitLab",
     "category": "internal",
     "retryable": false,
     "rpc": -32012
   },
   "DCK-GLB-007": {
-    "message": "Endereço do GitLab inválido",
     "category": "invalid_argument",
     "retryable": false,
     "rpc": -32013
