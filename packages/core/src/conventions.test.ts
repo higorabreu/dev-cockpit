@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join, relative, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const packagesRoot = join(import.meta.dirname, '..', '..')
@@ -62,6 +62,17 @@ describe('project conventions', () => {
       sources,
       /from\s+['"]@dck\/adapter-/,
       (path) => !path.startsWith('adapters/'),
+    )
+
+    expect(found).toEqual([])
+  })
+
+  // D46: the window shares the daemon's secret store chooser and nothing else of the daemon
+  it('should import the daemon only through its secret-store subpath when listing the shell sources', () => {
+    const found = offenders(
+      sources,
+      /from\s+['"]@dck\/daemon(?!\/secret-store['"])/,
+      (path) => !path.startsWith('shell/'),
     )
 
     expect(found).toEqual([])
@@ -184,5 +195,33 @@ describe('agent instructions', () => {
     )
 
     expect(unscoped).toEqual([])
+  })
+})
+
+describe('release', () => {
+  const readJson = (path: string): unknown => JSON.parse(readFileSync(path, 'utf8'))
+  const versionOf = (path: string) => (readJson(path) as { version?: string }).version
+  const manifests = directoriesUnder(packagesRoot)
+    .filter((directory) => readdirSync(directory).includes('package.json'))
+    .map((directory) => relative(repositoryRoot, join(directory, 'package.json')))
+    .map((path) => path.split(sep).join('/'))
+  const config = readJson(join(repositoryRoot, 'release-please-config.json')) as {
+    packages: Record<string, { 'extra-files'?: { path: string }[] }>
+  }
+  const bumped = (config.packages['.']?.['extra-files'] ?? []).map((file) => file.path)
+
+  // release-please only bumps the files it is told about, so a package left out keeps an old version
+  it('should list every workspace package in the extra files when reading the release config', () => {
+    const missing = manifests.filter((path) => !bumped.includes(path))
+
+    expect(missing).toEqual([])
+  })
+
+  it('should give every workspace package the root version when reading the manifests', () => {
+    const rootVersion = versionOf(join(repositoryRoot, 'package.json'))
+
+    const stale = manifests.filter((path) => versionOf(join(repositoryRoot, path)) !== rootVersion)
+
+    expect(stale).toEqual([])
   })
 })

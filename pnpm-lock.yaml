@@ -70,6 +70,18 @@ importers:
         specifier: workspace:^
         version: link:../../core
 
+  packages/adapters/macos-keychain:
+    dependencies:
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../../core
+
+  packages/adapters/macos-proc:
+    dependencies:
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../../core
+
   packages/adapters/node-fetch:
     dependencies:
       '@dck/core':
@@ -132,6 +144,9 @@ importers:
       '@dck/adapter-jira':
         specifier: workspace:^
         version: link:../adapters/jira
+      '@dck/adapter-macos-keychain':
+        specifier: workspace:^
+        version: link:../adapters/macos-keychain
       '@dck/adapter-node-fetch':
         specifier: workspace:^
         version: link:../adapters/node-fetch
@@ -167,6 +182,9 @@ importers:
       '@dck/adapter-linux-proc':
         specifier: workspace:^
         version: link:../adapters/linux-proc
+      '@dck/adapter-macos-proc':
+        specifier: workspace:^
+        version: link:../adapters/macos-proc
       '@dck/adapter-node-fetch':
         specifier: workspace:^
         version: link:../adapters/node-fetch
@@ -179,12 +197,12 @@ importers:
       '@dck/adapter-node-pty':
         specifier: workspace:^
         version: link:../adapters/node-pty
-      '@dck/adapter-secret-tool':
-        specifier: workspace:^
-        version: link:../adapters/secret-tool
       '@dck/core':
         specifier: workspace:^
         version: link:../core
+      '@dck/daemon':
+        specifier: workspace:^
+        version: link:../daemon
       node-pty:
         specifier: ^1.1.0
         version: 1.1.0

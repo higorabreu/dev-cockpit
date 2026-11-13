@@ -553,6 +553,22 @@ address error.
 **How to revert:** revert the commits of phase A; the settings file and the keyring key did not change, so
 an existing setup keeps working on either side.
 
+## D42. macOS: a panel window, F12 on every platform and the Keychain through `security -i`
+
+**Decision:** the MAC-T1 spike settles the macOS design of [plans/macos.md](../plans/macos.md). The window is
+an Electron `type: 'panel'` at the `screen-saver` level, visible on all workspaces and over fullscreen, with
+no Dock icon, focused on show with `focus()` and `app.focus({ steal: true })`. The default key stays `F12` on
+every platform, so there is no per-platform default; on a Mac keyboard it is `fn+F12`. The Keychain is
+reached through `security -i` with the command on stdin, and a value with a line break is refused, since
+`security` has no escape for it. Process inspection uses `ps` (`tpgid`, `ucomm`) and `lsof -a -d cwd -Fn`.
+Tested on macOS 26.5.1 arm64 with Electron 45.3.0: the panel showed over a fullscreen app and on another
+desktop and received the keyboard without a click; F12, `Ctrl+Backtick` and `Option+Space` fired with no
+Accessibility permission; `node-pty` opened `zsh -il`; `lsof` took about 20 ms.
+**Reason:** the spike on a tester's Mac on 2026-11-13; F12 keeps one key across platforms and was the
+tester's choice.
+**How to revert:** the plan B of the plan's risks (a regular high-level window with the Dock hidden), or a
+per-platform default key passed in by the host.
+
 ## D43. Work tabs are named by the action they ask for and grouped by service
 
 **Decision:** the GitLab tabs become "To review" (`review`) and "Follow up" (`mine`); Jira keeps "Tasks". The
@@ -601,6 +617,19 @@ select and All tabs show ten whole rows before they scroll.
 once the project select scrolled, and the same strip in the other lists (2026-11-13).
 **How to revert:** drop the `data-overflow` rule and `scroll-edges` from `styles/terminal.css` and the
 padding changes that came with them.
+
+## D46. The secret store is chosen in `@dck/daemon`, for the window and the daemon alike
+
+**Decision:** `systemSecretStore(platform)` in `@dck/daemon/secret-store` picks the Keychain on macOS and
+`secret-tool` elsewhere. The daemon's entry point and `dck daemon` build it once and pass it to every
+connector's views; the shell's `selectPlatform` calls the same function instead of choosing on its own.
+**Reason:** the window writes the token and the daemon reads it, so both processes must pick the same store;
+one chooser that both import cannot drift, while two copies of the choice could. It does not live in
+`core` because the choice has to import the Keychain and `secret-tool` adapters, and `core` imports no
+adapter.
+**Accepted cost:** the shell now depends on `@dck/daemon`, and only through its `secret-store` subpath, so
+the window does not load the daemon's server or views.
+**How to revert:** move the choice back into `selectPlatform` and into each daemon entry point.
 
 ## D47. A tab splits into panes, and the review of what changed is the second one
 

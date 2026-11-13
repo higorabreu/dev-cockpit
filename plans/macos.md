@@ -17,7 +17,7 @@ make Linux worse.
 | Id | Question | Proposal |
 | --- | --- | --- |
 | Q1 | Where does CI on macOS run? | **Resolved:** the repository is on GitHub, so macOS CI runs on GitHub Actions |
-| Q2 | Default key on the Mac. F12 is volume or a system function on a Mac and only arrives as F12 with `fn` or with "use F1, F2 as standard function keys" on | A per-platform default passed in by the host (`core` does not read `process.platform`). Candidate: `Ctrl+Backtick`. F12 stays configurable. Decide in the spike (MAC-T1), with the key really working |
+| Q2 | Default key on the Mac. F12 is volume or a system function on a Mac and only arrives as F12 with `fn` or with "use F1, F2 as standard function keys" on | **Resolved (D42):** `F12` on every platform, `fn+F12` on a Mac keyboard; no per-platform default |
 | Q3 | Tab and copy shortcuts: Cmd or Ctrl? | Cmd where Terminal.app and VS Code use it (`Cmd+T`, `Cmd+W`, `Cmd+C/V`, `Cmd+1..9`, `Cmd+,`); Ctrl stays free for the shell. Full table in MAC-T7, to confirm with the tester |
 | Q4 | Distribution: only the tester (ad hoc signing) or other people (Developer ID and notarization, US$ 99 a year)? | Only the tester for now. Notarization is MAC-T14, optional |
 
@@ -67,32 +67,49 @@ The order is meant to bring the tester in as late as possible and once per batch
 
 - [ ] MAC-T0. CI. Create the macOS job on GitHub Actions (install, lint, typecheck, test), now that Q1 is
   resolved. Without it the tasks below have no safety net. (C1)
-- [ ] MAC-T1. **Spike on the tester's Mac, half an hour.** A script they run and paste back: `pnpm install`,
+- [x] MAC-T1. **Spike on the tester's Mac, half an hour.** A script they run and paste back: `pnpm install`,
   `pnpm dev`, and four questions: (a) does a `type: 'panel'` window at a high level open over a fullscreen
   app and receive the keyboard? (b) do F12, `Ctrl+Backtick` and `Option+Space` reach `globalShortcut`
   without asking for Accessibility? (c) does `node-pty` open `zsh`? (d) does `security -i` write an item
-  with a quoted value and does `find-generic-password -w` read it back? The result becomes decision D36
+  with a quoted value and does `find-generic-password -w` read it back? The result becomes decision D42
   in `docs/decisions.md` and closes Q2. If (a) fails, MAC-T5 changes design before any code is written.
-  (C5, C6)
-- [ ] MAC-T2. Platform choice at boot. A `selectPlatform(process.platform)` function in the shell's
+  (C5, C6) Done on 2026-11-13 (macOS 26.5.1, arm64): all four pass, see D42.
+- [x] MAC-T2. Platform choice at boot. A `selectPlatform(process.platform)` function in the shell's
   composition root returns the set of adapters (processes, secret store, autostart, shortcut, paths);
   `main.ts` stops importing `linux-proc` and `secret-tool` directly. Drop `--no-sandbox` on the Mac. A test
-  with `platform` injected, no `any`. (C11)
-- [ ] MAC-T3. Secret store: `adapters/macos-keychain` (`@dck/adapter-macos-keychain`). The same `SecretStore`
+  with `platform` injected, no `any`. (C11) Done: `shell/src/platform/select-platform.ts`; the Mac keeps the
+  Linux adapters until T3, T4 and T8, and only Linux gets `--no-sandbox`. The scanner is a `ProcessScanner`
+  port in `core`, and the daemon receives its `SecretStore` from its entry point. Paths stay in `node-net`
+  and the GTK work areas stay gated in `main.ts`, since creating them runs `xprop`.
+- [x] MAC-T3. Secret store: `adapters/macos-keychain` (`@dck/adapter-macos-keychain`). The same `SecretStore`
   contract and the same codes (`DCK-SEC-001` tool missing, `DCK-SEC-002` refused). The
   `security add-generic-password` command does not read the value from stdin, and `-w value` shows in
   `ps`; the design is to use `security -i` and send the command line, with the value in escaped quotes,
   through stdin (which is how RubyGems and go-keyring do it). `find-generic-password -w` reads,
-  `delete-generic-password` deletes. A missing item exits with code 44 (to confirm in MAC-T1). A test
-  with a fake runner, including a value with quotes, a space, `$` and a line break, and an integration
-  test that only runs on macOS CI. (C3)
-- [ ] MAC-T4. Processes: `adapters/macos-proc` (`@dck/adapter-macos-proc`) behind the same
+  `delete-generic-password` deletes. A missing item exits with code 44 (confirmed in MAC-T1). `security -i`
+  has no escape for a line break, and one splits the command and stores the value cut short, so a value
+  with a line break is refused before it is sent. A test with a fake runner, including a value with quotes,
+  a space and `$`, a refused line break, and an integration test that only runs with `DCK_KEYCHAIN_TEST=1`,
+  which CI sets against a temporary keychain and then restores the runner's keychains. (C3) Done: `security`
+  by its absolute path, keys and the service from an allowlist and a line of at most 4094 bytes, since
+  `security -i` runs the rest of a longer line as another command. The window, the daemon and `dck daemon`
+  refuse an invalid `DCK_PROFILE` at boot, and D46 records why the store is chosen in `@dck/daemon`. Still
+  to run on the tester's Mac with the app.
+- [x] MAC-T4. Processes: `adapters/macos-proc` (`@dck/adapter-macos-proc`) behind the same
   `ProcessInspector` and scanner ports. The foreground group through `ps -o tpgid= -p <pid>`, the name through
   `ps -o comm=`, the start through `ps -o lstart=`, the directory through `lsof -a -d cwd -Fn -p <pid>`. The
   scan through `ps -axo pid=,command=` and the process's `DCK_ENDPOINT` through `ps eww -p` (only valid
   for the user's own processes). An injected executor like `docker-cli`'s. The real outputs recorded by
   the tester in MAC-T1 become the test files. Measure the cost of `lsof` and, if it goes past a few tens of
-  ms, cache by pid or try `pty.process` from `node-pty` for the name. (C4)
+  ms, cache by pid or try `pty.process` from `node-pty` for the name. (C4) Done: the name comes from
+  `ucomm` (the bare name, as on Linux; `comm` may be a full path) and there is no start time, which nothing
+  reads. One inspect took about 40 ms and 3 processes, so inspects within 10 ms share one `lsof` with every
+  pid and one `ps -axo pid=,tpgid=,ucomm=`: 2 processes per poll of all tabs. The paths `lsof -b -w`
+  prints are decoded from its `\xNN` escapes, and a batch that fails or outlives 5 s resolves with nothing.
+  The scan reads `ps -xww` (own processes, full width) and the last `DCK_ENDPOINT` after the command in
+  `ps -E -ww`. Open: a native Claude Code install shows its version (`2.1.323`) as `ucomm`, since the binary
+  is named after it, so it is not recognized as an agent (an npm install, likely `node`, is not checked);
+  the Energy Impact of polling while hidden is not measured yet.
 - [ ] MAC-T5. The anchored window on the Mac, in `shell/src/electron/dock-window.ts` and `main.ts`, only
   when `platform === 'darwin'`: `type: 'panel'`, `setAlwaysOnTop(true, 'screen-saver')`,
   `setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true })`,
@@ -148,9 +165,9 @@ The order is meant to bring the tester in as late as possible and once per batch
   monitor, restart and check autostart, close and `dck toggle`. Measurements with `DCK_LOG_DOCK=1`,
   `ps -o rss` of the app and the daemon and the cold start time. Problems come back grouped by round.
   (C5, C6, C9, C10)
-- [ ] MAC-T13. Close: decision D36 in `docs/decisions.md` (the port, window, secret store and PATH choices), the
-  "macOS packaging" item leaves the backlog of `docs/roadmap.md`, a Mac section in the `README` and check
-  the full gate. (C11)
+- [ ] MAC-T13. Close: a new decision in `docs/decisions.md`, with the next free number when it is written (D42
+  is the spike's), for the port, window, secret store and PATH choices; the "macOS packaging" item leaves
+  the backlog of `docs/roadmap.md`, a Mac section in the `README` and check the full gate. (C11)
 - [ ] MAC-T14. Optional, only if Q4 asks for distribution: a Developer ID certificate, signing with the hardened
   runtime on every nested executable (`pty.node`, `spawn-helper`, Electron's helpers), notarization
   (`@electron/notarize`), secrets in CI, manual update by download.

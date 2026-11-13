@@ -4,15 +4,13 @@ import { realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
-import { createGnomeShortcut } from '@dck/adapter-gnome-shortcuts'
-import { createProcessInspector, createProcessScanner } from '@dck/adapter-linux-proc'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import { createGitDiffSource, createGitInspector } from '@dck/adapter-node-git'
 import { connectTo, defaultConfigDir, defaultEndpoint } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
-import { createSecretToolStore } from '@dck/adapter-secret-tool'
 import {
   type ConnectionFields,
+  checkProfile,
   connectorCatalog,
   createConnections,
   createDockController,
@@ -52,11 +50,12 @@ import { createElectronShortcuts } from './electron/shortcuts.ts'
 import { createElectronStatusIcon } from './electron/status-icon.ts'
 import { createToggleKeyBinder } from './electron/toggle-key-binder.ts'
 import { buildTrayMenu } from './electron/tray-menu.ts'
+import { createWindowSender } from './electron/window-sender.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
-import { createXdgAutostart, defaultAutostartDirectory } from './platform/linux/xdg-autostart.ts'
+import { selectPlatform } from './platform/select-platform.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
@@ -65,6 +64,7 @@ import { watchSettingsFile } from './settings/settings-watch.ts'
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
+const profile = checkProfile(process.env.DCK_PROFILE, logger)
 
 // Set before anything reads it (the single instance lock does): the CLI looks in this same folder
 app.setPath('userData', process.env.DCK_CONFIG_DIR ?? defaultConfigDir())
@@ -80,29 +80,28 @@ process.on('unhandledRejection', (reason) => {
 if (!app.requestSingleInstanceLock()) app.quit()
 
 app.whenReady().then(async () => {
+  // checkProfile already logged why; app.exit is reliable only once the app is ready
+  if (profile.kind === 'invalid') {
+    app.exit(1)
+    return
+  }
   Menu.setApplicationMenu(null)
 
   let activeKey = ''
   const toggleWindow = () => dock.toggle()
 
-  const onGnome = (process.env.XDG_CURRENT_DESKTOP ?? '').split(':').includes('GNOME')
+  const platform = selectPlatform({
+    platform: process.platform,
+    env: process.env,
+    home: homedir(),
+    packaged: app.isPackaged,
+    execPath: process.execPath,
+    appPath: app.getAppPath(),
+    resourcesPath: process.resourcesPath,
+    logger,
+  })
   const toggleKey = createToggleKeyBinder({
-    // O atalho do sistema chama o CLI empacotado; em modo dev o Electron registra a tecla
-    desktop:
-      app.isPackaged && onGnome
-        ? createGnomeShortcut({
-            command: [
-              'env',
-              'ELECTRON_RUN_AS_NODE=1',
-              'DCK_PACKAGED=1',
-              process.execPath,
-              join(process.resourcesPath, 'dck.mjs'),
-              'toggle',
-            ],
-            name: 'Dev Cockpit',
-            logger,
-          })
-        : undefined,
+    desktop: platform.desktopShortcut,
     electron: createElectronShortcuts(globalShortcut),
     onToggle: toggleWindow,
     onInvalid: (key, error) => logger.warn('shortcut is not valid', { key, error: String(error) }),
@@ -129,14 +128,6 @@ app.whenReady().then(async () => {
   const loaded = await settingsStore.load()
   logger.info('settings loaded', { fresh: loaded.fresh, locked: loaded.locked })
 
-  const autostart = createXdgAutostart({
-    directory: process.env.DCK_AUTOSTART_DIR ?? defaultAutostartDirectory(process.env, homedir()),
-    name: 'Dev Cockpit',
-    command: app.isPackaged
-      ? [process.execPath, '--no-sandbox']
-      : [process.execPath, app.getAppPath(), '--no-sandbox'],
-    env: { DCK_START_HIDDEN: '1' },
-  })
   const window = new BrowserWindow({
     show: false,
     frame: false,
@@ -155,13 +146,14 @@ app.whenReady().then(async () => {
   // Page content never opens an Electron window nor leaves the app; links go to the browser through the host
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
+  const send = createWindowSender(window)
 
   const electronScreen = createElectronScreen(
     screen,
     process.platform === 'linux' ? createGtkWorkareas() : undefined,
   )
   const dockWindow = createElectronDockWindow(window, {
-    onShown: () => window.webContents.send(hostChannels.windowShown),
+    onShown: () => send(hostChannels.windowShown),
   })
   const traceDock = process.env.DCK_LOG_DOCK === '1'
 
@@ -184,9 +176,9 @@ app.whenReady().then(async () => {
   logger.info('notifications available', { supported: Notification.isSupported() })
 
   const implementations = createConnectorConnections({
-    secrets: createSecretToolStore(),
+    secrets: platform.secrets,
     http: createFetchHttpClient(),
-    profile: process.env.DCK_PROFILE,
+    profile: profile.profile,
     account: (id) => ({
       get: () => storedAccount(settingsStore.get().settings, id),
       // The settings model drops an empty e-mail, so erasing the account leaves no e-mail behind
@@ -247,7 +239,7 @@ app.whenReady().then(async () => {
         return catalog.ready.flatMap(({ id }) => accountOf(settings, id)?.url ?? [])
       },
     },
-    autostart,
+    autostart: platform.autostart,
     projects: createProjectCatalog(
       () => {
         const { projects } = settingsStore.get().settings
@@ -258,14 +250,14 @@ app.whenReady().then(async () => {
     ),
     review: createGitDiffSource(),
     sessions: createSessionInspector({
-      processes: createProcessInspector(),
+      processes: platform.processes,
       git: createGitInspector(),
       agents: agentProfiles,
     }),
     agents: agentProfiles,
 
     environment: createEnvironmentInspector({
-      processes: createProcessInspector(),
+      processes: platform.processes,
       compose: createComposeInspector({ stopAt: homedir() }),
     }),
     files: {
@@ -290,16 +282,16 @@ app.whenReady().then(async () => {
       },
       (tabId) => {
         dock.show()
-        window.webContents.send(hostChannels.notificationsClick, tabId)
+        send(hostChannels.notificationsClick, tabId)
       },
     ),
     shell: process.env.SHELL ?? '/bin/bash',
     home: homedir(),
     logger,
-    send: (channel, ...args) => window.webContents.send(channel, ...args),
+    send,
     toggleFullHeight: () => {
       dock.toggleFullHeight()
-      window.webContents.send(hostChannels.windowFullHeight, dock.isFullHeight())
+      send(hostChannels.windowFullHeight, dock.isFullHeight())
     },
   })
 
@@ -310,7 +302,7 @@ app.whenReady().then(async () => {
   })
 
   settingsStore.onChange((settings, changed) => {
-    window.webContents.send(hostChannels.settingsChanged, settings, changed)
+    send(hostChannels.settingsChanged, settings, changed)
     if (changed.includes('window.heightRatio')) dock.refresh()
     if (changed.includes('extensions.disabled')) {
       catalog = readCatalog()
@@ -337,7 +329,6 @@ app.whenReady().then(async () => {
   })
 
   const daemonScript = join(__dirname, 'daemon.cjs')
-  const processScanner = createProcessScanner()
 
   function startDaemonProcess() {
     mkdirSync(dirname(endpoint), { recursive: true, mode: 0o700 })
@@ -360,10 +351,10 @@ app.whenReady().then(async () => {
 
   const link = startDaemonLink({
     onReady: configureViews,
-    onAgentSignal: (signal) => window.webContents.send(hostChannels.agentSignal, signal),
+    onAgentSignal: (signal) => send(hostChannels.agentSignal, signal),
     onViews: (data) => {
       const snapshot = views.parse(data)
-      if (snapshot) window.webContents.send(hostChannels.viewsChanged, snapshot)
+      if (snapshot) send(hostChannels.viewsChanged, snapshot)
     },
     connect: () => connectTo(endpoint, logger),
     scheduler: {
@@ -378,7 +369,7 @@ app.whenReady().then(async () => {
     replaceDaemon: async (shutdown) => {
       if (!(await shutdown())) {
         // Old daemons do not even know `shutdown`: finds the processes of our own script
-        const pids = await processScanner.find({
+        const pids = await platform.processScanner.find({
           argument: daemonScript,
           endpoint: process.env.DCK_ENDPOINT,
           exclude: process.pid,
@@ -444,9 +435,9 @@ app.whenReady().then(async () => {
       toggleWindow: () => dock.toggle(),
       openSettings: () => {
         dock.show()
-        window.webContents.send(hostChannels.windowOpenSettings)
+        send(hostChannels.windowOpenSettings)
       },
-      autostart,
+      autostart: platform.autostart,
       // Read on every menu build: the language can change in settings while the app is open
       t: ((key, params) => {
         const { language } = settingsStore.get().settings

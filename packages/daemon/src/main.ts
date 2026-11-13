@@ -1,14 +1,25 @@
 import { defaultEndpoint, defaultStateDir } from '@dck/adapter-node-net'
-import { createJsonLogger } from '@dck/core'
+import { checkProfile, createJsonLogger } from '@dck/core'
 import { createConnectorViews } from './connector-views.ts'
 import { startDaemon } from './daemon.ts'
+import { systemSecretStore } from './secret-store.ts'
 
 async function main() {
   const logger = createJsonLogger((line) => process.stderr.write(line))
+  const profile = checkProfile(process.env.DCK_PROFILE, logger)
+  if (profile.kind === 'invalid') {
+    process.exitCode = 1
+    return
+  }
   const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
   const stateDir = process.env.DCK_STATE_DIR ?? defaultStateDir()
 
-  const views = createConnectorViews({ stateDir, logger, profile: process.env.DCK_PROFILE })
+  const views = createConnectorViews({
+    stateDir,
+    logger,
+    secrets: systemSecretStore(),
+    profile: profile.profile,
+  })
 
   let stopDaemon = async () => process.exit(0)
   const started = await startDaemon({
