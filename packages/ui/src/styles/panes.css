@@ -1,0 +1,67 @@
+/* A tab: its terminal and, beside it, an optional second pane. Only the active tab is visible, and the
+   others keep their size so their terminals stay fitted */
+.tabview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  visibility: hidden;
+}
+
+.tabview.active {
+  visibility: visible;
+}
+
+.session {
+  box-sizing: border-box;
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 8px 0 8px 10px;
+  overflow: hidden;
+}
+
+.session[hidden] {
+  display: none;
+}
+
+/* 1px of line between the panes; the grip around it is 9px wide and the line thickens under the mouse,
+   while dragging and with the keyboard focus */
+.pane-divider {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  width: 1px;
+  background: var(--line);
+  outline: none;
+  cursor: col-resize;
+}
+
+.pane-divider[hidden] {
+  display: none;
+}
+
+.pane-divider::before {
+  content: "";
+  position: absolute;
+  inset: 0 -4px;
+}
+
+.pane-divider::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1px;
+  width: 3px;
+  background: transparent;
+  transition: background var(--motion-fast);
+}
+
+.pane-divider:hover::after,
+.pane-divider[data-drag]::after {
+  background: var(--muted);
+}
+
+.pane-divider:focus-visible::after {
+  background: var(--fg);
+}

@@ -2,6 +2,7 @@ import { inputGate } from './input-gate.ts'
 export interface ShortcutActions {
   newTab(): void
   closeTab(): void
+  toggleReview(): void
   nextTab(): void
   previousTab(): void
   goToTab(index: number): void
@@ -44,6 +45,7 @@ export function bindShortcuts(actions: ShortcutActions): () => void {
       const key = event.key.toLowerCase()
       if (key === 't') return run(actions.newTab)
       if (key === 'w') return run(actions.closeTab)
+      if (key === 'd') return run(actions.toggleReview)
       if (key === 'l') return run(actions.toggleTheme)
       if (key === 'p') return run(actions.searchProjects)
       if (key === 'm') return run(actions.openViews)

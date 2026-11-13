@@ -330,15 +330,3 @@
 .syncs .on {
   color: var(--fg);
 }
-
-.session {
-  position: absolute;
-  inset: 0;
-  padding: 8px 0 8px 10px;
-  overflow: hidden;
-  visibility: hidden;
-}
-
-.session.active {
-  visibility: visible;
-}

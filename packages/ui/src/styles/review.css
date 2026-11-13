@@ -1,0 +1,455 @@
+/* The review beside a terminal: scope and totals, the changed files, the selected file's diff and the keys.
+   It shares the window's background with the terminal; the divider is the only edge between them */
+.review {
+  box-sizing: border-box;
+  container-type: inline-size;
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  outline: none;
+  --rv-gap: 16px;
+}
+
+.review[hidden] {
+  display: none;
+}
+
+.rv-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 6px 8px 6px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.rv-head .select {
+  padding-block: 3px;
+}
+
+.rv-head .select-field[hidden] {
+  display: none;
+}
+
+.rv-totals {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.rv-status {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rv-spacer {
+  flex: 1;
+}
+
+.rv-icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--muted);
+}
+
+.rv-icon:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+/* A pressed toggle gains an outline as well as the fill, so its state is not told by color alone */
+.rv-icon[aria-pressed="true"] {
+  background: var(--tab-active);
+  color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--muted);
+}
+
+.rv-icon:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
+.rv-icon[hidden] {
+  display: none;
+}
+
+.rv-counts {
+  flex: none;
+  display: inline-flex;
+  gap: 6px;
+  font: 11.5px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.rv-plus {
+  color: var(--diff-add-ink);
+}
+
+.rv-minus {
+  color: var(--diff-remove-ink);
+}
+
+/* Stacked in a pane of usual width; side by side once there is room for both */
+.rv-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rv-body[hidden] {
+  display: none;
+}
+
+/* The list reserves the scrollbar strip on both sides (`scroll-edges`), so its rows sit 8px in from each
+   edge and their text at 16px, like the panel's */
+.rv-files {
+  position: relative;
+  flex: none;
+  max-height: min(34%, 232px);
+  padding-block: 4px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--line);
+  outline: none;
+}
+
+.rv-files-inner {
+  position: relative;
+}
+
+@container (min-width: 820px) {
+  .rv-body {
+    flex-direction: row;
+  }
+
+  .rv-files {
+    width: 272px;
+    max-height: none;
+    border-right: 1px solid var(--line);
+    border-bottom: 0;
+  }
+}
+
+.rv-file {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 27px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border-bottom: 1px solid transparent;
+  border-radius: var(--radius-medium);
+  background-clip: padding-box;
+  font-size: 12.5px;
+}
+
+.rv-file:hover {
+  background-color: var(--hover);
+}
+
+/* The selected file is filled and its name gets heavier, so selection is not told by color alone */
+.rv-file[aria-selected="true"] {
+  background-color: var(--list-selected);
+}
+
+.rv-files:focus-visible .rv-file[aria-selected="true"] {
+  outline: 2px solid var(--fg);
+  outline-offset: -2px;
+}
+
+.rv-file .rv-counts {
+  margin-left: auto;
+}
+
+.rv-glyph {
+  flex: none;
+  display: grid;
+}
+
+.rv-glyph[data-state="added"] {
+  color: var(--success);
+}
+
+.rv-glyph[data-state="deleted"] {
+  color: var(--critical);
+}
+
+.rv-glyph[data-state="modified"] {
+  color: var(--warning);
+}
+
+.rv-glyph[data-state="renamed"] {
+  color: var(--muted);
+}
+
+/* The folders give way first, so a long path keeps its file name whole */
+.rv-path {
+  min-width: 0;
+  display: flex;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.rv-dir,
+.rv-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rv-dir {
+  flex: 0 1000 auto;
+  color: var(--muted);
+}
+
+/* The name never gives way to its folders; only a name longer than the row is cut */
+.rv-name {
+  flex: none;
+  max-width: 100%;
+  color: var(--fg);
+}
+
+.rv-file[aria-selected="true"] .rv-name {
+  font-weight: 600;
+}
+
+.rv-file-area {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rv-head-file {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px var(--rv-gap);
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+}
+
+.rv-head-file .rv-path {
+  flex: 0 1 auto;
+}
+
+.rv-head-file .rv-counts {
+  margin-left: auto;
+  padding-left: 8px;
+}
+
+.rv-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40%;
+  overflow: hidden;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rv-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px var(--rv-gap);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* The diff: fixed rows, so only the ones in view exist. It scrolls both ways and reserves the strip on both
+   sides, so the lines run 8px in from each edge */
+.rv-lines {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  outline: none;
+}
+
+.rv-lines[hidden] {
+  display: none;
+}
+
+.rv-inner {
+  --rv-num: calc(var(--rv-digits, 3) * 1ch + 16px);
+  position: relative;
+  width: max(100%, calc(2 * var(--rv-num) + 2ch + var(--rv-cols, 0) * 1ch + 16px));
+  font: 12px / 20px var(--font-mono);
+  /* A ligature would show characters the file does not have */
+  font-variant-ligatures: none;
+}
+
+.rv-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  display: grid;
+  grid-template-columns: var(--rv-num) var(--rv-num) 2ch 1fr;
+  align-items: center;
+  white-space: pre;
+  tab-size: 4;
+}
+
+/* Code is text: it keeps the text cursor though each line is an option for the keyboard */
+.rv-row[data-kind] {
+  cursor: text;
+}
+
+.rv-row[data-kind="add"] {
+  background: var(--diff-add);
+}
+
+.rv-row[data-kind="remove"] {
+  background: var(--diff-remove);
+}
+
+.rv-num {
+  padding-right: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+  user-select: none;
+}
+
+.rv-sign {
+  text-align: center;
+  user-select: none;
+}
+
+.rv-row[data-kind="add"] :is(.rv-num, .rv-sign) {
+  color: var(--diff-add-ink);
+}
+
+.rv-row[data-kind="remove"] :is(.rv-num, .rv-sign) {
+  color: var(--diff-remove-ink);
+}
+
+.rv-code {
+  padding-right: 16px;
+}
+
+.rv-word {
+  border-radius: 2px;
+}
+
+.rv-row[data-kind="add"] .rv-word {
+  background: var(--diff-add-word);
+}
+
+.rv-row[data-kind="remove"] .rv-word {
+  background: var(--diff-remove-word);
+}
+
+.rv-hunk,
+.rv-expand {
+  grid-template-columns: calc(2 * var(--rv-num) + 2ch) 1fr;
+}
+
+.rv-hunk {
+  height: 26px;
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  color: var(--muted);
+  font-size: 11.5px;
+  cursor: text;
+}
+
+.rv-section {
+  color: var(--fg);
+}
+
+.rv-expand {
+  color: var(--muted);
+  font: 11.5px var(--font-sans);
+}
+
+.rv-expand:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.rv-fold {
+  display: grid;
+  justify-items: end;
+  padding-right: 10px;
+}
+
+/* The keyboard's line, shown only while the diff has the focus */
+.rv-lines:focus-visible .rv-row[aria-selected="true"] {
+  outline: 2px solid var(--fg);
+  outline-offset: -2px;
+}
+
+.rv-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.rv-state[hidden] {
+  display: none;
+}
+
+.rv-state strong {
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rv-state span {
+  max-width: 380px;
+  overflow-wrap: anywhere;
+}
+
+.rv-state .vbtn {
+  margin-top: 4px;
+}
+
+.review .phint {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* In a narrow pane the hints that are also on the screen give way to the keys */
+@container (max-width: 520px) {
+  .review .phint .pkey:nth-child(2) {
+    display: none;
+  }
+}

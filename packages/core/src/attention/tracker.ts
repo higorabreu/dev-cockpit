@@ -171,6 +171,8 @@ export function createAttentionTracker(options: AttentionOptions) {
         if (now - quietSince >= quietAfter) endTurn(tabId, state, quietSince, true)
       }
     },
+    // What the tab's agent last said, while it is still in the foreground
+    agent: (tabId: string): AgentState | undefined => tabs.get(tabId)?.agent,
     hasWorkingAgent: () => [...tabs.values()].some((state) => state.agent === 'working'),
     // A tab that needs the user keeps its mark until the agent moves on, even after a look
     markSeen(tabId: string) {
