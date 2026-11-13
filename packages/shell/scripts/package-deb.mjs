@@ -5,34 +5,27 @@ import { execFileSync } from 'node:child_process'
 import {
   chmodSync,
   cpSync,
-  existsSync,
   mkdirSync,
   readdirSync,
-  readFileSync,
   renameSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs'
-import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { build } from 'esbuild'
+import {
+  buildCli,
+  electronDist,
+  NAME,
+  release,
+  shell,
+  stageApp,
+  version,
+} from './package-common.mjs'
 
-const shell = join(dirname(fileURLToPath(import.meta.url)), '..')
-const repository = join(shell, '..', '..')
-const require = createRequire(import.meta.url)
-const dist = join(shell, 'dist')
-const release = join(repository, 'release')
-
-const { version } = JSON.parse(readFileSync(join(shell, 'package.json'), 'utf8'))
 const architecture = { x64: 'amd64', arm64: 'arm64' }[process.arch]
 if (!architecture) throw new Error(`arquitetura sem suporte: ${process.arch}`)
-if (!existsSync(join(dist, 'main.cjs'))) {
-  throw new Error('run `pnpm --filter @dck/shell build` first (dist does not exist)')
-}
 
-const NAME = 'dev-cockpit'
 const INSTALL = `opt/${NAME}`
 const stage = join(release, 'stage')
 const root = join(stage, INSTALL)
@@ -41,54 +34,18 @@ rmSync(stage, { recursive: true, force: true })
 mkdirSync(root, { recursive: true })
 
 // 1. The Electron already installed in the project, with the binary renamed and only the used locales
-const electronRoot = dirname(require.resolve('electron/package.json'))
-const electronDist = join(electronRoot, 'dist')
-// Electron downloads its binary on first run instead of on install, so a fresh checkout has no dist yet
-if (!existsSync(electronDist)) {
-  execFileSync(process.execPath, [join(electronRoot, 'install.js')], { stdio: 'inherit' })
-}
-cpSync(electronDist, root, { recursive: true, dereference: true })
+cpSync(electronDist(), root, { recursive: true, dereference: true })
 renameSync(join(root, 'electron'), join(root, NAME))
 rmSync(join(root, 'resources', 'default_app.asar'), { force: true })
 for (const file of readdirSync(join(root, 'locales'))) {
   if (!['en-US.pak', 'pt-BR.pak'].includes(file)) rmSync(join(root, 'locales', file))
 }
 
-// 2. The app: dist without source maps, with the package.json Electron reads on start
-const app = join(root, 'resources', 'app')
-cpSync(dist, app, {
-  recursive: true,
-  dereference: true,
-  // dist's package.json is for the build only; node-pty's and its dependencies' stay
-  filter: (source) => !source.endsWith('.map') && source !== join(dist, 'package.json'),
-})
-writeFileSync(
-  join(app, 'package.json'),
-  `${JSON.stringify(
-    {
-      name: NAME,
-      productName: 'Dev Cockpit',
-      version,
-      description: 'Guake-style terminal with a project panel',
-      main: 'main.cjs',
-    },
-    null,
-    2,
-  )}\n`,
-)
+// 2. The app
+stageApp(join(root, 'resources', 'app'))
 
-// 3. The packaged `dck` CLI, to run inside Electron itself (without nvm's Node)
-await build({
-  entryPoints: [join(repository, 'packages', 'cli', 'src', 'main.ts')],
-  outfile: join(root, 'resources', 'dck.mjs'),
-  bundle: true,
-  platform: 'node',
-  format: 'esm',
-  logLevel: 'warning',
-  banner: {
-    js: "import { createRequire as __dckRequire } from 'node:module'; const require = __dckRequire(import.meta.url);",
-  },
-})
+// 3. The packaged `dck` CLI
+await buildCli(join(root, 'resources', 'dck.mjs'))
 
 // 4. System files: command, menu entry, icons and dpkg scripts
 const write = (path, content, mode = 0o644) => {

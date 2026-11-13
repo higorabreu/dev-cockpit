@@ -3,39 +3,30 @@
 // and signs ad hoc. Only macOS's own tools (ditto, plutil, sips, iconutil, lipo, codesign, hdiutil).
 import { execFileSync } from 'node:child_process'
 import {
-  cpSync,
-  existsSync,
   mkdirSync,
   readdirSync,
-  readFileSync,
   renameSync,
   rmSync,
   statSync,
   symlinkSync,
   writeFileSync,
 } from 'node:fs'
-import { createRequire } from 'node:module'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { build } from 'esbuild'
-import { ensureSpawnHelperExecutable } from '../../adapters/node-pty/src/spawn-helper.ts'
-
-const shell = join(dirname(fileURLToPath(import.meta.url)), '..')
-const repository = join(shell, '..', '..')
-const require = createRequire(import.meta.url)
-const dist = join(shell, 'dist')
-const release = join(repository, 'release')
+import { join } from 'node:path'
+import {
+  buildCli,
+  electronDist,
+  NAME,
+  PRODUCT,
+  release,
+  shell,
+  stageApp,
+  version,
+} from './package-common.mjs'
 
 if (process.platform !== 'darwin') throw new Error('the .app can only be built on macOS')
-const { version } = JSON.parse(readFileSync(join(shell, 'package.json'), 'utf8'))
 const lipoArchitecture = { x64: 'x86_64', arm64: 'arm64' }[process.arch]
 if (!lipoArchitecture) throw new Error(`unsupported architecture: ${process.arch}`)
-if (!existsSync(join(dist, 'main.cjs'))) {
-  throw new Error('run `pnpm --filter @dck/shell build` first (dist does not exist)')
-}
 
-const NAME = 'dev-cockpit'
-const PRODUCT = 'Dev Cockpit'
 const IDENTIFIER = 'io.github.devcockpit'
 const stage = join(release, 'mac')
 const bundle = join(stage, `${PRODUCT}.app`)
@@ -51,13 +42,7 @@ rmSync(stage, { recursive: true, force: true })
 mkdirSync(stage, { recursive: true })
 
 // 1. The Electron already installed in the project; ditto keeps the frameworks' symlinks
-const electronRoot = dirname(require.resolve('electron/package.json'))
-const electronApp = join(electronRoot, 'dist', 'Electron.app')
-// Electron downloads its binary on first run instead of on install, so a fresh checkout has no dist yet
-if (!existsSync(electronApp)) {
-  execFileSync(process.execPath, [join(electronRoot, 'install.js')], { stdio: 'inherit' })
-}
-run('ditto', [electronApp, bundle])
+run('ditto', [join(electronDist(), 'Electron.app'), bundle])
 rmSync(join(resources, 'default_app.asar'))
 rmSync(join(resources, 'electron.icns'))
 
@@ -101,49 +86,22 @@ run('plutil', ['-remove', 'ElectronAsarIntegrity', plist])
 const iconset = join(stage, `${NAME}.iconset`)
 const iconSource = join(shell, 'assets', 'app-512.png')
 mkdirSync(iconset)
-for (const [size, name] of [
-  [16, '16x16'],
-  [32, '16x16@2x'],
-  [32, '32x32'],
-  [64, '32x32@2x'],
-  [128, '128x128'],
-  [256, '128x128@2x'],
-  [256, '256x256'],
-  [512, '256x256@2x'],
-  [512, '512x512'],
-]) {
-  const icon = join(iconset, `icon_${name}.png`)
-  run('sips', ['-z', String(size), String(size), iconSource, '--out', icon])
+const scale = (pixels, name) =>
+  run('sips', ['-z', String(pixels), String(pixels), iconSource, '--out', join(iconset, name)])
+for (const size of [16, 32, 128, 256, 512]) {
+  scale(size, `icon_${size}x${size}.png`)
+  // The source is 512 px, so there is no 512@2x
+  if (size < 512) scale(size * 2, `icon_${size}x${size}@2x.png`)
 }
 run('iconutil', ['-c', 'icns', iconset, '-o', join(resources, `${NAME}.icns`)])
 rmSync(iconset, { recursive: true })
 
-// 5. The app: dist without source maps, with the package.json Electron reads on start
+// 5. The app
 const app = join(resources, 'app')
-cpSync(dist, app, {
-  recursive: true,
-  dereference: true,
-  // dist's package.json is for the build only; node-pty's and its dependencies' stay
-  filter: (source) => !source.endsWith('.map') && source !== join(dist, 'package.json'),
-})
-writeFileSync(
-  join(app, 'package.json'),
-  `${JSON.stringify(
-    {
-      name: NAME,
-      productName: PRODUCT,
-      version,
-      description: 'Guake-style terminal with a project panel',
-      main: 'main.cjs',
-    },
-    null,
-    2,
-  )}\n`,
-)
+stageApp(app)
 
-// 6. node-pty: executable spawn-helper and both binaries built for this machine's architecture
+// 6. node-pty: both binaries built for this machine's architecture
 const nodePty = join(app, 'node_modules', 'node-pty')
-await ensureSpawnHelperExecutable(nodePty)
 for (const binary of ['pty.node', 'spawn-helper']) {
   const file = join(nodePty, 'build', 'Release', binary)
   const architectures = run('lipo', ['-archs', file]).trim().split(' ')
@@ -152,18 +110,8 @@ for (const binary of ['pty.node', 'spawn-helper']) {
   }
 }
 
-// 7. The packaged `dck` CLI, to run inside Electron itself (without nvm's Node)
-await build({
-  entryPoints: [join(repository, 'packages', 'cli', 'src', 'main.ts')],
-  outfile: join(resources, 'dck.mjs'),
-  bundle: true,
-  platform: 'node',
-  format: 'esm',
-  logLevel: 'warning',
-  banner: {
-    js: "import { createRequire as __dckRequire } from 'node:module'; const require = __dckRequire(import.meta.url);",
-  },
-})
+// 7. The packaged `dck` CLI
+await buildCli(join(resources, 'dck.mjs'))
 mkdirSync(join(resources, 'bin'))
 writeFileSync(
   join(resources, 'bin', 'dck'),
