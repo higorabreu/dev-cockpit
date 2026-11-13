@@ -1,3 +1,4 @@
+import { UNKNOWN_FOREGROUND } from '@dck/core'
 import { describe, expect, it } from 'vitest'
 import type { CommandRunner } from './command-runner.ts'
 import { createProcessInspector } from './process-inspector.ts'
@@ -11,6 +12,8 @@ const table = [
   '  4180  4180 claude          ',
   `  ${other}  ${other} zsh`,
   '  4300     0 Code Helper     ',
+  '  4400  4410 zsh',
+  '  4410  4410 Code Helper     ',
   '',
 ].join('\n')
 
@@ -27,6 +30,17 @@ const recorder = (outputs: { lsof?: string; ps?: string }) => {
   }
   return { inspector: createProcessInspector(run, 0), calls }
 }
+
+// Recorded with `LC_ALL=C lsof -b -w -a -d cwd -Fn`, as an app opened from Finder runs it
+const escapedLsof = [
+  'p4100',
+  'fcwd',
+  'n/Users/ana/projetos/a\\xc3\\xa7\\xc3\\xa3o com espa\\xc3\\xa7o',
+  'p4200',
+  'fcwd',
+  'n/Users/ana/back\\\\slash/nl\\nline\\ttab',
+  '',
+].join('\n')
 
 describe('createProcessInspector', () => {
   it('should return the directory and the foreground command when the shell runs one', async () => {
@@ -61,7 +75,10 @@ describe('createProcessInspector', () => {
     const [first, second] = await Promise.all([inspector.inspect(shell), inspector.inspect(other)])
 
     expect([first?.foreground, second?.foreground]).toEqual(['claude', 'zsh'])
-    expect(calls).toEqual([`lsof -a -d cwd -Fn -p ${shell},${other}`, 'ps -axo pid=,tpgid=,ucomm='])
+    expect(calls).toEqual([
+      `lsof -b -w -a -d cwd -Fn -p ${shell},${other}`,
+      'ps -axo pid=,tpgid=,ucomm=',
+    ])
   })
 
   it('should return undefined when the process no longer exists', async () => {
@@ -80,7 +97,7 @@ describe('createProcessInspector', () => {
 
     const info = await inspector.inspect(shell)
 
-    expect(info).toEqual({ cwd: '/Users/ana', foreground: 'desconhecido', foregroundPid: 4180 })
+    expect(info).toEqual({ cwd: '/Users/ana', foreground: UNKNOWN_FOREGROUND, foregroundPid: 4180 })
   })
 
   it('should keep the directory without a foreground pid when the process has no terminal', async () => {
@@ -88,6 +105,83 @@ describe('createProcessInspector', () => {
 
     const info = await inspector.inspect(4300)
 
-    expect(info).toEqual({ cwd: '/', foreground: 'desconhecido' })
+    expect(info).toEqual({ cwd: '/', foreground: UNKNOWN_FOREGROUND })
+  })
+
+  it('should decode the escaped bytes when lsof prints an accented folder', async () => {
+    const { inspector } = recorder({ lsof: escapedLsof, ps: table })
+
+    const [accented, controls] = await Promise.all([
+      inspector.inspect(shell),
+      inspector.inspect(other),
+    ])
+
+    expect(accented?.cwd).toBe('/Users/ana/projetos/ação com espaço')
+    expect(controls?.cwd).toBe('/Users/ana/back\\slash/nl\nline\ttab')
+  })
+
+  it('should keep the spaces when the folder and the foreground name have them', async () => {
+    const { inspector } = recorder({
+      lsof: lsof({ 4400: '/Users/ana/my projects/acme' }),
+      ps: table,
+    })
+
+    const info = await inspector.inspect(4400)
+
+    expect(info).toEqual({
+      cwd: '/Users/ana/my projects/acme',
+      foreground: 'Code Helper',
+      foregroundPid: 4410,
+    })
+  })
+
+  it('should keep the directory with an unknown command when the pid leaves before ps runs', async () => {
+    const { inspector } = recorder({ lsof: lsof({ 4500: '/Users/ana' }), ps: table })
+
+    const info = await inspector.inspect(4500)
+
+    expect(info).toEqual({ cwd: '/Users/ana', foreground: UNKNOWN_FOREGROUND })
+  })
+
+  it('should resolve every caller with undefined when a command rejects', async () => {
+    const run: CommandRunner = async () => {
+      throw new Error('spawn failed')
+    }
+    const inspector = createProcessInspector(run, 0)
+
+    const infos = await Promise.all([inspector.inspect(shell), inspector.inspect(other)])
+
+    expect(infos).toEqual([undefined, undefined])
+  })
+
+  it('should resolve with undefined when a command never settles past the deadline', async () => {
+    const run: CommandRunner = () => new Promise(() => undefined)
+    const inspector = createProcessInspector(run, 0, 5)
+
+    const info = await inspector.inspect(shell)
+
+    expect(info).toBeUndefined()
+  })
+
+  it('should answer each batch with its own output when two batches overlap', async () => {
+    let release = () => undefined as void
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const run: CommandRunner = async (command, args) => {
+      if (command === 'ps') return table
+      const pid = Number(args.at(-1))
+      if (pid === shell) await held
+      return lsof({ [pid]: pid === shell ? '/Users/ana/projects/acme' : '/Users/ana' })
+    }
+    const inspector = createProcessInspector(run, 0)
+
+    const first = inspector.inspect(shell)
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    const second = await inspector.inspect(other)
+    release()
+
+    expect(second).toEqual({ cwd: '/Users/ana', foreground: 'zsh', foregroundPid: other })
+    expect((await first)?.foreground).toBe('claude')
   })
 })
