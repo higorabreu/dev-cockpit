@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs'
+import { realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
@@ -232,6 +233,12 @@ app.whenReady().then(async () => {
       processes: createProcessInspector(),
       compose: createComposeInspector({ stopAt: homedir() }),
     }),
+    files: {
+      stat: (path) => stat(path),
+      realpath: (path) => realpath(path),
+      openPath: (path) => electronShell.openPath(path),
+      showItemInFolder: (path) => electronShell.showItemInFolder(path),
+    },
     notifier: createElectronNotifier(
       {
         isSupported: () => Notification.isSupported(),

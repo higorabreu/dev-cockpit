@@ -506,3 +506,20 @@ running, not as an ordinary command.
 2026-11-13.
 **How to revert:** drop `connect` from the profile and the hint from Sessions; the marks do not depend on
 them.
+
+## D40. Paths in the terminal open with Ctrl+click, and nothing they point at is run
+
+**Decision:** a file or folder path printed in a terminal (absolute, `~/`, or relative with a slash or an
+extension, with an optional `:line[:col]`, also inside quotes and parentheses, never inside an address)
+becomes a link only when it exists. The window finds the candidates with an xterm link provider when a line
+is hovered and asks the host once per line through `paths.resolve` (at most 50 paths of at most 1024
+characters, the tab's directory as the base, `~` expanded by the host, answers cached for 2 s). Ctrl+click
+(Cmd on macOS) on a file opens it with the default app through `paths.openFile`; on a folder it opens the
+tab menu with "Open in a new tab" and "Open in the file manager" (`paths.openFolder`). The host re-checks the
+real file before opening: a file with any execute bit, or whose name or link target ends in a launcher or
+installer extension (`.desktop`, `.sh`, `.AppImage`, `.exe`, `.app` and the rest in
+`shell/src/electron/terminal-paths.ts`), is only shown in its folder (`showItemInFolder`). A refused request
+is logged by kind, never by path.
+**Reason:** a request from the maintainer on 2026-11-13; terminal output is not trusted, and the default
+app of a launcher or a script runs it.
+**How to revert:** drop `attachPaths` from the terminal session and the `paths` channels from the bridge.

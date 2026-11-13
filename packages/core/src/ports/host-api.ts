@@ -16,6 +16,15 @@ export interface PtyCreateOptions {
   readonly cwd?: string
 }
 
+// What a path printed in a terminal is on disk; anything that is neither a file nor a folder is `missing`
+export type PathKind = 'file' | 'dir' | 'missing'
+
+export interface ResolvedPath {
+  // Absolute, with `~` and the base directory applied by the host
+  readonly path: string
+  readonly kind: PathKind
+}
+
 // What the UI can ask the main process; the preload exposes this as window.dck
 export interface HostApi {
   readonly pty: {
@@ -61,6 +70,14 @@ export interface HostApi {
     open(url: string): void
     // Any http or https link the user Ctrl+clicked in a terminal; anything else is refused
     openLink(url: string): void
+  }
+  readonly paths: {
+    // Paths printed in a terminal, in order; relative ones against `base`, the tab's directory
+    resolve(base: string | undefined, paths: readonly string[]): Promise<readonly ResolvedPath[]>
+    // With the system's default app; a file that could run is only shown in its folder
+    openFile(path: string): void
+    // In the system's file manager
+    openFolder(path: string): void
   }
   readonly autostart: {
     isEnabled(): Promise<boolean>
@@ -111,6 +128,9 @@ export const hostChannels = {
   connectionsGitlabDisconnect: 'connections:gitlab:disconnect',
   externalOpen: 'external:open',
   externalOpenLink: 'external:open-link',
+  pathsResolve: 'paths:resolve',
+  pathsOpenFile: 'paths:open-file',
+  pathsOpenFolder: 'paths:open-folder',
   viewsSnapshot: 'views:snapshot',
   viewsRefresh: 'views:refresh',
   viewsChanged: 'views:changed',

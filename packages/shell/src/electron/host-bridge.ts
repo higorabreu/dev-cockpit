@@ -1,3 +1,4 @@
+import { isAbsolute } from 'node:path'
 import {
   type AgentProfile,
   type Autostart,
@@ -20,6 +21,7 @@ import {
 } from '@dck/core'
 import { z } from 'zod'
 import type { ViewsGateway } from '../daemon/views-gateway.ts'
+import { createTerminalPaths, type TerminalFiles } from './terminal-paths.ts'
 
 // Each field's value is validated and corrected by the settings model itself
 const patchSchema = z.record(z.string(), z.unknown())
@@ -71,6 +73,22 @@ function schemeOf(input: unknown): string {
   return (typeof input === 'string' && URL.parse(input)?.protocol) || 'invalid'
 }
 
+// Paths come from terminal output: few per call, short, no NUL, and the base and targets absolute
+const MAX_PATHS_PER_CALL = 50
+const MAX_CANDIDATE_LENGTH = 1024
+const MAX_ABSOLUTE_LENGTH = 4096
+const pathText = (max: number) =>
+  z
+    .string()
+    .min(1)
+    .max(max)
+    .refine((text) => !text.includes('\0'))
+const absolutePathSchema = pathText(MAX_ABSOLUTE_LENGTH).refine((text) => isAbsolute(text))
+const resolvePathsSchema = z.object({
+  base: absolutePathSchema.optional(),
+  paths: z.array(pathText(MAX_CANDIDATE_LENGTH)).max(MAX_PATHS_PER_CALL),
+})
+
 export interface IpcMainApi {
   handle(channel: string, listener: (event: unknown, ...args: never[]) => unknown): void
   on(channel: string, listener: (event: unknown, ...args: never[]) => void): void
@@ -92,6 +110,7 @@ export interface BridgeOptions {
   // Opens in the system browser; `allowedOrigin` is the connected GitLab's origin, if any, and only limits `open`
   readonly external: { open(url: string): void; allowedOrigin(): string | null }
   readonly environment: { status(pid: number): Promise<ComposeStatus> }
+  readonly files: TerminalFiles
   readonly sessions: {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
@@ -108,6 +127,7 @@ export interface BridgeOptions {
 export function registerHostBridge(options: BridgeOptions) {
   const { ipcMain, ptyHost, clipboard, logger, send } = options
   const sessions = new Map<number, PtySession>()
+  const paths = createTerminalPaths({ files: options.files, home: options.home, logger })
   let nextId = 1
 
   ipcMain.handle(hostChannels.ptyCreate, (_event, create: PtyCreateOptions) => {
@@ -174,6 +194,22 @@ export function registerHostBridge(options: BridgeOptions) {
     if (parsed.success && parsed.data) options.external.open(parsed.data.href)
     else logger.warn('terminal link refused', { scheme: schemeOf(url) })
   })
+  ipcMain.handle(hostChannels.pathsResolve, (_event, request: unknown) => {
+    const parsed = resolvePathsSchema.safeParse(request)
+    if (parsed.success) return paths.resolve(parsed.data.base, parsed.data.paths)
+    logger.warn('terminal path request refused', { kind: 'resolve' })
+    return []
+  })
+  const openRequest =
+    (kind: 'file' | 'dir', open: (path: string) => Promise<void>) =>
+    (_event: unknown, path: unknown) => {
+      const parsed = absolutePathSchema.safeParse(path)
+      if (parsed.success) return open(parsed.data)
+      logger.warn('terminal path request refused', { kind })
+      return undefined
+    }
+  ipcMain.on(hostChannels.pathsOpenFile, openRequest('file', paths.openFile))
+  ipcMain.on(hostChannels.pathsOpenFolder, openRequest('dir', paths.openFolder))
   ipcMain.handle(hostChannels.viewsSnapshot, (_event, view: unknown) => {
     const parsed = viewRequestSchema.shape.view.safeParse(view)
     return parsed.success ? options.views.snapshot(parsed.data) : undefined

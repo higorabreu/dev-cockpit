@@ -99,6 +99,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const nativeMiddlePaste = navigator.platform.startsWith('Linux')
   const notice = createNotice(elements.notice, i18n)
   const menu = createTabMenu(elements.menu)
+  const modifierName = linkModifier === 'meta' ? 'Cmd' : 'Ctrl'
   let state: TabsState = emptyTabs
   let theme = themeFor(settings.current().theme)
   let counter = 0
@@ -387,8 +388,14 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       nativeMiddlePaste,
       links: {
         modifier: linkModifier,
-        keyLabel: () =>
-          i18n.t('terminal.openLink', { modifier: linkModifier === 'meta' ? 'Cmd' : 'Ctrl' }),
+        keyLabel: () => i18n.t('terminal.openLink', { modifier: modifierName }),
+        tip: setTipRegion,
+      },
+      paths: {
+        modifier: linkModifier,
+        keyLabel: () => i18n.t('terminal.openPath', { modifier: modifierName }),
+        cwd: () => watcher.get(id)?.cwd,
+        openFolder: (path, x, y) => openFolderMenu(id, path, x, y),
         tip: setTipRegion,
       },
       onCopied: (text) => notice.copied(text),
@@ -401,6 +408,28 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     sessions.set(id, session)
     if (options.project) projectTabs.set(options.project, id)
     update(openTab(state, { id, label: options.label ?? i18n.t('tabs.default', { n: counter }) }))
+  }
+
+  // A folder Ctrl+clicked in a terminal: a tab there or the file manager; the focus returns to that terminal
+  function openFolderMenu(tabId: string, path: string, x: number, y: number) {
+    menu.open(
+      [
+        {
+          label: i18n.t('terminal.openInNewTab'),
+          enabled: true,
+          run: () => void open({ cwd: path }),
+        },
+        {
+          label: i18n.t('terminal.openInFileManager'),
+          enabled: true,
+          run: () => api.paths.openFolder(path),
+        },
+      ],
+      x,
+      y,
+      false,
+      () => sessions.get(tabId)?.focus(),
+    )
   }
 
   async function duplicate(id: string) {

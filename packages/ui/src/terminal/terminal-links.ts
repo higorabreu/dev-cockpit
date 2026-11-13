@@ -48,27 +48,40 @@ export function linkBox(range: CellRange, view: ViewportCells, screen: TipBox): 
   }
 }
 
+type Tip = LinkOptions['tip']
+
+// The tooltip of a link drawn in the terminal sits over its cells, like one over an element
+export function showLinkTip(
+  terminal: Terminal,
+  tip: Tip,
+  range: CellRange,
+  text: string,
+  key: string,
+) {
+  const owner = terminal.element
+  const screen = owner?.querySelector('.xterm-screen')
+  if (!owner || !screen) return
+  const view = {
+    viewportY: terminal.buffer.active.viewportY,
+    cols: terminal.cols,
+    rows: terminal.rows,
+  }
+  tip(owner, { text, key, box: linkBox(range, view, screen.getBoundingClientRect()) })
+}
+
+export function hideLinkTip(terminal: Terminal, tip: Tip) {
+  if (terminal.element) tip(terminal.element, undefined)
+}
+
 // Plain addresses (web links addon) and OSC 8 hyperlinks share one activation and one tooltip
 export function attachLinks(terminal: Terminal, options: LinkOptions) {
   const activate = (event: MouseEvent, url: string) => {
     if (opensLink(event, options.modifier)) options.open(url)
   }
   // The text of an OSC 8 link may differ from its target: the tooltip shows the target
-  const hover = (_event: MouseEvent, url: string, range: CellRange) => {
-    const owner = terminal.element
-    const screen = owner?.querySelector('.xterm-screen')
-    if (!owner || !screen) return
-    const view = {
-      viewportY: terminal.buffer.active.viewportY,
-      cols: terminal.cols,
-      rows: terminal.rows,
-    }
-    const box = linkBox(range, view, screen.getBoundingClientRect())
-    options.tip(owner, { text: url, key: options.keyLabel(), box })
-  }
-  const leave = () => {
-    if (terminal.element) options.tip(terminal.element, undefined)
-  }
+  const hover = (_event: MouseEvent, url: string, range: CellRange) =>
+    showLinkTip(terminal, options.tip, range, url, options.keyLabel())
+  const leave = () => hideLinkTip(terminal, options.tip)
 
   terminal.options.linkHandler = { activate, hover, leave }
   terminal.loadAddon(new WebLinksAddon(activate, { hover, leave }))

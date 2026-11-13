@@ -101,6 +101,9 @@ export const ptBR = {
 
   'terminal.exited': '[processo encerrado]',
   'terminal.openLink': '{modifier}+clique',
+  'terminal.openPath': '{modifier}+clique para abrir',
+  'terminal.openInNewTab': 'Abrir em uma nova aba',
+  'terminal.openInFileManager': 'Abrir no gerenciador de arquivos',
 
   'projects.search': 'Buscar projeto',
   'projects.none': 'Nenhum projeto encontrado',

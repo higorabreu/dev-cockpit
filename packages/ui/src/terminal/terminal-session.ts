@@ -5,6 +5,7 @@ import { Terminal } from '@xterm/xterm'
 import { terminalTheme } from '../platform/theme.ts'
 import { attachClipboard } from './clipboard-behavior.ts'
 import { attachLinks, type LinkOptions } from './terminal-links.ts'
+import { attachPaths, type PathLinkOptions } from './terminal-paths.ts'
 
 export interface TerminalSession {
   readonly element: HTMLElement
@@ -26,6 +27,8 @@ export interface SessionOptions {
   readonly fontSize: number
   readonly cwd?: string
   readonly exitedText: string
+  // How a file or folder path printed in the terminal opens; the host checks it on disk
+  readonly paths: Omit<PathLinkOptions, 'resolve' | 'openFile'>
   // How a link printed in the terminal opens and shows its tooltip
   readonly links: Omit<LinkOptions, 'open'>
   readonly nativeMiddlePaste: boolean
@@ -51,6 +54,11 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   const fit = new FitAddon()
   terminal.loadAddon(fit)
   terminal.open(element)
+  attachPaths(terminal, {
+    ...options.paths,
+    resolve: (base, paths) => api.paths.resolve(base, paths),
+    openFile: (path) => api.paths.openFile(path),
+  })
 
   attachLinks(terminal, { ...options.links, open: (url) => api.external.openLink(url) })
   const clipboard = attachClipboard(terminal, element, api.clipboard, options.onCopied, {
