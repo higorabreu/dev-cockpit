@@ -49,6 +49,7 @@ import { buildTrayMenu } from './electron/tray-menu.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
+import { activateOnFocus, anchorPanel, buildAppMenu } from './platform/darwin/panel-window.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
 import { selectPlatform } from './platform/select-platform.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
@@ -115,7 +116,9 @@ app.whenReady().then(async () => {
   const loaded = await settingsStore.load()
   logger.info('settings loaded', { fresh: loaded.fresh, locked: loaded.locked })
 
+  const mac = process.platform === 'darwin'
   const window = new BrowserWindow({
+    type: mac ? 'panel' : undefined,
     show: false,
     frame: false,
     alwaysOnTop: true,
@@ -129,7 +132,10 @@ app.whenReady().then(async () => {
       nodeIntegration: false,
     },
   })
-  window.setVisibleOnAllWorkspaces(true)
+  if (mac) {
+    anchorPanel(window)
+    app.dock?.hide()
+  } else window.setVisibleOnAllWorkspaces(true)
   // Page content never opens an Electron window nor leaves the app; links go to the browser through the host
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
@@ -141,11 +147,17 @@ app.whenReady().then(async () => {
   const dockWindow = createElectronDockWindow(window, {
     onShown: () => window.webContents.send(hostChannels.windowShown),
   })
+  const focusedDockWindow = mac
+    ? activateOnFocus(dockWindow, () => {
+        app.focus({ steal: true })
+        window.webContents.focus()
+      })
+    : dockWindow
   const traceDock = process.env.DCK_LOG_DOCK === '1'
 
   const dock = createDockController({
     screen: traceDock ? logScreen(electronScreen, logger) : electronScreen,
-    window: traceDock ? logDockWindow(dockWindow, logger) : dockWindow,
+    window: traceDock ? logDockWindow(focusedDockWindow, logger) : focusedDockWindow,
     scheduler: {
       after(milliseconds, task) {
         const timer = setTimeout(task, milliseconds)
@@ -360,6 +372,29 @@ app.whenReady().then(async () => {
     })
   }
 
+  // Read on every menu build: the language can change in settings while the app is open
+  const t = ((key, params) => {
+    const { language } = settingsStore.get().settings
+    return createTranslator(
+      language === 'auto' ? pickLocale(app.getPreferredSystemLanguages()) : language,
+    ).t(key, params)
+  }) as Translate
+  const openSettings = () => {
+    dock.show()
+    window.webContents.send(hostChannels.windowOpenSettings)
+  }
+
+  if (mac) {
+    const refreshAppMenu = () =>
+      Menu.setApplicationMenu(
+        Menu.buildFromTemplate(buildAppMenu({ t, openSettings, quit: () => app.quit() })),
+      )
+    refreshAppMenu()
+    settingsStore.onChange((_settings, changed) => {
+      if (changed.includes('language')) refreshAppMenu()
+    })
+  }
+
   // DCK_NO_TRAY exists so automated tests do not flash icons in the user's bar
   if (!process.env.DCK_NO_TRAY) {
     const statusIcons = createElectronStatusIcon(
@@ -371,18 +406,9 @@ app.whenReady().then(async () => {
     )
     const menuDeps = {
       toggleWindow: () => dock.toggle(),
-      openSettings: () => {
-        dock.show()
-        window.webContents.send(hostChannels.windowOpenSettings)
-      },
+      openSettings,
       autostart: platform.autostart,
-      // Read on every menu build: the language can change in settings while the app is open
-      t: ((key, params) => {
-        const { language } = settingsStore.get().settings
-        return createTranslator(
-          language === 'auto' ? pickLocale(app.getPreferredSystemLanguages()) : language,
-        ).t(key, params)
-      }) as Translate,
+      t,
       quit: () => app.quit(),
       onChange: () => void refreshTrayMenu(),
     }

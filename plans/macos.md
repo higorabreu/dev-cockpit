@@ -95,7 +95,7 @@ The order is meant to bring the tester in as late as possible and once per batch
   for the user's own processes). An injected executor like `docker-cli`'s. The real outputs recorded by
   the tester in MAC-T1 become the test files. Measure the cost of `lsof` and, if it goes past a few tens of
   ms, cache by pid or try `pty.process` from `node-pty` for the name. (C4)
-- [ ] MAC-T5. The anchored window on the Mac, in `shell/src/electron/dock-window.ts` and `main.ts`, only
+- [x] MAC-T5. The anchored window on the Mac, in `shell/src/electron/dock-window.ts` and `main.ts`, only
   when `platform === 'darwin'`: `type: 'panel'`, `setAlwaysOnTop(true, 'screen-saver')`,
   `setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true })`,
   no Dock (`LSUIElement` in `Info.plist`, `app.dock?.hide()` in dev mode) and keyboard focus on show (a panel
@@ -114,7 +114,8 @@ The order is meant to bring the tester in as late as possible and once per batch
   (`metaKey` on the Mac, `ctrlKey` elsewhere), with the table of Q3. In `xterm.js`, `macOptionIsMeta: true`.
   The `data-tip-key` formatter shows `⌘ ⇧ ⌥ ⌃` on the Mac. A new shortcut is born with its mouse path, as
   `AGENTS.md` already says. Tests with fake events; one of them pins that `Option+1` does not become
-  another character. (C7)
+  another character. (C7) The macOS app menu from T5 has no Edit menu yet, so Cmd+C/V/X/A/Z do not work in
+  inputs or the terminal; add the Edit roles together with the Q3 table.
 - [ ] MAC-T8. Autostart: `shell/src/platform/darwin/launchd-autostart.ts` with the same shape as
   `createXdgAutostart`: writes `~/Library/LaunchAgents/<label>.plist` (`RunAtLoad`, `ProgramArguments`,
   `EnvironmentVariables` with `DCK_START_HIDDEN`) atomically; turning on and off creates and deletes the
