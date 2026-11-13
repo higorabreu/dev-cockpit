@@ -167,9 +167,9 @@ The order is meant to bring the tester in as late as possible and once per batch
   monitor, restart and check autostart, close and `dck toggle`. Measurements with `DCK_LOG_DOCK=1`,
   `ps -o rss` of the app and the daemon and the cold start time. Problems come back grouped by round.
   (C5, C6, C9, C10)
-- [ ] MAC-T13. Close: a new decision in `docs/decisions.md` that records the port as built (the window, secret
-  store and PATH choices; D42 is the spike's), the "macOS packaging" item leaves the backlog of
-  `docs/roadmap.md`, a Mac section in the `README` and check the full gate. (C11)
+- [ ] MAC-T13. Close: a new decision in `docs/decisions.md`, with the next free number when it is written (D42
+  is the spike's), for the port, window, secret store and PATH choices; the "macOS packaging" item leaves
+  the backlog of `docs/roadmap.md`, a Mac section in the `README` and check the full gate. (C11)
 - [ ] MAC-T14. Optional, only if Q4 asks for distribution: a Developer ID certificate, signing with the hardened
   runtime on every nested executable (`pty.node`, `spawn-helper`, Electron's helpers), notarization
   (`@electron/notarize`), secrets in CI, manual update by download.

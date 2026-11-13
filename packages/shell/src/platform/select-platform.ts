@@ -38,6 +38,10 @@ export interface Platform {
   readonly window: PlatformWindow
 }
 
+// Exported so a test can check which adapter a platform gets without inspecting the system
+export const processAdapters = (platform: NodeJS.Platform) =>
+  platform === 'darwin' ? macosProc : linuxProc
+
 // macOS still gets the Linux secret store and autostart until MAC-T3 and T8 replace them
 export function selectPlatform(context: PlatformContext): Platform {
   const { platform, env, home, packaged, execPath, appPath, resourcesPath, logger } = context
@@ -46,7 +50,7 @@ export function selectPlatform(context: PlatformContext): Platform {
   // A Linux workaround for Chromium's sandbox helper; the Mac runs with the sandbox
   const sandbox = platform === 'linux' ? ['--no-sandbox'] : []
   const app = packaged ? [execPath] : [execPath, appPath]
-  const proc = platform === 'darwin' ? macosProc : linuxProc
+  const proc = processAdapters(platform)
 
   return {
     processes: proc.createProcessInspector(),
