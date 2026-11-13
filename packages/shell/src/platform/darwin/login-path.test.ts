@@ -74,20 +74,55 @@ describe('readLoginPath', () => {
   })
 
   it.each([
-    { when: 'the marks are missing', output: '/opt/homebrew/bin:/usr/bin' },
-    { when: 'an entry is relative', output: '__DCK_PATH__/usr/bin:bin__DCK_PATH__' },
-    { when: 'an entry is empty', output: '__DCK_PATH__/usr/bin::/bin__DCK_PATH__' },
-    { when: 'the value has a line break', output: '__DCK_PATH__/usr/bin\n/bin__DCK_PATH__' },
-  ])('should return nothing and warn when $when', async ({ output }) => {
+    {
+      when: 'an entry is relative',
+      output: '__DCK_PATH__/usr/bin:bin__DCK_PATH__',
+      path: '/usr/bin',
+      dropped: 1,
+    },
+    {
+      when: 'entries are empty',
+      output: '__DCK_PATH__:/usr/bin::/bin:__DCK_PATH__',
+      path: '/usr/bin:/bin',
+      dropped: 3,
+    },
+    {
+      when: 'an entry has a line break',
+      output: '__DCK_PATH__/opt/homebrew/bin:/usr/bin\n/bin__DCK_PATH__',
+      path: '/opt/homebrew/bin',
+      dropped: 1,
+    },
+  ])(
+    'should keep the valid entries and warn with the count when $when',
+    async ({ output, path, dropped }) => {
+      // Arrange
+      const { deps: options, warnings, contexts } = deps(async () => printed(output))
+
+      // Act
+      const result = await readLoginPath(options)
+
+      // Assert
+      expect(result).toBe(path)
+      expect(warnings).toEqual(['login shell PATH entries dropped'])
+      expect(contexts).toEqual([{ shell: '/bin/zsh', dropped }])
+    },
+  )
+
+  it.each([
+    { when: 'the marks are missing', output: '/opt/homebrew/bin:/usr/bin', dropped: 1 },
+    { when: 'the closing mark is missing', output: '__DCK_PATH__/opt/homebrew/bin', dropped: 1 },
+    { when: 'every entry is invalid', output: '__DCK_PATH__bin::sbin__DCK_PATH__', dropped: 3 },
+  ])('should return nothing and warn when $when', async ({ output, dropped }) => {
     // Arrange
-    const { deps: options, warnings } = deps(async () => printed(output))
+    const { deps: options, warnings, contexts } = deps(async () => printed(output))
 
     // Act
     const path = await readLoginPath(options)
 
     // Assert
     expect(path).toBeUndefined()
-    expect(warnings).toEqual(['login shell PATH is not valid, keeping the inherited one'])
+    expect(warnings).toEqual(['login shell PATH has no valid entry, keeping the inherited one'])
+    expect(contexts).toEqual([{ shell: '/bin/zsh', dropped }])
   })
 })
 

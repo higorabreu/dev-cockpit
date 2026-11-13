@@ -78,8 +78,18 @@ export async function readLoginPath(deps: LoginPathDeps): Promise<string | undef
     })
     return undefined
   }
-  const path = result.output.split(MARK)[1] ?? ''
-  if (path.split(':').every((entry) => ABSOLUTE_ENTRY.test(entry))) return path
-  logger.warn('login shell PATH is not valid, keeping the inherited one', { shell })
-  return undefined
+  const parts = result.output.split(MARK)
+  const entries = (parts.length > 2 ? (parts[1] ?? '') : '').split(':')
+  // One stray entry (an empty one from a trailing colon, say) should not cost the whole PATH
+  const valid = entries.filter((entry) => ABSOLUTE_ENTRY.test(entry))
+  const dropped = entries.length - valid.length
+  if (valid.length === 0) {
+    logger.warn('login shell PATH has no valid entry, keeping the inherited one', {
+      shell,
+      dropped,
+    })
+    return undefined
+  }
+  if (dropped > 0) logger.warn('login shell PATH entries dropped', { shell, dropped })
+  return valid.join(':')
 }
