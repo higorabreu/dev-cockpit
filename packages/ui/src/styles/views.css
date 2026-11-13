@@ -41,6 +41,8 @@
   display: flex;
   gap: 4px;
   margin-right: auto;
+  /* One tab's height, so the header does not move when no account is connected and there is no tab */
+  min-height: calc(1lh + 8px);
 }
 
 .vtab {
@@ -102,6 +104,22 @@
 .vtab:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 1px;
+}
+
+.vheading {
+  margin: 0 auto 0 0;
+  padding: 4px 10px;
+  color: var(--fg);
+  font: inherit;
+  font-weight: 600;
+}
+
+.vtabs[hidden],
+.vheading[hidden],
+.vstatus[hidden],
+.vbar[hidden],
+.vbtn[hidden] {
+  display: none;
 }
 
 .vbar {

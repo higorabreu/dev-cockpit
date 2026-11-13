@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { MergeRequestSummary } from '../ports/code-review.ts'
-import { filterMergeRequests, hasPending, visibleRange } from './list.ts'
+import type { ViewItem } from '../ports/views.ts'
+import { filterViewItems, hasPending, visibleRange } from './list.ts'
 
-const mr = (number: number, extra: Partial<MergeRequestSummary> = {}): MergeRequestSummary => ({
+type MergeRequestItem = Extract<ViewItem, { kind: 'mergeRequest' }>
+
+const mr = (number: number, extra: Partial<MergeRequestItem> = {}): MergeRequestItem => ({
+  kind: 'mergeRequest',
   id: `g/p!${number}`,
   number,
   title: `Feature ${number}`,
@@ -33,7 +36,7 @@ describe('hasPending', () => {
   })
 })
 
-describe('filterMergeRequests', () => {
+describe('filterViewItems', () => {
   const items = [
     mr(1),
     mr(2, { hasConflicts: true }),
@@ -41,21 +44,44 @@ describe('filterMergeRequests', () => {
   ]
 
   it('should keep the given order when there is no query', () => {
-    expect(filterMergeRequests(items, '', false).map((item) => item.number)).toEqual([1, 2, 3])
+    expect(filterViewItems(items, '', false).map((item) => item.id)).toEqual([
+      'g/p!1',
+      'g/p!2',
+      'g/p!3',
+    ])
   })
 
   it('should keep only the pending ones when asked to', () => {
-    expect(filterMergeRequests(items, '', true).map((item) => item.number)).toEqual([2])
+    expect(filterViewItems(items, '', true).map((item) => item.id)).toEqual(['g/p!2'])
   })
 
   it('should match the author, the title or the number when typing', () => {
-    expect(filterMergeRequests(items, 'bruno', false).map((item) => item.number)).toEqual([3])
-    expect(filterMergeRequests(items, 'login', false).map((item) => item.number)).toEqual([3])
-    expect(filterMergeRequests(items, '!2', false).map((item) => item.number)).toEqual([2])
+    expect(filterViewItems(items, 'bruno', false).map((item) => item.id)).toEqual(['g/p!3'])
+    expect(filterViewItems(items, 'login', false).map((item) => item.id)).toEqual(['g/p!3'])
+    expect(filterViewItems(items, '!2', false).map((item) => item.id)).toEqual(['g/p!2'])
   })
 
   it('should return nothing when no merge request matches', () => {
-    expect(filterMergeRequests(items, 'zzzz', false)).toEqual([])
+    expect(filterViewItems(items, 'zzzz', false)).toEqual([])
+  })
+
+  it('should match an issue by key, summary, type or status and never count it as pending', () => {
+    const issue: ViewItem = {
+      kind: 'issue',
+      id: '10001',
+      key: 'ACME-12',
+      summary: 'Export the report',
+      url: 'https://acme.example.com/browse/ACME-12',
+      project: 'ACME',
+      type: 'Bug',
+      status: 'In Review',
+      statusCategory: 'progress',
+      updatedAt: '2026-11-11T10:00:00Z',
+    }
+
+    expect(filterViewItems([issue], 'acme-12', false)).toEqual([issue])
+    expect(filterViewItems([issue], 'review', false)).toEqual([issue])
+    expect(filterViewItems([issue], '', true)).toEqual([])
   })
 })
 

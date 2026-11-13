@@ -1,8 +1,8 @@
 import {
+  type ConnectionFields,
   type ErrorBody,
   errorCodeOf,
   type Logger,
-  type MergeRequestView,
   type Result,
   type ViewSnapshot,
   viewSnapshotSchema,
@@ -14,10 +14,10 @@ export interface ViewsGatewayDeps {
 }
 
 export interface ViewsGateway {
-  snapshot(view: MergeRequestView): Promise<ViewSnapshot | undefined>
-  refresh(view: MergeRequestView, maxAgeMs?: number): Promise<ViewSnapshot | undefined>
-  // The account's address; null when there is no connection
-  configure(url: string | null): Promise<void>
+  snapshot(view: string): Promise<ViewSnapshot | undefined>
+  refresh(view: string, maxAgeMs?: number): Promise<ViewSnapshot | undefined>
+  // One connector's account; null when it is not connected or its extension is disabled
+  configure(connector: string, account: ConnectionFields | null): Promise<void>
   // For what the daemon publishes without being asked
   parse(data: unknown): ViewSnapshot | undefined
 }
@@ -54,10 +54,10 @@ export function createViewsGateway(deps: ViewsGatewayDeps): ViewsGateway {
   return {
     snapshot: (view) => ask('views.snapshot', { view }),
     refresh: (view, maxAgeMs) => ask('views.refresh', { view, maxAgeMs }),
-    async configure(url) {
-      const result = await deps.request('views.configure', { url })
+    async configure(connector, account) {
+      const result = await deps.request('views.configure', { connector, account })
       if (!result.ok)
-        logger.warn('could not configure the views', { code: result.error.data?.code })
+        logger.warn('could not configure the views', { connector, code: result.error.data?.code })
     },
     parse,
   }

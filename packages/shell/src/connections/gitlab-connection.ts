@@ -3,11 +3,11 @@ import {
   type ConnectionStatus,
   type ErrorBody,
   errorCodeOf,
-  type GitLabConnection,
   type Logger,
   parseServerUrl,
   type SecretStore,
 } from '@dck/core'
+import type { ConnectionService } from './connector-connections.ts'
 
 export interface GitLabConnectionDeps {
   readonly secrets: SecretStore
@@ -21,12 +21,7 @@ export interface GitLabConnectionDeps {
   readonly logger: Logger
 }
 
-export interface GitLabConnectionService extends GitLabConnection {
-  // The address was erased another way (file, restore all): the token is not left orphaned
-  forgetToken(): Promise<void>
-}
-
-export function createGitLabConnection(deps: GitLabConnectionDeps): GitLabConnectionService {
+export function createGitLabConnection(deps: GitLabConnectionDeps): ConnectionService {
   const { secrets, address, logger } = deps
 
   const failed = (url: string | undefined, body: ErrorBody): ConnectionStatus => {
@@ -61,8 +56,8 @@ export function createGitLabConnection(deps: GitLabConnectionDeps): GitLabConnec
       return check(url, token.value)
     },
 
-    async connect(rawUrl, token) {
-      const url = parseServerUrl(rawUrl)
+    async connect(fields, token) {
+      const url = parseServerUrl(fields.url)
       if (!url) {
         logger.warn('gitlab address rejected')
         return { kind: 'error', url: undefined, code: 'DCK-GLB-007' }

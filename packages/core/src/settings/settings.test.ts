@@ -20,7 +20,7 @@ describe('parseSettings', () => {
       window: { heightRatio: 0.5, panelOnFullHeight: true },
       shortcuts: { toggleWindow: 'F12', holdTrigger: 'ControlRight' },
       projects: { root: null, depth: 2 },
-      connections: { gitlab: { url: null } },
+      connections: {},
       system: { notifyAfterSeconds: 30, agentConnectHint: true },
       extensions: { disabled: [] },
     })
@@ -262,13 +262,13 @@ describe('acceleratorFromEvent', () => {
 
 describe('connections.gitlab.url', () => {
   it('should default to no address when the settings are empty', () => {
-    expect(parseSettings({}).connections.gitlab.url).toBeNull()
+    expect(parseSettings({}).connections.gitlab?.url ?? null).toBeNull()
   })
 
   it('should keep the normalized address when it is https', () => {
     const settings = parseSettings({ connections: { gitlab: { url: 'https://gl.test/' } } })
 
-    expect(settings.connections.gitlab.url).toBe('https://gl.test')
+    expect(settings.connections.gitlab?.url).toBe('https://gl.test')
   })
 
   it.each(['http://gl.test', 'gitlab', 42, 'https://u:p@gl.test'])(
@@ -276,7 +276,60 @@ describe('connections.gitlab.url', () => {
     (value) => {
       const settings = parseSettings({ connections: { gitlab: { url: value } } })
 
-      expect(settings.connections.gitlab.url).toBeNull()
+      expect(settings.connections.gitlab?.url).toBeNull()
     },
   )
+})
+
+describe('connections, per connector', () => {
+  it('should read back an existing file entry exactly when it only has the address', () => {
+    const file = { connections: { gitlab: { url: 'https://gitlab.example.com' } } }
+
+    const settings = parseSettings(file)
+
+    expect(settings.connections).toEqual(file.connections)
+    expect(JSON.stringify(settings.connections)).toBe(JSON.stringify(file.connections))
+  })
+
+  it('should keep the e-mail when the connector asks for one', () => {
+    const settings = parseSettings({
+      connections: { jira: { url: 'https://acme.example.com', email: ' ana@example.com ' } },
+    })
+
+    expect(settings.connections.jira).toEqual({
+      url: 'https://acme.example.com',
+      email: 'ana@example.com',
+    })
+  })
+
+  it('should drop only the e-mail when it is not an address', () => {
+    const settings = parseSettings({
+      connections: { jira: { url: 'https://acme.example.com', email: 'ana' } },
+    })
+
+    expect(settings.connections.jira).toEqual({ url: 'https://acme.example.com' })
+  })
+
+  it.each([
+    ['an id with capitals', 'GitLab'],
+    ['an id with a dot', 'acme.tracker'],
+    ['an empty id', ''],
+  ])('should drop the entry and keep the others when it has %s', (_label, id) => {
+    const settings = parseSettings({
+      connections: { [id]: { url: 'https://a.example.com' }, gitlab: { url: 'https://gl.test' } },
+    })
+
+    expect(settings.connections).toEqual({ gitlab: { url: 'https://gl.test' } })
+  })
+
+  it('should go back to no connections when the value is not an object', () => {
+    expect(parseSettings({ connections: ['gitlab'] }).connections).toEqual({})
+  })
+
+  it('should name the address of one connector when only it changed', () => {
+    const before = parseSettings({ connections: { gitlab: { url: 'https://a.example.com' } } })
+    const after = mergeSettings(before, { connections: { gitlab: { url: null } } })
+
+    expect(changedKeys(before, after)).toEqual(['connections.gitlab.url'])
+  })
 })

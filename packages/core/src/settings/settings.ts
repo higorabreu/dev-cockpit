@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { parseServerUrl } from '../connections/url.ts'
+import { CONNECTOR_ID_PATTERN } from '../connectors/connector.ts'
 import { EXTENSION_ID_MAX, EXTENSION_ID_PATTERN } from '../extensions/manifest.ts'
 
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
@@ -13,6 +14,8 @@ export const LIMITS = {
   depth: { min: 1, max: 4 },
   notifyAfterSeconds: { min: 5, max: 600 },
   disabledExtensions: { max: 200 },
+  connections: { max: 20 },
+  email: { max: 254 },
 } as const
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -43,6 +46,30 @@ const extensionIds = z.preprocess(
   z.array(z.string()).readonly(),
 )
 
+// One connector's account. No default: these are the addresses of the user's environment
+const connectionSchema = section({
+  // A value that is not a safe address becomes null
+  url: z
+    .preprocess(
+      (value) => (typeof value === 'string' ? (parseServerUrl(value) ?? null) : null),
+      z.string().nullable(),
+    )
+    .catch(null),
+  // Left out of the file when the connector does not ask for one
+  email: z.string().trim().max(LIMITS.email.max).pipe(z.email()).optional().catch(undefined),
+})
+
+// Keyed by connector id; an entry with a bad key is dropped and the others are kept
+const connectionsSchema = z.preprocess(
+  (value) =>
+    Object.fromEntries(
+      Object.entries(asObject(value))
+        .filter(([id]) => CONNECTOR_ID_PATTERN.test(id))
+        .slice(0, LIMITS.connections.max),
+    ),
+  z.record(z.string(), connectionSchema),
+)
+
 export const settingsSchema = z.preprocess(
   asObject,
   z.object({
@@ -63,17 +90,7 @@ export const settingsSchema = z.preprocess(
       root: z.string().trim().min(1).max(1024).nullable().catch(null),
       depth: bounded(LIMITS.depth.min, LIMITS.depth.max, 2, true),
     }),
-    connections: section({
-      gitlab: section({
-        // No default: it is the address of the user's environment. A value that is not a safe address becomes null.
-        url: z
-          .preprocess(
-            (value) => (typeof value === 'string' ? (parseServerUrl(value) ?? null) : null),
-            z.string().nullable(),
-          )
-          .catch(null),
-      }),
-    }),
+    connections: connectionsSchema,
     system: section({
       notifyAfterSeconds: bounded(
         LIMITS.notifyAfterSeconds.min,

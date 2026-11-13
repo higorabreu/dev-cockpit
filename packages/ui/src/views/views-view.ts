@@ -1,10 +1,11 @@
 import {
+  type ConnectorView,
   connectionErrorKey,
-  filterMergeRequests,
+  filterViewItems,
   type HostApi,
-  type MergeRequestSummary,
-  type MergeRequestView,
+  type PluralKey,
   type Translator,
+  type ViewItem,
   type ViewSnapshot,
   visibleRange,
 } from '@dck/core'
@@ -18,7 +19,11 @@ const OVERSCAN = 4
 const STALE_MS = 60_000
 // For the rail badge, which does not need to be as fresh as the open list
 const WARM_STALE_MS = 5 * 60_000
-const VIEWS: readonly MergeRequestView[] = ['review', 'mine']
+
+type MergeRequestItem = Extract<ViewItem, { kind: 'mergeRequest' }>
+const isMergeRequest = (item: ViewItem): item is MergeRequestItem => item.kind === 'mergeRequest'
+// The kinds this screen draws a row for; a view of another kind is left out until its row exists
+const DRAWN_KINDS: ReadonlySet<ViewItem['kind']> = new Set(['mergeRequest'])
 
 // SVG icons rather than characters: the fallback font for the symbols misaligns the chip
 const GLYPHS = {
@@ -32,36 +37,45 @@ export interface ViewsViewDeps {
   readonly i18n: Translator
   onClose(): void
   openSettings(): void
-  // How many MRs are waiting for the user's review; feeds the rail icon badge
-  onReviewCount(count: number): void
+  // The item count of the view a connector marked for the rail badge, with the text that says what they are
+  onBadge(count: number, label: PluralKey | undefined): void
 }
 
-const unavailable: ViewSnapshot = {
-  view: 'review',
+const unavailable: Omit<ViewSnapshot, 'view'> = {
   items: [],
   updatedAt: undefined,
   state: 'unconfigured',
   error: undefined,
 }
 
-// Review and Mine views: virtualized list, always-on filter, keyboard first
+// The views of the connected connectors: virtualized list, always-on filter, keyboard first
 export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const { api, i18n } = deps
   const t = i18n.t
-  const snapshots = new Map<MergeRequestView, ViewSnapshot>()
-  let current: MergeRequestView = 'review'
+  const snapshots = new Map<string, ViewSnapshot>()
+  // Every view of the enabled connectors; a tab only shows once its account is connected
+  let views: readonly ConnectorView[] = []
+  let current: string | undefined
   let query = ''
   let onlyPending = false
   let selected = 0
-  let matches: readonly MergeRequestSummary[] = []
+  let matches: readonly MergeRequestItem[] = []
   let frame = 0
 
   const isOpen = () => overlay.classList.contains('open')
-  const announceCount = () => {
-    const review = snapshots.get('review')
-    deps.onReviewCount(review && review.state !== 'unconfigured' ? review.items.length : 0)
+  const snapshotOf = (view: string): ViewSnapshot => snapshots.get(view) ?? { ...unavailable, view }
+  const connectedViews = () => views.filter((view) => snapshotOf(view.id).state !== 'unconfigured')
+  const currentView = () => connectedViews().find((view) => view.id === current)
+  // A view that is gone or lost its account gives its place to the first connected one
+  const settleCurrent = () => {
+    if (currentView() === undefined) current = connectedViews()[0]?.id
   }
-  const snapshotOf = (view: MergeRequestView) => snapshots.get(view) ?? { ...unavailable, view }
+  const announceCount = () => {
+    const badge = views.find((view) => view.badge !== undefined)
+    const snapshot = badge && snapshotOf(badge.id)
+    const count = snapshot && snapshot.state !== 'unconfigured' ? snapshot.items.length : 0
+    deps.onBadge(count, badge?.badge)
+  }
 
   const input = h('input', {
     type: 'text',
@@ -79,6 +93,8 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     role: 'tablist',
     'aria-label': t('views.title'),
   })
+  // In place of the tabs while no account is connected, so the screen still says what it is
+  const heading = h('h2', { class: 'vheading', hidden: true })
   const status = h('span', { class: 'vstatus', role: 'status' })
   const pendingButton = h('button', { type: 'button', class: 'vbtn', 'aria-pressed': 'false' })
   const notice = h('div', { class: 'vnotice' })
@@ -91,11 +107,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const inner = h('div', { class: 'vinner' })
   list.append(inner)
   const hint = hintBar()
+  const bar = h('div', { class: 'vbar' }, input, pendingButton)
+  // The way to Connections while nothing is connected; it holds the focus then
+  let setupButton: HTMLButtonElement | undefined
   const box = h(
     'div',
     { id: 'views-box' },
-    h('div', { class: 'vhead' }, tabs, status, closeButton(t, close)),
-    h('div', { class: 'vbar' }, input, pendingButton),
+    h('div', { class: 'vhead' }, tabs, heading, status, closeButton(t, close)),
+    bar,
     notice,
     list,
     hint,
@@ -110,6 +129,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
 
   function drawStatic() {
     overlay.setAttribute('aria-label', t('views.title'))
+    heading.textContent = t('views.title')
     pendingButton.textContent = t('views.pending')
     pendingButton.dataset.tip = t('views.pending')
     pendingButton.dataset.tipKey = 'Ctrl+P'
@@ -124,27 +144,27 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
 
   function drawTabs() {
     tabs.replaceChildren(
-      ...VIEWS.map((view) => {
-        const count = snapshotOf(view).items.length
+      ...connectedViews().map((view) => {
+        const count = snapshotOf(view.id).items.length
         const tab = h(
           'button',
           {
             type: 'button',
             class: 'vtab',
             role: 'tab',
-            'aria-selected': String(view === current),
+            'aria-selected': String(view.id === current),
             tabindex: '-1',
           },
-          t(`views.${view}`),
+          t(view.title),
           h('span', { class: 'vcount' }, String(count)),
         )
-        tab.addEventListener('click', () => switchView(view))
+        tab.addEventListener('click', () => switchView(view.id))
         return tab
       }),
     )
   }
 
-  function flags(item: MergeRequestSummary): HTMLElement[] {
+  function flags(item: MergeRequestItem): HTMLElement[] {
     const chip = (kind: string, glyph: keyof typeof GLYPHS, text: string) =>
       h(
         'span',
@@ -169,7 +189,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     return out
   }
 
-  function row(item: MergeRequestSummary, index: number): HTMLElement {
+  function row(item: MergeRequestItem, index: number): HTMLElement {
     const elapsed = agoText(i18n, Date.now() / 1000, Date.parse(item.updatedAt) / 1000)
     const element = h(
       'div',
@@ -219,21 +239,24 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   }
 
   function drawNotice() {
-    const snapshot = snapshotOf(current)
+    const view = currentView()
+    const snapshot = view && snapshotOf(view.id)
     notice.replaceChildren()
     notice.classList.remove('setup')
-    list.hidden = snapshot.state === 'unconfigured'
+    setupButton = undefined
+    list.hidden = snapshot === undefined
     notice.hidden = true
     const show = (...children: (Node | string)[]) => {
       notice.hidden = false
       notice.append(...children)
     }
-    if (snapshot.state === 'unconfigured') {
+    if (view === undefined || snapshot === undefined) {
       const open = h('button', { type: 'button', class: 'vbtn' }, t('views.openSettings'))
       open.addEventListener('click', () => {
         close()
         deps.openSettings()
       })
+      setupButton = open
       notice.classList.add('setup')
       return show(
         h('strong', {}, t('views.unconfigured.title')),
@@ -245,14 +268,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       return show(t('views.error', { reason: t(connectionErrorKey(snapshot.error)) }))
     }
     if (matches.length === 0 && snapshot.state !== 'refreshing') {
-      show(t(query !== '' || onlyPending ? 'views.empty.filtered' : `views.empty.${current}`))
+      show(t(query !== '' || onlyPending ? 'views.empty.filtered' : view.empty))
     }
   }
 
   function drawStatus() {
-    const snapshot = snapshotOf(current)
-    if (snapshot.state === 'refreshing') status.textContent = t('views.refreshing')
-    else if (snapshot.updatedAt === undefined) status.textContent = ''
+    const snapshot = current === undefined ? undefined : snapshotOf(current)
+    if (snapshot?.state === 'refreshing') status.textContent = t('views.refreshing')
+    else if (snapshot?.updatedAt === undefined) status.textContent = ''
     else
       status.textContent = t('views.updated', {
         ago: agoText(i18n, Date.now() / 1000, snapshot.updatedAt / 1000),
@@ -260,7 +283,9 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   }
 
   function refilter(keepId?: string) {
-    matches = filterMergeRequests(snapshotOf(current).items, query, onlyPending)
+    settleCurrent()
+    const items = current === undefined ? [] : snapshotOf(current).items
+    matches = filterViewItems(items, query, onlyPending).filter(isMergeRequest)
     const kept = keepId === undefined ? -1 : matches.findIndex((item) => item.id === keepId)
     selected = kept === -1 ? 0 : kept
     redraw()
@@ -268,10 +293,30 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
 
   function redraw() {
     pendingButton.setAttribute('aria-pressed', String(onlyPending))
+    // Only a merge request can need attention
+    const kind = currentView()?.kind
+    pendingButton.hidden = kind !== undefined && kind !== 'mergeRequest'
+    // With nothing connected there is nothing to filter, switch or refresh: only the way to Connections
+    const empty = connectedViews().length === 0
+    tabs.hidden = empty
+    heading.hidden = !empty
+    status.hidden = empty
+    bar.hidden = empty
+    hint.hidden = empty
     drawTabs()
     drawStatus()
     drawNotice()
     drawList()
+    placeFocus()
+  }
+
+  // The filter has the focus while there is something to filter, the Connections button otherwise
+  function placeFocus() {
+    if (!isOpen()) return
+    const active = document.activeElement
+    if (setupButton) {
+      if (active === input || !box.contains(active)) setupButton.focus()
+    } else if (!box.contains(active)) input.focus()
   }
 
   function schedule() {
@@ -302,14 +347,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     if (item) api.external.open(item.url)
   }
 
-  function switchView(view: MergeRequestView) {
+  function switchView(view: string) {
     if (view === current) return
     current = view
     refilter()
     void load(view)
   }
 
-  async function load(view: MergeRequestView) {
+  async function load(view: string) {
     const snapshot = await api.views.refresh(view, STALE_MS)
     if (snapshot) snapshots.set(view, snapshot)
     announceCount()
@@ -317,9 +362,21 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   }
 
   function refresh() {
-    void api.views.refresh(current).then((snapshot) => {
-      if (snapshot) snapshots.set(current, snapshot)
+    const view = current
+    if (view === undefined) return
+    void api.views.refresh(view).then((snapshot) => {
+      if (snapshot) snapshots.set(view, snapshot)
     })
+  }
+
+  // The enabled connectors decide which views exist; a disabled one takes its tabs and its badge away
+  async function loadViews() {
+    const connectors = await api.connections.list()
+    views = connectors.flatMap((connector) =>
+      connector.views.filter((view) => DRAWN_KINDS.has(view.kind)),
+    )
+    for (const view of snapshots.keys())
+      if (!views.some((known) => known.id === view)) snapshots.delete(view)
   }
 
   function close() {
@@ -349,7 +406,10 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     else if (key === 'Enter') openSelected()
     else if ((key === 'ArrowLeft' || key === 'ArrowRight') && query === '') {
       const step = key === 'ArrowRight' ? 1 : -1
-      switchView(VIEWS[(VIEWS.indexOf(current) + step + VIEWS.length) % VIEWS.length] ?? current)
+      const ids = connectedViews().map((view) => view.id)
+      const index = current === undefined ? -1 : ids.indexOf(current)
+      const next = ids[(index + step + ids.length) % ids.length]
+      if (next !== undefined) switchView(next)
     } else if (event.ctrlKey && key.toLowerCase() === 'r') refresh()
     else if (event.ctrlKey && !event.shiftKey && key.toLowerCase() === 'p') {
       onlyPending = !onlyPending
@@ -365,7 +425,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   })
   // Keys are listened for on the field: after clicking any button focus returns to it, otherwise the shortcuts stop
   box.addEventListener('click', () => {
-    if (isOpen()) input.focus()
+    if (isOpen()) (setupButton ?? input).focus()
+  })
+  // The filter handles its own keys; anywhere else in the box Escape still closes the screen
+  box.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || event.target === input) return
+    event.preventDefault()
+    event.stopPropagation()
+    close()
   })
   overlay.addEventListener('mousedown', (event) => {
     if (event.target === overlay) close()
@@ -373,9 +440,13 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
 
   // The daemon publishes the new state of a view after each fetch
   api.views.onChange((snapshot) => {
+    if (!views.some((view) => view.id === snapshot.view)) return
+    const wasConnected = snapshotOf(snapshot.view).state !== 'unconfigured'
     snapshots.set(snapshot.view, snapshot)
     announceCount()
-    if (isOpen() && snapshot.view === current) refilter(matches[selected]?.id)
+    const connectionChanged = wasConnected !== (snapshot.state !== 'unconfigured')
+    if (isOpen() && (snapshot.view === current || connectionChanged))
+      refilter(matches[selected]?.id)
     else if (isOpen()) drawTabs()
   })
 
@@ -387,13 +458,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     async open() {
       overlay.classList.add('open')
       input.focus()
+      await loadViews()
       // Shows what is stored right away; the fetch runs on top if the data is stale
-      for (const view of VIEWS) {
-        const snapshot = await api.views.snapshot(view)
-        if (snapshot) snapshots.set(view, snapshot)
+      for (const view of views) {
+        const snapshot = await api.views.snapshot(view.id)
+        if (snapshot) snapshots.set(view.id, snapshot)
       }
       refilter()
-      for (const view of VIEWS) void load(view)
+      for (const view of views) void load(view.id)
     },
     toggle() {
       if (isOpen()) close()
@@ -401,9 +473,12 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     },
     // Without opening the screen: loads what is stored and refreshes if older than 5 minutes, for the rail badge
     async warm() {
-      const snapshot = await api.views.refresh('review', WARM_STALE_MS)
-      if (snapshot) snapshots.set('review', snapshot)
+      await loadViews()
+      const badge = views.find((view) => view.badge !== undefined)
+      const snapshot = badge && (await api.views.refresh(badge.id, WARM_STALE_MS))
+      if (badge && snapshot) snapshots.set(badge.id, snapshot)
       announceCount()
+      if (isOpen()) refilter(matches[selected]?.id)
     },
     retranslate() {
       drawStatic()
