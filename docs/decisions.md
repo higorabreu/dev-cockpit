@@ -553,7 +553,7 @@ address error.
 **How to revert:** revert the commits of phase A; the settings file and the keyring key did not change, so
 an existing setup keeps working on either side.
 
-## D42. Work tabs are named by the action they ask for and grouped by service
+## D43. Work tabs are named by the action they ask for and grouped by service
 
 **Decision:** the GitLab tabs become "To review" (`review`) and "Follow up" (`mine`); Jira keeps "Tasks". The
 Work header draws each connected connector's tabs after a group label with the connector's `name`, in the
