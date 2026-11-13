@@ -56,12 +56,15 @@ const repository = (text = diffText(3000, 5000) + lockText) =>
 type Answer = Result<DiffOutcome, ErrorBody>
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
+const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
 
 function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home/ana/acme') {
   const requests: DiffRequest[] = []
   const reads: string[] = []
   let escapes = 0
   let closes = 0
+  let layouts = 0
+  const memory = { indexHidden: false }
   const api = {
     review: {
       diff: async (request: DiffRequest) => {
@@ -79,6 +82,7 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
     id: 'review-tab-1',
     api,
     i18n: createTranslator('en'),
+    memory,
     modifier: 'Ctrl',
     isModified: (event) => event.ctrlKey,
     cwd: async () => cwd,
@@ -88,6 +92,9 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
     onClose: () => {
       closes += 1
     },
+    onToggleLayout: () => {
+      layouts += 1
+    },
   })
   document.body.append(pane.element)
   return {
@@ -96,6 +103,8 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
     reads,
     escapes: () => escapes,
     closes: () => closes,
+    layouts: () => layouts,
+    memory,
     text: (selector: string) => pane.element.querySelector(selector)?.textContent ?? '',
     labels: (selector: string) =>
       [...pane.element.querySelectorAll(selector)].map((row) => row.getAttribute('aria-label')),
@@ -134,35 +143,47 @@ describe('createReviewPane', () => {
     expect(text('.rv-head .select-value [data-current]')).toBe('Uncommitted')
   })
 
-  it('should open on a file to read and keep a generated file collapsed until asked', async () => {
-    const { pane, text, key } = setup(repository())
+  it('should show every file in one scroll with its header and keep a generated file collapsed until asked', async () => {
+    const { pane, labels } = setup(repository())
     pane.open()
     await flush()
-    const first = pane.element
-      .querySelector('.rv-file[aria-selected="true"]')
-      ?.getAttribute('aria-label')
-    key(pane.element.querySelector('.rv-files') as Element, 'ArrowUp')
 
-    expect(first).toBe('src/billing/invoice.ts, modified, 1 added, 1 removed')
+    const headers = labels('.rv-filerow')
+    pane.element.querySelector<HTMLButtonElement>('.rv-filerow .rv-show')?.click()
 
-    expect(text('.rv-notice')).toContain('Generated files start collapsed.')
-    pane.element.querySelector<HTMLButtonElement>('.rv-notice .vbtn')?.click()
-
-    expect(pane.element.querySelector('.rv-notice')).toBeNull()
-    expect(pane.element.querySelectorAll('.rv-row[data-kind]').length).toBe(2)
+    expect(headers).toEqual([
+      'pnpm-lock.yaml, modified, 1 added, 0 removed. Generated files start collapsed. Enter shows it anyway.',
+      'src/billing/invoice.ts, modified, 1 added, 1 removed',
+    ])
+    expect(pane.element.querySelector('.rv-show')).toBeNull()
+    expect(pane.element.querySelectorAll('.rv-row[data-kind]').length).toBe(6)
   })
 
-  it('should number both sides, sign the changes and mark the changed word when a file is shown', async () => {
-    const { pane, key, labels } = setup(repository())
+  it('should group the rows of each file under its name for a screen reader', async () => {
+    const { pane } = setup(repository())
     pane.open()
     await flush()
 
-    key(pane.element.querySelector('.rv-files') as Element, 'ArrowDown')
+    const groups = [...pane.element.querySelectorAll('.rv-lines [role="group"]')].map((group) => [
+      group.getAttribute('aria-label')?.split(',')[0],
+      group.querySelectorAll('[role="option"]').length,
+    ])
+
+    expect(groups).toEqual([
+      ['pnpm-lock.yaml', 1],
+      ['src/billing/invoice.ts', 8],
+    ])
+  })
+
+  it('should number both sides, sign the changes and mark the changed word in a sticky gutter', async () => {
+    const { pane, labels } = setup(repository())
+    pane.open()
+    await flush()
 
     const rows = [...pane.element.querySelectorAll('.rv-row[data-kind]')].map((row) => [
       row.getAttribute('data-kind'),
-      [...row.querySelectorAll('.rv-num')].map((cell) => cell.textContent),
-      row.querySelector('.rv-sign')?.textContent,
+      [...row.querySelectorAll('.rv-gutter .rv-num')].map((cell) => cell.textContent),
+      row.querySelector('.rv-gutter .rv-sign')?.textContent,
       [...row.querySelectorAll('.rv-word')].map((mark) => mark.textContent),
     ])
     expect(rows).toEqual([
@@ -175,13 +196,13 @@ describe('createReviewPane', () => {
     expect(labels('.rv-hunk')).toEqual([
       'Hunk at line 10, in export function total(invoice: Invoice) {',
     ])
+    expect(pane.element.querySelector('.rv-hunk .rv-band')).not.toBeNull()
   })
 
   it('should show the unchanged lines from the working tree when a collapsed gap is expanded', async () => {
-    const { pane, key, reads, labels } = setup(repository())
+    const { pane, reads, labels } = setup(repository())
     pane.open()
     await flush()
-    key(pane.element.querySelector('.rv-files') as Element, 'ArrowDown')
 
     expect(labels('.rv-expand')).toEqual(['Show 9 lines', 'Show 8 lines'])
     pane.element.querySelector<HTMLElement>('.rv-expand')?.click()
@@ -192,22 +213,134 @@ describe('createReviewPane', () => {
     expect(labels('.rv-row[data-kind="context"]')[0]).toBe('Line 1: text 1')
   })
 
-  it('should move between hunks and files with the keys when the diff has the focus', async () => {
+  it('should cross files with n and p and land on file headers with ] and [', async () => {
     const { pane, key } = setup(repository())
     pane.open()
     await flush()
+    pane.element.querySelector<HTMLButtonElement>('.rv-show')?.click()
     const lines = pane.element.querySelector('.rv-lines') as HTMLElement
-    key(pane.element.querySelector('.rv-files') as Element, 'ArrowDown')
+    const active = () => lines.getAttribute('aria-activedescendant')
+    const current = () =>
+      pane.element.querySelector('.rv-file[aria-selected="true"]')?.getAttribute('aria-label')
+    lines.focus()
 
     key(lines, 'n')
-    const first = lines.getAttribute('aria-activedescendant')
+    const lockHunk = active()
+    key(lines, 'n')
+    const invoiceHunk = [active(), current()]
+    key(lines, 'p')
+    const back = [active(), current()]
+    key(lines, ']')
+    const nextFile = active()
     key(lines, '[')
-    const selected = pane.element
-      .querySelector('.rv-file[aria-selected="true"]')
-      ?.getAttribute('aria-label')
 
-    expect(first).toBe('review-tab-1-row-1')
-    expect(selected).toBe('pnpm-lock.yaml, modified, 1 added, 0 removed')
+    expect(lockHunk).toBe('review-tab-1-row-1')
+    expect(invoiceHunk).toEqual([
+      'review-tab-1-row-6',
+      'src/billing/invoice.ts, modified, 1 added, 1 removed',
+    ])
+    expect(back).toEqual(['review-tab-1-row-1', 'pnpm-lock.yaml, modified, 1 added, 0 removed'])
+    expect(nextFile).toBe('review-tab-1-row-4')
+    expect(active()).toBe('review-tab-1-row-0')
+  })
+
+  it('should keep the keys on the diff when ] lands on a collapsed file and show it with Enter', async () => {
+    const big = Array.from({ length: 2600 }, (_, index) => `+line ${index}`)
+    const text = [
+      diffText(3000, 5000),
+      'diff --git a/z-data.csv b/z-data.csv',
+      '--- a/z-data.csv',
+      '+++ b/z-data.csv',
+      '@@ -0,0 +1,2600 @@',
+      ...big,
+      '',
+    ].join('\n')
+    const { pane, key, escapes } = setup(repository(text))
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+
+    key(lines, ']')
+    const onCollapsed = [
+      document.activeElement === lines,
+      lines.getAttribute('aria-activedescendant'),
+    ]
+    key(lines, 'Enter')
+    key(lines, 'Escape')
+
+    expect(onCollapsed).toEqual([true, 'review-tab-1-row-8'])
+    expect(document.activeElement).toBe(lines)
+    expect(pane.element.querySelector('.rv-show')).toBeNull()
+    expect(escapes()).toBe(1)
+  })
+
+  it('should scroll the diff to a file when it is picked in the index and give it the keys on Enter', async () => {
+    const { pane, key } = setup(repository())
+    pane.open()
+    await flush()
+    const index = pane.element.querySelector('.rv-files') as HTMLElement
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+
+    pane.element.querySelector<HTMLElement>('.rv-file[data-index="1"]')?.click()
+    const afterClick = lines.getAttribute('aria-activedescendant')
+    index.focus()
+    key(index, 'ArrowUp')
+    const afterArrow = lines.getAttribute('aria-activedescendant')
+    key(index, 'Enter')
+
+    expect(afterClick).toBe('review-tab-1-row-1')
+    expect(afterArrow).toBe('review-tab-1-row-0')
+    expect(document.activeElement).toBe(lines)
+  })
+
+  it('should highlight in the index the file at the top of the diff when it is scrolled by hand', async () => {
+    const { pane } = setup(repository())
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    const current = () =>
+      pane.element.querySelector('.rv-file[aria-selected="true"]')?.getAttribute('aria-label')
+    const before = current()
+
+    lines.scrollTop = 60
+    lines.dispatchEvent(new Event('scroll'))
+    await frame()
+
+    expect(before).toBe('pnpm-lock.yaml, modified, 1 added, 0 removed')
+    expect(current()).toBe('src/billing/invoice.ts, modified, 1 added, 1 removed')
+  })
+
+  it('should hide the index with its button and keep that for the next review', async () => {
+    const { pane, memory } = setup(repository())
+    pane.open()
+    await flush()
+    const toggle = pane.element.querySelector('.rv-icon[aria-controls]') as HTMLButtonElement
+
+    toggle.click()
+
+    expect(pane.element.querySelector('.rv-files')?.hasAttribute('hidden')).toBe(true)
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(toggle.dataset.tip).toBe('Show the file list')
+    expect(memory.indexHidden).toBe(true)
+  })
+
+  it('should offer the other layout in the header while the review shares the tab', () => {
+    const { pane, layouts } = setup(repository())
+    const button = () => pane.element.querySelector('.rv-icon[data-tip-key="Ctrl+Shift+E"]')
+
+    pane.setArrangement('side', false)
+    const beside = [button()?.hasAttribute('hidden'), button()?.getAttribute('aria-label')]
+    pane.setArrangement('stacked', false)
+    const below = button()?.getAttribute('aria-label')
+    ;(button() as HTMLButtonElement).click()
+    pane.setArrangement(undefined, true)
+
+    expect(beside).toEqual([false, 'Review below the terminal'])
+    expect(below).toBe('Review beside the terminal')
+    expect(layouts()).toBe(1)
+    expect(button()?.hasAttribute('hidden')).toBe(true)
+    expect(pane.element.querySelector('[data-tip-key="Esc"]')?.hasAttribute('hidden')).toBe(false)
   })
 
   it('should give the keys back to the terminal on Esc and read again on Ctrl+R', async () => {
@@ -303,11 +436,11 @@ describe('createReviewPane', () => {
     pane.open()
     await flush()
 
-    pane.element.querySelector<HTMLButtonElement>('.rv-notice .vbtn')?.click()
+    pane.element.querySelector<HTMLButtonElement>('.rv-show')?.click()
 
     expect(pane.element.querySelectorAll('.rv-row').length).toBeLessThan(100)
     expect((pane.element.querySelector('.rv-inner') as HTMLElement).style.height).toBe(
-      `${26 + 10_000 * 20}px`,
+      `${40 + 26 + 10_000 * 20}px`,
     )
   })
 })

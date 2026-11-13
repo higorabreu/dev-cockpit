@@ -42,6 +42,7 @@ import { localeFor } from './platform/locale.ts'
 import { bindShortcuts } from './platform/shortcuts.ts'
 import { applyTheme, themeFor, watchSystemTheme } from './platform/theme.ts'
 import { createProjectSearch } from './projects/project-search.ts'
+import { LAYOUT_KEY } from './review/review-pane.ts'
 import { createReviewTabs } from './review/review-tabs.ts'
 import { applyOpacity } from './settings/preferences.ts'
 import type { SettingsClient } from './settings/settings-client.ts'
@@ -205,6 +206,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       return fresh?.cwd ?? watcher.get(tabId)?.cwd
     },
     agent: (tabId) => attention.agent(tabId),
+    chooseLayout: (orientation) => split.setPreference(orientation),
   })
 
   let activeSnapshot: SessionSnapshot | undefined
@@ -430,7 +432,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       t: i18n.t,
       preferences: () => split.current(),
       onRatio: (orientation, ratio) => split.saveRatio(orientation, ratio),
-      onArrange: (_orientation, narrow) => reviews.narrow(id, narrow),
+      onArrange: (orientation, narrow) => reviews.arranged(id, orientation, narrow),
       onShownChange: () => renderTabs(),
     })
     tabViews.set(id, view)
@@ -636,6 +638,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const actions = {
     newTab: () => void open(),
     toggleReview: () => state.activeId && toggleReview(state.activeId),
+    toggleReviewLayout: () => state.activeId && reviews.toggleLayout(state.activeId),
     closeTab: () => state.activeId && close(state.activeId),
     nextTab: () => update(stepTab(state, 1)),
     previousTab: () => update(stepTab(state, -1)),
@@ -670,6 +673,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     'tab:previous': actions.previousTab,
     'tab:finished': actions.nextFinished,
     'tab:review': actions.toggleReview,
+    'tab:review-layout': actions.toggleReviewLayout,
     'agent:claude': () => activeSession()?.write('claude\r'),
     'agent:resume': () => activeSession()?.write('claude --resume\r'),
     [CONNECT_ITEM]: () => state.activeId && connectTab(state.activeId),
@@ -702,6 +706,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
           { id: 'tab:previous', label: i18n.t('tabs.previous'), shortcut: 'Ctrl+Shift+Tab' },
           { id: 'tab:finished', label: i18n.t('tabs.nextFinished') },
           { id: 'tab:review', label: i18n.t('review.toggle'), shortcut: 'Ctrl+Shift+D' },
+          { id: 'tab:review-layout', label: i18n.t('review.layout.toggle'), shortcut: LAYOUT_KEY },
         ],
       },
       {

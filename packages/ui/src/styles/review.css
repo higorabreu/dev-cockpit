@@ -1,5 +1,6 @@
-/* The review beside a terminal: scope and totals, the changed files, the selected file's diff and the keys.
-   It shares the window's background with the terminal; the divider is the only edge between them */
+/* The review beside or below a terminal: scope and totals, the index of the changed files, every file's
+   diff in one scroll and the keys. It shares the window's background with the terminal; the divider is
+   the only edge between them */
 .review {
   box-sizing: border-box;
   container-type: inline-size;
@@ -108,7 +109,8 @@
   color: var(--diff-remove-ink);
 }
 
-/* Stacked in a pane of usual width; side by side once there is room for both */
+/* The index above the diff in a narrow review; beside it once the review is 720px wide, which a stacked
+   review below a usual window always is */
 .rv-body {
   flex: 1;
   min-height: 0;
@@ -120,7 +122,7 @@
   display: none;
 }
 
-/* The list reserves the scrollbar strip on both sides (`scroll-edges`), so its rows sit 8px in from each
+/* The index reserves the scrollbar strip on both sides (`scroll-edges`), so its rows sit 8px in from each
    edge and their text at 16px, like the panel's */
 .rv-files {
   position: relative;
@@ -132,17 +134,21 @@
   outline: none;
 }
 
+.rv-files[hidden] {
+  display: none;
+}
+
 .rv-files-inner {
   position: relative;
 }
 
-@container (min-width: 820px) {
+@container (min-width: 720px) {
   .rv-body {
     flex-direction: row;
   }
 
   .rv-files {
-    width: 272px;
+    width: clamp(208px, 24%, 272px);
     max-height: none;
     border-right: 1px solid var(--line);
     border-bottom: 0;
@@ -169,7 +175,7 @@
   background-color: var(--hover);
 }
 
-/* The selected file is filled and its name gets heavier, so selection is not told by color alone */
+/* The file the diff is on is filled and its name gets heavier, so it is not told by color alone */
 .rv-file[aria-selected="true"] {
   background-color: var(--list-selected);
 }
@@ -235,75 +241,22 @@
   font-weight: 600;
 }
 
-.rv-file-area {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.rv-head-file {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 7px var(--rv-gap);
-  border-bottom: 1px solid var(--line);
-  font-size: 12.5px;
-}
-
-.rv-head-file .rv-path {
-  flex: 0 1 auto;
-}
-
-.rv-head-file .rv-counts {
-  margin-left: auto;
-  padding-left: 8px;
-}
-
-.rv-label {
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 40%;
-  overflow: hidden;
-  padding: 1px 6px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-small);
-  color: var(--muted);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rv-notice {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px var(--rv-gap);
-  color: var(--muted);
-  font-size: 12px;
-}
-
-/* The diff: fixed rows, so only the ones in view exist. It scrolls both ways and reserves the strip on both
-   sides, so the lines run 8px in from each edge */
+/* The diff: every file in one scroll, only the rows in view exist. It scrolls both ways and reserves the
+   strip on both sides, so the rows run 8px in from each edge */
 .rv-lines {
   position: relative;
   flex: 1;
+  min-width: 0;
   min-height: 0;
   overflow: auto;
   outline: none;
 }
 
-.rv-lines[hidden] {
-  display: none;
-}
-
 .rv-inner {
   --rv-num: calc(var(--rv-digits, 3) * 1ch + 16px);
+  --rv-gutter: calc(2 * var(--rv-num) + 2ch);
   position: relative;
-  width: max(100%, calc(2 * var(--rv-num) + 2ch + var(--rv-cols, 0) * 1ch + 16px));
+  width: max(100%, calc(var(--rv-gutter) + var(--rv-cols, 0) * 1ch + 16px));
   font: 12px / 20px var(--font-mono);
   /* A ligature would show characters the file does not have */
   font-variant-ligatures: none;
@@ -316,7 +269,7 @@
   right: 0;
   height: 20px;
   display: grid;
-  grid-template-columns: var(--rv-num) var(--rv-num) 2ch 1fr;
+  grid-template-columns: var(--rv-gutter) 1fr;
   align-items: center;
   white-space: pre;
   tab-size: 4;
@@ -333,6 +286,13 @@
 
 .rv-row[data-kind="remove"] {
   background: var(--diff-remove);
+}
+
+/* The two line numbers and the sign */
+.rv-gutter {
+  display: grid;
+  grid-template-columns: var(--rv-num) var(--rv-num) 2ch;
+  align-items: center;
 }
 
 .rv-num {
@@ -360,6 +320,11 @@
   padding-right: 16px;
 }
 
+.rv-band .rv-code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .rv-word {
   border-radius: 2px;
 }
@@ -372,9 +337,19 @@
   background: var(--diff-remove-word);
 }
 
+/* Hunk headers, hidden lines and file headers draw their content on a band */
 .rv-hunk,
-.rv-expand {
-  grid-template-columns: calc(2 * var(--rv-num) + 2ch) 1fr;
+.rv-expand,
+.rv-filerow {
+  display: block;
+}
+
+.rv-band {
+  box-sizing: border-box;
+  height: 100%;
+  display: grid;
+  grid-template-columns: var(--rv-gutter) minmax(0, 1fr);
+  align-items: center;
 }
 
 .rv-hunk {
@@ -405,8 +380,95 @@
   padding-right: 10px;
 }
 
-/* The keyboard's line, shown only while the diff has the focus */
-.rv-lines:focus-visible .rv-row[aria-selected="true"] {
+/* A file's header: a band on the surface with 8px of air above it, its state, path, labels and counts.
+   The one of the file being read is pinned on top of the scroll (`rv-pin`) and covers the lines below */
+.rv-filerow {
+  height: 40px;
+}
+
+.rv-fhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px;
+  border-block: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  font: 12.5px var(--font-sans);
+  white-space: nowrap;
+}
+
+.rv-filerow .rv-fhead {
+  height: 32px;
+  margin-top: 8px;
+}
+
+.rv-pin {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  height: 0;
+}
+
+.rv-pin[hidden] {
+  display: none;
+}
+
+/* Pinned, its top edge is the review header's line */
+.rv-pin .rv-fhead {
+  border-top-color: transparent;
+}
+
+.rv-fhead .rv-path {
+  flex: 0 1 auto;
+}
+
+.rv-fhead .rv-counts {
+  flex: none;
+}
+
+.rv-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40%;
+  overflow: hidden;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rv-why {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+
+.rv-fhead .rv-spacer {
+  flex: 1 0 0;
+}
+
+.vbtn.rv-show {
+  flex: none;
+  padding: 1px 8px;
+  font-size: 11.5px;
+}
+
+/* The keyboard's row, shown only while the diff has the focus; a header draws it on its band */
+.rv-lines:focus-visible .rv-row[aria-selected="true"]:not(.rv-filerow) {
+  outline: 2px solid var(--fg);
+  outline-offset: -2px;
+}
+
+.rv-lines:focus-visible .rv-filerow[aria-selected="true"] .rv-fhead {
   outline: 2px solid var(--fg);
   outline-offset: -2px;
 }

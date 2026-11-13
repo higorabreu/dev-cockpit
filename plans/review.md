@@ -89,9 +89,14 @@ change.
   orientation and a ratio per orientation. (R9, R10) The rule takes each pane's grid (the terminal's real
   cell size and padding, the diff's 12px cell and gutters): side by side when each keeps 100 columns, else
   stacked when each keeps 15 rows (and the review its 440px width), else the focused pane alone.
-- [ ] RV-T8. Settings `review.layout` with its row, the header control and shortcut, the stacked layout and
-  the divider in both orientations. (R9, R10)
-- [ ] RV-T9. The continuous diff and the file index. (R11)
+- [x] RV-T8. Settings `review.layout` with its row, the header control and shortcut, the stacked layout and
+  the divider in both orientations. (R9, R10) The shortcut is Ctrl+Shift+E (free in D13 and in Claude Code,
+  Terminator's and Guake's split key); the button names the orientation it switches to. Shares are saved
+  400 ms after the divider rests.
+- [x] RV-T9. The continuous diff and the file index. (R11) Each file's rows sit in a `group` named after the
+  file inside the diff's listbox, its header row first (an option the cursor lands on with `]` and `[`); the
+  header of the file being read is pinned on top. A collapsed or binary file is its header alone, with
+  "Show anyway" (Enter on the header). The index sits beside the diff from 720px of review width.
 
 ## Phase 2: comments back to the agent
 

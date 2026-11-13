@@ -56,7 +56,8 @@ export interface FileListDeps {
   onOpen(): void
 }
 
-// The changed files, virtualized; the focus stays on the list and the selected row follows the keys
+// The index of the changed files, virtualized: the selected row is the file the diff is on, and picking
+// one scrolls the diff to it
 export function createFileList(deps: FileListDeps) {
   const { i18n } = deps
   const inner = h('div', { class: 'rv-files-inner' })
@@ -175,6 +176,12 @@ export function createFileList(deps: FileListDeps) {
       reveal()
     },
     select,
+    // The file the diff is on, without moving the diff
+    highlight(index: number) {
+      if (index < 0 || index >= files.length || index === selected) return
+      selected = index
+      reveal()
+    },
     selected: () => selected,
     focus: () => element.focus(),
     redraw: draw,
