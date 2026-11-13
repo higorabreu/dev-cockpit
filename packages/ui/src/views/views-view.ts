@@ -93,6 +93,8 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     role: 'tablist',
     'aria-label': t('views.title'),
   })
+  // In place of the tabs while no account is connected, so the screen still says what it is
+  const heading = h('h2', { class: 'vheading', hidden: true })
   const status = h('span', { class: 'vstatus', role: 'status' })
   const pendingButton = h('button', { type: 'button', class: 'vbtn', 'aria-pressed': 'false' })
   const notice = h('div', { class: 'vnotice' })
@@ -105,11 +107,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const inner = h('div', { class: 'vinner' })
   list.append(inner)
   const hint = hintBar()
+  const bar = h('div', { class: 'vbar' }, input, pendingButton)
+  // The way to Connections while nothing is connected; it holds the focus then
+  let setupButton: HTMLButtonElement | undefined
   const box = h(
     'div',
     { id: 'views-box' },
-    h('div', { class: 'vhead' }, tabs, status, closeButton(t, close)),
-    h('div', { class: 'vbar' }, input, pendingButton),
+    h('div', { class: 'vhead' }, tabs, heading, status, closeButton(t, close)),
+    bar,
     notice,
     list,
     hint,
@@ -124,6 +129,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
 
   function drawStatic() {
     overlay.setAttribute('aria-label', t('views.title'))
+    heading.textContent = t('views.title')
     pendingButton.textContent = t('views.pending')
     pendingButton.dataset.tip = t('views.pending')
     pendingButton.dataset.tipKey = 'Ctrl+P'
@@ -237,6 +243,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     const snapshot = view && snapshotOf(view.id)
     notice.replaceChildren()
     notice.classList.remove('setup')
+    setupButton = undefined
     list.hidden = snapshot === undefined
     notice.hidden = true
     const show = (...children: (Node | string)[]) => {
@@ -249,6 +256,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
         close()
         deps.openSettings()
       })
+      setupButton = open
       notice.classList.add('setup')
       return show(
         h('strong', {}, t('views.unconfigured.title')),
@@ -288,10 +296,27 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     // Only a merge request can need attention
     const kind = currentView()?.kind
     pendingButton.hidden = kind !== undefined && kind !== 'mergeRequest'
+    // With nothing connected there is nothing to filter, switch or refresh: only the way to Connections
+    const empty = connectedViews().length === 0
+    tabs.hidden = empty
+    heading.hidden = !empty
+    status.hidden = empty
+    bar.hidden = empty
+    hint.hidden = empty
     drawTabs()
     drawStatus()
     drawNotice()
     drawList()
+    placeFocus()
+  }
+
+  // The filter has the focus while there is something to filter, the Connections button otherwise
+  function placeFocus() {
+    if (!isOpen()) return
+    const active = document.activeElement
+    if (setupButton) {
+      if (active === input || !box.contains(active)) setupButton.focus()
+    } else if (!box.contains(active)) input.focus()
   }
 
   function schedule() {
@@ -400,7 +425,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   })
   // Keys are listened for on the field: after clicking any button focus returns to it, otherwise the shortcuts stop
   box.addEventListener('click', () => {
-    if (isOpen()) input.focus()
+    if (isOpen()) (setupButton ?? input).focus()
+  })
+  // The filter handles its own keys; anywhere else in the box Escape still closes the screen
+  box.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || event.target === input) return
+    event.preventDefault()
+    event.stopPropagation()
+    close()
   })
   overlay.addEventListener('mousedown', (event) => {
     if (event.target === overlay) close()

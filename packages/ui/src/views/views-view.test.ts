@@ -121,6 +121,45 @@ describe('views view tabs', () => {
     expect(settingsOpened()).toBe(1)
   })
 
+  it('should leave only the title, the notice and the close button, with the Connections button focused, when nothing is connected', async () => {
+    const { view, overlay } = setup({ connectors: [GITLAB_CONNECTOR], snapshots: unconnected })
+
+    await view.open()
+
+    const shown = (selector: string) =>
+      overlay.querySelector<HTMLElement>(selector)?.hidden === false
+    expect(overlay.querySelector('.vheading')?.textContent).toBe('Work')
+    expect(['.vheading', '.vtabs', '.vbar', '.phint', '.vlist'].map(shown)).toEqual([
+      true,
+      false,
+      false,
+      false,
+      false,
+    ])
+    expect(document.activeElement?.textContent).toBe('Open Connections')
+  })
+
+  it('should close the screen when Escape is pressed on the Connections button', async () => {
+    const { view, overlay } = setup({ connectors: [GITLAB_CONNECTOR], snapshots: unconnected })
+    await view.open()
+
+    press(document.activeElement, 'Escape')
+
+    expect(overlay.classList.contains('open')).toBe(false)
+    expect(view.isOpen()).toBe(false)
+  })
+
+  it('should show the tabs, the filter and the hints with the filter focused when an account is connected', async () => {
+    const { view, overlay } = setup({ connectors: [GITLAB_CONNECTOR], snapshots: connected })
+
+    await view.open()
+
+    const shown = (selector: string) =>
+      overlay.querySelector<HTMLElement>(selector)?.hidden === false
+    expect(['.vheading', '.vtabs', '.vbar', '.phint'].map(shown)).toEqual([false, true, true, true])
+    expect(document.activeElement).toBe(overlay.querySelector('.vinput'))
+  })
+
   it('should show no tab and the setup notice when the only connector is disabled', async () => {
     const { view, tabs, notice } = setup({ connectors: [], snapshots: connected })
 

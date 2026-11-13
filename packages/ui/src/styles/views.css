@@ -106,6 +106,22 @@
   outline-offset: 1px;
 }
 
+.vheading {
+  margin: 0 auto 0 0;
+  padding: 4px 10px;
+  color: var(--fg);
+  font: inherit;
+  font-weight: 600;
+}
+
+.vtabs[hidden],
+.vheading[hidden],
+.vstatus[hidden],
+.vbar[hidden],
+.vbtn[hidden] {
+  display: none;
+}
+
 .vbar {
   flex: none;
   display: flex;
