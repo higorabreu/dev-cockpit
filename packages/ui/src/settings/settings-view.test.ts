@@ -183,20 +183,26 @@ const tracker: Connector = {
   views: [{ id: 'tasks', kind: 'issue', title: 'views.review', empty: 'views.empty.review' }],
 }
 
-function connectionsHost(initial: readonly Connector[]) {
+function connectionsHost(initial: readonly Connector[], options: { refuse?: boolean } = {}) {
   let connectors = initial
   const connects: { id: string; fields: ConnectionFields; token: string }[] = []
+  let answer: (() => void) | undefined
   const host = {
     connections: {
       list: async () => connectors,
       status: async (): Promise<ConnectionStatus> => ({ kind: 'none' }),
       connect: async (id: string, fields: ConnectionFields, token: string) => {
         connects.push({ id, fields, token })
-        return {
-          kind: 'connected',
-          url: fields.url,
-          user: { username: 'ana', name: 'Ana' },
-        } satisfies ConnectionStatus
+        await new Promise<void>((resolve) => {
+          answer = resolve
+        })
+        return options.refuse
+          ? ({ kind: 'error', url: fields.url, code: 'DCK-GLB-001' } satisfies ConnectionStatus)
+          : ({
+              kind: 'connected',
+              url: fields.url,
+              user: { username: 'ana', name: 'Ana' },
+            } satisfies ConnectionStatus)
       },
       disconnect: async (): Promise<ConnectionStatus> => ({ kind: 'none' }),
     },
@@ -205,6 +211,8 @@ function connectionsHost(initial: readonly Connector[]) {
   return {
     host,
     connects,
+    // The host answers the pending connect
+    answer: () => answer?.(),
     set: (next: readonly Connector[]) => {
       connectors = next
     },
@@ -220,7 +228,18 @@ const connectionsPage = async (host: HostApi) => {
     [...page.body.querySelectorAll('.spanel .sgroup')].map((section) =>
       [...section.querySelectorAll('.sname2')].map((label) => label.textContent),
     )
-  return { ...page, sections }
+  const control = <T extends HTMLElement>(focus: string) => {
+    const found = page.body.querySelector<T>(`[data-focus="${focus}"]`)
+    if (!found) throw new Error(`invariant: ${focus} exists`)
+    return found
+  }
+  const type = (focus: string, value: string) => {
+    const input = control<HTMLInputElement>(focus)
+    input.value = value
+    input.dispatchEvent(new Event('input'))
+  }
+  const focused = () => document.activeElement?.getAttribute('data-focus')
+  return { ...page, sections, control, type, focused }
 }
 
 describe('settings view, connections', () => {
@@ -251,18 +270,13 @@ describe('settings view, connections', () => {
 
   it('should send the address, the e-mail and the token of that connector when connecting', async () => {
     const fake = connectionsHost([tracker])
-    const { body, view } = await connectionsPage(fake.host)
-    const type = (focus: string, value: string) => {
-      const input = body.querySelector<HTMLInputElement>(`[data-focus="${focus}"]`)
-      if (!input) throw new Error(`invariant: ${focus} exists`)
-      input.value = value
-      input.dispatchEvent(new Event('input'))
-    }
+    const { body, view, type, control } = await connectionsPage(fake.host)
     type('conn-tracker-url', 'https://tracker.example.com')
     type('conn-tracker-email', 'ana@example.com')
     type('conn-tracker-token', 'secret-token')
 
-    body.querySelector<HTMLButtonElement>('[data-focus="conn-tracker-connect"]')?.click()
+    control('conn-tracker-connect').click()
+    fake.answer()
     await settle()
 
     expect(fake.connects).toEqual([
@@ -289,5 +303,75 @@ describe('settings view, connections', () => {
       'No connections available. Turn one on in a terminal with dck ext enable <id>',
     )
     view.close()
+  })
+})
+
+describe('settings view, focus around a connection', () => {
+  it('should keep the token field focused and busy while checking, then focus Disconnect when it connects', async () => {
+    const fake = connectionsHost([GITLAB_CONNECTOR])
+    const page = await connectionsPage(fake.host)
+    page.type('conn-gitlab-url', 'https://gitlab.example.com')
+    page.type('conn-gitlab-token', 'glpat-x')
+    page.control('conn-gitlab-token').focus()
+
+    press(page.control('conn-gitlab-token'), 'Enter')
+    await settle()
+    const whileChecking = {
+      focused: page.focused(),
+      busy: page.control('conn-gitlab-connect').getAttribute('aria-busy'),
+    }
+    fake.answer()
+    await settle()
+
+    expect(whileChecking).toEqual({ focused: 'conn-gitlab-token', busy: 'true' })
+    expect(page.focused()).toBe('conn-gitlab-disconnect')
+    page.view.close()
+  })
+
+  it('should focus the token field with the reason attached when the connection fails', async () => {
+    const fake = connectionsHost([GITLAB_CONNECTOR], { refuse: true })
+    const page = await connectionsPage(fake.host)
+    page.type('conn-gitlab-url', 'https://gitlab.example.com')
+    page.type('conn-gitlab-token', 'glpat-wrong')
+
+    page.control('conn-gitlab-connect').click()
+    fake.answer()
+    await settle()
+
+    const token = page.control('conn-gitlab-token')
+    expect(page.focused()).toBe('conn-gitlab-token')
+    expect(page.body.querySelector(`#${token.getAttribute('aria-describedby')}`)?.textContent).toBe(
+      'GitLab refused the token. Check that it has not expired or been revoked.',
+    )
+    page.view.close()
+  })
+
+  it('should focus the address field after disconnecting', async () => {
+    const fake = connectionsHost([GITLAB_CONNECTOR])
+    const page = await connectionsPage(fake.host)
+    page.type('conn-gitlab-token', 'glpat-x')
+    page.control('conn-gitlab-connect').click()
+    fake.answer()
+    await settle()
+
+    page.control('conn-gitlab-disconnect').click()
+    await settle()
+
+    expect(page.focused()).toBe('conn-gitlab-url')
+    page.view.close()
+  })
+
+  it('should close Settings with Escape while the account is being checked', async () => {
+    const fake = connectionsHost([GITLAB_CONNECTOR])
+    const page = await connectionsPage(fake.host)
+    page.type('conn-gitlab-token', 'glpat-x')
+    page.control('conn-gitlab-connect').focus()
+    page.control('conn-gitlab-connect').click()
+    await settle()
+
+    press(document.activeElement as HTMLElement, 'Escape')
+
+    expect(page.isClosed()).toBe(true)
+    fake.answer()
   })
 })

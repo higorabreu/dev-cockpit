@@ -93,6 +93,8 @@ export function createSettingsView(
   let connectors: readonly Connector[] = []
   // Until the first answer the page stays blank, so it does not flash the "none available" text
   let listed = false
+  // Where the next drawing puts the focus, when an action replaced the control that had it
+  let focusNext: string | undefined
   const statuses = new Map<string, ConnectionStatus | 'checking'>()
   // What was typed and not connected yet. The token only exists here between typing and connecting, and
   // the screen never gets it back
@@ -353,12 +355,15 @@ export function createSettingsView(
     const status = await api.connections.connect(id, fields, token)
     statuses.set(id, status)
     if (status.kind === 'connected') drafts.delete(id)
+    // Connected: the next thing to do is disconnect. Failed: type the token again, with the reason read out
+    focusNext = status.kind === 'connected' ? `conn-${id}-disconnect` : `conn-${id}-token`
     render()
   }
 
   async function disconnect(id: string) {
     drafts.delete(id)
     statuses.set(id, await api.connections.disconnect(id))
+    focusNext = `conn-${id}-url`
     render()
   }
 
@@ -370,6 +375,7 @@ export function createSettingsView(
     return t('connections.none')
   }
 
+  // While checking the fields are read only, not disabled, so the one in use keeps the focus
   function textInput(focus: string, value: string, placeholder: string, busy: boolean) {
     const input = h('input', {
       type: 'text',
@@ -377,7 +383,7 @@ export function createSettingsView(
       autocomplete: 'off',
       placeholder,
       'data-focus': focus,
-      disabled: busy,
+      readonly: busy,
     })
     input.value = value
     return input
@@ -418,27 +424,35 @@ export function createSettingsView(
       autocomplete: 'off',
       placeholder: t('connections.token.placeholder'),
       'data-focus': `conn-${id}-token`,
-      disabled: busy,
+      readonly: busy,
     })
     tokenInput.value = draft.token
+    const statusId = `conn-${id}-status`
+    if (status !== 'checking' && status.kind === 'error')
+      tokenInput.setAttribute('aria-describedby', statusId)
+    // While checking the button is busy rather than disabled, so it keeps the focus
     const connectButton = h(
       'button',
       {
         type: 'button',
         class: 'srecord',
         'data-focus': `conn-${id}-connect`,
-        disabled: busy || draft.token === '',
+        disabled: !busy && draft.token === '',
+        'aria-disabled': busy ? 'true' : undefined,
+        'aria-busy': busy ? 'true' : undefined,
       },
       t('connections.connect'),
     )
     tokenInput.addEventListener('input', () => {
       draft.token = tokenInput.value
-      connectButton.disabled = busy || draft.token.trim() === ''
+      connectButton.disabled = draft.token.trim() === ''
     })
     tokenInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && !connectButton.disabled) void connect(connector)
+      if (event.key === 'Enter' && !busy && !connectButton.disabled) void connect(connector)
     })
-    connectButton.addEventListener('click', () => void connect(connector))
+    connectButton.addEventListener('click', () => {
+      if (!busy) void connect(connector)
+    })
 
     const connected = status !== 'checking' && status.kind === 'connected'
     const disconnectButton = connected
@@ -453,7 +467,7 @@ export function createSettingsView(
     const state = status === 'checking' ? 'checking' : status.kind
     const statusLine = h(
       'span',
-      { class: 'sconn-status', 'data-state': state, role: 'status' },
+      { class: 'sconn-status', id: statusId, 'data-state': state, role: 'status' },
       statusText(status),
     )
     return [
@@ -502,6 +516,7 @@ export function createSettingsView(
   }
 
   function selectTab(id: TabId, focus = false) {
+    focusNext = undefined
     activeTab = id
     confirmingReset = false
     render()
@@ -562,7 +577,9 @@ export function createSettingsView(
     h('section', { class: 'sgroup' }, title && h('h2', {}, title), ...rows)
 
   function render() {
-    const focused = document.activeElement?.getAttribute('data-focus')
+    const pending = focusNext
+    const focused = pending ?? document.activeElement?.getAttribute('data-focus')
+    focusNext = undefined
     const value = settings.current()
     const holdOptions = HOLD_TRIGGERS.map(
       (id) => [id, t(`settings.holdTrigger.${id}` as const)] as const,
@@ -740,7 +757,10 @@ export function createSettingsView(
       ),
     )
     void value
-    if (focused) body.querySelector<HTMLElement>(`[data-focus="${focused}"]`)?.focus()
+    const target = focused ? body.querySelector<HTMLElement>(`[data-focus="${focused}"]`) : null
+    target?.focus()
+    // A target that cannot take the focus yet (a connector still loading) gets it on the next drawing
+    if (pending !== undefined && document.activeElement !== target) focusNext = pending
   }
 
   function open(tab: TabId = TABS[0].id) {
@@ -758,6 +778,7 @@ export function createSettingsView(
   }
 
   function closeView() {
+    focusNext = undefined
     if (recording) stopRecording()
     drafts.clear()
     overlay.classList.remove('open')

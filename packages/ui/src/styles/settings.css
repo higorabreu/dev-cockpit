@@ -276,7 +276,8 @@
   cursor: pointer;
 }
 
-.srecord:disabled {
+.srecord:disabled,
+.srecord[aria-disabled="true"] {
   border-style: dashed;
   color: var(--muted);
   cursor: default;
