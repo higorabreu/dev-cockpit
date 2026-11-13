@@ -13,6 +13,7 @@ ones that match the files you change.
 - `pnpm dev:dck <command>`: run the repository's CLI against the development cockpit
 - `pnpm lint`, `pnpm typecheck`, `pnpm test`: the gate, run before every commit; only the exit code counts
 - `pnpm format`: Biome formatting. `pnpm build`: build `dist`. `pnpm package`: build the `.deb` in `release/`
+- `pnpm package:mac`: build the `.app` and the `.dmg` in `release/` (on macOS)
 
 ## Premises (they outrank any implementation taste)
 
