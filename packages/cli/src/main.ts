@@ -7,6 +7,7 @@ import {
   defaultEndpoint,
   defaultStateDir,
 } from '@dck/adapter-node-net'
+import { createSecretToolStore } from '@dck/adapter-secret-tool'
 import { createJsonLogger, createTranslator, pickLocale, silentLogger } from '@dck/core'
 import { createConnectorViews, startDaemon } from '@dck/daemon'
 import packageJson from '../package.json' with { type: 'json' }
@@ -22,6 +23,7 @@ if (args[0] === 'daemon') {
   const views = createConnectorViews({
     stateDir: process.env.DCK_STATE_DIR ?? defaultStateDir(),
     logger,
+    secrets: createSecretToolStore(),
     profile: process.env.DCK_PROFILE,
   })
   const started = await startDaemon({

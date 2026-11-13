@@ -111,6 +111,9 @@ importers:
       '@dck/adapter-node-net':
         specifier: workspace:^
         version: link:../adapters/node-net
+      '@dck/adapter-secret-tool':
+        specifier: workspace:^
+        version: link:../adapters/secret-tool
       '@dck/core':
         specifier: workspace:^
         version: link:../core

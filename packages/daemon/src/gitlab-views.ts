@@ -1,7 +1,6 @@
 import { join } from 'node:path'
 import { createGitLabClient } from '@dck/adapter-gitlab'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
-import { createSecretToolStore } from '@dck/adapter-secret-tool'
 import {
   type CodeReviewSource,
   connectorTokenKey,
@@ -12,6 +11,7 @@ import {
   type Logger,
   type MergeRequestView,
   ok,
+  type SecretStore,
   type ViewSource,
   type ViewsService,
 } from '@dck/core'
@@ -37,12 +37,12 @@ function mergeRequestViews(client: CodeReviewSource): ViewSource {
 export function createGitLabViews(options: {
   stateDir: string
   logger: Logger
+  secrets: SecretStore
   // Same profile as the shell, so both read the same keyring key
   profile?: string
 }): ViewsService {
-  const { stateDir, logger } = options
+  const { stateDir, logger, secrets } = options
   const tokenKey = connectorTokenKey(GITLAB_CONNECTOR.id, options.profile)
-  const secrets = createSecretToolStore()
   const http = createFetchHttpClient()
   return createViewsService({
     views: GITLAB_CONNECTOR.views.map((view) => view.id),
