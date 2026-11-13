@@ -161,6 +161,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     onClose: () => activeSession()?.focus(),
     openSettings: () => settingsView.open('connections'),
     onBadge: showBadge,
+    onCopied: (text) => notice.copied(text),
   })
 
   let badge: { count: number; label: PluralKey | undefined } = { count: 0, label: undefined }

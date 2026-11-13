@@ -255,6 +255,15 @@
   max-width: 200px;
 }
 
+/* A task's key copies on click, like Ctrl+C on the selected row */
+.vcopy {
+  cursor: pointer;
+}
+
+.vcopy:hover {
+  color: var(--fg);
+}
+
 .vflags {
   flex: none;
   display: flex;
@@ -285,6 +294,26 @@
 
 .vflag[data-kind="muted"] {
   color: var(--muted);
+}
+
+/* The row's highlight hides a neutral chip's border, so the chip keeps its outline there */
+.vrow:is(:hover, [aria-selected="true"]) .vflag:is([data-kind="muted"], [data-kind="active"]) {
+  border-color: var(--control-line);
+}
+
+/* In progress reads stronger than to do without a semantic color: a status is not a problem */
+.vflag[data-kind="active"] {
+  color: var(--fg);
+}
+
+/* A workflow can name a status at length; the chip keeps its place and the tooltip shows the rest */
+.vstate .vflag-text {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Room for descenders, which the trimmed text box would otherwise clip */
+  padding-block: 3px;
+  margin-block: -3px;
 }
 
 .vflag[data-kind="warning"] {

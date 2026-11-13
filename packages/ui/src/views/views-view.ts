@@ -3,6 +3,7 @@ import {
   connectionErrorKey,
   filterViewItems,
   type HostApi,
+  type MessageKey,
   type PluralKey,
   type Translator,
   type ViewItem,
@@ -21,9 +22,14 @@ const STALE_MS = 60_000
 const WARM_STALE_MS = 5 * 60_000
 
 type MergeRequestItem = Extract<ViewItem, { kind: 'mergeRequest' }>
-const isMergeRequest = (item: ViewItem): item is MergeRequestItem => item.kind === 'mergeRequest'
+type IssueItem = Extract<ViewItem, { kind: 'issue' }>
 // The kinds this screen draws a row for; a view of another kind is left out until its row exists
-const DRAWN_KINDS: ReadonlySet<ViewItem['kind']> = new Set(['mergeRequest'])
+const DRAWN_KINDS: ReadonlySet<ViewItem['kind']> = new Set(['mergeRequest', 'issue'])
+// The filter says which fields it matches, and those depend on the kind of item
+const FILTER_PLACEHOLDER: Readonly<Record<ViewItem['kind'], MessageKey>> = {
+  mergeRequest: 'views.filter.placeholder',
+  issue: 'views.filter.placeholder.issue',
+}
 
 // SVG icons rather than characters: the fallback font for the symbols misaligns the chip
 const GLYPHS = {
@@ -39,6 +45,8 @@ export interface ViewsViewDeps {
   openSettings(): void
   // The item count of the view a connector marked for the rail badge, with the text that says what they are
   onBadge(count: number, label: PluralKey | undefined): void
+  // Shows the app's "copied" notice
+  onCopied(text: string): void
 }
 
 const unavailable: Omit<ViewSnapshot, 'view'> = {
@@ -59,13 +67,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   let query = ''
   let onlyPending = false
   let selected = 0
-  let matches: readonly MergeRequestItem[] = []
+  let matches: readonly ViewItem[] = []
   let frame = 0
 
   const isOpen = () => overlay.classList.contains('open')
   const snapshotOf = (view: string): ViewSnapshot => snapshots.get(view) ?? { ...unavailable, view }
   const connectedViews = () => views.filter((view) => snapshotOf(view.id).state !== 'unconfigured')
   const currentView = () => connectedViews().find((view) => view.id === current)
+  const currentKind = () => currentView()?.kind ?? 'mergeRequest'
   // A view that is gone or lost its account gives its place to the first connected one
   const settleCurrent = () => {
     if (currentView() === undefined) current = connectedViews()[0]?.id
@@ -133,12 +142,29 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     pendingButton.textContent = t('views.pending')
     pendingButton.dataset.tip = t('views.pending')
     pendingButton.dataset.tipKey = 'Ctrl+P'
-    input.placeholder = t('views.filter.placeholder')
+    drawKindTexts(true)
+  }
+
+  // The filter's placeholder and the hints follow the kind of the open tab; Ctrl+C only exists on a task,
+  // and switching only when there is another tab
+  let drawnTexts: string | undefined
+  function drawKindTexts(force = false) {
+    const kind = currentKind()
+    const switchable = connectedViews().length > 1
+    const texts = `${kind} ${switchable}`
+    if (texts === drawnTexts && !force) return
+    drawnTexts = texts
+    const placeholder = t(FILTER_PLACEHOLDER[kind])
+    input.placeholder = placeholder
+    input.setAttribute('aria-label', placeholder)
     hint.replaceChildren(
-      keyHint('↑↓', t('views.hint.navigate')),
-      keyHint('Enter', t('views.hint.open')),
-      keyHint('←→', t('views.hint.switch')),
-      refreshButton(),
+      ...[
+        keyHint('↑↓', t('views.hint.navigate')),
+        keyHint('Enter', t('views.hint.open')),
+        kind === 'issue' ? keyHint('Ctrl+C', t('views.hint.copyKey')) : undefined,
+        switchable ? keyHint('←→', t('views.hint.switch')) : undefined,
+        refreshButton(),
+      ].filter((element) => element !== undefined),
     )
   }
 
@@ -189,19 +215,11 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     return out
   }
 
-  function row(item: MergeRequestItem, index: number): HTMLElement {
-    const elapsed = agoText(i18n, Date.now() / 1000, Date.parse(item.updatedAt) / 1000)
-    const element = h(
-      'div',
-      {
-        class: 'vrow',
-        role: 'option',
-        id: `views-row-${index}`,
-        'aria-selected': String(index === selected),
-        'aria-posinset': String(index + 1),
-        'aria-setsize': String(matches.length),
-        style: `transform: translateY(${index * ROW_HEIGHT}px)`,
-      },
+  const elapsedSince = (updatedAt: string) =>
+    agoText(i18n, Date.now() / 1000, Date.parse(updatedAt) / 1000)
+
+  function mergeRequestContent(item: MergeRequestItem): HTMLElement[] {
+    return [
       h(
         'span',
         { class: 'vmain' },
@@ -211,10 +229,72 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
           { class: 'vmeta' },
           h('span', { class: 'vref' }, `${item.project}!${item.number}`),
           h('span', { class: 'vbranch' }, item.sourceBranch),
-          h('span', {}, `${item.author} · ${elapsed}`),
+          h('span', {}, `${item.author} · ${elapsedSince(item.updatedAt)}`),
         ),
       ),
       h('span', { class: 'vflags' }, ...flags(item)),
+    ]
+  }
+
+  // A status is not a problem, so its chip stays neutral: a ring while to do, a dot once in progress
+  function issueContent(item: IssueItem, index: number): HTMLElement[] {
+    const key = h(
+      'span',
+      {
+        class: 'vref vcopy',
+        'data-tip': t('views.copyKey'),
+        'data-tip-key': 'Ctrl+C',
+      },
+      item.key,
+    )
+    key.addEventListener('click', (event) => {
+      event.stopPropagation()
+      selected = index
+      drawList()
+      copy(item)
+    })
+    const progress = item.statusCategory === 'progress'
+    return [
+      h(
+        'span',
+        { class: 'vmain' },
+        h('span', { class: 'vtitle' }, item.summary),
+        h(
+          'span',
+          { class: 'vmeta' },
+          key,
+          h('span', {}, `${item.type} · ${elapsedSince(item.updatedAt)}`),
+        ),
+      ),
+      h(
+        'span',
+        { class: 'vflags' },
+        h(
+          'span',
+          { class: 'vflag vstate', 'data-kind': progress ? 'active' : 'muted' },
+          icon(GLYPHS[progress ? 'dot' : 'ring'], 11),
+          h('span', { class: 'vflag-text' }, item.status),
+        ),
+      ),
+    ]
+  }
+
+  function row(item: ViewItem, index: number): HTMLElement {
+    const element = h(
+      'div',
+      {
+        class: 'vrow',
+        role: 'option',
+        id: `views-row-${index}`,
+        'aria-selected': String(index === selected),
+        'aria-posinset': String(index + 1),
+        'aria-setsize': String(matches.length),
+        // The row's own text reads as one run; a task is named by what people say about it
+        'aria-label':
+          item.kind === 'issue' ? `${item.key} ${item.summary}, ${item.status}` : undefined,
+        style: `transform: translateY(${index * ROW_HEIGHT}px)`,
+      },
+      ...(item.kind === 'issue' ? issueContent(item, index) : mergeRequestContent(item)),
     )
     element.addEventListener('click', () => {
       selected = index
@@ -268,7 +348,8 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       return show(t('views.error', { reason: t(connectionErrorKey(snapshot.error)) }))
     }
     if (matches.length === 0 && snapshot.state !== 'refreshing') {
-      show(t(query !== '' || onlyPending ? 'views.empty.filtered' : view.empty))
+      const filtered = query !== '' || (onlyPending && view.kind === 'mergeRequest')
+      show(t(filtered ? 'views.empty.filtered' : view.empty))
     }
   }
 
@@ -285,7 +366,11 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   function refilter(keepId?: string) {
     settleCurrent()
     const items = current === undefined ? [] : snapshotOf(current).items
-    matches = filterViewItems(items, query, onlyPending).filter(isMergeRequest)
+    // Only a merge request can need attention, so the toggle does not empty another kind of tab
+    const pendingOnly = onlyPending && currentKind() === 'mergeRequest'
+    matches = filterViewItems(items, query, pendingOnly).filter((item) =>
+      DRAWN_KINDS.has(item.kind),
+    )
     const kept = keepId === undefined ? -1 : matches.findIndex((item) => item.id === keepId)
     selected = kept === -1 ? 0 : kept
     redraw()
@@ -294,8 +379,8 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   function redraw() {
     pendingButton.setAttribute('aria-pressed', String(onlyPending))
     // Only a merge request can need attention
-    const kind = currentView()?.kind
-    pendingButton.hidden = kind !== undefined && kind !== 'mergeRequest'
+    pendingButton.hidden = currentKind() !== 'mergeRequest'
+    drawKindTexts()
     // With nothing connected there is nothing to filter, switch or refresh: only the way to Connections
     const empty = connectedViews().length === 0
     tabs.hidden = empty
@@ -345,6 +430,16 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   function openSelected() {
     const item = matches[selected]
     if (item) api.external.open(item.url)
+  }
+
+  // The key is what goes in a commit message, a branch name or a chat
+  function copy(item: IssueItem) {
+    void api.clipboard.writeText(item.key).then(() => deps.onCopied(item.key))
+  }
+
+  function copySelected() {
+    const item = matches[selected]
+    if (item?.kind === 'issue') copy(item)
   }
 
   function switchView(view: string) {
@@ -412,8 +507,19 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       if (next !== undefined) switchView(next)
     } else if (event.ctrlKey && key.toLowerCase() === 'r') refresh()
     else if (event.ctrlKey && !event.shiftKey && key.toLowerCase() === 'p') {
-      onlyPending = !onlyPending
-      refilter()
+      if (currentKind() === 'mergeRequest') {
+        onlyPending = !onlyPending
+        refilter()
+      }
+    } else if (
+      event.ctrlKey &&
+      !event.shiftKey &&
+      key.toLowerCase() === 'c' &&
+      currentKind() === 'issue' &&
+      input.selectionStart === input.selectionEnd
+    ) {
+      // Text selected in the filter is copied as usual
+      copySelected()
     } else return
     event.preventDefault()
     event.stopPropagation()
