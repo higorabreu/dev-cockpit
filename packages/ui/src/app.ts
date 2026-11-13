@@ -16,7 +16,6 @@ import {
   type HostApi,
   type MenuCategory,
   openTab,
-  PANE_RATIO,
   type PluralKey,
   type Project,
   recentTabs,
@@ -37,6 +36,7 @@ import { displayPath } from './panel/format.ts'
 import { createGitSection } from './panel/git-section.ts'
 import { createPanel } from './panel/panel.ts'
 import { createSessionsSection } from './panel/sessions-section.ts'
+import { createSplitPreferences } from './panes/split-preferences.ts'
 import { createTabView, type TabView } from './panes/tab-view.ts'
 import { localeFor } from './platform/locale.ts'
 import { bindShortcuts } from './platform/shortcuts.ts'
@@ -96,9 +96,16 @@ const PROJECT_PREFIX = 'open-project:'
 export async function startApp(elements: AppElements, api: HostApi, settings: SettingsClient) {
   const { bar, host } = elements
   const sessions = new Map<string, TerminalSession>()
-  // Each tab's panes: its terminal and, when open, the review beside it
+  // Each tab's panes: its terminal and, when open, the review beside or below it
   const tabViews = new Map<string, TabView>()
-  const ratioMemory = { ratio: PANE_RATIO.initial }
+  const split = createSplitPreferences({
+    current: () => settings.current(),
+    update: (patch) => void settings.update(patch),
+    after(milliseconds, task) {
+      const timer = setTimeout(task, milliseconds)
+      return () => clearTimeout(timer)
+    },
+  })
   const projectTabs = new Map<string, string>()
   const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
@@ -421,8 +428,9 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     const id = `tab-${counter}`
     const view = createTabView(host, {
       t: i18n.t,
-      memory: ratioMemory,
-      onNarrow: (narrow) => reviews.narrow(id, narrow),
+      preferences: () => split.current(),
+      onRatio: (orientation, ratio) => split.saveRatio(orientation, ratio),
+      onArrange: (_orientation, narrow) => reviews.narrow(id, narrow),
       onShownChange: () => renderTabs(),
     })
     tabViews.set(id, view)
@@ -459,6 +467,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       kind: 'terminal',
       element: session.element,
       focus: () => session.focus(),
+      grid: () => session.grid(),
     })
     if (options.project) projectTabs.set(options.project, id)
     update(openTab(state, { id, label: options.label ?? i18n.t('tabs.default', { n: counter }) }))
@@ -552,6 +561,10 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     if (changed.includes('extensions.disabled')) void viewsView.warm()
     if (changed.includes('fontSize')) {
       for (const session of sessions.values()) session.setFontSize(next.fontSize)
+    }
+    // The layout or a kept share changed, here or in another window; a new font changes the columns
+    if (changed.includes('fontSize') || changed.some((key) => key.startsWith('review.'))) {
+      for (const view of tabViews.values()) view.relayout()
     }
   })
   // In "system" mode the desktop may switch themes while the cockpit is open

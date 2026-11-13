@@ -359,6 +359,14 @@ export const ptBR = {
   'review.hint.hunk': 'trecho',
   'review.hint.expand': 'mostrar linhas',
   'review.hint.terminal': 'terminal',
+  'review.a11y.dividerStacked': 'Altura da revisão',
+  'settings.group.review': 'Revisão',
+  'settings.reviewLayout': 'Layout da revisão',
+  'settings.reviewLayout.hint':
+    'Automático põe ao lado do terminal quando os dois mantêm cerca de 100 colunas; senão, abaixo.',
+  'settings.reviewLayout.auto': 'Automático',
+  'settings.reviewLayout.side': 'Lado a lado',
+  'settings.reviewLayout.stacked': 'Empilhado',
 
   'error.DCK-IPC-001': 'Método desconhecido',
   'error.DCK-IPC-002': 'O método falhou',

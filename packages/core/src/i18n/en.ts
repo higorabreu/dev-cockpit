@@ -360,6 +360,14 @@ export const en: Record<MessageKey, string> = {
   'review.hint.hunk': 'hunk',
   'review.hint.expand': 'show lines',
   'review.hint.terminal': 'terminal',
+  'review.a11y.dividerStacked': 'Height of the review',
+  'settings.group.review': 'Review',
+  'settings.reviewLayout': 'Review layout',
+  'settings.reviewLayout.hint':
+    'Automatic puts it beside the terminal when both keep about 100 columns, else below.',
+  'settings.reviewLayout.auto': 'Automatic',
+  'settings.reviewLayout.side': 'Side by side',
+  'settings.reviewLayout.stacked': 'Stacked',
 
   'error.DCK-IPC-001': 'Unknown method',
   'error.DCK-IPC-002': 'The method failed',

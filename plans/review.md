@@ -85,8 +85,10 @@ change.
 | R10 | The orientation control, its shortcut and the Settings row switch the layout at once and the choice survives a restart; the ratio is kept per orientation | Tests, a real-app run |
 | R11 | All files read as one scroll; the index scrolls to a file and follows the scroll; a 10 000-line change still opens under 300 ms and scrolls at 60 fps | Tests, measured |
 
-- [ ] RV-T7. `core`: the orientation rule from the tab's size and the setting; the pane model gains an
-  orientation and a ratio per orientation. (R9, R10)
+- [x] RV-T7. `core`: the orientation rule from the tab's size and the setting; the pane model gains an
+  orientation and a ratio per orientation. (R9, R10) The rule takes each pane's grid (the terminal's real
+  cell size and padding, the diff's 12px cell and gutters): side by side when each keeps 100 columns, else
+  stacked when each keeps 15 rows (and the review its 440px width), else the focused pane alone.
 - [ ] RV-T8. Settings `review.layout` with its row, the header control and shortcut, the stacked layout and
   the divider in both orientations. (R9, R10)
 - [ ] RV-T9. The continuous diff and the file index. (R11)

@@ -1,4 +1,4 @@
-import type { HostApi } from '@dck/core'
+import type { HostApi, PaneGrid } from '@dck/core'
 import { type ThemeName, tokens } from '@dck/design'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
@@ -15,6 +15,8 @@ export interface TerminalSession {
   focus(): void
   write(data: string): void
   fit(): void
+  // The real cell size of the font and the padding around the cells, while the terminal is on screen
+  grid(): PaneGrid | undefined
   setTheme(name: ThemeName): void
   setFontSize(size: number): void
   dispose(): void
@@ -99,15 +101,36 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   // The pane, not the tab: a split changes the terminal's width while the tab keeps its own
   observer.observe(element)
 
+  // The fit leaves this strip for xterm's scrollbar (its default width) beside the columns
+  const SCROLLBAR = 14
+  let lastGrid: PaneGrid | undefined
+  function grid(): PaneGrid | undefined {
+    const screen = element.querySelector<HTMLElement>('.xterm-screen')
+    if (!screen || screen.clientWidth === 0 || terminal.cols === 0 || terminal.rows === 0) {
+      return lastGrid
+    }
+    const style = getComputedStyle(element)
+    const pad = (a: string, b: string) => (Number.parseFloat(a) || 0) + (Number.parseFloat(b) || 0)
+    lastGrid = {
+      cellWidth: screen.clientWidth / terminal.cols,
+      cellHeight: screen.clientHeight / terminal.rows,
+      frameWidth: pad(style.paddingLeft, style.paddingRight) + SCROLLBAR,
+      frameHeight: pad(style.paddingTop, style.paddingBottom),
+    }
+    return lastGrid
+  }
+
   return {
     element,
     ptyId: id,
+    grid,
     lastOutputAt: () => lastOutputAt,
     focus: () => terminal.focus(),
     write: (data) => api.pty.write(id, data),
     fit: () => fit.fit(),
     setFontSize: (size) => {
       terminal.options.fontSize = size
+      lastGrid = undefined
       fit.fit()
     },
     setTheme: (name) => {

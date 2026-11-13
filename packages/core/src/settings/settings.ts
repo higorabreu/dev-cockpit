@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { parseServerUrl } from '../connections/url.ts'
 import { CONNECTOR_ID_PATTERN } from '../connectors/connector.ts'
 import { EXTENSION_ID_MAX, EXTENSION_ID_PATTERN } from '../extensions/manifest.ts'
+import { PANE_RATIO, SPLIT_PREFERENCES } from '../panes/panes.ts'
 import type { ConnectionFields } from '../ports/connections.ts'
 
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
@@ -17,6 +18,7 @@ export const LIMITS = {
   disabledExtensions: { max: 200 },
   connections: { max: 20 },
   email: { max: 254 },
+  paneRatio: { min: PANE_RATIO.min, max: PANE_RATIO.max },
 } as const
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -101,6 +103,13 @@ export const settingsSchema = z.preprocess(
       ),
       // "Not now" on the Sessions hint turns it off; the System page turns it back on
       agentConnectHint: z.boolean().catch(true),
+    }),
+    review: section({
+      // How the review sits beside the terminal: by the tab's shape, or always one way while it fits
+      layout: z.enum(SPLIT_PREFERENCES).catch('auto'),
+      // The terminal's share of the width side by side and of the height stacked, kept by the divider
+      sideRatio: bounded(LIMITS.paneRatio.min, LIMITS.paneRatio.max, PANE_RATIO.initial),
+      stackedRatio: bounded(LIMITS.paneRatio.min, LIMITS.paneRatio.max, PANE_RATIO.initial),
     }),
     extensions: section({
       // Managed by `dck ext enable` and `dck ext disable`, not by the settings screen

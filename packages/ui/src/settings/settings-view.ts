@@ -686,6 +686,19 @@ export function createSettingsView(
             checkbox('window.panelOnFullHeight'),
           ),
         ),
+        group(
+          t('settings.group.review'),
+          row(
+            'review.layout',
+            t('settings.reviewLayout'),
+            select('review.layout', [
+              ['auto', t('settings.reviewLayout.auto')],
+              ['side', t('settings.reviewLayout.side')],
+              ['stacked', t('settings.reviewLayout.stacked')],
+            ]),
+            t('settings.reviewLayout.hint'),
+          ),
+        ),
       ],
       shortcuts: [
         group(

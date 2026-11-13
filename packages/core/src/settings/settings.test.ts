@@ -29,6 +29,7 @@ describe('parseSettings', () => {
       projects: { root: null, depth: 2 },
       connections: {},
       system: { notifyAfterSeconds: 30, agentConnectHint: true },
+      review: { layout: 'auto', sideRatio: 0.5, stackedRatio: 0.5 },
       extensions: { disabled: [] },
     })
   })
@@ -68,6 +69,18 @@ describe('parseSettings', () => {
       false,
     )
     expect(parseSettings({ system: { agentConnectHint: 'no' } }).system.agentConnectHint).toBe(true)
+  })
+
+  it('should keep a known review layout and go back to auto when it is unknown', () => {
+    expect(parseSettings({ review: { layout: 'stacked' } }).review.layout).toBe('stacked')
+    expect(parseSettings({ review: { layout: 'diagonal' } }).review.layout).toBe('auto')
+  })
+
+  it('should clamp the kept divider shares when they pass the limits', () => {
+    const settings = parseSettings({ review: { sideRatio: 0.05, stackedRatio: 3 } })
+
+    expect(settings.review.sideRatio).toBe(LIMITS.paneRatio.min)
+    expect(settings.review.stackedRatio).toBe(LIMITS.paneRatio.max)
   })
 
   it('should ignore unknown fields when reading', () => {
