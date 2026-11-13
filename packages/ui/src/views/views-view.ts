@@ -2,8 +2,10 @@ import {
   type ConnectorView,
   connectionErrorKey,
   filterViewItems,
+  groupByProgress,
   type HostApi,
   type MessageKey,
+  matchesReference,
   type PluralKey,
   type Translator,
   type ViewItem,
@@ -13,8 +15,9 @@ import {
 import { actionHint, closeButton, hintBar, keyHint } from '../kit/panel-frame.ts'
 import { h, icon } from '../panel/dom.ts'
 import { agoText } from '../panel/format.ts'
+import { type LaidSection, layOutList, ROW_HEIGHT, rowSpan } from './list-layout.ts'
+import { createProjectSelect } from './project-select.ts'
 
-const ROW_HEIGHT = 46
 const OVERSCAN = 4
 // How long the header says what was copied before it goes back to the update time
 const COPIED_MS = 2000
@@ -63,10 +66,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const snapshots = new Map<string, ViewSnapshot>()
   // Every view of the enabled connectors; a tab only shows once its account is connected
   let views: readonly ConnectorView[] = []
+  // The name of the service each view comes from, which heads its group of tabs
+  let serviceOf: ReadonlyMap<string, string> = new Map()
   let current: string | undefined
   let query = ''
   let onlyPending = false
   let selected = 0
+  // The items in the order they are drawn, under their section headers on a tab of tasks
+  let layout = layOutList([])
   let matches: readonly ViewItem[] = []
   let frame = 0
 
@@ -106,6 +113,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const heading = h('h2', { class: 'vheading', hidden: true })
   const status = h('span', { class: 'vstatus', role: 'status' })
   const pendingButton = h('button', { type: 'button', class: 'vbtn', 'aria-pressed': 'false' })
+  // After a pick the keys go back to the filter, where the list is driven from
+  const projects = createProjectSelect({
+    i18n,
+    onPick: () => {
+      refilter()
+      input.focus()
+    },
+  })
   const notice = h('div', { class: 'vnotice' })
   const list = h('div', {
     class: 'vlist scroll',
@@ -116,7 +131,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const inner = h('div', { class: 'vinner' })
   list.append(inner)
   const hint = hintBar()
-  const bar = h('div', { class: 'vbar' }, input, pendingButton)
+  const bar = h('div', { class: 'vbar' }, input, projects.element, pendingButton)
   // The way to Connections while nothing is connected; it holds the focus then
   let setupButton: HTMLButtonElement | undefined
   const box = h(
@@ -168,26 +183,40 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     )
   }
 
+  // A tablist may own only tabs, so the service's name is a visual label hidden from assistive technology and
+  // each tab says the service in its own name; the tabs stay siblings, so ←→ crosses the groups
   function drawTabs() {
-    tabs.replaceChildren(
-      ...connectedViews().map((view) => {
-        const count = snapshotOf(view.id).items.length
-        const tab = h(
-          'button',
-          {
-            type: 'button',
-            class: 'vtab',
-            role: 'tab',
-            'aria-selected': String(view.id === current),
-            tabindex: '-1',
-          },
-          t(view.title),
-          h('span', { class: 'vcount' }, String(count)),
-        )
-        tab.addEventListener('click', () => switchView(view.id))
-        return tab
-      }),
-    )
+    const children: HTMLElement[] = []
+    let group: string | undefined
+    for (const view of connectedViews()) {
+      const service = serviceOf.get(view.id) ?? ''
+      if (service !== group) {
+        group = service
+        children.push(h('span', { class: 'vgroup', 'aria-hidden': 'true' }, service))
+      }
+      const title = t(view.title)
+      const count = String(snapshotOf(view.id).items.length)
+      const description = t(view.description)
+      const tab = h(
+        'button',
+        {
+          type: 'button',
+          class: 'vtab',
+          role: 'tab',
+          'aria-selected': String(view.id === current),
+          'aria-label': `${service}, ${title}, ${count}`,
+          // The tooltip describes the list only under the mouse; this says it to a screen reader too
+          'aria-description': description,
+          'data-tip': description,
+          tabindex: '-1',
+        },
+        title,
+        h('span', { class: 'vcount' }, count),
+      )
+      tab.addEventListener('click', () => switchView(view.id))
+      children.push(tab)
+    }
+    tabs.replaceChildren(...children)
   }
 
   function flags(item: MergeRequestItem): HTMLElement[] {
@@ -276,7 +305,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     ]
   }
 
-  function row(item: ViewItem, index: number): HTMLElement {
+  function row(item: ViewItem, index: number, offset: number): HTMLElement {
     const element = h(
       'div',
       {
@@ -289,7 +318,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
         // The row's own text reads as one run; a task is named by what people say about it
         'aria-label':
           item.kind === 'issue' ? `${item.key} ${item.summary}, ${item.status}` : undefined,
-        style: `transform: translateY(${index * ROW_HEIGHT}px)`,
+        style: `transform: translateY(${offset}px)`,
       },
       ...(item.kind === 'issue' ? issueContent(item, index) : mergeRequestContent(item)),
     )
@@ -300,18 +329,64 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     return element
   }
 
+  const sectionTitle = (section: LaidSection) =>
+    section.category === undefined ? '' : t(`views.section.${section.category}`)
+
+  // A listbox may hold groups of options, so a section is a labelled group; its visible header is hidden
+  // from assistive technology, which hears the group's label instead
+  function sectionGroup(section: LaidSection): HTMLElement {
+    const count = section.end - section.start
+    return h('div', {
+      class: 'vsection',
+      role: 'group',
+      'aria-label': `${sectionTitle(section)}, ${count}`,
+      style: `transform: translateY(${section.top}px); height: ${section.height}px`,
+    })
+  }
+
+  function sectionHeader(section: LaidSection): HTMLElement {
+    return h(
+      'div',
+      { class: 'vsection-head', 'aria-hidden': 'true' },
+      h('span', {}, sectionTitle(section)),
+      h('span', { class: 'vsection-count' }, String(section.end - section.start)),
+    )
+  }
+
+  // Only the entries in view exist; a row inside a section is placed from the section's top
   function drawList() {
-    inner.style.height = `${matches.length * ROW_HEIGHT}px`
+    inner.style.height = `${layout.height}px`
     const { start, end } = visibleRange({
+      tops: layout.tops,
       scrollTop: list.scrollTop,
       viewportHeight: list.clientHeight || ROW_HEIGHT * 8,
-      rowHeight: ROW_HEIGHT,
-      count: matches.length,
       overscan: OVERSCAN,
     })
-    inner.replaceChildren(
-      ...matches.slice(start, end).map((item, offset) => row(item, start + offset)),
-    )
+    const drawn: HTMLElement[] = []
+    const groups = new Map<number, HTMLElement>()
+    for (const entry of layout.entries.slice(start, end)) {
+      const section = layout.sections[entry.section]
+      if (section === undefined) continue
+      let parent: HTMLElement | undefined
+      if (section.category !== undefined) {
+        parent = groups.get(entry.section)
+        if (parent === undefined) {
+          parent = sectionGroup(section)
+          groups.set(entry.section, parent)
+          drawn.push(parent)
+        }
+      }
+      const base = parent === undefined ? 0 : section.top
+      const item = entry.kind === 'row' ? matches[entry.index] : undefined
+      const element =
+        entry.kind === 'header'
+          ? sectionHeader(section)
+          : item && row(item, entry.index, entry.top - base)
+      if (element === undefined) continue
+      if (parent === undefined) drawn.push(element)
+      else parent.append(element)
+    }
+    inner.replaceChildren(...drawn)
     input.setAttribute('aria-activedescendant', matches.length > 0 ? `views-row-${selected}` : '')
   }
 
@@ -345,7 +420,10 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       return show(t('views.error', { reason: t(connectionErrorKey(snapshot.error)) }))
     }
     if (matches.length === 0 && snapshot.state !== 'refreshing') {
-      const filtered = query !== '' || (onlyPending && view.kind === 'mergeRequest')
+      const filtered =
+        query !== '' ||
+        (onlyPending && view.kind === 'mergeRequest') ||
+        projects.chosen() !== undefined
       show(t(filtered ? 'views.empty.filtered' : view.empty))
     }
   }
@@ -371,14 +449,23 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   function refilter(keepId?: string) {
     settleCurrent()
     const items = current === undefined ? [] : snapshotOf(current).items
-    // Only a merge request can need attention, so the toggle does not empty another kind of tab
-    const pendingOnly = onlyPending && currentKind() === 'mergeRequest'
-    matches = filterViewItems(items, query, pendingOnly).filter((item) =>
-      DRAWN_KINDS.has(item.kind),
-    )
-    const kept = keepId === undefined ? -1 : matches.findIndex((item) => item.id === keepId)
-    selected = kept === -1 ? 0 : kept
+    const tasks = currentKind() === 'issue'
+    projects.update(tasks ? items : [])
+    const found = filterViewItems(items, {
+      query,
+      // Only a merge request can need attention, so the toggle does not empty another kind of tab
+      onlyPending: onlyPending && currentKind() === 'mergeRequest',
+      project: projects.chosen(),
+    }).filter((item) => DRAWN_KINDS.has(item.kind))
+    layout = layOutList(tasks ? groupByProgress(found) : [{ category: undefined, items: found }])
+    matches = layout.items
+    // A typed key selects its task even when it sits in a later section; otherwise the first row
+    const best = found[0]
+    const wanted = keepId ?? (best && matchesReference(best, query) ? best.id : matches[0]?.id)
+    const index = wanted === undefined ? -1 : matches.findIndex((item) => item.id === wanted)
+    selected = Math.max(0, index)
     redraw()
+    if (keepId === undefined) reveal()
   }
 
   function redraw() {
@@ -418,11 +505,10 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   }
 
   function reveal() {
-    const top = selected * ROW_HEIGHT
-    const bottom = top + ROW_HEIGHT
+    const { top, bottom } = rowSpan(layout, selected)
+    const height = list.clientHeight || ROW_HEIGHT * 8
     if (top < list.scrollTop) list.scrollTop = top
-    else if (bottom > list.scrollTop + list.clientHeight)
-      list.scrollTop = bottom - list.clientHeight
+    else if (bottom > list.scrollTop + height) list.scrollTop = bottom - height
     drawList()
   }
 
@@ -483,6 +569,9 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     views = connectors.flatMap((connector) =>
       connector.views.filter((view) => DRAWN_KINDS.has(view.kind)),
     )
+    serviceOf = new Map(
+      connectors.flatMap((connector) => connector.views.map((view) => [view.id, connector.name])),
+    )
     for (const view of snapshots.keys())
       if (!views.some((known) => known.id === view)) snapshots.delete(view)
   }
@@ -494,6 +583,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     query = ''
     input.value = ''
     onlyPending = false
+    projects.reset()
     deps.onClose()
   }
 
@@ -513,6 +603,9 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     else if (key === 'ArrowUp') move(-1)
     else if (key === 'PageDown') move(8)
     else if (key === 'PageUp') move(-8)
+    // With text in the filter they move the caret, as ← and → do
+    else if (key === 'Home' && query === '') move(-matches.length)
+    else if (key === 'End' && query === '') move(matches.length)
     else if (key === 'Enter') openSelected()
     else if ((key === 'ArrowLeft' || key === 'ArrowRight') && query === '') {
       const step = key === 'ArrowRight' ? 1 : -1
@@ -545,7 +638,9 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     refilter()
   })
   // Keys are listened for on the field: after clicking any button focus returns to it, otherwise the shortcuts stop
-  box.addEventListener('click', () => {
+  box.addEventListener('click', (event) => {
+    // The project select keeps the focus while its list is open
+    if (event.target instanceof Node && projects.element.contains(event.target)) return
     if (isOpen()) (setupButton ?? input).focus()
   })
   // The filter handles its own keys; anywhere else in the box Escape still closes the screen

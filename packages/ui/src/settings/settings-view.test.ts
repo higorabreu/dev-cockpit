@@ -184,7 +184,15 @@ const tracker: Connector = {
     email: { placeholder: 'ana@example.com' },
     token: { label: 'connections.gitlab.token', hint: 'connections.gitlab.token.hint' },
   },
-  views: [{ id: 'tasks', kind: 'issue', title: 'views.review', empty: 'views.empty.review' }],
+  views: [
+    {
+      id: 'tasks',
+      kind: 'issue',
+      title: 'views.review',
+      description: 'views.review.description',
+      empty: 'views.empty.review',
+    },
+  ],
 }
 
 function connectionsHost(
