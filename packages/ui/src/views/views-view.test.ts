@@ -9,7 +9,7 @@ import {
   type ViewItem,
   type ViewSnapshot,
 } from '@dck/core'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createViewsView } from './views-view.ts'
 
 const mergeRequest = (number: number): ViewItem => ({
@@ -62,7 +62,6 @@ function setup(options: { connectors: readonly Connector[]; snapshots: ViewSnaps
   const stored = new Map(options.snapshots.map((entry) => [entry.view, entry]))
   const opened: string[] = []
   const badges: { count: number; label: PluralKey | undefined }[] = []
-  const copied: string[] = []
   const clipboard: string[] = []
   let settingsOpened = 0
   let connectors = options.connectors
@@ -87,7 +86,6 @@ function setup(options: { connectors: readonly Connector[]; snapshots: ViewSnaps
       settingsOpened += 1
     },
     onBadge: (count, label) => void badges.push({ count, label }),
-    onCopied: (text) => void copied.push(text),
   })
   const tabs = () => [...overlay.querySelectorAll('.vtab')].map((tab) => tab.textContent)
   const notice = () => {
@@ -101,7 +99,6 @@ function setup(options: { connectors: readonly Connector[]; snapshots: ViewSnaps
     notice,
     opened,
     badges,
-    copied,
     clipboard,
     settingsOpened: () => settingsOpened,
     disableAll: () => {
@@ -274,6 +271,10 @@ async function openTasks(snapshots: ViewSnapshot[] = jiraOnly) {
 }
 
 describe('tasks tab', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('should show only Tasks when Jira is the only connected account', async () => {
     const { tabs } = await openTasks()
 
@@ -324,19 +325,37 @@ describe('tasks tab', () => {
     expect(input?.getAttribute('aria-label')).toBe('Filter by key, summary, type or status')
   })
 
-  it('should copy the key of the selected task and show the notice when Ctrl+C is pressed', async () => {
-    const { input, ctrl, copied, clipboard } = await openTasks()
+  it('should copy the key of the selected task and say so in the header when Ctrl+C is pressed', async () => {
+    const { input, ctrl, clipboard, overlay } = await openTasks()
     press(input, 'ArrowDown')
 
     ctrl('c')
     await settle()
 
+    const status = overlay.querySelector('.vstatus')
     expect(clipboard).toEqual(['ACME-9'])
-    expect(copied).toEqual(['ACME-9'])
+    expect(status?.textContent).toBe('Copied ACME-9')
+    expect(status?.getAttribute('role')).toBe('status')
+  })
+
+  it('should go back to the update time in the header two seconds after copying', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const { ctrl, overlay } = await openTasks()
+    const status = () => overlay.querySelector('.vstatus')?.textContent
+    const before = status()
+
+    ctrl('c')
+    await vi.advanceTimersByTimeAsync(0)
+    const during = status()
+    await vi.advanceTimersByTimeAsync(2000)
+
+    expect(during).toBe('Copied ACME-12')
+    expect(status()).toBe(before)
+    expect(before).toContain('Updated')
   })
 
   it('should leave Ctrl+C to the filter when text is selected in it', async () => {
-    const { input, ctrl, type, copied } = await openTasks()
+    const { input, ctrl, type, clipboard } = await openTasks()
     type('ACME')
     input?.setSelectionRange(0, 4)
 
@@ -344,16 +363,17 @@ describe('tasks tab', () => {
     await settle()
 
     expect(handled).toBe(false)
-    expect(copied).toEqual([])
+    expect(clipboard).toEqual([])
   })
 
   it('should copy the key without opening the task when the key is clicked', async () => {
-    const { rows, copied, opened } = await openTasks()
+    const { rows, clipboard, opened, overlay } = await openTasks()
 
     rows()[2]?.querySelector<HTMLElement>('.vref')?.click()
     await settle()
 
-    expect(copied).toEqual(['OPS-3'])
+    expect(clipboard).toEqual(['OPS-3'])
+    expect(overlay.querySelector('.vstatus')?.textContent).toBe('Copied OPS-3')
     expect(opened).toEqual([])
     expect(rows()[2]?.getAttribute('aria-selected')).toBe('true')
   })
@@ -369,7 +389,7 @@ describe('tasks tab', () => {
       )
     await settle()
 
-    expect(context.copied).toEqual([])
+    expect(context.clipboard).toEqual([])
   })
 
   it('should open the selected task in the browser when Enter is pressed', async () => {

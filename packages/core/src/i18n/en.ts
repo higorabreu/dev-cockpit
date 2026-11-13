@@ -179,6 +179,7 @@ export const en: Record<MessageKey, string> = {
   'views.hint.switch': 'switch view',
   'views.hint.copyKey': 'copy key',
   'views.copyKey': 'Copy key',
+  'views.copied': 'Copied {key}',
   'views.flag.draft': 'Draft',
   'views.flag.conflict': 'Conflict',
   'views.flag.discussions': 'Open discussion',

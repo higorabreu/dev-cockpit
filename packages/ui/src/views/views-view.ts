@@ -16,6 +16,8 @@ import { agoText } from '../panel/format.ts'
 
 const ROW_HEIGHT = 46
 const OVERSCAN = 4
+// How long the header says what was copied before it goes back to the update time
+const COPIED_MS = 2000
 // Data older than this is fetched again on open
 const STALE_MS = 60_000
 // For the rail badge, which does not need to be as fresh as the open list
@@ -45,8 +47,6 @@ export interface ViewsViewDeps {
   openSettings(): void
   // The item count of the view a connector marked for the rail badge, with the text that says what they are
   onBadge(count: number, label: PluralKey | undefined): void
-  // Shows the app's "copied" notice
-  onCopied(text: string): void
 }
 
 const unavailable: Omit<ViewSnapshot, 'view'> = {
@@ -350,7 +350,15 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     }
   }
 
+  // What was just copied holds the header's status for a moment; the element announces it as well
+  let copiedKey: string | undefined
+  let copiedTimer: ReturnType<typeof setTimeout> | undefined
+
   function drawStatus() {
+    if (copiedKey !== undefined) {
+      status.textContent = t('views.copied', { key: copiedKey })
+      return
+    }
     const snapshot = current === undefined ? undefined : snapshotOf(current)
     if (snapshot?.state === 'refreshing') status.textContent = t('views.refreshing')
     else if (snapshot?.updatedAt === undefined) status.textContent = ''
@@ -431,7 +439,15 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
 
   // The key is what goes in a commit message, a branch name or a chat
   function copy(item: IssueItem) {
-    void api.clipboard.writeText(item.key).then(() => deps.onCopied(item.key))
+    void api.clipboard.writeText(item.key).then(() => {
+      copiedKey = item.key
+      drawStatus()
+      clearTimeout(copiedTimer)
+      copiedTimer = setTimeout(() => {
+        copiedKey = undefined
+        drawStatus()
+      }, COPIED_MS)
+    })
   }
 
   function copySelected() {
@@ -473,6 +489,8 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
 
   function close() {
     overlay.classList.remove('open')
+    clearTimeout(copiedTimer)
+    copiedKey = undefined
     query = ''
     input.value = ''
     onlyPending = false

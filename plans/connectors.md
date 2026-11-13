@@ -121,11 +121,13 @@ item kind.
   address is refused before any request (`DCK-JRA-008`). The e-mail is never logged.
 - "Connected as" shows the display name, since Jira Cloud has no username. Disconnecting erases the address,
   the e-mail and the token; the settings model drops an empty e-mail, which is how it is erased.
-- In progress reads in the text color with a dot and to do in the muted color with a ring; no semantic
-  color, since a status is not a problem. A long status is cut at 160 px with its tooltip. A neutral chip
-  keeps its outline on a highlighted row, merge request chips included, where the line color vanished.
+- The status is plain text with its category glyph, not a chip: in the MR tab a bordered chip means
+  something needs the user, and a status does not. In progress reads in the text color with a dot and to do
+  in the muted color with a ring. A long status is cut at 160 px with its tooltip. A merge request's Draft
+  chip keeps its outline on a highlighted row, where the line color vanished in the light theme.
 - Ctrl+C copies the key only on Tasks and only when no text is selected in the filter; a click on the key is
-  the mouse path, with its tooltip and shortcut. The "copied" notice is the app's own, in the tab bar.
+  the mouse path, with its tooltip and shortcut. The Work header says "Copied ACME-139" for two seconds in
+  place of the update time, through its status element, instead of the tab bar's notice.
 - The hint bar leaves out switching tabs when there is only one.
 - Verified against a fake Jira server (two pages, 12 issues) in both themes and languages, with GitLab and
   Jira together, Jira alone, an empty list, a wrong token and a narrow window.

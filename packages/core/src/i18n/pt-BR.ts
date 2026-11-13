@@ -179,6 +179,7 @@ export const ptBR = {
   'views.hint.switch': 'trocar aba',
   'views.hint.copyKey': 'copiar chave',
   'views.copyKey': 'Copiar chave',
+  'views.copied': 'Chave {key} copiada',
   'views.flag.draft': 'Rascunho',
   'views.flag.conflict': 'Conflito',
   'views.flag.discussions': 'Discussão aberta',
