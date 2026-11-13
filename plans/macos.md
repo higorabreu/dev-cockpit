@@ -91,13 +91,21 @@ The order is meant to bring the tester in as late as possible and once per batch
   break is refused before it is sent. A test
   with a fake runner, including a value with quotes, a space and `$`, a refused line break, and an integration
   test that only runs on macOS CI. (C3)
-- [ ] MAC-T4. Processes: `adapters/macos-proc` (`@dck/adapter-macos-proc`) behind the same
+- [x] MAC-T4. Processes: `adapters/macos-proc` (`@dck/adapter-macos-proc`) behind the same
   `ProcessInspector` and scanner ports. The foreground group through `ps -o tpgid= -p <pid>`, the name through
   `ps -o comm=`, the start through `ps -o lstart=`, the directory through `lsof -a -d cwd -Fn -p <pid>`. The
   scan through `ps -axo pid=,command=` and the process's `DCK_ENDPOINT` through `ps eww -p` (only valid
   for the user's own processes). An injected executor like `docker-cli`'s. The real outputs recorded by
   the tester in MAC-T1 become the test files. Measure the cost of `lsof` and, if it goes past a few tens of
-  ms, cache by pid or try `pty.process` from `node-pty` for the name. (C4)
+  ms, cache by pid or try `pty.process` from `node-pty` for the name. (C4) Done: the name comes from
+  `ucomm` (the bare name, as on Linux; `comm` may be a full path) and there is no start time, which nothing
+  reads. One inspect took about 40 ms and 3 processes, so inspects within 10 ms share one `lsof` with every
+  pid and one `ps -axo pid=,tpgid=,ucomm=`: 2 processes per poll of all tabs. The paths `lsof -b -w`
+  prints are decoded from its `\xNN` escapes, and a batch that fails or outlives 5 s resolves with nothing.
+  The scan reads `ps -xww` (own processes, full width) and the last `DCK_ENDPOINT` after the command in
+  `ps -E -ww`. Open: a native Claude Code install shows its version (`2.1.323`) as `ucomm`, since the binary
+  is named after it, so it is not recognized as an agent (an npm install, likely `node`, is not checked);
+  the Energy Impact of polling while hidden is not measured yet.
 - [ ] MAC-T5. The anchored window on the Mac, in `shell/src/electron/dock-window.ts` and `main.ts`, only
   when `platform === 'darwin'`: `type: 'panel'`, `setAlwaysOnTop(true, 'screen-saver')`,
   `setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true })`,
