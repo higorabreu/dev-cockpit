@@ -22,6 +22,8 @@ const DEFAULT_AFTER_MS = 10_000
 export function createConnectHint(options: ConnectHintOptions) {
   const afterMs = options.afterMs ?? DEFAULT_AFTER_MS
   const tabs = new Map<string, TabState>()
+  // The install is per user, not per tab: one connected or connecting tab answers for its agent everywhere
+  const settled = new Set<string>()
 
   return {
     // The agent in the tab's foreground, or undefined for a shell or any other command
@@ -43,19 +45,23 @@ export function createConnectHint(options: ConnectHintOptions) {
     // Any signal from the tab proves its agent is connected
     signal(tabId: string) {
       const state = tabs.get(tabId)
+      if (state?.agent) settled.add(state.agent.id)
       if (state) state.signalled = true
       else tabs.set(tabId, { signalled: true, handled: false })
     },
     // Connect typed the command: the hint has done its job for this run of the agent
     handled(tabId: string) {
       const state = tabs.get(tabId)
+      if (state?.agent) settled.add(state.agent.id)
       if (state) state.handled = true
     },
     // The agent to suggest connecting in this tab, if the hint shows now
     shown(tabId: string): AgentProfile | undefined {
       const state = tabs.get(tabId)
       if (!state?.agent?.connect || state.since === undefined) return undefined
-      if (state.signalled || state.handled || !options.enabled()) return undefined
+      if (state.signalled || state.handled || settled.has(state.agent.id) || !options.enabled()) {
+        return undefined
+      }
       return options.clock.now() - state.since >= afterMs ? state.agent : undefined
     },
     forget(tabId: string) {

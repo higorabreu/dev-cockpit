@@ -76,6 +76,8 @@ export function createSessionsSection(source: SessionsSource, i18n: Translator):
     summary: () => i18n.plural('sessions.count', source.tabs().length),
     badge: () => (source.finishedCount() > 0 ? String(source.finishedCount()) : undefined),
     body() {
+      // One connection serves every session, so the hint shows once, under the first agent that needs it
+      let hinted = false
       const rows = source
         .tabs()
         .map((tab, order) => ({
@@ -129,7 +131,9 @@ export function createSessionsSection(source: SessionsSource, i18n: Translator):
               : info && h('span', { class: 'smeta' }, folder(info.cwd)),
           )
           row.addEventListener('click', () => source.select(tab.id))
-          return source.connectHint(tab.id) ? [row, connectHint(tab.id)] : [row]
+          if (hinted || !source.connectHint(tab.id)) return [row]
+          hinted = true
+          return [row, connectHint(tab.id)]
         })
       return h('div', { class: 'slist' }, ...rows)
     },

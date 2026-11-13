@@ -89,13 +89,27 @@ describe('createConnectHint', () => {
   it('should count the 10 s again when the agent starts again after leaving', () => {
     const { hint, advance } = setup()
     hint.update('a', connectable)
+    advance(8000)
+    hint.update('a', undefined)
+
+    hint.update('a', connectable)
+    advance(9999)
+    expect(hint.shown('a')).toBeUndefined()
+    advance(1)
+
+    expect(hint.shown('a')).toBe(connectable)
+  })
+
+  it('should not suggest again in the same app run once the agent proved connected', () => {
+    const { hint, advance } = setup()
+    hint.update('a', connectable)
     hint.signal('a')
     hint.update('a', undefined)
 
     hint.update('a', connectable)
-    advance(10_000)
+    advance(12_000)
 
-    expect(hint.shown('a')).toBe(connectable)
+    expect(hint.shown('a')).toBeUndefined()
   })
 
   it('should hide the hint for this run when Connect typed the command', () => {
@@ -118,7 +132,7 @@ describe('createConnectHint', () => {
     expect(hint.shown('a')).toBeUndefined()
   })
 
-  it('should keep the tabs apart when one of them signals', () => {
+  it('should hide the hint in every tab of the agent when one of them signals', () => {
     const { hint, advance } = setup()
     hint.update('a', connectable)
     hint.update('b', connectable)
@@ -127,7 +141,30 @@ describe('createConnectHint', () => {
     hint.signal('a')
 
     expect(hint.shown('a')).toBeUndefined()
-    expect(hint.shown('b')).toBe(connectable)
+    expect(hint.shown('b')).toBeUndefined()
+  })
+
+  it('should hide the hint in every tab of the agent when Connect typed the command in one', () => {
+    const { hint, advance } = setup()
+    hint.update('a', connectable)
+    hint.update('b', connectable)
+    advance(12_000)
+
+    hint.handled('a')
+
+    expect(hint.shown('b')).toBeUndefined()
+  })
+
+  it('should keep the hint of another agent when one agent signals', () => {
+    const { hint, advance } = setup()
+    const other: AgentProfile = { ...connectable, id: 'zeta', processes: ['zeta'] }
+    hint.update('a', connectable)
+    hint.update('b', other)
+    advance(12_000)
+
+    hint.signal('a')
+
+    expect(hint.shown('b')).toBe(other)
   })
 
   it('should forget the tab when it closes', () => {

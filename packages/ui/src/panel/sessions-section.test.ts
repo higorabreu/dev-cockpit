@@ -16,7 +16,8 @@ const running: SessionActivityInfo = {
   agent: acme,
 }
 
-function draw(hinted: string | undefined, locale: 'en' | 'pt-BR' = 'en') {
+function draw(hinted: string | readonly string[] | undefined, locale: 'en' | 'pt-BR' = 'en') {
+  const asking = new Set(typeof hinted === 'string' ? [hinted] : (hinted ?? []))
   const calls: string[] = []
   const source: SessionsSource = {
     tabs: () => [
@@ -29,7 +30,7 @@ function draw(hinted: string | undefined, locale: 'en' | 'pt-BR' = 'en') {
     needsYou: () => false,
     finishedCount: () => 0,
     select: (id) => void calls.push(`select ${id}`),
-    connectHint: (id) => (id === hinted ? acme : undefined),
+    connectHint: (id) => (asking.has(id) ? acme : undefined),
     connect: (id) => void calls.push(`connect ${id}`),
     dismissConnect: () => void calls.push('dismiss'),
   }
@@ -51,6 +52,15 @@ describe('sessions section, connect hint', () => {
     expect(hint?.previousElementSibling?.textContent).toContain('backend')
     expect(hint?.textContent).toContain('Connect it to see when it needs you')
     expect(body.querySelectorAll('.sconnect')).toHaveLength(1)
+  })
+
+  it('should show the hint once under the first agent when several agents can be connected', () => {
+    const { body } = draw(['tab-1', 'tab-2'])
+
+    const hints = body.querySelectorAll('.sconnect')
+
+    expect(hints).toHaveLength(1)
+    expect(hints[0]?.previousElementSibling?.textContent).toContain('backend')
   })
 
   it('should show no hint when no tab asks for it', () => {
