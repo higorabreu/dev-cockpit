@@ -1,5 +1,5 @@
 import { UNKNOWN_FOREGROUND } from '@dck/core'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CommandRunner } from './command-runner.ts'
 import { createProcessInspector } from './process-inspector.ts'
 
@@ -43,6 +43,10 @@ const escapedLsof = [
 ].join('\n')
 
 describe('createProcessInspector', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('should return the directory and the foreground command when the shell runs one', async () => {
     const { inspector } = recorder({
       lsof: lsof({ [shell]: '/Users/ana/projects/acme' }),
@@ -183,5 +187,63 @@ describe('createProcessInspector', () => {
 
     expect(second).toEqual({ cwd: '/Users/ana', foreground: 'zsh', foregroundPid: other })
     expect((await first)?.foreground).toBe('claude')
+  })
+
+  it('should resolve every caller with undefined when the runner throws before returning', async () => {
+    vi.useFakeTimers()
+    const run: CommandRunner = () => {
+      throw new Error('spawn EAGAIN')
+    }
+    const inspector = createProcessInspector(run, 10, 100)
+
+    const infos = Promise.all([inspector.inspect(shell), inspector.inspect(other)])
+    await vi.advanceTimersByTimeAsync(10)
+
+    expect(await infos).toEqual([undefined, undefined])
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('should leave no timer behind when a batch answers before the deadline', async () => {
+    vi.useFakeTimers()
+    const run: CommandRunner = async (command) =>
+      command === 'lsof' ? lsof({ [shell]: '/Users/ana' }) : table
+    const inspector = createProcessInspector(run, 10, 100)
+
+    const info = inspector.inspect(shell)
+    await vi.advanceTimersByTimeAsync(10)
+
+    expect((await info)?.foreground).toBe('claude')
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('should answer new batches with undefined without running again while a batch is stuck past the deadline', async () => {
+    vi.useFakeTimers()
+    const calls: string[] = []
+    let release: () => void = () => undefined
+    const stuck = new Promise<undefined>((resolve) => {
+      release = () => resolve(undefined)
+    })
+    const run: CommandRunner = async (command) => {
+      calls.push(command)
+      if (command === 'ps') return table
+      return calls.length === 1 ? stuck : lsof({ [other]: '/Users/ana' })
+    }
+    const inspector = createProcessInspector(run, 10, 100)
+
+    const first = inspector.inspect(shell)
+    await vi.advanceTimersByTimeAsync(110)
+    const second = inspector.inspect(other)
+    await vi.advanceTimersByTimeAsync(10)
+    const answers = [await first, await second]
+    const callsWhileStuck = calls.length
+    release()
+    await vi.advanceTimersByTimeAsync(0)
+    const third = inspector.inspect(other)
+    await vi.advanceTimersByTimeAsync(10)
+
+    expect(answers).toEqual([undefined, undefined])
+    expect(callsWhileStuck).toBe(2)
+    expect(await third).toEqual({ cwd: '/Users/ana', foreground: 'zsh', foregroundPid: other })
+    expect(vi.getTimerCount()).toBe(0)
   })
 })

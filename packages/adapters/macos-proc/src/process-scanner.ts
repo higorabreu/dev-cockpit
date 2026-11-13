@@ -10,10 +10,18 @@ const parseListing = (output: string | undefined) =>
 // The command is one string, so the script must stand as a whole argument between spaces
 const hasArgument = (command: string, argument: string) => ` ${command} `.includes(` ${argument} `)
 
-// `ps -E` appends the environment after the command; the last match wins, so an argument cannot
-// pose as the variable
-const lastEndpoint = (environment: string) =>
-  [...environment.matchAll(/(?:^|\s)DCK_ENDPOINT=(\S+)/g)].at(-1)?.[1]
+const ENDPOINT_MARKER = ' DCK_ENDPOINT='
+
+// `ps -E` appends the environment after the command with nothing escaped, so a value may hold spaces;
+// the last marker wins, so an argument cannot pose as the variable, and the value runs up to the next
+// variable or the end
+const onEndpoint = (environment: string, endpoint: string | undefined) => {
+  const padded = ` ${environment}`
+  const at = padded.lastIndexOf(ENDPOINT_MARKER)
+  if (at < 0) return endpoint === undefined
+  const value = padded.slice(at + ENDPOINT_MARKER.length)
+  return endpoint !== undefined && (value === endpoint || value.startsWith(`${endpoint} `))
+}
 
 export function createProcessScanner(run: CommandRunner = runCommand): ProcessScanner {
   return {
@@ -28,7 +36,7 @@ export function createProcessScanner(run: CommandRunner = runCommand): ProcessSc
         const output = await run('ps', ['-E', '-ww', '-o', 'command=', '-p', String(pid)])
         // Gone, or the pid now runs something else
         if (!output?.startsWith(command)) continue
-        if (lastEndpoint(output.slice(command.length).trimEnd()) === query.endpoint) found.push(pid)
+        if (onEndpoint(output.slice(command.length).trimEnd(), query.endpoint)) found.push(pid)
       }
       return found
     },
