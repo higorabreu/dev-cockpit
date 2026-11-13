@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { UNKNOWN_FOREGROUND } from '@dck/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   createProcessInspector,
@@ -55,12 +56,12 @@ describe('createProcessInspector', () => {
     expect(await createProcessInspector(proc).inspect(999)).toBeUndefined()
   })
 
-  it('should name the process unknown when the foreground group has no name', async () => {
+  it('should report an unknown foreground when the foreground group has no name', async () => {
     await fakeProcess(10, '/work', '10 (zsh) S 1 10 10 1 -1 0')
 
     const info = await createProcessInspector(proc).inspect(10)
 
-    expect(info?.foreground).toBe('desconhecido')
+    expect(info?.foreground).toBe(UNKNOWN_FOREGROUND)
   })
 })
 

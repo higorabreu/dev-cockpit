@@ -1,11 +1,13 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import * as linuxProc from '@dck/adapter-linux-proc'
+import * as macosProc from '@dck/adapter-macos-proc'
 import { silentLogger } from '@dck/core'
 import { FakeDockWindow } from '@dck/core/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { PlacedWindow } from './platform-window.ts'
-import { type PlatformContext, selectPlatform } from './select-platform.ts'
+import { type PlatformContext, processAdapters, selectPlatform } from './select-platform.ts'
 
 let directory = ''
 
@@ -103,6 +105,20 @@ describe('selectPlatform', () => {
     const entry = await readFile(join(directory, 'dev-cockpit.desktop'), 'utf8')
     expect(entry.split('\n')).toContain(exec)
   })
+
+  it.each([
+    { name: 'macos-proc', platform: 'darwin' as const, expected: macosProc },
+    { name: 'linux-proc', platform: 'linux' as const, expected: linuxProc },
+  ])(
+    'should inspect processes with $name when the platform is $platform',
+    ({ platform, expected }) => {
+      // Act
+      const adapters = processAdapters(platform)
+
+      // Assert
+      expect(adapters).toBe(expected)
+    },
+  )
 
   it.each([
     {
