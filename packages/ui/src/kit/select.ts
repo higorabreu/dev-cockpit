@@ -1,4 +1,5 @@
 import { h, icon } from '../panel/dom.ts'
+import { watchOverflow } from './scrollbar.ts'
 
 export interface SelectOption {
   readonly value: string
@@ -53,6 +54,7 @@ export function createSelect(deps: SelectDeps) {
     hidden: true,
   })
   const element = h('span', { class: 'select-field' }, button, list)
+  watchOverflow(list)
 
   const isOpen = () => !list.hidden
   const selectedIndex = () => options.findIndex((option) => option.value === value)

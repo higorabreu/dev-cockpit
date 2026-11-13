@@ -160,7 +160,7 @@ export function createPanel(options: PanelOptions) {
       h('div', { class: 'phead' }, options.title()),
       h(
         'div',
-        { class: 'pscroll scroll' },
+        { class: 'pscroll scroll scroll-edges' },
         open.length > 0 && h('div', { class: 'stack' }, ...open.map(sectionBlock)),
         // Collapsed ones go at the end of the column, below the open ones; with none open, they align at the top
         closed.length > 0 &&
