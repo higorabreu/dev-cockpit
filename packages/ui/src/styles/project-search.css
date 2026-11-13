@@ -54,12 +54,14 @@
   color: var(--muted);
 }
 
-#search-results {
+/* Without the id's weight, so the scroll list's overflow padding applies */
+:where(#search-results) {
   display: flex;
   flex-direction: column;
   gap: 1px;
   max-height: 296px;
-  padding: 0 6px;
+  /* The last row keeps the same 4px from the hint bar as the first one has from the field */
+  padding: 0 6px 4px;
   overflow-y: auto;
 }
 
