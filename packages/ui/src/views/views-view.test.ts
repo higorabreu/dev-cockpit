@@ -587,3 +587,333 @@ describe('views view tab groups', () => {
     ])
   })
 })
+
+// Tasks across projects, as the tracker sends them: most recently updated first
+const tracked = (
+  key: string,
+  category: 'todo' | 'progress',
+  extra: Partial<Extract<ViewItem, { kind: 'issue' }>> = {},
+) =>
+  task(key, {
+    project: key.split('-')[0] ?? '',
+    statusCategory: category,
+    status: category === 'progress' ? 'In Progress' : 'To Do',
+    ...extra,
+  })
+const spread = [
+  tracked('NTF-41', 'todo', { summary: 'Retry the failed webhooks' }),
+  tracked('BID-7', 'progress', { summary: 'Fix the build cache', type: 'Task' }),
+  tracked('NTF-39', 'todo', { summary: 'Corrigir o deploy de homologação' }),
+  tracked('NTF-397', 'progress', { summary: 'Send the daily digest' }),
+  tracked('PLTB-3', 'todo', { summary: 'Login fails on Safari', type: 'Bug' }),
+  tracked('NTF-12', 'todo', { summary: 'Rename the digest template' }),
+]
+
+async function openSpread(items: ViewItem[] = spread, language: 'en' | 'pt-BR' = 'en') {
+  const context = setup({
+    connectors: [JIRA_CONNECTOR],
+    snapshots: [snapshot('tasks', 'idle', items)],
+    language,
+  })
+  await context.view.open()
+  const overlay = context.overlay
+  const input = overlay.querySelector<HTMLInputElement>('.vinput')
+  const keys = () =>
+    [...overlay.querySelectorAll('.vrow .vref')].map((element) => element.textContent)
+  const heads = () =>
+    [...overlay.querySelectorAll('.vsection-head')].map((element) => element.textContent)
+  const selectedKey = () => overlay.querySelector('.vrow[aria-selected="true"] .vref')?.textContent
+  const projectButton = () => overlay.querySelector<HTMLButtonElement>('#views-project')
+  const projectShown = () => projectButton()?.querySelector('[data-current]')?.textContent
+  const openProjects = () => projectButton()?.click()
+  const projectOptions = () =>
+    [...overlay.querySelectorAll('#views-project-list [role="option"]')].map(
+      (option) =>
+        `${option.querySelector('.select-label')?.textContent} ${option.querySelector('.select-detail')?.textContent}`,
+    )
+  const pickProject = (label: string) => {
+    openProjects()
+    const option = [
+      ...overlay.querySelectorAll<HTMLElement>('#views-project-list [role="option"]'),
+    ].find((element) => element.querySelector('.select-label')?.textContent === label)
+    option?.click()
+  }
+  const type = (value: string) => {
+    if (!input) return
+    input.value = value
+    input.dispatchEvent(new Event('input'))
+  }
+  return {
+    ...context,
+    input,
+    keys,
+    heads,
+    selectedKey,
+    type,
+    projectButton,
+    projectShown,
+    openProjects,
+    projectOptions,
+    pickProject,
+  }
+}
+
+describe('tasks grouped by progress', () => {
+  it('should list In progress before To do with their counts, keeping the list order in each', async () => {
+    const { keys, heads } = await openSpread()
+
+    expect(heads()).toEqual(['In progress2', 'To do4'])
+    expect(keys()).toEqual(['BID-7', 'NTF-397', 'NTF-41', 'NTF-39', 'PLTB-3', 'NTF-12'])
+  })
+
+  it('should expose each section as a labelled group and count only tasks in the positions', async () => {
+    const { overlay } = await openSpread()
+
+    const groups = [...overlay.querySelectorAll('.vlist [role="group"]')]
+    const rows = [...overlay.querySelectorAll('.vrow')]
+
+    expect(groups.map((group) => group.getAttribute('aria-label'))).toEqual([
+      'In progress, 2',
+      'To do, 4',
+    ])
+    expect(groups[1]?.querySelectorAll('[role="option"]')).toHaveLength(4)
+    expect(
+      [...overlay.querySelectorAll('.vsection-head')].map((head) =>
+        head.getAttribute('aria-hidden'),
+      ),
+    ).toEqual(['true', 'true'])
+    expect(rows.map((row) => row.getAttribute('aria-posinset'))).toEqual([
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+    ])
+    expect(new Set(rows.map((row) => row.getAttribute('aria-setsize')))).toEqual(new Set(['6']))
+  })
+
+  it('should skip the headers when ↓ and ↑ cross from one section to the other', async () => {
+    const { input, selectedKey } = await openSpread()
+    const visited: (string | null | undefined)[] = []
+
+    for (const key of ['ArrowDown', 'ArrowDown', 'ArrowUp']) {
+      press(input, key)
+      visited.push(selectedKey())
+    }
+
+    expect(visited).toEqual(['NTF-397', 'NTF-41', 'NTF-397'])
+  })
+
+  it('should go to the last and the first task when End and Home are pressed with an empty filter', async () => {
+    const { input, selectedKey } = await openSpread()
+
+    press(input, 'End')
+    const last = selectedKey()
+    press(input, 'Home')
+
+    expect(last).toBe('NTF-12')
+    expect(selectedKey()).toBe('BID-7')
+  })
+
+  it('should leave Home and End to the text when the filter has some', async () => {
+    const { input, type, selectedKey } = await openSpread()
+    type('the')
+
+    const handled = !press(input, 'End')
+
+    expect(handled).toBe(false)
+    expect(selectedKey()).toBe('BID-7')
+  })
+
+  it('should hide a section when none of its tasks is in the list', async () => {
+    const { heads, type } = await openSpread()
+
+    type('safari')
+
+    expect(heads()).toEqual(['To do1'])
+  })
+
+  it('should keep the sections and their counts when filtering', async () => {
+    const { heads, keys, type } = await openSpread()
+
+    type('digest')
+
+    expect(heads()).toEqual(['In progress1', 'To do1'])
+    expect(keys()).toEqual(['NTF-397', 'NTF-12'])
+  })
+
+  it('should name the sections in Portuguese when the language is pt-BR', async () => {
+    const { heads } = await openSpread(spread, 'pt-BR')
+
+    expect(heads()).toEqual(['Em andamento2', 'A fazer4'])
+  })
+
+  it('should draw only the rows in view when the list has a thousand tasks', async () => {
+    const many = Array.from({ length: 1000 }, (_, index) =>
+      tracked(`NTF-${index + 1}`, index % 3 === 0 ? 'progress' : 'todo'),
+    )
+
+    const { overlay } = await openSpread(many)
+
+    const height = Number.parseFloat(
+      overlay.querySelector<HTMLElement>('.vinner')?.style.height ?? '',
+    )
+    expect(overlay.querySelectorAll('.vrow').length).toBeLessThan(30)
+    expect(height).toBe(2 * 32 + 1000 * 46)
+  })
+})
+
+describe('tasks project select', () => {
+  it('should offer all projects with the total, then every project with its count, most frequent first', async () => {
+    const { openProjects, projectOptions, projectShown } = await openSpread()
+
+    openProjects()
+
+    expect(projectShown()).toBe('All projects')
+    expect(projectOptions()).toEqual(['All projects 6', 'NTF 4', 'BID 1', 'PLTB 1'])
+  })
+
+  it('should list every project however many there are', async () => {
+    const projects = ['AAA', 'BBB', 'CCC', 'DDD', 'EEE', 'FFF', 'GGG', 'PLATFORMUI']
+    const { openProjects, projectOptions } = await openSpread(
+      projects.map((project) => tracked(`${project}-1`, 'todo')),
+    )
+
+    openProjects()
+
+    expect(projectOptions()).toHaveLength(projects.length + 1)
+    expect(projectOptions().at(-1)).toBe('PLATFORMUI 1')
+  })
+
+  it('should be named Project for assistive technology and sit right after the filter', async () => {
+    const { projectButton, overlay } = await openSpread()
+
+    const labelId = projectButton()?.getAttribute('aria-labelledby') ?? ''
+
+    expect(document.getElementById(labelId)?.textContent).toBe('Project')
+    expect(projectButton()?.getAttribute('role')).toBe('combobox')
+    expect(
+      overlay.querySelector('.vinput')?.nextElementSibling?.classList.contains('vproject'),
+    ).toBe(true)
+  })
+
+  it('should keep only the tasks of the picked project and give the focus back to the filter', async () => {
+    const { pickProject, projectShown, keys, input } = await openSpread()
+
+    pickProject('NTF')
+
+    expect(projectShown()).toBe('NTF')
+    expect(keys()).toEqual(['NTF-397', 'NTF-41', 'NTF-39', 'NTF-12'])
+    expect(document.activeElement).toBe(input)
+  })
+
+  it('should show every task again when All projects is picked', async () => {
+    const { pickProject, keys } = await openSpread()
+    pickProject('NTF')
+
+    pickProject('All projects')
+
+    expect(keys()).toHaveLength(6)
+  })
+
+  it('should pick a project with the keyboard alone when it has the focus', async () => {
+    const { projectButton, keys, input } = await openSpread()
+    const button = projectButton()
+    button?.focus()
+
+    for (const key of ['ArrowDown', 'ArrowDown', 'ArrowDown', 'Enter']) press(button ?? null, key)
+
+    expect(keys()).toEqual(['BID-7'])
+    expect(document.activeElement).toBe(input)
+  })
+
+  it('should combine the project with the text filter and say when nothing is left', async () => {
+    const { pickProject, keys, type, notice } = await openSpread()
+    pickProject('NTF')
+
+    type('digest')
+    const found = keys()
+    type('safari')
+
+    expect(found).toEqual(['NTF-397', 'NTF-12'])
+    expect(keys()).toEqual([])
+    expect(notice()).toBe('Nothing found.')
+  })
+
+  it('should be hidden when every task is of the same project', async () => {
+    const { overlay } = await openSpread([tracked('NTF-1', 'todo'), tracked('NTF-2', 'progress')])
+
+    expect(overlay.querySelector<HTMLElement>('.vproject')?.hidden).toBe(true)
+  })
+
+  it('should go back to all projects when the screen closes', async () => {
+    const { pickProject, projectShown, keys, view } = await openSpread()
+    pickProject('NTF')
+
+    view.close()
+    await view.open()
+
+    expect(projectShown()).toBe('All projects')
+    expect(keys()).toHaveLength(6)
+  })
+
+  it('should be hidden on a merge request tab', async () => {
+    const { view, overlay } = setup({ connectors: [GITLAB_CONNECTOR], snapshots: connected })
+
+    await view.open()
+
+    expect(overlay.querySelector<HTMLElement>('.vproject')?.hidden).toBe(true)
+  })
+
+  it('should name all projects in Portuguese when the language is pt-BR', async () => {
+    const { projectShown, projectButton } = await openSpread(spread, 'pt-BR')
+
+    const labelId = projectButton()?.getAttribute('aria-labelledby') ?? ''
+
+    expect(projectShown()).toBe('Todos os projetos')
+    expect(document.getElementById(labelId)?.textContent).toBe('Projeto')
+  })
+})
+
+describe('work list search', () => {
+  it('should not match the middle of a word when typing bug', async () => {
+    const { keys, type } = await openSpread()
+
+    type('bug')
+
+    expect(keys()).toEqual(['PLTB-3'])
+  })
+
+  it('should find accented text when typed without accents', async () => {
+    const { keys, type } = await openSpread()
+
+    type('homologacao')
+
+    expect(keys()).toEqual(['NTF-39'])
+  })
+
+  it('should select the exact key even when it sits in a later section', async () => {
+    const { keys, type, selectedKey } = await openSpread()
+
+    type('NTF-39')
+
+    expect(keys()).toEqual(['NTF-397', 'NTF-39'])
+    expect(selectedKey()).toBe('NTF-39')
+  })
+
+  it('should search merge requests by the start of their words too', async () => {
+    const { view, overlay } = setup({ connectors: [GITLAB_CONNECTOR], snapshots: connected })
+    await view.open()
+    const input = overlay.querySelector<HTMLInputElement>('.vinput')
+    const titles = () =>
+      [...overlay.querySelectorAll('.vrow .vtitle')].map((element) => element.textContent)
+
+    if (input) {
+      input.value = 'request 4'
+      input.dispatchEvent(new Event('input'))
+    }
+
+    expect(titles()).toEqual(['Merge request 41'])
+  })
+})
