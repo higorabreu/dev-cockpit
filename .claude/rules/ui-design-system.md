@@ -18,7 +18,11 @@ paths:
 - **Scrollbar:** only the design system's, the `scroll` class (transparent track, thin thumb that shows
   while scrolling or hovering, sizes in `size.scrollbar`). Every scrolling list carries `scroll` and touches
   the card edges (breathing room is padding inside it). The only exception is the tab strip. No
-  `scrollbar-width` or `::-webkit-scrollbar` outside the component.
+  `scrollbar-width` or `::-webkit-scrollbar` outside the component. The strip is empty at rest, so it never
+  reads as a wider right margin: a list with padding calls `watchOverflow` (`kit/scrollbar.ts`), and while
+  it overflows the strip replaces its right padding and the left one matches it; a list whose rows run edge
+  to edge adds `scroll-edges`, which reserves the strip on both sides, and gives that space back from its
+  inner padding so the text keeps its place.
 - Git and developer terms follow VS Code and the verbs developers already use (pull, push, commit, branch);
   no free translation and no Incoming or Outgoing. Fonts: Inter for text, JetBrains Mono for keys, branches
   and commands. No emoji.

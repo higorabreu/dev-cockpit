@@ -36,6 +36,19 @@ const press = (target: HTMLElement, key: string, init: KeyboardEventInit = {}) =
   return event
 }
 
+describe('createSelect overflow', () => {
+  it('should mark its list as overflowing when the options are taller than the list', async () => {
+    const { button, list } = setup()
+    Object.defineProperty(list, 'scrollHeight', { get: () => 600 })
+    Object.defineProperty(list, 'clientHeight', { get: () => 300 })
+
+    press(button, 'Enter')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(list.hasAttribute('data-overflow')).toBe(true)
+  })
+})
+
 const shown = (button: HTMLElement) =>
   button.querySelector('[data-current]')?.textContent ?? undefined
 

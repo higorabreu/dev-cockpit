@@ -270,12 +270,16 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 46px;
+  /* 46px a row: a clear 1px below keeps two highlighted rows from merging, as in the other lists */
+  height: 45px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 0 12px;
+  border-bottom: 1px solid transparent;
+  border-radius: var(--radius-medium);
+  background-clip: padding-box;
   cursor: pointer;
 }
 

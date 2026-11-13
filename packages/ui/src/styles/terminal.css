@@ -60,6 +60,19 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   background-clip: padding-box;
 }
 
+/* The strip is empty at rest, so it must not read as a wider right margin. A padded list that overflows
+   (`watchOverflow`) takes the strip as its right breathing room and pads its left side as much */
+.scroll[data-overflow] {
+  padding-left: var(--size-scrollbar);
+  padding-right: 0;
+}
+
+/* A list whose rows run edge to edge reserves the strip on both sides, overflowing or not, so its rows stay
+   centred and do not shift when the list grows past the card */
+.scroll-edges {
+  scrollbar-gutter: stable both-edges;
+}
+
 /* xterm scrollbar: no arrows, thin track and only the thumb, which disappears without scrolling */
 .xterm .xterm-scrollable-element > .scrollbar.vertical {
   width: var(--size-scrollbar) !important;

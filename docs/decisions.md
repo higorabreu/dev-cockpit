@@ -587,7 +587,22 @@ scan and the fuzzy search too loose ("bug" matched "build") (2026-11-13).
 **How to revert:** draw the Tasks list as one group, drop the project select and call `searchItems` again in
 `filterViewItems`.
 
-## D45. The secret store is chosen in `@dck/daemon`, for the window and the daemon alike
+## D45. The empty scrollbar strip never reads as a wider right margin
+
+**Decision:** a scrolling list keeps its rows evenly placed between the card's edges. A list with inner
+padding (the select, All tabs, the project search) is watched by `watchOverflow` in `kit/scrollbar.ts`, a
+`ResizeObserver` and a `MutationObserver` that set `data-overflow`; while it overflows, the 8px strip takes
+the place of the right padding and the left padding grows to 8px. A list whose rows run edge to edge (the
+Work list, Settings, the side panel) carries `scroll-edges`, `scrollbar-gutter: stable both-edges`, and
+gives the 8px back from its inner padding, so its text stays where it was and nothing shifts when the
+list starts to overflow. The Work rows become rounded bands with a 1px gap, like the other lists, and the
+select and All tabs show ten whole rows before they scroll.
+**Reason:** the maintainer saw the highlighted option 4px from the left border and 12px from the right one
+once the project select scrolled, and the same strip in the other lists (2026-11-13).
+**How to revert:** drop the `data-overflow` rule and `scroll-edges` from `styles/terminal.css` and the
+padding changes that came with them.
+
+## D46. The secret store is chosen in `@dck/daemon`, for the window and the daemon alike
 
 **Decision:** `systemSecretStore(platform)` in `@dck/daemon/secret-store` picks the Keychain on macOS and
 `secret-tool` elsewhere. The daemon's entry point and `dck daemon` build it once and pass it to every
