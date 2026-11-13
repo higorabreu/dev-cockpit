@@ -10,6 +10,7 @@ import {
   type ViewSnapshot,
 } from '@dck/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { HEADER_HEIGHT, ROW_HEIGHT } from './list-layout.ts'
 import { createViewsView } from './views-view.ts'
 
 const mergeRequest = (number: number): ViewItem => ({
@@ -768,7 +769,7 @@ describe('tasks grouped by progress', () => {
       overlay.querySelector<HTMLElement>('.vinner')?.style.height ?? '',
     )
     expect(overlay.querySelectorAll('.vrow').length).toBeLessThan(30)
-    expect(height).toBe(2 * 32 + 1000 * 46)
+    expect(height).toBe(2 * HEADER_HEIGHT + 1000 * ROW_HEIGHT)
   })
 })
 
