@@ -37,12 +37,12 @@ const api: HostApi = {
       subscribe<[Settings, readonly string[]]>(hostChannels.settingsChanged, listener),
   },
   connections: {
-    gitlab: {
-      status: () => ipcRenderer.invoke(hostChannels.connectionsGitlabStatus),
-      connect: (url, token) =>
-        ipcRenderer.invoke(hostChannels.connectionsGitlabConnect, { url, token }),
-      disconnect: () => ipcRenderer.invoke(hostChannels.connectionsGitlabDisconnect),
-    },
+    list: () => ipcRenderer.invoke(hostChannels.connectionsList),
+    disabled: () => ipcRenderer.invoke(hostChannels.connectionsDisabled),
+    status: (id) => ipcRenderer.invoke(hostChannels.connectionsStatus, id),
+    connect: (id, fields, token) =>
+      ipcRenderer.invoke(hostChannels.connectionsConnect, { id, fields, token }),
+    disconnect: (id) => ipcRenderer.invoke(hostChannels.connectionsDisconnect, id),
   },
   external: {
     open: (url) => ipcRenderer.send(hostChannels.externalOpen, url),

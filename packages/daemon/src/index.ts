@@ -1,2 +1,2 @@
+export * from './connector-views.ts'
 export * from './daemon.ts'
-export * from './gitlab-views.ts'

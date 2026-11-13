@@ -176,3 +176,51 @@ describe('createSettingsStore update', () => {
     expect((await store.update({ opacity: 0.1 })).settings.opacity).toBe(0.3)
   })
 })
+
+describe('createSettingsStore reloadExtensions', () => {
+  const editFile = async (change: Record<string, unknown>) => {
+    const current = JSON.parse(await readFile(file, 'utf8'))
+    await writeFile(file, JSON.stringify({ ...current, ...change }))
+  }
+
+  it('should apply the disabled extensions the CLI wrote and tell the listeners when the file changed', async () => {
+    const store = make()
+    await store.load()
+    await store.update({ fontSize: 20 })
+    const seen: (readonly string[])[] = []
+    store.onChange((_settings, changed) => seen.push(changed))
+    await editFile({ extensions: { disabled: ['dck.gitlab'] } })
+
+    await store.reloadExtensions()
+
+    expect(store.get().settings.extensions.disabled).toEqual(['dck.gitlab'])
+    expect(seen).toEqual([['extensions.disabled']])
+  })
+
+  it('should leave every other field as it is in memory when the file changed it too', async () => {
+    const store = make()
+    await store.load()
+    await store.update({ fontSize: 20 })
+    await editFile({ fontSize: 12, extensions: { disabled: ['dck.gitlab'] } })
+
+    await store.reloadExtensions()
+
+    expect(store.get().settings.fontSize).toBe(20)
+  })
+
+  it('should keep what it had and tell nobody when the file is not valid json', async () => {
+    const store = make()
+    await store.load()
+    await store.update({ extensions: { disabled: ['dck.gitlab'] } })
+    let calls = 0
+    store.onChange(() => {
+      calls += 1
+    })
+    await writeFile(file, '{ broken')
+
+    await store.reloadExtensions()
+
+    expect(store.get().settings.extensions.disabled).toEqual(['dck.gitlab'])
+    expect(calls).toBe(0)
+  })
+})

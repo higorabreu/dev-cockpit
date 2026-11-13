@@ -1,7 +1,7 @@
 {
   "name": "@dck/cli",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -13,6 +13,7 @@
   "dependencies": {
     "@dck/adapter-extension-files": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
+    "@dck/adapter-secret-tool": "workspace:^",
     "@dck/core": "workspace:^",
     "@dck/daemon": "workspace:^"
   },

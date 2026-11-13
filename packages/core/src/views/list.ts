@@ -1,19 +1,25 @@
 import type { MergeRequestSummary } from '../ports/code-review.ts'
+import type { ViewItem } from '../ports/views.ts'
 import { searchItems } from '../search/fuzzy.ts'
 
 // Pending is what the author needs to resolve: failed pipeline, conflict or open discussion
 export const hasPending = (item: MergeRequestSummary): boolean =>
   item.pipeline === 'failed' || item.hasConflicts || item.openDiscussions
 
-const searchText = (item: MergeRequestSummary) =>
-  `${item.title} ${item.project} !${item.number} ${item.author} ${item.sourceBranch}`
+const searchText = (item: ViewItem) =>
+  item.kind === 'mergeRequest'
+    ? `${item.title} ${item.project} !${item.number} ${item.author} ${item.sourceBranch}`
+    : `${item.key} ${item.summary} ${item.type} ${item.status}`
 
-export function filterMergeRequests(
-  items: readonly MergeRequestSummary[],
+// Only a merge request can be pending; with `onlyPending` an issue never matches
+export function filterViewItems(
+  items: readonly ViewItem[],
   query: string,
   onlyPending: boolean,
-): readonly MergeRequestSummary[] {
-  const base = onlyPending ? items.filter(hasPending) : items
+): readonly ViewItem[] {
+  const base = onlyPending
+    ? items.filter((item) => item.kind === 'mergeRequest' && hasPending(item))
+    : items
   return searchItems(base, query, searchText)
 }
 

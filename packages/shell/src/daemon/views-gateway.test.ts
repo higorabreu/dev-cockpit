@@ -61,12 +61,15 @@ describe('createViewsGateway', () => {
     expect(gateway.parse('garbage')).toBeUndefined()
   })
 
-  it('should send the address to the daemon when configuring', async () => {
+  it('should send the connector and its address to the daemon when configuring', async () => {
     const { gateway, calls } = setup({})
 
-    await gateway.configure('https://gl.test')
-    await gateway.configure(null)
+    await gateway.configure('gitlab', { url: 'https://gl.test' })
+    await gateway.configure('gitlab', null)
 
-    expect(calls.map((call) => call.params)).toEqual([{ url: 'https://gl.test' }, { url: null }])
+    expect(calls.map((call) => call.params)).toEqual([
+      { connector: 'gitlab', account: { url: 'https://gl.test' } },
+      { connector: 'gitlab', account: null },
+    ])
   })
 })

@@ -35,6 +35,10 @@ const deps = () =>
     appVersion: '0.3.0',
     logger: silentLogger,
     readFile: (path) => readFile(path, 'utf8').catch(() => undefined),
+    writeFile: async (path, text) => {
+      await writeFile(path, text)
+      return true
+    },
   })
 
 async function list() {
@@ -51,11 +55,15 @@ async function list() {
 }
 
 describe('createExtDeps', () => {
-  it('should list only the built-in extension when the config folder is empty', async () => {
+  it('should list only the built-in extensions when the config folder is empty', async () => {
     const { code, lines } = await list()
 
     expect(code).toBe(0)
-    expect(lines).toEqual(['dck.built-in  0.3.0  built-in  active'])
+    expect(lines).toEqual([
+      'dck.built-in  0.3.0  built-in  active',
+      'dck.gitlab    0.3.0  built-in  active',
+      'dck.jira      0.3.0  built-in  active',
+    ])
   })
 
   it('should show an installed extension as disabled when the settings file lists its id', async () => {
@@ -70,6 +78,8 @@ describe('createExtDeps', () => {
 
     expect(lines).toEqual([
       'dck.built-in  0.3.0  built-in   active',
+      'dck.gitlab    0.3.0  built-in   active',
+      'dck.jira      0.3.0  built-in   active',
       'acme.commits  1.0.0  installed  active',
       'acme.reviews  1.0.0  installed  disabled',
     ])
@@ -91,5 +101,64 @@ describe('createExtDeps', () => {
     await writeFile(join(root, 'settings.json'), '{ broken')
 
     expect(await deps().disabled()).toEqual(new Set())
+  })
+})
+
+describe('createExtDeps saveDisabled', () => {
+  const settingsFile = () => join(root, 'settings.json')
+
+  it('should change only the disabled list and keep the account when saving', async () => {
+    const before = {
+      theme: 'light',
+      connections: { gitlab: { url: 'https://gitlab.example.com' } },
+    }
+    await writeFile(settingsFile(), JSON.stringify(before))
+
+    const result = await deps().saveDisabled(new Set(['dck.gitlab']))
+
+    const after = JSON.parse(await readFile(settingsFile(), 'utf8'))
+    expect(result).toEqual({ kind: 'saved' })
+    expect(after.extensions.disabled).toEqual(['dck.gitlab'])
+    expect(after.theme).toBe('light')
+    expect(after.connections).toEqual(before.connections)
+  })
+
+  it('should write the list when there is no settings file yet', async () => {
+    const result = await deps().saveDisabled(new Set(['dck.gitlab']))
+
+    expect(result).toEqual({ kind: 'saved' })
+    expect(await deps().disabled()).toEqual(new Set(['dck.gitlab']))
+  })
+
+  it('should leave a settings file that is not valid json untouched', async () => {
+    await writeFile(settingsFile(), '{ broken')
+
+    const result = await deps().saveDisabled(new Set(['dck.gitlab']))
+
+    expect(result).toEqual({ kind: 'invalid', file: settingsFile() })
+    expect(await readFile(settingsFile(), 'utf8')).toBe('{ broken')
+  })
+
+  it('should show the connector disabled in the listing and active again after it is enabled', async () => {
+    const run = async (args: string[]) => {
+      const out: string[] = []
+      await runCli(args, {
+        endpoint: '',
+        t: createTranslator('en').t,
+        connect: () => Promise.reject(new Error('invariant: ext must not reach the daemon')),
+        out: (text) => out.push(text),
+        err: (text) => out.push(text),
+        ext: deps(),
+      })
+      return out.join('')
+    }
+
+    await run(['ext', 'disable', 'dck.gitlab'])
+    const disabled = await run(['ext', 'list'])
+    await run(['ext', 'enable', 'dck.gitlab'])
+    const enabled = await run(['ext', 'list'])
+
+    expect(disabled).toContain('dck.gitlab    0.3.0  built-in  disabled')
+    expect(enabled).toContain('dck.gitlab    0.3.0  built-in  active')
   })
 })
