@@ -236,6 +236,14 @@ export const en: Record<MessageKey, string> = {
   'connections.error.DCK-GLB-005': 'GitLab is not responding.',
   'connections.error.DCK-GLB-006': 'The address answered, but it does not look like GitLab.',
   'connections.error.DCK-GLB-007': 'Invalid address. Use https:// with the full GitLab address.',
+  'connections.error.DCK-JRA-001':
+    'Jira refused the email or the token. Check both, and that the token has not expired or been revoked.',
+  'connections.error.DCK-JRA-002':
+    'Jira denied access. Check that this account can open the site in the browser.',
+  'connections.error.DCK-JRA-003': 'Address not found. Check the Jira site address.',
+  'connections.error.DCK-JRA-004': 'Jira rate limited the requests. Try again shortly.',
+  'connections.error.DCK-JRA-005': 'Jira is not responding.',
+  'connections.error.DCK-JRA-006': 'The address answered, but it does not look like Jira.',
   'connections.error.DCK-NET-001':
     'No response from the server. Check the network and the address.',
   'connections.error.DCK-SEC-001': 'The system keyring is not available (install libsecret-tools).',
@@ -286,4 +294,10 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-EXT-001': 'Invalid extension manifest',
   'error.DCK-EXT-002': 'Extension feature not supported by this version',
   'error.DCK-EXT-003': 'Extension not compatible with this version',
+  'error.DCK-JRA-001': 'Jira rejected the email or token',
+  'error.DCK-JRA-002': 'Jira denied access',
+  'error.DCK-JRA-003': 'Jira address not found',
+  'error.DCK-JRA-004': 'Jira rate limit reached',
+  'error.DCK-JRA-005': 'Jira is not responding',
+  'error.DCK-JRA-006': 'Unexpected Jira response',
 }

@@ -236,6 +236,14 @@ export const ptBR = {
   'connections.error.DCK-GLB-006': 'O endereço respondeu, mas não parece ser um GitLab.',
   'connections.error.DCK-GLB-007':
     'Endereço inválido. Use https://, com o endereço completo do GitLab.',
+  'connections.error.DCK-JRA-001':
+    'O Jira recusou o e-mail ou o token. Confira os dois e se o token não expirou nem foi revogado.',
+  'connections.error.DCK-JRA-002':
+    'O Jira negou o acesso. Confira se esta conta abre o site no navegador.',
+  'connections.error.DCK-JRA-003': 'Endereço não encontrado. Confira o endereço do site do Jira.',
+  'connections.error.DCK-JRA-004': 'O Jira limitou as requisições. Tente de novo em instantes.',
+  'connections.error.DCK-JRA-005': 'O Jira não está respondendo.',
+  'connections.error.DCK-JRA-006': 'O endereço respondeu, mas não parece ser um Jira.',
   'connections.error.DCK-NET-001': 'Sem resposta do servidor. Confira a rede e o endereço.',
   'connections.error.DCK-SEC-001':
     'O cofre de segredos do sistema não está disponível (instale libsecret-tools).',
@@ -286,6 +294,12 @@ export const ptBR = {
   'error.DCK-EXT-001': 'Manifesto de extensão inválido',
   'error.DCK-EXT-002': 'Recurso de extensão não suportado por esta versão',
   'error.DCK-EXT-003': 'Extensão incompatível com esta versão',
+  'error.DCK-JRA-001': 'O Jira recusou o e-mail ou o token',
+  'error.DCK-JRA-002': 'O Jira negou o acesso',
+  'error.DCK-JRA-003': 'Endereço do Jira não encontrado',
+  'error.DCK-JRA-004': 'Limite de requisições do Jira atingido',
+  'error.DCK-JRA-005': 'O Jira não está respondendo',
+  'error.DCK-JRA-006': 'Resposta inesperada do Jira',
 } as const
 
 export type MessageKey = keyof typeof ptBR
