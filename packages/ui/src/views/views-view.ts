@@ -236,7 +236,8 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     ]
   }
 
-  // A status is not a problem, so its chip stays neutral: a ring while to do, a dot once in progress
+  // A status is not a problem, so it is plain text with its glyph, not a chip: a ring while to do, a dot
+  // once in progress, which reads stronger by contrast alone
   function issueContent(item: IssueItem, index: number): HTMLElement[] {
     const key = h(
       'span',
@@ -268,13 +269,9 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       ),
       h(
         'span',
-        { class: 'vflags' },
-        h(
-          'span',
-          { class: 'vflag vstate', 'data-kind': progress ? 'active' : 'muted' },
-          icon(GLYPHS[progress ? 'dot' : 'ring'], 11),
-          h('span', { class: 'vflag-text' }, item.status),
-        ),
+        { class: 'vstate', 'data-category': item.statusCategory },
+        icon(GLYPHS[progress ? 'dot' : 'ring'], 11),
+        h('span', { class: 'vstate-text' }, item.status),
       ),
     ]
   }

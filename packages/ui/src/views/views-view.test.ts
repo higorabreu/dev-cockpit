@@ -295,9 +295,10 @@ describe('tasks tab', () => {
     expect(first?.querySelector('.vtitle')?.textContent).toBe('Add rate limiting to the public API')
     expect(first?.querySelector('.vref')?.textContent).toBe('ACME-12')
     expect(first?.querySelector('.vmeta')?.textContent).toBe('ACME-12Bug · 2 h ago')
-    expect(first?.querySelector('.vflag')?.textContent).toBe('In Progress')
-    expect(first?.querySelector('.vflag')?.getAttribute('data-kind')).toBe('active')
-    expect(second?.querySelector('.vflag')?.getAttribute('data-kind')).toBe('muted')
+    expect(first?.querySelector('.vstate')?.textContent).toBe('In Progress')
+    expect(first?.querySelector('.vstate')?.getAttribute('data-category')).toBe('progress')
+    expect(second?.querySelector('.vstate')?.getAttribute('data-category')).toBe('todo')
+    expect(first?.querySelector('.vflag')).toBeNull()
     expect(first?.getAttribute('aria-label')).toBe(
       'ACME-12 Add rate limiting to the public API, In Progress',
     )

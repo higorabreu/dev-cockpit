@@ -296,24 +296,37 @@
   color: var(--muted);
 }
 
-/* The row's highlight hides a neutral chip's border, so the chip keeps its outline there */
-.vrow:is(:hover, [aria-selected="true"]) .vflag:is([data-kind="muted"], [data-kind="active"]) {
+/* The row's highlight hides the line color, so a muted chip (Draft) would lose its outline there */
+.vrow:is(:hover, [aria-selected="true"]) .vflag[data-kind="muted"] {
   border-color: var(--control-line);
 }
 
-/* In progress reads stronger than to do without a semantic color: a status is not a problem */
-.vflag[data-kind="active"] {
+/* A task's status is plain text with its category glyph: it is not something that needs the user */
+.vstate {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.vstate svg {
+  flex: none;
+  stroke-width: 2.6;
+}
+
+/* In progress stands out by contrast alone, without a semantic color */
+.vstate[data-category="progress"] {
   color: var(--fg);
 }
 
-/* A workflow can name a status at length; the chip keeps its place and the tooltip shows the rest */
-.vstate .vflag-text {
+/* A workflow can name a status at length; the tooltip shows the rest */
+.vstate-text {
   max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
-  /* Room for descenders, which the trimmed text box would otherwise clip */
-  padding-block: 3px;
-  margin-block: -3px;
 }
 
 .vflag[data-kind="warning"] {
