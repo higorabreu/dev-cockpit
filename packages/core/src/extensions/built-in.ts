@@ -1,5 +1,6 @@
 import { connectorsPoint } from '../connectors/connector.ts'
 import { GITLAB_CONNECTOR, GITLAB_EXTENSION } from '../connectors/gitlab.ts'
+import { JIRA_CONNECTOR, JIRA_EXTENSION } from '../connectors/jira.ts'
 import type { ContributionPoint } from './contribution-points.ts'
 import type { ExtensionCandidate } from './load.ts'
 import { releaseOf } from './version.ts'
@@ -45,5 +46,6 @@ export function builtInExtensions(appVersion: string): readonly ExtensionCandida
   return [
     builtInExtension(appVersion),
     candidate(appVersion, { ...GITLAB_EXTENSION, contributes: { connectors: [GITLAB_CONNECTOR] } }),
+    candidate(appVersion, { ...JIRA_EXTENSION, contributes: { connectors: [JIRA_CONNECTOR] } }),
   ]
 }

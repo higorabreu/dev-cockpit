@@ -159,13 +159,16 @@ export const ptBR = {
   'views.title': 'Trabalho',
   'views.review': 'Atribuídas',
   'views.mine': 'Criadas',
+  'views.tasks': 'Tarefas',
   'views.filter.placeholder': 'Filtrar por título, projeto, autor ou branch',
+  'views.filter.placeholder.issue': 'Filtrar por chave, resumo, tipo ou status',
   'views.pending': 'Pendências',
   'views.refresh': 'Atualizar',
   'views.refreshing': 'Atualizando',
   'views.updated': 'Atualizado {ago}',
   'views.empty.review': 'Nenhuma MR esperando a sua review.',
   'views.empty.mine': 'Você não tem MRs abertas.',
+  'views.empty.tasks': 'Nenhuma tarefa aberta atribuída a você.',
   'views.empty.filtered': 'Nada encontrado.',
   'views.unconfigured.title': 'Conta não conectada',
   'views.unconfigured.text': 'Conecte uma conta para acompanhar o seu trabalho.',
@@ -174,6 +177,9 @@ export const ptBR = {
   'views.hint.navigate': 'navegar',
   'views.hint.open': 'abrir no navegador',
   'views.hint.switch': 'trocar aba',
+  'views.hint.copyKey': 'copiar chave',
+  'views.copyKey': 'Copiar chave',
+  'views.copied': 'Chave {key} copiada',
   'views.flag.draft': 'Rascunho',
   'views.flag.conflict': 'Conflito',
   'views.flag.discussions': 'Discussão aberta',
@@ -217,6 +223,9 @@ export const ptBR = {
   'connections.email': 'E-mail',
   'connections.gitlab.token': 'Token de acesso pessoal',
   'connections.gitlab.token.hint': 'Escopo read_api. Fica no cofre do sistema, nunca em arquivo.',
+  'connections.jira.token': 'Token de API',
+  'connections.jira.token.hint':
+    'Crie em id.atlassian.com, em Segurança, Tokens de API. Fica no cofre do sistema, nunca em arquivo.',
   'connections.token.placeholder': 'Cole o token para conectar',
   'connections.connect': 'Conectar',
   'connections.disconnect': 'Desconectar',
@@ -236,6 +245,16 @@ export const ptBR = {
   'connections.error.DCK-GLB-006': 'O endereço respondeu, mas não parece ser um GitLab.',
   'connections.error.DCK-GLB-007':
     'Endereço inválido. Use https://, com o endereço completo do GitLab.',
+  'connections.error.DCK-JRA-001': 'O Jira recusou o e-mail ou o token. Confira os dois.',
+  'connections.error.DCK-JRA-002':
+    'O Jira negou o acesso. Confira se esta conta abre o site no navegador.',
+  'connections.error.DCK-JRA-003': 'Endereço não encontrado. Confira o endereço do site do Jira.',
+  'connections.error.DCK-JRA-004': 'O Jira limitou as requisições. Tente de novo em instantes.',
+  'connections.error.DCK-JRA-005': 'O Jira não está respondendo.',
+  'connections.error.DCK-JRA-006': 'O endereço respondeu, mas não parece ser um Jira.',
+  'connections.error.DCK-JRA-007':
+    'Endereço inválido. Use o endereço do site, como https://acme.atlassian.net.',
+  'connections.error.DCK-JRA-008': 'E-mail inválido. Use o e-mail da sua conta Atlassian.',
   'connections.error.DCK-NET-001': 'Sem resposta do servidor. Confira a rede e o endereço.',
   'connections.error.DCK-SEC-001':
     'O cofre de segredos do sistema não está disponível (instale libsecret-tools).',
@@ -286,6 +305,14 @@ export const ptBR = {
   'error.DCK-EXT-001': 'Manifesto de extensão inválido',
   'error.DCK-EXT-002': 'Recurso de extensão não suportado por esta versão',
   'error.DCK-EXT-003': 'Extensão incompatível com esta versão',
+  'error.DCK-JRA-001': 'O Jira recusou o e-mail ou o token',
+  'error.DCK-JRA-002': 'O Jira negou o acesso',
+  'error.DCK-JRA-003': 'Endereço do Jira não encontrado',
+  'error.DCK-JRA-004': 'Limite de requisições do Jira atingido',
+  'error.DCK-JRA-005': 'O Jira não está respondendo',
+  'error.DCK-JRA-006': 'Resposta inesperada do Jira',
+  'error.DCK-JRA-007': 'Endereço do Jira inválido',
+  'error.DCK-JRA-008': 'E-mail da conta Atlassian inválido',
 } as const
 
 export type MessageKey = keyof typeof ptBR

@@ -15,7 +15,7 @@ app reads the manifests, validates them, decides which ones win and reports the 
 | The manifest (version 1) and its validation | Extensions with code in a dedicated host process (phase 3) |
 | Contribution points as a mechanism, with one registered: `connectors` | Connectors from installed extensions (phase 3) |
 | Four sources with precedence and shadowing | Interface contributions and a shared index (phases 4 and 5) |
-| The built-in extensions: `dck.built-in` (empty) and `dck.gitlab` | |
+| The built-in extensions: `dck.built-in` (empty), `dck.gitlab` and `dck.jira` | |
 | The `extensions.disabled` setting | |
 | `dck ext list`, `dck ext enable`, `dck ext disable` | |
 
@@ -80,11 +80,11 @@ One point is registered: `connectors`. Any other key in `contributes` is refused
 
 ### `connectors`
 
-A connector brings the developer's work from a service (GitLab today, Jira next) into the Work screen.
+A connector brings the developer's work from a service (GitLab and Jira Cloud today) into the Work screen.
 Its code still ships with the app, because extensions cannot run code yet: **only built-in extensions may
 declare a connector**, and a connector from an installed, global or repository extension is refused with
-`DCK-EXT-002` until the extension host exists (phase 3). The contract below is internal until then and may
-change with the second connector.
+`DCK-EXT-002` until the extension host exists (phase 3). The contract below is internal until then; the
+second connector, Jira, fitted it without a change.
 
 `contributes.connectors` is a list of 1 to 4 connectors:
 
@@ -111,6 +111,21 @@ change with the second connector.
 | `connection.email` | Optional; when present the account e-mail is asked too, with its `placeholder` |
 | `connection.token` | Always asked; `label` and `hint` are keys of the text catalogs |
 | `views` | 1 to 8 views. `id` is unique across connectors; `kind` is `mergeRequest` or `issue`; `title` and `empty` are catalog keys; `badge` is an optional plural catalog key, and the item count of that view becomes the rail badge |
+
+Jira declares the e-mail too, and a view of the other kind:
+
+```json
+{
+  "id": "jira",
+  "name": "Jira",
+  "connection": {
+    "address": { "placeholder": "https://acme.atlassian.net" },
+    "email": { "placeholder": "ana@example.com" },
+    "token": { "label": "connections.jira.token", "hint": "connections.jira.token.hint" }
+  },
+  "views": [{ "id": "tasks", "kind": "issue", "title": "views.tasks", "empty": "views.empty.tasks" }]
+}
+```
 
 Every text is a key of the text catalogs (`core/src/i18n`), checked when the declaration is read, so a
 connector is translated like the rest of the interface. The declaration is strict: an unknown field is an
@@ -163,9 +178,7 @@ same loader as an installed extension: it can be disabled or refused by the same
 | --- | --- |
 | `dck.built-in` | Nothing yet |
 | `dck.gitlab` | The GitLab connector: merge requests waiting for your review and the ones you opened |
-
-`dck.jira` arrives with the Jira connector (phase B of [plans/connectors.md](../plans/connectors.md)); it is
-not declared before its code exists.
+| `dck.jira` | The Jira Cloud connector: the open issues assigned to you, read only, in the Tasks tab |
 
 ### Implicit extensions
 
