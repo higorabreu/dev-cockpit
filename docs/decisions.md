@@ -566,3 +566,20 @@ so ←→ crosses the groups: the label is `aria-hidden`, and each tab's name ca
 which service a list came from (2026-11-13).
 **How to revert:** restore the two catalog entries and draw the tabs without the group labels; the
 `description` key can stay in the declarations.
+
+## D43. The Tasks list is grouped by progress, filtered by project, and the Work lists search by word start
+
+**Decision:** the Tasks tab shows "In progress" and then "To do", each with its count and in the list's order
+(most recently updated first); an empty section is hidden and filtering keeps the sections. A section is a
+`role=group` labelled "In progress, 6" inside the listbox, its visible header is `aria-hidden`, and the
+rows' `aria-posinset` and `aria-setsize` count only tasks. ↑↓ and, with an empty filter, Home and End move
+over tasks only. After the filter, up to six project toggles (most frequent first) choose one project at a
+time; they are hidden when the list has one project and reset when the screen closes. Both Work lists (merge
+requests and tasks) search with `searchViewItems` in `core`: every typed word must start a word of the
+item, ignoring case and accents; the exact key or reference comes first, then the keys that start with the
+query, and a typed key selects its task even in a later section. The fuzzy search of the tabs and projects
+is unchanged.
+**Reason:** testing with a real Jira (45 tasks across projects), the maintainer found the flat list hard to
+scan and the fuzzy search too loose ("bug" matched "build") (2026-11-13).
+**How to revert:** draw the Tasks list as one group, drop the project toggles and call `searchItems` again in
+`filterViewItems`.

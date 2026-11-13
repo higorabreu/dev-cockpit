@@ -114,7 +114,9 @@
   background: var(--hover);
 }
 
+/* A pressed toggle changes its outline too, so its state is not told by the fill alone */
 .vbtn[aria-pressed="true"] {
+  border-color: var(--muted);
   background: var(--tab-active);
 }
 
@@ -143,14 +145,16 @@
 .vbar {
   flex: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
 }
 
+/* The project toggles move under the filter rather than squeeze it in a narrow window */
 .vinput {
-  flex: 1;
+  flex: 1 1 240px;
   min-width: 0;
   padding: 6px 8px;
   border: 1px solid var(--line);
@@ -216,6 +220,47 @@
 
 .vinner {
   position: relative;
+}
+
+/* The projects of the task list, as toggles like Needs attention */
+.vprojects {
+  display: flex;
+  gap: 6px;
+}
+
+.vprojects[hidden] {
+  display: none;
+}
+
+/* A section of the task list; its rows are placed from its top */
+.vsection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+/* A quiet caption like the panel's section heads, sitting on the rows it names */
+.vsection-head {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 0 12px 7px;
+  color: var(--muted);
+  font: 500 10.5px var(--font-sans);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.vsection-count {
+  font-size: 11px;
+  letter-spacing: 0;
 }
 
 .vrow {
