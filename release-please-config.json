@@ -45,6 +45,11 @@
         },
         {
           "type": "json",
+          "path": "packages/adapters/macos-proc/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "packages/adapters/node-fetch/package.json",
           "jsonpath": "$.version"
         },
