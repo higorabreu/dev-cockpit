@@ -1,6 +1,6 @@
 import { createTranslator } from '@dck/core'
 import { describe, expect, it } from 'vitest'
-import { attentionMark, strongestMark } from './attention-mark.ts'
+import { attentionMark, reviewMark, strongestMark } from './attention-mark.ts'
 
 describe('attentionMark', () => {
   it('should give the needs you mark its own shape and name when an agent needs the user', () => {
@@ -31,5 +31,15 @@ describe('strongestMark', () => {
 
   it('should pick nothing when no tab is marked', () => {
     expect(strongestMark([])).toBeUndefined()
+  })
+})
+
+describe('reviewMark', () => {
+  it('should name the open review in both languages when a tab hides it behind its terminal', () => {
+    expect(reviewMark(createTranslator('en').t)).toEqual({
+      className: 'pip review',
+      label: 'Review open',
+    })
+    expect(reviewMark(createTranslator('pt-BR').t).label).toBe('Revisão aberta')
   })
 })

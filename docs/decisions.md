@@ -638,6 +638,9 @@ for now, the review as the second, with the share of the first pane and which pa
 divider is a 1px line with a 9px grip, a `role=separator` that resizes with the mouse and with ←→ (16px),
 Home and End, and announces the review's share. Each pane keeps a minimum width (terminal 360px, review
 440px); below both, the focused pane takes the whole tab and Esc or the header's terminal button goes back.
+While the terminal shows, the tab carries a quiet split glyph in the bar ("Review open", with Ctrl+Shift+D in
+its tooltip and in the tab's accessible name), a mark that never counts as attention. The divider shows a
+2px muted line under the mouse and while dragging, and the foreground only on keyboard focus.
 A second terminal pane is a new kind in the same model, not a new layout. Ctrl+Shift+D (reserved in D13)
 opens the review on the active tab and focuses it, and closes it while it is on screen; in a narrow tab
 showing the terminal it brings the review back instead. The same action is in the tab's right click menu

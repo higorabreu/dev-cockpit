@@ -251,8 +251,21 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     })
   }
 
+  // A tab whose review is open but hidden behind its terminal (narrow) says so in the bar
+  function hiddenReviews(): ReadonlySet<string> {
+    const hidden = new Set<string>()
+    for (const [id, view] of tabViews) {
+      if (reviews.isOpen(id) && !view.isShown(`${id}:review`)) hidden.add(id)
+    }
+    return hidden
+  }
+
+  function renderTabs() {
+    tabBar.render(state, attention.marks(), hiddenReviews())
+  }
+
   function showAttention() {
-    tabBar.render(state, attention.marks())
+    renderTabs()
     panel.render()
   }
 
@@ -366,7 +379,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   }
 
   function render() {
-    tabBar.render(state, attention.marks())
+    renderTabs()
     for (const [id, view] of tabViews) view.setActive(id === state.activeId)
     activeSession()?.fit()
     focusActive()
@@ -410,6 +423,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       t: i18n.t,
       memory: ratioMemory,
       onNarrow: (narrow) => reviews.narrow(id, narrow),
+      onShownChange: () => renderTabs(),
     })
     tabViews.set(id, view)
     const session = await createTerminalSession({
@@ -528,7 +542,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       for (const view of tabViews.values()) view.retranslate()
       showBadge(badge.count, badge.label)
       settingsView.rerender()
-      tabBar.render(state, attention.marks())
+      renderTabs()
     }
     // The folder and depth are only read when listing: reload for the menu and the search
     if (changed.some((key) => key.startsWith('projects.'))) void refreshProjects()

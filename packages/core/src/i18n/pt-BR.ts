@@ -71,6 +71,7 @@ export const ptBR = {
   'tabs.nextFinished': 'Próxima esperando você',
   'tabs.finished': 'terminou',
   'tabs.needsYou': 'precisa de você',
+  'tabs.reviewOpen': 'Revisão aberta',
   'tabs.all': 'Todas as abas',
   'tabs.search': 'Buscar aba',
   'tabs.none': 'Nenhuma aba',

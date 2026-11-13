@@ -22,11 +22,15 @@ function setup(width: number) {
   document.body.append(host)
   const focused: string[] = []
   const narrowChanges: boolean[] = []
+  let shownChanges = 0
   const memory = { ratio: PANE_RATIO.initial }
   const view = createTabView(host, {
     t: createTranslator('en').t,
     memory,
     onNarrow: (narrow) => narrowChanges.push(narrow),
+    onShownChange: () => {
+      shownChanges += 1
+    },
   })
   Object.defineProperty(view.element, 'clientWidth', { value: width, configurable: true })
   const terminal = pane('tab-1', 'terminal', focused)
@@ -35,7 +39,17 @@ function setup(width: number) {
   const review = pane('tab-1:review', 'review', focused)
   const divider = () => view.element.querySelector('.pane-divider') as HTMLElement
   const widths = () => [terminal.element.style.flex, review.element.style.flex]
-  return { view, terminal, review, divider, widths, focused, narrowChanges, memory }
+  return {
+    view,
+    terminal,
+    review,
+    divider,
+    widths,
+    focused,
+    narrowChanges,
+    memory,
+    shownChanges: () => shownChanges,
+  }
 }
 
 const key = (target: Element, name: string) =>
@@ -110,6 +124,18 @@ describe('createTabView', () => {
     expect(widths()[0]).toBe('0 0 1201px')
     expect(focused.at(-1)).toBe('tab-1')
     expect(terminal.element.hidden).toBe(false)
+  })
+
+  it('should tell when a narrow tab switches the pane it shows', () => {
+    const { view, review, shownChanges } = setup(700)
+    view.open(review)
+    const afterOpen = shownChanges()
+
+    view.focus('tab-1')
+    view.focus('tab-1')
+
+    expect(afterOpen).toBe(2)
+    expect(shownChanges()).toBe(3)
   })
 
   it('should keep the terminal when asked to close it', () => {

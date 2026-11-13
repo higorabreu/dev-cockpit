@@ -72,6 +72,7 @@ export const en: Record<MessageKey, string> = {
   'tabs.nextFinished': 'Next waiting for you',
   'tabs.finished': 'finished',
   'tabs.needsYou': 'needs you',
+  'tabs.reviewOpen': 'Review open',
   'tabs.all': 'All tabs',
   'tabs.search': 'Search tabs',
   'tabs.none': 'No tabs',

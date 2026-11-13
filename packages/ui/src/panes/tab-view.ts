@@ -31,6 +31,8 @@ export interface TabViewDeps {
   readonly memory: RatioMemory
   // Two panes exist but only one fits, or both fit again
   onNarrow?(narrow: boolean): void
+  // Which panes are on screen changed (a pane opened or closed, or a narrow tab switched panes)
+  onShownChange?(): void
 }
 
 // The divider is 1px of line between the panes; its grip is wider than what it draws
@@ -54,6 +56,7 @@ export function createTabView(host: HTMLElement, deps: TabViewDeps) {
   let narrow = false
   let firstWidth = 0
   let frame = 0
+  let shownIds = ''
 
   const room = () => element.clientWidth - DIVIDER
 
@@ -66,6 +69,9 @@ export function createTabView(host: HTMLElement, deps: TabViewDeps) {
       view.element.hidden = width === undefined
       view.element.style.flex = width === undefined ? '' : `0 0 ${width}px`
     }
+    const visibleIds = arranged.visible.map((pane) => pane.id).join(' ')
+    const shownChanged = visibleIds !== shownIds
+    shownIds = visibleIds
     const split = arranged.visible.length === 2
     divider.hidden = !split
     firstWidth = arranged.visible[0]?.width ?? 0
@@ -88,6 +94,7 @@ export function createTabView(host: HTMLElement, deps: TabViewDeps) {
       element.toggleAttribute('data-narrow', narrow)
       deps.onNarrow?.(narrow)
     }
+    if (shownChanged) deps.onShownChange?.()
   }
 
   function setRatio(ratio: number) {
