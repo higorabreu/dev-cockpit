@@ -31,6 +31,16 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Keychain integration test (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          keychain="$RUNNER_TEMP/dck-test.keychain-db"
+          security create-keychain -p dck-test "$keychain"
+          security set-keychain-settings "$keychain"
+          security unlock-keychain -p dck-test "$keychain"
+          security list-keychains -d user -s "$keychain"
+          security default-keychain -d user -s "$keychain"
+          DCK_KEYCHAIN_TEST=1 pnpm exec vitest run packages/adapters/macos-keychain
 
   package:
     name: Package preview (.deb)
