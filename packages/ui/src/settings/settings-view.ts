@@ -775,7 +775,7 @@ export function createSettingsView(
         h(
           'div',
           {
-            class: 'spanel scroll',
+            class: 'spanel scroll scroll-edges',
             role: 'tabpanel',
             id: 'settings-panel',
             'aria-labelledby': `settings-tab-${activeTab}`,
