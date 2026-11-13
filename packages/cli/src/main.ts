@@ -7,7 +7,7 @@ import {
   defaultStateDir,
 } from '@dck/adapter-node-net'
 import { createJsonLogger, createTranslator, pickLocale, silentLogger } from '@dck/core'
-import { createGitLabViews, startDaemon } from '@dck/daemon'
+import { createGitLabViews, startDaemon, systemSecretStore } from '@dck/daemon'
 import packageJson from '../package.json' with { type: 'json' }
 import { runCli } from './cli.ts'
 import { createExtDeps } from './ext-deps.ts'
@@ -21,6 +21,7 @@ if (args[0] === 'daemon') {
   const views = createGitLabViews({
     stateDir: process.env.DCK_STATE_DIR ?? defaultStateDir(),
     logger,
+    secrets: systemSecretStore(),
     profile: process.env.DCK_PROFILE,
   })
   const started = await startDaemon({

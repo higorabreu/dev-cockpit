@@ -4,7 +4,8 @@
   "version": "0.3.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./secret-store": "./src/secret-store.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
@@ -12,6 +13,7 @@
   },
   "dependencies": {
     "@dck/adapter-gitlab": "workspace:^",
+    "@dck/adapter-macos-keychain": "workspace:^",
     "@dck/adapter-node-fetch": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
     "@dck/adapter-secret-tool": "workspace:^",

@@ -1,8 +1,8 @@
 import { join } from 'node:path'
 import { createGnomeShortcut } from '@dck/adapter-gnome-shortcuts'
 import { createProcessInspector, createProcessScanner } from '@dck/adapter-linux-proc'
-import { createSecretToolStore } from '@dck/adapter-secret-tool'
 import type { Autostart, DesktopShortcut, Logger, ProcessInspector, SecretStore } from '@dck/core'
+import { systemSecretStore } from '@dck/daemon/secret-store'
 import { createXdgAutostart, defaultAutostartDirectory } from './linux/xdg-autostart.ts'
 
 export interface PlatformContext {
@@ -24,7 +24,7 @@ export interface Platform {
   readonly desktopShortcut: DesktopShortcut | undefined
 }
 
-// macOS still gets the Linux processes, secret store and autostart until MAC-T3, T4 and T8 replace them
+// macOS still gets the Linux processes and autostart until MAC-T4 and T8 replace them
 export function selectPlatform(context: PlatformContext): Platform {
   const { platform, env, home, packaged, execPath, appPath, resourcesPath, logger } = context
   const onGnome =
@@ -36,7 +36,7 @@ export function selectPlatform(context: PlatformContext): Platform {
   return {
     processes: createProcessInspector(),
     processScanner: createProcessScanner(),
-    secrets: createSecretToolStore(),
+    secrets: systemSecretStore(platform),
     autostart: createXdgAutostart({
       directory: env.DCK_AUTOSTART_DIR ?? defaultAutostartDirectory(env, home),
       name: 'Dev Cockpit',
