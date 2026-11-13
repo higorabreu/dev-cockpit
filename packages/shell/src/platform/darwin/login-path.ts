@@ -31,15 +31,22 @@ export const runLoginShell: Run = (file, args, timeoutMs) =>
     const child = spawn(file, [...args], { detached: true, stdio: ['ignore', 'pipe', 'ignore'] })
     let output = ''
     let settled = false
-    const settle = (result: ShellRun) => {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
+    const killGroup = () => {
       try {
         if (child.pid) process.kill(-child.pid, 'SIGKILL')
       } catch {
         // The group already exited: nothing is left to stop
       }
+    }
+    const settle = (result: ShellRun) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      killGroup()
+      // On macOS a child forked while the group is being killed can miss the signal; it is still in the
+      // group, so killing it again once the shell is gone, and once more a moment later, stops it
+      child.once('exit', killGroup)
+      setTimeout(killGroup, 100).unref()
       resolve(result)
     }
     const timer = setTimeout(
