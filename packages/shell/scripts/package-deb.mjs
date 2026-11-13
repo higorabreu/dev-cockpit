@@ -24,7 +24,7 @@ import {
 } from './package-common.mjs'
 
 const architecture = { x64: 'amd64', arm64: 'arm64' }[process.arch]
-if (!architecture) throw new Error(`arquitetura sem suporte: ${process.arch}`)
+if (!architecture) throw new Error(`unsupported architecture: ${process.arch}`)
 
 const INSTALL = `opt/${NAME}`
 const stage = join(release, 'stage')
@@ -121,11 +121,11 @@ Description: Guake-style terminal with a project panel
 // The builder's umask must not leak into the package: nothing is group or world writable
 execFileSync('chmod', ['-R', 'go-w', stage])
 
-// 5. O pacote
+// 5. The package
 mkdirSync(release, { recursive: true })
 const output = join(release, `${NAME}_${version}_${architecture}.deb`)
 rmSync(output, { force: true })
 execFileSync('dpkg-deb', ['-Zxz', '-z6', '--root-owner-group', '--build', stage, output], {
   stdio: 'inherit',
 })
-console.log(`pacote: ${output} (${(statSync(output).size / 1024 / 1024).toFixed(0)} MB)`)
+console.log(`package: ${output} (${(statSync(output).size / 1024 / 1024).toFixed(0)} MB)`)
