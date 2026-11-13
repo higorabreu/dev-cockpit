@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { EXTENSION_ID_MAX, parseManifest } from '../extensions/manifest.ts'
 import { acceleratorFromEvent } from './accelerator.ts'
-import { changedKeys, defaultSettings, LIMITS, mergeSettings, parseSettings } from './settings.ts'
+import {
+  changedKeys,
+  defaultSettings,
+  LIMITS,
+  mergeSettings,
+  parseSettings,
+  storedAccount,
+} from './settings.ts'
 
 describe('parseSettings', () => {
   it('should return the defaults when there is nothing to read', () => {
@@ -324,6 +331,35 @@ describe('connections, per connector', () => {
 
   it('should go back to no connections when the value is not an object', () => {
     expect(parseSettings({ connections: ['gitlab'] }).connections).toEqual({})
+  })
+
+  it('should leave no e-mail behind when a patch erases the account with an empty one', () => {
+    const before = parseSettings({
+      connections: { jira: { url: 'https://acme.example.com', email: 'ana@example.com' } },
+    })
+
+    const after = mergeSettings(before, { connections: { jira: { url: null, email: '' } } })
+
+    expect(after.connections.jira).toEqual({ url: null })
+    expect(JSON.stringify(after.connections)).not.toContain('ana@example.com')
+  })
+
+  it('should read the stored account with its e-mail only when it has an address', () => {
+    const settings = parseSettings({
+      connections: {
+        jira: { url: 'https://acme.example.com', email: 'ana@example.com' },
+        gitlab: { url: 'https://gl.test' },
+        other: { url: null },
+      },
+    })
+
+    expect(storedAccount(settings, 'jira')).toEqual({
+      url: 'https://acme.example.com',
+      email: 'ana@example.com',
+    })
+    expect(storedAccount(settings, 'gitlab')).toEqual({ url: 'https://gl.test' })
+    expect(storedAccount(settings, 'other')).toBeNull()
+    expect(storedAccount(settings, 'missing')).toBeNull()
   })
 
   it('should name the address of one connector when only it changed', () => {

@@ -1,5 +1,6 @@
-import { GITLAB_CONNECTOR, type Logger, type ViewsService } from '@dck/core'
+import { GITLAB_CONNECTOR, JIRA_CONNECTOR, type Logger, type ViewsService } from '@dck/core'
 import { createGitLabViews } from './gitlab-views.ts'
+import { createJiraViews } from './jira-views.ts'
 
 export interface ConnectorViewsOptions {
   readonly stateDir: string
@@ -12,5 +13,8 @@ export interface ConnectorViewsOptions {
 export function createConnectorViews(
   options: ConnectorViewsOptions,
 ): ReadonlyMap<string, ViewsService> {
-  return new Map([[GITLAB_CONNECTOR.id, createGitLabViews(options)]])
+  return new Map([
+    [GITLAB_CONNECTOR.id, createGitLabViews(options)],
+    [JIRA_CONNECTOR.id, createJiraViews(options)],
+  ])
 }

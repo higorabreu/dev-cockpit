@@ -128,5 +128,15 @@
     "category": "internal",
     "retryable": false,
     "rpc": -32022
+  },
+  "DCK-JRA-007": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32023
+  },
+  "DCK-JRA-008": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32024
   }
 }

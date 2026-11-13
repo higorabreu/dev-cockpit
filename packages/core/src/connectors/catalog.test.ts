@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { connectorCatalog, connectorOfView } from './catalog.ts'
 import { GITLAB_CONNECTOR } from './gitlab.ts'
+import { JIRA_CONNECTOR } from './jira.ts'
 
-const catalog = (disabled: string[], implemented: string[] = ['gitlab']) =>
+const catalog = (disabled: string[], implemented: string[] = ['gitlab', 'jira']) =>
   connectorCatalog({
     appVersion: '0.3.0',
     disabled: new Set(disabled),
@@ -10,16 +11,26 @@ const catalog = (disabled: string[], implemented: string[] = ['gitlab']) =>
   })
 
 describe('connectorCatalog', () => {
-  it('should offer GitLab when nothing is disabled', () => {
-    expect(catalog([]).ready.map((connector) => connector.id)).toEqual(['gitlab'])
+  it('should offer GitLab and Jira in their order when nothing is disabled', () => {
+    expect(catalog([]).ready.map((connector) => connector.id)).toEqual(['gitlab', 'jira'])
+  })
+
+  it('should offer only Jira when GitLab is disabled', () => {
+    const result = catalog(['dck.gitlab'])
+
+    expect(result.ready).toEqual([JIRA_CONNECTOR])
+    expect(result.disabled).toEqual([{ extension: 'dck.gitlab', id: 'gitlab', name: 'GitLab' }])
   })
 
   it('should leave GitLab out and list it as disabled when its extension is disabled', () => {
-    const result = catalog(['dck.gitlab'])
+    const result = catalog(['dck.gitlab', 'dck.jira'])
 
     expect(result.ready).toEqual([])
     expect(result.missing).toEqual([])
-    expect(result.disabled).toEqual([{ extension: 'dck.gitlab', id: 'gitlab', name: 'GitLab' }])
+    expect(result.disabled).toEqual([
+      { extension: 'dck.gitlab', id: 'gitlab', name: 'GitLab' },
+      { extension: 'dck.jira', id: 'jira', name: 'Jira' },
+    ])
   })
 
   it('should not offer to enable a disabled connector the process has no code for', () => {
@@ -31,19 +42,19 @@ describe('connectorCatalog', () => {
 
     const after = catalog([])
 
-    expect(before.ready).toEqual([])
-    expect(after.ready).toEqual([GITLAB_CONNECTOR])
+    expect(before.ready).toEqual([JIRA_CONNECTOR])
+    expect(after.ready).toEqual([GITLAB_CONNECTOR, JIRA_CONNECTOR])
   })
 
   it('should keep GitLab when another extension is disabled', () => {
-    expect(catalog(['dck.built-in']).ready).toEqual([GITLAB_CONNECTOR])
+    expect(catalog(['dck.built-in']).ready).toEqual([GITLAB_CONNECTOR, JIRA_CONNECTOR])
   })
 
   it('should report a declared connector and leave it out when the process has no code for it', () => {
     const result = catalog([], [])
 
     expect(result.ready).toEqual([])
-    expect(result.missing.map((connector) => connector.id)).toEqual(['gitlab'])
+    expect(result.missing.map((connector) => connector.id)).toEqual(['gitlab', 'jira'])
   })
 })
 
@@ -54,5 +65,9 @@ describe('connectorOfView', () => {
 
   it('should find nothing when no listed connector declares the view', () => {
     expect(connectorOfView([GITLAB_CONNECTOR], 'tasks')).toBeUndefined()
+  })
+
+  it('should find Jira for the tasks view when both connectors are listed', () => {
+    expect(connectorOfView([GITLAB_CONNECTOR, JIRA_CONNECTOR], 'tasks')?.id).toBe('jira')
   })
 })

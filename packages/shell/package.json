@@ -12,6 +12,7 @@
   "dependencies": {
     "@dck/adapter-docker-cli": "workspace:^",
     "@dck/adapter-gitlab": "workspace:^",
+    "@dck/adapter-jira": "workspace:^",
     "@dck/adapter-gnome-shortcuts": "workspace:^",
     "@dck/adapter-linux-proc": "workspace:^",
     "@dck/adapter-node-fetch": "workspace:^",

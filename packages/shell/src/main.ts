@@ -23,6 +23,7 @@ import {
   hostChannels,
   pickLocale,
   type Settings,
+  storedAccount,
   type Translate,
 } from '@dck/core'
 import {
@@ -186,9 +187,13 @@ app.whenReady().then(async () => {
     secrets: createSecretToolStore(),
     http: createFetchHttpClient(),
     profile: process.env.DCK_PROFILE,
-    address: (id) => ({
-      get: () => settingsStore.get().settings.connections[id]?.url ?? null,
-      set: (url) => settingsStore.update({ connections: { [id]: { url } } }),
+    account: (id) => ({
+      get: () => storedAccount(settingsStore.get().settings, id),
+      // The settings model drops an empty e-mail, so erasing the account leaves no e-mail behind
+      set: (fields) =>
+        settingsStore.update({
+          connections: { [id]: { url: fields?.url ?? null, email: fields?.email ?? '' } },
+        }),
     }),
     logger,
   })
@@ -210,11 +215,8 @@ app.whenReady().then(async () => {
     implementation: (id) => implementations.get(id),
     logger,
   })
-  const accountOf = (settings: Settings, id: string): ConnectionFields | null => {
-    const entry = settings.connections[id]
-    if (!entry?.url || !catalog.ready.some((connector) => connector.id === id)) return null
-    return entry.email === undefined ? { url: entry.url } : { url: entry.url, email: entry.email }
-  }
+  const accountOf = (settings: Settings, id: string): ConnectionFields | null =>
+    catalog.ready.some((connector) => connector.id === id) ? storedAccount(settings, id) : null
 
   let daemonLink: DaemonLink | undefined
   const views = createViewsGateway({

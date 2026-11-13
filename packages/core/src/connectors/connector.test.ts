@@ -7,6 +7,7 @@ import {
 import { contributionsFor, type ExtensionCandidate, loadExtensions } from '../extensions/load.ts'
 import { connectorSchema, connectorsPoint } from './connector.ts'
 import { GITLAB_CONNECTOR } from './gitlab.ts'
+import { JIRA_CONNECTOR } from './jira.ts'
 
 const tracker = {
   id: 'tracker',
@@ -44,8 +45,12 @@ describe('connectors contribution point', () => {
     const connectors = contributionsFor(report, connectorsPoint)
 
     expect(report.rejected).toEqual([])
-    expect(connectors.map(({ extension }) => extension.manifest.id)).toEqual(['dck.gitlab'])
+    expect(connectors.map(({ extension }) => extension.manifest.id)).toEqual([
+      'dck.gitlab',
+      'dck.jira',
+    ])
     expect(connectors[0]?.declaration).toEqual([GITLAB_CONNECTOR])
+    expect(connectors[1]?.declaration).toEqual([JIRA_CONNECTOR])
   })
 
   it.each([
@@ -119,7 +124,7 @@ describe('connectors with clashing ids', () => {
 
     expect(
       contributionsFor(report, connectorsPoint).map(({ extension }) => extension.manifest.id),
-    ).toEqual(['dck.gitlab'])
+    ).toEqual(['dck.gitlab', 'dck.jira'])
     expect(report.rejected.map(({ error }) => [error.data?.code, error.message])).toEqual([
       [
         'DCK-EXT-001',

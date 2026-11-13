@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@dck/adapter-gitlab": "workspace:^",
+    "@dck/adapter-jira": "workspace:^",
     "@dck/adapter-node-fetch": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
     "@dck/adapter-secret-tool": "workspace:^",

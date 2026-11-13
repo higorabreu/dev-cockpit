@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { parseServerUrl } from '../connections/url.ts'
 import { CONNECTOR_ID_PATTERN } from '../connectors/connector.ts'
 import { EXTENSION_ID_MAX, EXTENSION_ID_PATTERN } from '../extensions/manifest.ts'
+import type { ConnectionFields } from '../ports/connections.ts'
 
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
 export const THEMES = ['dark', 'light', 'system'] as const
@@ -120,6 +121,13 @@ export type DeepPartial<T> = {
 }
 
 export type SettingsPatch = DeepPartial<Settings>
+
+// The account a connector keeps in the settings, or null while it has no address
+export function storedAccount(settings: Settings, id: string): ConnectionFields | null {
+  const entry = settings.connections[id]
+  if (!entry?.url) return null
+  return entry.email === undefined ? { url: entry.url } : { url: entry.url, email: entry.email }
+}
 
 // Reads anything (old, hand-edited or corrupted file) and returns valid settings
 export function parseSettings(raw: unknown): Settings {

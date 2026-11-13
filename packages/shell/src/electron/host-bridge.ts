@@ -35,7 +35,8 @@ const connectSchema = z.object({
   id: connectorIdSchema,
   fields: z.object({
     url: z.string().max(512),
-    email: z.string().trim().min(1).max(254).optional(),
+    // An empty or malformed e-mail reaches the connector, which says what is wrong with it
+    email: z.string().trim().max(254).optional(),
   }),
   token: z.string().trim().min(1).max(512),
 })

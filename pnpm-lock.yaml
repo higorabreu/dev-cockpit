@@ -129,6 +129,9 @@ importers:
       '@dck/adapter-gitlab':
         specifier: workspace:^
         version: link:../adapters/gitlab
+      '@dck/adapter-jira':
+        specifier: workspace:^
+        version: link:../adapters/jira
       '@dck/adapter-node-fetch':
         specifier: workspace:^
         version: link:../adapters/node-fetch
@@ -158,6 +161,9 @@ importers:
       '@dck/adapter-gnome-shortcuts':
         specifier: workspace:^
         version: link:../adapters/gnome-shortcuts
+      '@dck/adapter-jira':
+        specifier: workspace:^
+        version: link:../adapters/jira
       '@dck/adapter-linux-proc':
         specifier: workspace:^
         version: link:../adapters/linux-proc
