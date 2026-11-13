@@ -608,5 +608,9 @@ padding changes that came with them.
 `secret-tool` elsewhere. The daemon's entry point and `dck daemon` build it once and pass it to every
 connector's views; the shell's `selectPlatform` calls the same function instead of choosing on its own.
 **Reason:** the window writes the token and the daemon reads it, so both processes must pick the same store;
-one chooser that both import cannot drift, while two copies of the choice could.
+one chooser that both import cannot drift, while two copies of the choice could. It does not live in
+`core` because the choice has to import the Keychain and `secret-tool` adapters, and `core` imports no
+adapter.
+**Accepted cost:** the shell now depends on `@dck/daemon`, and only through its `secret-store` subpath, so
+the window does not load the daemon's server or views.
 **How to revert:** move the choice back into `selectPlatform` and into each daemon entry point.

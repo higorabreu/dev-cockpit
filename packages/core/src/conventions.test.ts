@@ -67,6 +67,17 @@ describe('project conventions', () => {
     expect(found).toEqual([])
   })
 
+  // D46: the window shares the daemon's secret store chooser and nothing else of the daemon
+  it('should import the daemon only through its secret-store subpath when listing the shell sources', () => {
+    const found = offenders(
+      sources,
+      /from\s+['"]@dck\/daemon(?!\/secret-store['"])/,
+      (path) => !path.startsWith('shell/'),
+    )
+
+    expect(found).toEqual([])
+  })
+
   it('should start every test title with should when listing the test files', () => {
     const titles = tests.flatMap((file) =>
       [...file.text.matchAll(/\b(?:it|test)(?:\.each\([^)]*\))?\(\s*(['"`])(.+?)\1/g)].map(
