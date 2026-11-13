@@ -88,9 +88,11 @@ The order is meant to bring the tester in as late as possible and once per batch
   through stdin (which is how RubyGems and go-keyring do it). `find-generic-password -w` reads,
   `delete-generic-password` deletes. A missing item exits with code 44 (confirmed on macOS 26.5.1). A test
   with a fake runner, including a value with quotes, a space, `$` and a line break, and an integration
-  test that only runs with `DCK_KEYCHAIN_TEST=1`, which CI sets against a temporary keychain. (C3) Done:
-  `security` by its absolute path, keys from an allowlist and a line of at most 4094 bytes, since
-  `security -i` runs the rest of a longer line as another command.
+  test that only runs with `DCK_KEYCHAIN_TEST=1`, which CI sets against a temporary keychain and then
+  restores the runner's keychains. (C3) Done: `security` by its absolute path, keys and the service from
+  an allowlist and a line of at most 4094 bytes, since `security -i` runs the rest of a longer line as
+  another command. The window, the daemon and `dck daemon` refuse an invalid `DCK_PROFILE` at boot, and
+  D46 records why the store is chosen in `@dck/daemon`. Still to run on the tester's Mac with the app.
 - [ ] MAC-T4. Processes: `adapters/macos-proc` (`@dck/adapter-macos-proc`) behind the same
   `ProcessInspector` and scanner ports. The foreground group through `ps -o tpgid= -p <pid>`, the name through
   `ps -o comm=`, the start through `ps -o lstart=`, the directory through `lsof -a -d cwd -Fn -p <pid>`. The
