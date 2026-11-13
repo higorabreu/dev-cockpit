@@ -123,7 +123,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   })
   const notice = h('div', { class: 'vnotice' })
   const list = h('div', {
-    class: 'vlist scroll',
+    class: 'vlist scroll scroll-edges',
     id: 'views-list',
     role: 'listbox',
     tabindex: '-1',

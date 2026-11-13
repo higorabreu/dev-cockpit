@@ -553,6 +553,22 @@ address error.
 **How to revert:** revert the commits of phase A; the settings file and the keyring key did not change, so
 an existing setup keeps working on either side.
 
+## D42. macOS: a panel window, F12 on every platform and the Keychain through `security -i`
+
+**Decision:** the MAC-T1 spike settles the macOS design of [plans/macos.md](../plans/macos.md). The window is
+an Electron `type: 'panel'` at the `screen-saver` level, visible on all workspaces and over fullscreen, with
+no Dock icon, focused on show with `focus()` and `app.focus({ steal: true })`. The default key stays `F12` on
+every platform, so there is no per-platform default; on a Mac keyboard it is `fn+F12`. The Keychain is
+reached through `security -i` with the command on stdin, and a value with a line break is refused, since
+`security` has no escape for it. Process inspection uses `ps` (`tpgid`, `ucomm`) and `lsof -a -d cwd -Fn`.
+Tested on macOS 26.5.1 arm64 with Electron 45.3.0: the panel showed over a fullscreen app and on another
+desktop and received the keyboard without a click; F12, `Ctrl+Backtick` and `Option+Space` fired with no
+Accessibility permission; `node-pty` opened `zsh -il`; `lsof` took about 20 ms.
+**Reason:** the spike on a tester's Mac on 2026-11-13; F12 keeps one key across platforms and was the
+tester's choice.
+**How to revert:** the plan B of the plan's risks (a regular high-level window with the Dock hidden), or a
+per-platform default key passed in by the host.
+
 ## D43. Work tabs are named by the action they ask for and grouped by service
 
 **Decision:** the GitLab tabs become "To review" (`review`) and "Follow up" (`mine`); Jira keeps "Tasks". The
@@ -586,3 +602,18 @@ later section. The fuzzy search of the tabs and projects is unchanged.
 scan and the fuzzy search too loose ("bug" matched "build") (2026-11-13).
 **How to revert:** draw the Tasks list as one group, drop the project select and call `searchItems` again in
 `filterViewItems`.
+
+## D45. The empty scrollbar strip never reads as a wider right margin
+
+**Decision:** a scrolling list keeps its rows evenly placed between the card's edges. A list with inner
+padding (the select, All tabs, the project search) is watched by `watchOverflow` in `kit/scrollbar.ts`, a
+`ResizeObserver` and a `MutationObserver` that set `data-overflow`; while it overflows, the 8px strip takes
+the place of the right padding and the left padding grows to 8px. A list whose rows run edge to edge (the
+Work list, Settings, the side panel) carries `scroll-edges`, `scrollbar-gutter: stable both-edges`, and
+gives the 8px back from its inner padding, so its text stays where it was and nothing shifts when the
+list starts to overflow. The Work rows become rounded bands with a 1px gap, like the other lists, and the
+select and All tabs show ten whole rows before they scroll.
+**Reason:** the maintainer saw the highlighted option 4px from the left border and 12px from the right one
+once the project select scrolled, and the same strip in the other lists (2026-11-13).
+**How to revert:** drop the `data-overflow` rule and `scroll-edges` from `styles/terminal.css` and the
+padding changes that came with them.
