@@ -56,6 +56,9 @@ export interface ProcessInfo {
   readonly foregroundStart?: string
 }
 
+// Foreground name when the process inspector cannot read it
+export const UNKNOWN_FOREGROUND = 'desconhecido'
+
 export interface ProcessInspector {
   inspect(pid: number): Promise<ProcessInfo | undefined>
 }
