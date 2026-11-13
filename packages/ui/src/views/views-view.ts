@@ -16,7 +16,7 @@ import { actionHint, closeButton, hintBar, keyHint } from '../kit/panel-frame.ts
 import { h, icon } from '../panel/dom.ts'
 import { agoText } from '../panel/format.ts'
 import { type LaidSection, layOutList, ROW_HEIGHT, rowSpan } from './list-layout.ts'
-import { createProjectFilter } from './project-filter.ts'
+import { createProjectSelect } from './project-select.ts'
 
 const OVERSCAN = 4
 // How long the header says what was copied before it goes back to the update time
@@ -113,7 +113,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const heading = h('h2', { class: 'vheading', hidden: true })
   const status = h('span', { class: 'vstatus', role: 'status' })
   const pendingButton = h('button', { type: 'button', class: 'vbtn', 'aria-pressed': 'false' })
-  const projects = createProjectFilter({ i18n, onChange: () => refilter() })
+  // After a pick the keys go back to the filter, where the list is driven from
+  const projects = createProjectSelect({
+    i18n,
+    onPick: () => {
+      refilter()
+      input.focus()
+    },
+  })
   const notice = h('div', { class: 'vnotice' })
   const list = h('div', {
     class: 'vlist scroll',
@@ -631,7 +638,9 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     refilter()
   })
   // Keys are listened for on the field: after clicking any button focus returns to it, otherwise the shortcuts stop
-  box.addEventListener('click', () => {
+  box.addEventListener('click', (event) => {
+    // The project select keeps the focus while its list is open
+    if (event.target instanceof Node && projects.element.contains(event.target)) return
     if (isOpen()) (setupButton ?? input).focus()
   })
   // The filter handles its own keys; anywhere else in the box Escape still closes the screen
@@ -688,7 +697,6 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       if (isOpen()) refilter(matches[selected]?.id)
     },
     retranslate() {
-      projects.retranslate()
       drawStatic()
       if (isOpen()) redraw()
     },

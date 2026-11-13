@@ -3,6 +3,8 @@ import { h, icon } from '../panel/dom.ts'
 export interface SelectOption {
   readonly value: string
   readonly label: string
+  // Secondary text shown at the right of the option in the list (a count), never in the closed control
+  readonly detail?: string
 }
 
 export interface SelectDeps {
@@ -77,6 +79,7 @@ export function createSelect(deps: SelectDeps) {
             'data-index': String(index),
           },
           h('span', { class: 'select-label' }, option.label),
+          option.detail !== undefined && h('span', { class: 'select-detail' }, option.detail),
           h('span', { class: 'select-check' }, option.value === value && icon(CHECK, 14)),
         ),
       ),

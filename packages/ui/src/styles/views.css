@@ -145,16 +145,14 @@
 .vbar {
   flex: none;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
 }
 
-/* The project toggles move under the filter rather than squeeze it in a narrow window */
 .vinput {
-  flex: 1 1 240px;
+  flex: 1;
   min-width: 0;
   padding: 6px 8px;
   border: 1px solid var(--line);
@@ -222,14 +220,18 @@
   position: relative;
 }
 
-/* The projects of the task list, as toggles like Needs attention */
-.vprojects {
-  display: flex;
-  gap: 6px;
+/* The project select keeps the width of its longest option, so the filter keeps the rest of the line */
+.vproject {
+  flex: none;
 }
 
-.vprojects[hidden] {
+.vproject[hidden] {
   display: none;
+}
+
+/* As tall as the filter beside it */
+.vproject .select {
+  padding-block: 6px;
 }
 
 /* A section of the task list; its rows are placed from its top */

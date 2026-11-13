@@ -573,13 +573,16 @@ which service a list came from (2026-11-13).
 (most recently updated first); an empty section is hidden and filtering keeps the sections. A section is a
 `role=group` labelled "In progress, 6" inside the listbox, its visible header is `aria-hidden`, and the
 rows' `aria-posinset` and `aria-setsize` count only tasks. ↑↓ and, with an empty filter, Home and End move
-over tasks only. After the filter, up to six project toggles (most frequent first) choose one project at a
-time; they are hidden when the list has one project and reset when the screen closes. Both Work lists (merge
-requests and tasks) search with `searchViewItems` in `core`: every typed word must start a word of the
-item, ignoring case and accents; the exact key or reference comes first, then the keys that start with the
-query, and a typed key selects its task even in a later section. The fuzzy search of the tabs and projects
-is unchanged.
+over tasks only. Right after the filter, the kit's select (D38) named "Project" chooses one project: "All
+projects" with the total first, then every project of the list with its count beside it, most frequent first
+and then by key. It is as wide as its longest option, shows "All projects" or the chosen key when closed,
+gives the focus back to the filter after a pick, is hidden on a list with one project and resets when the
+screen closes. Toggles were tried first and dropped: with six or more projects they wrapped to a second line
+and a seventh was out of reach. Both Work lists (merge requests and tasks) search with `searchViewItems` in
+`core`: every typed word must start a word of the item, ignoring case and accents; the exact key or
+reference comes first, then the keys that start with the query, and a typed key selects its task even in a
+later section. The fuzzy search of the tabs and projects is unchanged.
 **Reason:** testing with a real Jira (45 tasks across projects), the maintainer found the flat list hard to
 scan and the fuzzy search too loose ("bug" matched "build") (2026-11-13).
-**How to revert:** draw the Tasks list as one group, drop the project toggles and call `searchItems` again in
+**How to revert:** draw the Tasks list as one group, drop the project select and call `searchItems` again in
 `filterViewItems`.
