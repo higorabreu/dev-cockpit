@@ -1,5 +1,11 @@
 // @vitest-environment happy-dom
-import { type AgentProfile, createTranslator, type SessionActivityInfo } from '@dck/core'
+import {
+  type AgentProfile,
+  createTranslator,
+  type FinishedCommand,
+  type SessionActivityInfo,
+  UNKNOWN_FOREGROUND,
+} from '@dck/core'
 import { describe, expect, it } from 'vitest'
 import { createSessionsSection, type SessionsSource } from './sessions-section.ts'
 
@@ -105,4 +111,59 @@ describe('sessions section, connect hint', () => {
     expect(button('Conectar')).toBeDefined()
     expect(button('Agora não')).toBeDefined()
   })
+})
+
+function stateText(
+  info: SessionActivityInfo,
+  locale: 'en' | 'pt-BR',
+  finished?: FinishedCommand,
+): string | null | undefined {
+  const source: SessionsSource = {
+    tabs: () => [{ id: 'tab-1', label: 'backend' }],
+    activeId: () => 'tab-1',
+    info: () => info,
+    finished: () => finished,
+    needsYou: () => false,
+    finishedCount: () => (finished ? 1 : 0),
+    select: () => undefined,
+    connectHint: () => undefined,
+    connect: () => undefined,
+    dismissConnect: () => undefined,
+  }
+  const body = createSessionsSection(source, createTranslator(locale)).body()
+  return body.querySelector('.sstate')?.textContent
+}
+
+describe('sessions section, unknown command', () => {
+  const unknown: SessionActivityInfo = {
+    cwd: '/home/ana/acme',
+    process: UNKNOWN_FOREGROUND,
+    activity: 'busy',
+  }
+
+  it.each([
+    { locale: 'en' as const, expected: 'Running a command' },
+    { locale: 'pt-BR' as const, expected: 'Executando um comando' },
+  ])(
+    'should say a command is running in $locale when its name is unknown',
+    ({ locale, expected }) => {
+      expect(stateText(unknown, locale)).toBe(expected)
+    },
+  )
+
+  it('should name the command when it is known', () => {
+    expect(stateText({ ...unknown, process: 'pnpm' }, 'en')).toBe('Running pnpm')
+  })
+
+  it.each([
+    { locale: 'en' as const, expected: 'Finished in 42 s' },
+    { locale: 'pt-BR' as const, expected: 'Terminou em 42 s' },
+  ])(
+    'should leave the name out in $locale when an unknown command finished',
+    ({ locale, expected }) => {
+      const finished = { process: UNKNOWN_FOREGROUND, durationMs: 42_000 }
+
+      expect(stateText(unknown, locale, finished)).toBe(expected)
+    },
+  )
 })
