@@ -24,7 +24,7 @@ const context = (overrides: Partial<PlatformContext>): PlatformContext => ({
   appPath: '/opt/dck/app',
   resourcesPath: '/opt/dck/resources',
   logger: silentLogger,
-  app: { focus: () => undefined },
+  app: { focus: () => undefined, hide: () => undefined },
   ...overrides,
 })
 

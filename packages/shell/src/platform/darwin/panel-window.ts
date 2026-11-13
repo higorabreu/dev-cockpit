@@ -3,6 +3,7 @@ import type { AppMenuDeps, AppMenuItem, PlacedWindow, PlatformWindow } from '../
 
 export interface PanelApp {
   focus(options: { steal: boolean }): void
+  hide(): void
   readonly dock?: { hide(): void }
 }
 
@@ -14,16 +15,25 @@ export function createPanelWindow(app: PanelApp): PlatformWindow {
       app.dock?.hide()
     },
     dock: (window, contents) =>
-      activateOnFocus(window, () => {
-        app.focus({ steal: true })
-        contents.focus()
-      }),
+      activateOnFocus(
+        window,
+        () => {
+          app.focus({ steal: true })
+          contents.focus()
+        },
+        () => app.hide(),
+      ),
     menu: buildAppMenu,
   }
 }
 
-// A panel does not activate the app by itself, so the keyboard would stay with the other app
-export function activateOnFocus(window: DockWindow, activate: () => void): DockWindow {
+// A panel does not activate the app by itself, so the keyboard would stay with the other app; once
+// activated, hiding the panel alone leaves the app active and the keyboard with no window
+export function activateOnFocus(
+  window: DockWindow,
+  activate: () => void,
+  deactivate: () => void,
+): DockWindow {
   // Delegates by name: spreading would drop the methods of a class instance
   return {
     isVisible: () => window.isVisible(),
@@ -31,7 +41,10 @@ export function activateOnFocus(window: DockWindow, activate: () => void): DockW
     bounds: () => window.bounds(),
     setBounds: (bounds) => window.setBounds(bounds),
     show: () => window.show(),
-    hide: () => window.hide(),
+    hide() {
+      window.hide()
+      deactivate()
+    },
     focus() {
       window.focus()
       activate()

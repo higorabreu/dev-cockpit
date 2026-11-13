@@ -24,7 +24,7 @@ export interface PlatformContext {
   readonly appPath: string
   readonly resourcesPath: string
   readonly logger: Logger
-  // Electron's app: the Mac panel activates it and hides its Dock icon
+  // Electron's app, which the Mac panel activates, hides and keeps out of the Dock
   readonly app: PanelApp
 }
 

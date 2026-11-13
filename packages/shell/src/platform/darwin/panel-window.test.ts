@@ -5,6 +5,7 @@ import { activateOnFocus, buildAppMenu, createPanelWindow, type PanelApp } from 
 function recordingApp(calls: string[]): PanelApp {
   return {
     focus: (options) => void calls.push(`app.focus ${JSON.stringify(options)}`),
+    hide: () => void calls.push('app.hide'),
     dock: { hide: () => void calls.push('dock.hide') },
   }
 }
@@ -24,12 +25,33 @@ describe('createPanelWindow', () => {
     // Assert
     expect(window.calls.slice(-3)).toEqual(['focus', 'app.focus {"steal":true}', 'contents.focus'])
   })
+
+  it('should hide the app after the panel when the dock hides the panel', () => {
+    // Arrange
+    const window = new FakeDockWindow()
+    const dock = createPanelWindow(recordingApp(window.calls)).dock(window, {
+      focus: () => undefined,
+    })
+    dock.show()
+    dock.focus()
+
+    // Act
+    dock.hide()
+
+    // Assert
+    expect(window.calls.slice(-2)).toEqual(['hide', 'app.hide'])
+    expect(dock.isVisible()).toBe(false)
+  })
 })
 
 describe('activateOnFocus', () => {
   it('should activate the app after focusing the window when the window is focused', () => {
     const window = new FakeDockWindow()
-    const dock = activateOnFocus(window, () => window.calls.push('activate'))
+    const dock = activateOnFocus(
+      window,
+      () => window.calls.push('activate'),
+      () => undefined,
+    )
 
     dock.focus()
 
