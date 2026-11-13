@@ -103,7 +103,12 @@ The order is meant to bring the tester in as late as possible and once per batch
   does not activate the app by itself; `window.focus()` and `app.focus({ steal: true })`, to validate).
   A minimal menu with `Cmd+Q` and `Cmd+,`. Keep the rest of `createDockController` the same: the height
   and monitor math already belongs to `core`. This is the riskiest task; expect 2 or 3 rounds with the
-  tester. (C6)
+  tester. (C6) Done, not verified on a Mac: `shell/src/platform/darwin/panel-window.ts`, which
+  `selectPlatform` returns as the `window` part (Linux gets `platform/linux/regular-window.ts`, with the same
+  calls as before), so `main.ts` has no macOS branch. The panel hides the Dock icon before
+  `setVisibleOnAllWorkspaces`, activates the app on focus and calls `app.hide()` after hiding, so the
+  keyboard goes back to the previous app. `app.dock?.hide()` runs in every mode; `LSUIElement` in
+  `Info.plist` belongs to the packaging, MAC-T10.
 - [ ] MAC-T6. Terminal environment and PATH. Find the login shell (`$SHELL`, otherwise `/bin/zsh`) and open
   it as a login shell on the Mac, like Terminal.app. Read the login shell's PATH once at boot
   (`$SHELL -ilc 'printf %s "$PATH"'`, with a 2 s timeout and path validation) and hand the same PATH to
@@ -152,9 +157,9 @@ The order is meant to bring the tester in as late as possible and once per batch
   monitor, restart and check autostart, close and `dck toggle`. Measurements with `DCK_LOG_DOCK=1`,
   `ps -o rss` of the app and the daemon and the cold start time. Problems come back grouped by round.
   (C5, C6, C9, C10)
-- [ ] MAC-T13. Close: decision D36 in `docs/decisions.md` (the port, window, secret store and PATH choices), the
-  "macOS packaging" item leaves the backlog of `docs/roadmap.md`, a Mac section in the `README` and check
-  the full gate. (C11)
+- [ ] MAC-T13. Close: a new decision in `docs/decisions.md` that records the port as built (the window, secret
+  store and PATH choices; D42 is the spike's), the "macOS packaging" item leaves the backlog of
+  `docs/roadmap.md`, a Mac section in the `README` and check the full gate. (C11)
 - [ ] MAC-T14. Optional, only if Q4 asks for distribution: a Developer ID certificate, signing with the hardened
   runtime on every nested executable (`pty.node`, `spawn-helper`, Electron's helpers), notarization
   (`@electron/notarize`), secrets in CI, manual update by download.
