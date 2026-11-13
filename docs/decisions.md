@@ -617,3 +617,16 @@ select and All tabs show ten whole rows before they scroll.
 once the project select scrolled, and the same strip in the other lists (2026-11-13).
 **How to revert:** drop the `data-overflow` rule and `scroll-edges` from `styles/terminal.css` and the
 padding changes that came with them.
+
+## D46. The secret store is chosen in `@dck/daemon`, for the window and the daemon alike
+
+**Decision:** `systemSecretStore(platform)` in `@dck/daemon/secret-store` picks the Keychain on macOS and
+`secret-tool` elsewhere. The daemon's entry point and `dck daemon` build it once and pass it to every
+connector's views; the shell's `selectPlatform` calls the same function instead of choosing on its own.
+**Reason:** the window writes the token and the daemon reads it, so both processes must pick the same store;
+one chooser that both import cannot drift, while two copies of the choice could. It does not live in
+`core` because the choice has to import the Keychain and `secret-tool` adapters, and `core` imports no
+adapter.
+**Accepted cost:** the shell now depends on `@dck/daemon`, and only through its `secret-store` subpath, so
+the window does not load the daemon's server or views.
+**How to revert:** move the choice back into `selectPlatform` and into each daemon entry point.

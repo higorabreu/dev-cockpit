@@ -30,7 +30,22 @@
         },
         {
           "type": "json",
+          "path": "packages/adapters/jira/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "packages/adapters/linux-proc/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/adapters/macos-keychain/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/adapters/macos-proc/package.json",
           "jsonpath": "$.version"
         },
         {

@@ -81,16 +81,20 @@ The order is meant to bring the tester in as late as possible and once per batch
   Linux adapters until T3, T4 and T8, and only Linux gets `--no-sandbox`. The scanner is a `ProcessScanner`
   port in `core`, and the daemon receives its `SecretStore` from its entry point. Paths stay in `node-net`
   and the GTK work areas stay gated in `main.ts`, since creating them runs `xprop`.
-- [ ] MAC-T3. Secret store: `adapters/macos-keychain` (`@dck/adapter-macos-keychain`). The same `SecretStore`
+- [x] MAC-T3. Secret store: `adapters/macos-keychain` (`@dck/adapter-macos-keychain`). The same `SecretStore`
   contract and the same codes (`DCK-SEC-001` tool missing, `DCK-SEC-002` refused). The
   `security add-generic-password` command does not read the value from stdin, and `-w value` shows in
   `ps`; the design is to use `security -i` and send the command line, with the value in escaped quotes,
   through stdin (which is how RubyGems and go-keyring do it). `find-generic-password -w` reads,
-  `delete-generic-password` deletes. A missing item exits with code 44 (confirmed in MAC-T1). `security -i` has no escape
-  for a line break, and one splits the command and stores the value cut short, so a value with a line
-  break is refused before it is sent. A test
-  with a fake runner, including a value with quotes, a space and `$`, a refused line break, and an integration
-  test that only runs on macOS CI. (C3)
+  `delete-generic-password` deletes. A missing item exits with code 44 (confirmed in MAC-T1). `security -i`
+  has no escape for a line break, and one splits the command and stores the value cut short, so a value
+  with a line break is refused before it is sent. A test with a fake runner, including a value with quotes,
+  a space and `$`, a refused line break, and an integration test that only runs with `DCK_KEYCHAIN_TEST=1`,
+  which CI sets against a temporary keychain and then restores the runner's keychains. (C3) Done: `security`
+  by its absolute path, keys and the service from an allowlist and a line of at most 4094 bytes, since
+  `security -i` runs the rest of a longer line as another command. The window, the daemon and `dck daemon`
+  refuse an invalid `DCK_PROFILE` at boot, and D46 records why the store is chosen in `@dck/daemon`. Still
+  to run on the tester's Mac with the app.
 - [x] MAC-T4. Processes: `adapters/macos-proc` (`@dck/adapter-macos-proc`) behind the same
   `ProcessInspector` and scanner ports. The foreground group through `ps -o tpgid= -p <pid>`, the name through
   `ps -o comm=`, the start through `ps -o lstart=`, the directory through `lsof -a -d cwd -Fn -p <pid>`. The
