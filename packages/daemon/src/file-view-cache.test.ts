@@ -122,6 +122,23 @@ describe('createFileViewCache', () => {
     expect(await readdir(dir)).toEqual(['views.json'])
   })
 
+  it('should not collide when two caches on the same file save at once', async () => {
+    const errors: string[] = []
+    const logger: Logger = { ...silentLogger, error: (message) => void errors.push(message) }
+    const file = join(dir, 'views.json')
+    const first = { scope: 's', views: { review: { items: [item], updatedAt: 1 } } }
+    const second = { scope: 's', views: { mine: { items: [item], updatedAt: 2 } } }
+
+    await Promise.all([
+      createFileViewCache(file, logger).save(first),
+      createFileViewCache(file, logger).save(second),
+    ])
+
+    expect(errors).toEqual([])
+    expect([first, second]).toContainEqual(JSON.parse(await readFile(file, 'utf8')))
+    expect(await readdir(dir)).toEqual(['views.json'])
+  })
+
   it('should remove its temporary file when the save fails', async () => {
     const errors: string[] = []
     const logger: Logger = { ...silentLogger, error: (message) => void errors.push(message) }

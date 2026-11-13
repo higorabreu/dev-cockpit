@@ -19,10 +19,11 @@ const dataSchema = z.object({
   views: z.record(z.string(), cachedView),
 })
 
+// Shared by every cache in the process so no two saves, even of two caches on one file, share a temporary name
+let writes = 0
+
 // An unreadable or otherwise broken file becomes "no cache": the server is the source, the file only speeds things up
 export function createFileViewCache(file: string, logger: Logger): ViewCache {
-  // Each write gets its own temporary file: views saving at the same time would rename each other's away
-  let writes = 0
   return {
     async load() {
       const text = await readFile(file, 'utf8').catch((error: NodeJS.ErrnoException) => {
