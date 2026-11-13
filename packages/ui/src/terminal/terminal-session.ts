@@ -31,6 +31,7 @@ export interface SessionOptions {
   readonly paths: Omit<PathLinkOptions, 'resolve' | 'openFile'>
   // How a link printed in the terminal opens and shows its tooltip
   readonly links: Omit<LinkOptions, 'open'>
+  readonly nativeMiddlePaste: boolean
   onCopied(text: string): void
   onExit(): void
   // A key the user typed, not the replies xterm sends by itself (focus and cursor reports)
@@ -60,22 +61,10 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   })
 
   attachLinks(terminal, { ...options.links, open: (url) => api.external.openLink(url) })
-  const clipboard = attachClipboard(terminal, element, api.clipboard, options.onCopied)
-  // Keys xterm must not send to the shell: Ctrl+Shift+C and V copy and paste
-  terminal.attachCustomKeyEventHandler((event) => {
-    if (event.type !== 'keydown') return true
-    if (!event.ctrlKey || !event.shiftKey) return true
-    const key = event.key.toLowerCase()
-    if (key === 'c' && terminal.hasSelection()) {
-      clipboard.copySelection()
-      return false
-    }
-    if (key === 'v') {
-      void clipboard.paste()
-      return false
-    }
-    return true
+  const clipboard = attachClipboard(terminal, element, api.clipboard, options.onCopied, {
+    nativeMiddlePaste: options.nativeMiddlePaste,
   })
+  terminal.attachCustomKeyEventHandler(clipboard.onKey)
 
   // The tab must be visible for xterm to measure the columns; the caller shows it before creating
   fit.fit()

@@ -1,4 +1,12 @@
-import type { Cancel, DockWindow, Point, Rectangle, Scheduler, Screen } from '../ports/index.ts'
+import type {
+  Cancel,
+  Clock,
+  DockWindow,
+  Point,
+  Rectangle,
+  Scheduler,
+  Screen,
+} from '../ports/index.ts'
 
 export interface DockOptions {
   readonly screen: Screen
@@ -6,6 +14,8 @@ export interface DockOptions {
   readonly scheduler: Scheduler
   // Fraction of the usable height; a function lets it change while the window is open
   readonly heightRatio?: number | (() => number)
+  // Without it every toggle request counts; with it a repeat right after one is ignored
+  readonly clock?: Clock
 }
 
 export interface DockController {
@@ -19,6 +29,8 @@ export interface DockController {
 }
 
 const REAPPLY_DELAY_MS = 250
+// A held key or a shortcut delivered twice would hide the window and show it again at once
+const TOGGLE_REPEAT_MS = 300
 
 export function dockBounds(
   workArea: Rectangle,
@@ -43,6 +55,7 @@ export function createDockController(options: DockOptions): DockController {
   let cancelReapply: Cancel | undefined
   // Monitor where the window was shown; reading the window position is unreliable on X11 with several monitors
   let anchor: Point | undefined
+  let lastToggleAt: number | undefined
 
   const boundsAt = (point: Point) =>
     dockBounds(screen.displayNearest(point).workArea, ratio(), fullHeight)
@@ -80,6 +93,15 @@ export function createDockController(options: DockOptions): DockController {
     show,
     hide,
     toggle() {
+      const now = options.clock?.now()
+      if (
+        now !== undefined &&
+        lastToggleAt !== undefined &&
+        now - lastToggleAt < TOGGLE_REPEAT_MS
+      ) {
+        return
+      }
+      lastToggleAt = now
       if (window.isVisible() && window.isFocused()) hide()
       else show()
     },
