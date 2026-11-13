@@ -7,6 +7,9 @@ import {
   type ConnectionStatus,
   type Connections,
   connectorOfView,
+  type DiffSource,
+  errorBody,
+  fail,
   hostChannels,
   type Logger,
   type Notifier,
@@ -94,6 +97,17 @@ const resolvePathsSchema = z.object({
   paths: z.array(pathText(MAX_CANDIDATE_LENGTH)).max(MAX_PATHS_PER_CALL),
 })
 
+// The tab's folder goes into git's arguments, so it must be an absolute folder that exists
+const diffRequestSchema = z.object({
+  cwd: absolutePathSchema,
+  scope: z.enum(['uncommitted', 'branch']),
+  ignoreWhitespace: z.boolean(),
+})
+const fileLinesSchema = z.object({
+  root: absolutePathSchema,
+  path: pathText(MAX_ABSOLUTE_LENGTH).refine((text) => !isAbsolute(text)),
+})
+
 export interface IpcMainApi {
   handle(channel: string, listener: (event: unknown, ...args: never[]) => unknown): void
   on(channel: string, listener: (event: unknown, ...args: never[]) => void): void
@@ -116,6 +130,7 @@ export interface BridgeOptions {
   readonly external: { open(url: string): void; allowedOrigins(): readonly string[] }
   readonly environment: { status(pid: number): Promise<ComposeStatus> }
   readonly files: TerminalFiles
+  readonly review: DiffSource
   readonly sessions: {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
@@ -237,6 +252,32 @@ export function registerHostBridge(options: BridgeOptions) {
     return parsed.success && enabledView(parsed.data.view)
       ? options.views.refresh(parsed.data.view, parsed.data.maxAgeMs)
       : undefined
+  })
+  // A file is only read from a repository a diff found, never from any folder the window names
+  const reviewRoots = new Set<string>()
+  const isFolder = (path: string) =>
+    options.files.stat(path).then(
+      (stats) => stats.isDirectory(),
+      () => false,
+    )
+  ipcMain.handle(hostChannels.reviewDiff, async (_event, payload: unknown) => {
+    const parsed = diffRequestSchema.safeParse(payload)
+    if (!parsed.success || !(await isFolder(parsed.data.cwd))) {
+      logger.warn('review request refused', { kind: 'diff' })
+      return fail(errorBody('DCK-IPC-003', 'review diff'))
+    }
+    const result = await options.review.diff(parsed.data)
+    if (result.ok && result.value.kind === 'ok') reviewRoots.add(result.value.diff.root)
+    if (!result.ok) logger.warn('review diff failed', { error: result.error.message })
+    return result
+  })
+  ipcMain.handle(hostChannels.reviewFile, (_event, payload: unknown) => {
+    const parsed = fileLinesSchema.safeParse(payload)
+    if (!parsed.success || !reviewRoots.has(parsed.data.root)) {
+      logger.warn('review request refused', { kind: 'file' })
+      return fail(errorBody('DCK-IPC-003', 'review file'))
+    }
+    return options.review.fileLines(parsed.data.root, parsed.data.path)
   })
   ipcMain.handle(hostChannels.autostartGet, () => options.autostart.isEnabled())
   ipcMain.handle(hostChannels.autostartSet, async (_event, enabled: unknown) => {

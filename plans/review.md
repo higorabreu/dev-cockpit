@@ -89,7 +89,8 @@ comment) into the tab's prompt without Enter, so any agent can take it. Detailed
   tested against temporary repositories. (R2, R4, R8) Untracked files go through `diff --no-index` one
   by one (at most 300, 8 at a time) so the index is never written; one over 1 MB is listed with its size.
   New error domain `GIT` (`DCK-GIT-001` to `005`).
-- [ ] RV-T4. Shell and host API: the diff channel, validated with zod, for the tab's folder. (R2)
+- [x] RV-T4. Shell and host API: the diff channel, validated with zod, for the tab's folder. (R2) Also a
+  `review:file` channel for the lines a diff left out, answered only for a root a diff returned.
 - [ ] RV-T5. Interface: the split with its divider, the review pane (header with scope select and totals,
   file list, virtualized diff), keyboard, refresh rules, both catalogs, screenshots. (R1, R3, R5, R6, R7, R8)
 - [ ] RV-T6. Docs: decision record, roadmap (milestone 3), shortcuts.

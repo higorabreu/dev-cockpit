@@ -7,7 +7,7 @@ import { createComposeInspector } from '@dck/adapter-docker-cli'
 import { createGnomeShortcut } from '@dck/adapter-gnome-shortcuts'
 import { createProcessInspector, createProcessScanner } from '@dck/adapter-linux-proc'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
-import { createGitInspector } from '@dck/adapter-node-git'
+import { createGitDiffSource, createGitInspector } from '@dck/adapter-node-git'
 import { connectTo, defaultConfigDir, defaultEndpoint } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
 import { createSecretToolStore } from '@dck/adapter-secret-tool'
@@ -256,6 +256,7 @@ app.whenReady().then(async () => {
       createRecencyStore(join(app.getPath('userData'), 'recent-projects.json'), logger),
       createFavoritesStore(join(app.getPath('userData'), 'favorite-projects.json'), logger),
     ),
+    review: createGitDiffSource(),
     sessions: createSessionInspector({
       processes: createProcessInspector(),
       git: createGitInspector(),
