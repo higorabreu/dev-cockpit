@@ -82,8 +82,9 @@ comment) into the tab's prompt without Enter, so any agent can take it. Detailed
 ## Tasks
 
 - [x] RV-T1. `core`: the pane model of a tab (one or two panes, ratio, focus), pure and tested.
-- [ ] RV-T2. `core`: the diff model, the unified diff parser and the word change marking; the
-  `DiffSource` port. (R3, R4)
+- [x] RV-T2. `core`: the diff model, the unified diff parser and the word change marking; the
+  `DiffSource` port. (R3, R4) Core pairs the removed and added lines; the word comparison itself is
+  jsdiff in `ui`, as decided. The rows of a file (hunks, collapsed gaps, expanded lines) are pure here too.
 - [ ] RV-T3. `node-git`: the diff adapter for both scopes, untracked files, the base branch, edge cases,
   tested against temporary repositories. (R2, R4, R8)
 - [ ] RV-T4. Shell and host API: the diff channel, validated with zod, for the tab's folder. (R2)
