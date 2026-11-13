@@ -6,8 +6,7 @@
   "main": "dist/main.cjs",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "build": "node scripts/build.mjs",
-    "start": "electron . --no-sandbox"
+    "build": "node scripts/build.mjs"
   },
   "dependencies": {
     "@dck/adapter-docker-cli": "workspace:^",
