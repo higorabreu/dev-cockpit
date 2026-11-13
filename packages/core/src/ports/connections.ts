@@ -25,10 +25,19 @@ export interface Connection {
   disconnect(): Promise<ConnectionStatus>
 }
 
+// A connector whose extension is in `extensions.disabled`; enabling the extension brings it back
+export interface DisabledConnector {
+  readonly extension: string
+  readonly id: string
+  readonly name: string
+}
+
 // Every enabled connector's account, by connector id
 export interface Connections {
   // The enabled connectors that have an implementation, in the order they were declared
   list(): readonly Connector[]
+  // The ones this app implements but the user disabled, so the interface can offer to enable them
+  disabled(): readonly DisabledConnector[]
   status(id: string): Promise<ConnectionStatus>
   connect(id: string, fields: ConnectionFields, token: string): Promise<ConnectionStatus>
   disconnect(id: string): Promise<ConnectionStatus>

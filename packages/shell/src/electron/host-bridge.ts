@@ -184,6 +184,7 @@ export function registerHostBridge(options: BridgeOptions) {
       return parsed.success ? action(parsed.data) : ({ kind: 'none' } satisfies ConnectionStatus)
     }
   ipcMain.handle(hostChannels.connectionsList, () => connections.list())
+  ipcMain.handle(hostChannels.connectionsDisabled, () => connections.disabled())
   ipcMain.handle(hostChannels.connectionsStatus, byId(connections.status))
   ipcMain.handle(hostChannels.connectionsConnect, (_event, payload: unknown) => {
     const parsed = connectSchema.safeParse(payload)

@@ -206,6 +206,7 @@ app.whenReady().then(async () => {
   let catalog = readCatalog()
   const connections = createConnections({
     connectors: () => catalog.ready,
+    disabled: () => catalog.disabled,
     implementation: (id) => implementations.get(id),
     logger,
   })

@@ -2,7 +2,7 @@ import type { AgentSignal } from '../attention/agent-signal.ts'
 import type { Connector } from '../connectors/connector.ts'
 import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
 import type { AgentProfile } from './agent.ts'
-import type { ConnectionFields, ConnectionStatus } from './connections.ts'
+import type { ConnectionFields, ConnectionStatus, DisabledConnector } from './connections.ts'
 import type { ComposeStatus } from './environment.ts'
 import type { TabNotification } from './notifier.ts'
 import type { Project } from './projects.ts'
@@ -54,6 +54,8 @@ export interface HostApi {
   // By connector id; only the enabled connectors this app implements are listed or answered
   readonly connections: {
     list(): Promise<readonly Connector[]>
+    // Disabled in `extensions.disabled`; the settings model enables them again
+    disabled(): Promise<readonly DisabledConnector[]>
     status(id: string): Promise<ConnectionStatus>
     connect(id: string, fields: ConnectionFields, token: string): Promise<ConnectionStatus>
     disconnect(id: string): Promise<ConnectionStatus>
@@ -125,6 +127,7 @@ export const hostChannels = {
   settingsUpdate: 'settings:update',
   settingsChanged: 'settings:changed',
   connectionsList: 'connections:list',
+  connectionsDisabled: 'connections:disabled',
   connectionsStatus: 'connections:status',
   connectionsConnect: 'connections:connect',
   connectionsDisconnect: 'connections:disconnect',

@@ -110,6 +110,8 @@ function setup() {
     },
     connections: {
       list: () => connectors,
+      disabled: () =>
+        connectors.length === 0 ? [{ extension: 'dck.gitlab', id: 'gitlab', name: 'GitLab' }] : [],
       status: async () => ({ kind: 'none' as const }),
       connect: async (id, fields, token) => {
         connects.push({ id, fields, token })
@@ -430,6 +432,15 @@ describe('registerHostBridge connections', () => {
     const { call } = setup()
 
     expect(await call(hostChannels.connectionsList)).toEqual([GITLAB_CONNECTOR])
+  })
+
+  it('should list the disabled connectors when asked', async () => {
+    const { call, disableConnectors } = setup()
+    disableConnectors()
+
+    expect(await call(hostChannels.connectionsDisabled)).toEqual([
+      { extension: 'dck.gitlab', id: 'gitlab', name: 'GitLab' },
+    ])
   })
 
   it('should answer none when the status asks for an id that is not text', async () => {

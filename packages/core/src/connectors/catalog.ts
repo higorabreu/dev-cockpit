@@ -4,6 +4,7 @@ import {
   EXTENSION_API_VERSION,
 } from '../extensions/built-in.ts'
 import { contributionsFor, loadExtensions } from '../extensions/load.ts'
+import type { DisabledConnector } from '../ports/connections.ts'
 import { type Connector, connectorsPoint } from './connector.ts'
 
 export interface ConnectorCatalog {
@@ -11,6 +12,8 @@ export interface ConnectorCatalog {
   readonly ready: readonly Connector[]
   // Enabled, but this app has no code for them: reported and left out, never half-loaded
   readonly missing: readonly Connector[]
+  // Implemented, but their extension is disabled
+  readonly disabled: readonly DisabledConnector[]
 }
 
 export interface ConnectorCatalogOptions {
@@ -33,9 +36,17 @@ export function connectorCatalog(options: ConnectorCatalogOptions): ConnectorCat
   const declared = contributionsFor(report, connectorsPoint).flatMap(
     (contribution) => contribution.declaration,
   )
+  const disabled = report.disabled.flatMap((extension) => {
+    const parsed = connectorsPoint.schema.safeParse(extension.declarations.get(connectorsPoint.id))
+    if (!parsed.success) return []
+    return parsed.data
+      .filter((connector) => options.implemented.has(connector.id))
+      .map(({ id, name }) => ({ extension: extension.manifest.id, id, name }))
+  })
   return {
     ready: declared.filter((connector) => options.implemented.has(connector.id)),
     missing: declared.filter((connector) => !options.implemented.has(connector.id)),
+    disabled,
   }
 }
 

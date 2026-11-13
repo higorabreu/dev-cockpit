@@ -1,10 +1,16 @@
-import type { Connection, ConnectionStatus, Connections } from '../ports/connections.ts'
+import type {
+  Connection,
+  ConnectionStatus,
+  Connections,
+  DisabledConnector,
+} from '../ports/connections.ts'
 import type { Logger } from '../ports/logger.ts'
 import type { Connector } from './connector.ts'
 
 export interface ConnectionsOptions {
   // The connectors enabled and implemented right now; read on every call, so disabling one applies at once
   connectors(): readonly Connector[]
+  disabled(): readonly DisabledConnector[]
   implementation(id: string): Connection | undefined
   readonly logger: Logger
 }
@@ -21,6 +27,8 @@ export function createConnections(options: ConnectionsOptions): Connections {
 
   return {
     list: () => options.connectors(),
+
+    disabled: () => options.disabled(),
 
     status: async (id) => (await find(id)?.status()) ?? none,
 

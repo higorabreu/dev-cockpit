@@ -14,11 +14,16 @@ describe('connectorCatalog', () => {
     expect(catalog([]).ready.map((connector) => connector.id)).toEqual(['gitlab'])
   })
 
-  it('should leave GitLab out when its extension is disabled', () => {
+  it('should leave GitLab out and list it as disabled when its extension is disabled', () => {
     const result = catalog(['dck.gitlab'])
 
     expect(result.ready).toEqual([])
     expect(result.missing).toEqual([])
+    expect(result.disabled).toEqual([{ extension: 'dck.gitlab', id: 'gitlab', name: 'GitLab' }])
+  })
+
+  it('should not offer to enable a disabled connector the process has no code for', () => {
+    expect(catalog(['dck.gitlab'], []).disabled).toEqual([])
   })
 
   it('should offer GitLab again when its extension is enabled after being disabled', () => {

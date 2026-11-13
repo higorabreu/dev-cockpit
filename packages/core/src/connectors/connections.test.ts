@@ -26,6 +26,8 @@ function setup() {
   }
   const connections = createConnections({
     connectors: () => enabled,
+    disabled: () =>
+      enabled.length === 0 ? [{ extension: 'dck.gitlab', id: 'gitlab', name: 'GitLab' }] : [],
     implementation: (id) => (id === 'gitlab' ? gitlab : undefined),
     logger: silentLogger,
   })
@@ -66,6 +68,9 @@ describe('createConnections', () => {
     expect(connects).toEqual([])
     expect(disconnects()).toBe(0)
     expect(connections.list()).toEqual([])
+    expect(connections.disabled()).toEqual([
+      { extension: 'dck.gitlab', id: 'gitlab', name: 'GitLab' },
+    ])
   })
 
   it('should find the account still connected when the connector is enabled again', async () => {

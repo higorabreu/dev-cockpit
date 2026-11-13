@@ -38,6 +38,7 @@ const api: HostApi = {
   },
   connections: {
     list: () => ipcRenderer.invoke(hostChannels.connectionsList),
+    disabled: () => ipcRenderer.invoke(hostChannels.connectionsDisabled),
     status: (id) => ipcRenderer.invoke(hostChannels.connectionsStatus, id),
     connect: (id, fields, token) =>
       ipcRenderer.invoke(hostChannels.connectionsConnect, { id, fields, token }),

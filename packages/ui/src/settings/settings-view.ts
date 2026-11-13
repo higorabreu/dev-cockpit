@@ -3,6 +3,7 @@ import {
   type ConnectionStatus,
   type Connector,
   connectionErrorKey,
+  type DisabledConnector,
   defaultSettings,
   HOLD_TRIGGERS,
   type HostApi,
@@ -91,6 +92,8 @@ export function createSettingsView(
   let activeTab: TabId = TABS[0].id
   // The enabled connectors, each with its own section on the Connections page
   let connectors: readonly Connector[] = []
+  // Turned off with `dck ext disable`; listed at the end with a way to turn them back on
+  let disabledConnectors: readonly DisabledConnector[] = []
   // Until the first answer the page stays blank, so it does not flash the "none available" text
   let listed = false
   // Where the next drawing puts the focus, when an action replaced the control that had it
@@ -330,7 +333,12 @@ export function createSettingsView(
   const storedAccount = (id: string) => settings.current().connections[id]
 
   async function loadConnections() {
-    connectors = await api.connections.list()
+    const [enabled, disabled] = await Promise.all([
+      api.connections.list(),
+      api.connections.disabled(),
+    ])
+    connectors = enabled
+    disabledConnectors = disabled
     listed = true
     for (const { id } of connectors) statuses.set(id, 'checking')
     if (isOpen()) render()
@@ -365,6 +373,15 @@ export function createSettingsView(
     statuses.set(id, await api.connections.disconnect(id))
     focusNext = `conn-${id}-url`
     render()
+  }
+
+  // Through the settings model, like any other setting: the host applies it with no restart
+  async function enable(connector: DisabledConnector) {
+    focusNext = `conn-${connector.id}-url`
+    const disabled = settings.current().extensions.disabled
+    await settings.update({
+      extensions: { disabled: disabled.filter((id) => id !== connector.extension) },
+    })
   }
 
   function statusText(status: ConnectionStatus | 'checking'): string {
@@ -485,25 +502,36 @@ export function createSettingsView(
     ].filter((element) => element !== undefined)
   }
 
+  // One compact row per disabled connector; disabling stays in the CLI, where it is rare
+  function disabledRow(connector: DisabledConnector): HTMLElement {
+    const button = h(
+      'button',
+      { type: 'button', class: 'srecord', 'data-focus': `conn-${connector.id}-enable` },
+      t('connections.enable'),
+    )
+    button.addEventListener('click', () => void enable(connector))
+    return row(
+      `connections.${connector.id}.enable`,
+      `${connector.name} · ${t('connections.disabled')}`,
+      button,
+      undefined,
+      false,
+    )
+  }
+
   function connectionGroups(): Node[] {
     if (!listed) return []
-    if (connectors.length === 0)
-      return [
+    const sections = connectors.map((connector) => group(undefined, ...connectorRows(connector)))
+    if (disabledConnectors.length > 0)
+      sections.push(group(undefined, ...disabledConnectors.map(disabledRow)))
+    if (sections.length === 0)
+      sections.push(
         group(
           undefined,
-          h(
-            'div',
-            { class: 'srow2' },
-            h(
-              'span',
-              { class: 'shint' },
-              `${t('connections.empty')} `,
-              h('code', { class: 'scode' }, 'dck ext enable <id>'),
-            ),
-          ),
+          h('div', { class: 'srow2' }, h('span', { class: 'shint' }, t('connections.empty'))),
         ),
-      ]
-    return connectors.map((connector) => group(undefined, ...connectorRows(connector)))
+      )
+    return sections
   }
 
   function header(): HTMLElement {

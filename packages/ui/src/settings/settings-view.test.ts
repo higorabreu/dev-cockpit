@@ -14,8 +14,8 @@ import { describe, expect, it } from 'vitest'
 import type { SettingsClient } from './settings-client.ts'
 import { createSettingsView } from './settings-view.ts'
 
-function fakeSettings(locked: readonly string[] = []) {
-  let current: Settings = defaultSettings
+function fakeSettings(locked: readonly string[] = [], initial: Settings = defaultSettings) {
+  let current: Settings = initial
   const patches: SettingsPatch[] = []
   const listeners = new Set<(settings: Settings, changed: readonly string[]) => void>()
   const client: SettingsClient = {
@@ -39,17 +39,21 @@ function fakeSettings(locked: readonly string[] = []) {
 
 // Only what opening the screen asks the host for
 const api = {
-  connections: { list: async () => [GITLAB_CONNECTOR], status: async () => ({ kind: 'none' }) },
+  connections: {
+    list: async () => [GITLAB_CONNECTOR],
+    disabled: async () => [],
+    status: async () => ({ kind: 'none' }),
+  },
   autostart: { isEnabled: async () => false },
 } as unknown as HostApi
 
-function open(locked: readonly string[] = [], host: HostApi = api) {
+function open(locked: readonly string[] = [], host: HostApi = api, initial?: Settings) {
   document.body.replaceChildren()
   const overlay = document.createElement('div')
   const body = document.createElement('div')
   overlay.append(body)
   document.body.append(overlay)
-  const settings = fakeSettings(locked)
+  const settings = fakeSettings(locked, initial)
   let closed = false
   const view = createSettingsView(
     { overlay, body },
@@ -183,13 +187,18 @@ const tracker: Connector = {
   views: [{ id: 'tasks', kind: 'issue', title: 'views.review', empty: 'views.empty.review' }],
 }
 
-function connectionsHost(initial: readonly Connector[], options: { refuse?: boolean } = {}) {
+function connectionsHost(
+  initial: readonly Connector[],
+  options: { refuse?: boolean; disabled?: readonly Connector[] } = {},
+) {
   let connectors = initial
+  let disabled = options.disabled ?? []
   const connects: { id: string; fields: ConnectionFields; token: string }[] = []
   let answer: (() => void) | undefined
   const host = {
     connections: {
       list: async () => connectors,
+      disabled: async () => disabled.map(({ id, name }) => ({ extension: `dck.${id}`, id, name })),
       status: async (): Promise<ConnectionStatus> => ({ kind: 'none' }),
       connect: async (id: string, fields: ConnectionFields, token: string) => {
         connects.push({ id, fields, token })
@@ -213,14 +222,15 @@ function connectionsHost(initial: readonly Connector[], options: { refuse?: bool
     connects,
     // The host answers the pending connect
     answer: () => answer?.(),
-    set: (next: readonly Connector[]) => {
+    set: (next: readonly Connector[], nextDisabled: readonly Connector[] = []) => {
       connectors = next
+      disabled = nextDisabled
     },
   }
 }
 
-const connectionsPage = async (host: HostApi) => {
-  const page = open([], host)
+const connectionsPage = async (host: HostApi, initial?: Settings) => {
+  const page = open([], host, initial)
   page.body.querySelector<HTMLElement>('#settings-tab-connections')?.click()
   await settle()
   await settle()
@@ -290,18 +300,43 @@ describe('settings view, connections', () => {
     view.close()
   })
 
-  it('should take the section away when the connector is disabled while the page is open', async () => {
+  it('should take the section away and offer to enable it when the connector is disabled', async () => {
     const fake = connectionsHost([GITLAB_CONNECTOR])
     const { sections, emit, body, view } = await connectionsPage(fake.host)
-    fake.set([])
+    fake.set([], [GITLAB_CONNECTOR])
 
     emit(['extensions.disabled'])
     await settle()
 
+    expect(sections()).toEqual([['GitLab · Disabled']])
+    expect(body.textContent).not.toContain('dck ext')
+    expect(body.querySelector('[data-focus="conn-gitlab-enable"]')?.textContent).toBe('Enable')
+    view.close()
+  })
+
+  it('should take the extension out of the disabled list and bring the section back when Enable is clicked', async () => {
+    const fake = connectionsHost([], { disabled: [GITLAB_CONNECTOR] })
+    const initial = { ...defaultSettings, extensions: { disabled: ['acme.other', 'dck.gitlab'] } }
+    const page = await connectionsPage(fake.host, initial)
+    page.control('conn-gitlab-enable').click()
+    await settle()
+    fake.set([GITLAB_CONNECTOR])
+
+    page.emit(['extensions.disabled'])
+    await settle()
+    await settle()
+
+    expect(page.patches).toEqual([{ extensions: { disabled: ['acme.other'] } }])
+    expect(page.sections()).toEqual([['GitLab', 'Address', 'Personal access token', '']])
+    expect(page.focused()).toBe('conn-gitlab-url')
+    page.view.close()
+  })
+
+  it('should show only that nothing is available when no connector exists at all', async () => {
+    const { sections, body, view } = await connectionsPage(connectionsHost([]).host)
+
     expect(sections()).toEqual([[]])
-    expect(body.textContent).toContain(
-      'No connections available. Turn one on in a terminal with dck ext enable <id>',
-    )
+    expect(body.querySelector('.spanel')?.textContent).toBe('No connections available.')
     view.close()
   })
 })
