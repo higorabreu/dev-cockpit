@@ -257,7 +257,8 @@ export const en: Record<MessageKey, string> = {
   'connections.error.DCK-JRA-008': 'Invalid email. Use the email of your Atlassian account.',
   'connections.error.DCK-NET-001':
     'No response from the server. Check the network and the address.',
-  'connections.error.DCK-SEC-001': 'The system keyring is not available (install libsecret-tools).',
+  'connections.error.DCK-SEC-001':
+    'The system keyring is not available. On Linux, install libsecret-tools.',
   'connections.error.DCK-SEC-002': 'The system keyring refused to store the token.',
   'settings.group.system': 'System',
   'settings.autostart': 'Start with the system',
