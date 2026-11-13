@@ -27,7 +27,11 @@ const [command, args] =
     ? ['node', [join(repository, 'packages', 'cli', 'src', 'main.ts'), ...process.argv.slice(3)]]
     : [
         join(repository, 'packages', 'shell', 'node_modules', '.bin', 'electron'),
-        [join(repository, 'packages', 'shell'), '--no-sandbox'],
+        [
+          join(repository, 'packages', 'shell'),
+          // A Linux workaround for Chromium's sandbox helper; the Mac runs with the sandbox
+          ...(process.platform === 'darwin' ? [] : ['--no-sandbox']),
+        ],
       ]
 
 const child = spawn(command, args, { env: environment, stdio: 'inherit' })

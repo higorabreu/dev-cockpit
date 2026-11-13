@@ -74,10 +74,12 @@ The order is meant to bring the tester in as late as possible and once per batch
   with a quoted value and does `find-generic-password -w` read it back? The result becomes decision D36
   in `docs/decisions.md` and closes Q2. If (a) fails, MAC-T5 changes design before any code is written.
   (C5, C6)
-- [ ] MAC-T2. Platform choice at boot. A `selectPlatform(process.platform)` function in the shell's
+- [x] MAC-T2. Platform choice at boot. A `selectPlatform(process.platform)` function in the shell's
   composition root returns the set of adapters (processes, secret store, autostart, shortcut, paths);
   `main.ts` stops importing `linux-proc` and `secret-tool` directly. Drop `--no-sandbox` on the Mac. A test
-  with `platform` injected, no `any`. (C11)
+  with `platform` injected, no `any`. (C11) Done: `shell/src/platform/select-platform.ts`; the Mac keeps the
+  Linux adapters until T3, T4 and T8, paths stay in `node-net` and the GTK work areas stay gated in `main.ts`, since creating them runs
+  `xprop`. T4 needs a scanner port in `core` instead of the inferred `linux-proc` type.
 - [ ] MAC-T3. Secret store: `adapters/macos-keychain` (`@dck/adapter-macos-keychain`). The same `SecretStore`
   contract and the same codes (`DCK-SEC-001` tool missing, `DCK-SEC-002` refused). The
   `security add-generic-password` command does not read the value from stdin, and `-w value` shows in
