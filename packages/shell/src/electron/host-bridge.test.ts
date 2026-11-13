@@ -144,7 +144,7 @@ function setup() {
       touch: async (path: string) => void touched.push(path),
       toggleFavorite: async (path: string) => !path.endsWith('/pinned'),
     },
-    shell: '/bin/zsh',
+    shell: { file: '/bin/zsh', args: [] },
     home: '/home/usuario',
     logger: {
       info() {},

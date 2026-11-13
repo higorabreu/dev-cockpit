@@ -122,6 +122,53 @@ describe('selectPlatform', () => {
 
   it.each([
     {
+      expected: 'open the SHELL as a login shell',
+      when: 'the app runs on macOS',
+      overrides: { platform: 'darwin' as const, env: { SHELL: '/opt/homebrew/bin/fish' } },
+      terminal: { file: '/opt/homebrew/bin/fish', args: ['-l'] },
+    },
+    {
+      expected: 'open zsh as a login shell',
+      when: 'macOS gives no SHELL',
+      overrides: { platform: 'darwin' as const, env: {} },
+      terminal: { file: '/bin/zsh', args: ['-l'] },
+    },
+    {
+      expected: 'open the SHELL as it is',
+      when: 'the app runs on Linux',
+      overrides: { env: { SHELL: '/usr/bin/fish' } },
+      terminal: { file: '/usr/bin/fish', args: [] },
+    },
+    {
+      expected: 'open bash',
+      when: 'Linux gives no SHELL',
+      overrides: { env: {} },
+      terminal: { file: '/bin/bash', args: [] },
+    },
+  ])('should $expected when $when', ({ overrides, terminal }) => {
+    // Arrange
+    const selected = context(overrides)
+
+    // Act
+    const platform = selectPlatform(selected)
+
+    // Assert
+    expect(platform.terminal).toEqual(terminal)
+  })
+
+  it('should keep the inherited PATH when the app runs on Linux', async () => {
+    // Arrange
+    const platform = selectPlatform(context({}))
+
+    // Act
+    const path = await platform.loginPath()
+
+    // Assert
+    expect(path).toBeUndefined()
+  })
+
+  it.each([
+    {
       expected: 'open a panel with its own app menu',
       when: 'the app runs on macOS',
       platform: 'darwin' as const,

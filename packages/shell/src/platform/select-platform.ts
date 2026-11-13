@@ -8,9 +8,11 @@ import type {
   Logger,
   ProcessInspector,
   ProcessScanner,
+  PtyOptions,
   SecretStore,
 } from '@dck/core'
 import { systemSecretStore } from '@dck/daemon/secret-store'
+import { readLoginPath } from './darwin/login-path.ts'
 import { createPanelWindow, type PanelApp } from './darwin/panel-window.ts'
 import { createRegularWindow } from './linux/regular-window.ts'
 import { createXdgAutostart, defaultAutostartDirectory } from './linux/xdg-autostart.ts'
@@ -35,6 +37,9 @@ export interface Platform {
   readonly secrets: SecretStore
   readonly autostart: Autostart
   readonly desktopShortcut: DesktopShortcut | undefined
+  readonly terminal: Pick<PtyOptions, 'file' | 'args'>
+  // The PATH child processes should get, or undefined to keep the inherited one
+  loginPath(): Promise<string | undefined>
   readonly window: PlatformWindow
 }
 
@@ -47,6 +52,10 @@ export function selectPlatform(context: PlatformContext): Platform {
   const { platform, env, home, packaged, execPath, appPath, resourcesPath, logger } = context
   const onGnome =
     platform === 'linux' && (env.XDG_CURRENT_DESKTOP ?? '').split(':').includes('GNOME')
+  const terminal =
+    platform === 'darwin'
+      ? { file: env.SHELL ?? '/bin/zsh', args: ['-l'] }
+      : { file: env.SHELL ?? '/bin/bash', args: [] }
   // A Linux workaround for Chromium's sandbox helper; the Mac runs with the sandbox
   const sandbox = platform === 'linux' ? ['--no-sandbox'] : []
   const app = packaged ? [execPath] : [execPath, appPath]
@@ -78,6 +87,10 @@ export function selectPlatform(context: PlatformContext): Platform {
             logger,
           })
         : undefined,
+    // The Mac opens a login shell, like Terminal.app, so `.zprofile` runs in every tab
+    terminal,
+    loginPath: async () =>
+      platform === 'darwin' ? readLoginPath({ shell: terminal.file, logger }) : undefined,
     window: platform === 'darwin' ? createPanelWindow(context.app) : createRegularWindow(),
   }
 }

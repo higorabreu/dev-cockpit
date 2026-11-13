@@ -101,6 +101,10 @@ app.whenReady().then(async () => {
     logger,
     app,
   })
+  // Off the boot path: the tabs open a login shell and need nothing; only the daemon waits for it
+  const loginPath = platform.loginPath().then((path) => {
+    if (path) process.env.PATH = path
+  })
   const toggleKey = createToggleKeyBinder({
     desktop: platform.desktopShortcut,
     electron: createElectronShortcuts(globalShortcut),
@@ -287,7 +291,7 @@ app.whenReady().then(async () => {
         send(hostChannels.notificationsClick, tabId)
       },
     ),
-    shell: process.env.SHELL ?? '/bin/bash',
+    shell: platform.terminal,
     home: homedir(),
     logger,
     send,
@@ -332,7 +336,8 @@ app.whenReady().then(async () => {
 
   const daemonScript = join(__dirname, 'daemon.cjs')
 
-  function startDaemonProcess() {
+  async function startDaemonProcess() {
+    await loginPath
     mkdirSync(dirname(endpoint), { recursive: true, mode: 0o700 })
     launchDaemon(
       {
@@ -366,7 +371,7 @@ app.whenReady().then(async () => {
       },
     },
     logger,
-    onUnavailable: startDaemonProcess,
+    onUnavailable: () => void startDaemonProcess(),
     // A daemon from a previous version survives the update and would refuse the new methods
     replaceDaemon: async (shutdown) => {
       if (!(await shutdown())) {
@@ -387,7 +392,7 @@ app.whenReady().then(async () => {
         logger.warn('stale daemon stopped', { pids })
       }
       await new Promise((resolve) => setTimeout(resolve, 400))
-      startDaemonProcess()
+      await startDaemonProcess()
     },
     onToggle: () => {
       logger.info('toggle requested by the daemon')
