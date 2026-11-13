@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { mkdirSync, openSync, readFileSync, watch, writeFileSync } from 'node:fs'
 import { realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -52,6 +52,7 @@ import { buildTrayMenu } from './electron/tray-menu.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
+import { readLoginPath } from './platform/darwin/login-path.ts'
 import { activateOnFocus, anchorPanel, buildAppMenu } from './platform/darwin/panel-window.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
 import { selectPlatform } from './platform/select-platform.ts'
@@ -93,6 +94,20 @@ app.whenReady().then(async () => {
     resourcesPath: process.resourcesPath,
     logger,
   })
+  const loginPath =
+    process.platform === 'darwin'
+      ? readLoginPath({
+          shell: platform.terminal.file,
+          inherited: process.env.PATH,
+          run: (file, args, timeout) =>
+            new Promise((resolve, reject) =>
+              execFile(file, [...args], { timeout }, (error, stdout) =>
+                error ? reject(error) : resolve(stdout),
+              ),
+            ),
+          logger,
+        })
+      : undefined
   const toggleKey = createToggleKeyBinder({
     desktop: platform.desktopShortcut,
     electron: createElectronShortcuts(globalShortcut),
@@ -225,6 +240,10 @@ app.whenReady().then(async () => {
     for (const id of implementations.keys()) void views.configure(id, accountOf(settings, id))
   }
 
+  // Set before any child process starts: the terminal, the daemon, git and docker all inherit it
+  const path = await loginPath
+  if (path) process.env.PATH = path
+
   const bridge = registerHostBridge({
     ipcMain: createElectronIpc(ipcMain),
     ptyHost: createNodePtyHost(),
@@ -287,7 +306,7 @@ app.whenReady().then(async () => {
         window.webContents.send(hostChannels.notificationsClick, tabId)
       },
     ),
-    shell: process.env.SHELL ?? '/bin/bash',
+    shell: platform.terminal,
     home: homedir(),
     logger,
     send: (channel, ...args) => window.webContents.send(channel, ...args),

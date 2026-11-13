@@ -29,6 +29,7 @@ export interface Platform {
   readonly secrets: SecretStore
   readonly autostart: Autostart
   readonly desktopShortcut: DesktopShortcut | undefined
+  readonly terminal: { readonly file: string; readonly args: readonly string[] }
 }
 
 // macOS still gets the Linux processes, secret store and autostart until MAC-T3, T4 and T8 replace them
@@ -66,5 +67,10 @@ export function selectPlatform(context: PlatformContext): Platform {
             logger,
           })
         : undefined,
+    // The Mac opens a login shell, like Terminal.app, so `.zprofile` runs in every tab
+    terminal:
+      platform === 'darwin'
+        ? { file: env.SHELL ?? '/bin/zsh', args: ['-l'] }
+        : { file: env.SHELL ?? '/bin/bash', args: [] },
   }
 }
