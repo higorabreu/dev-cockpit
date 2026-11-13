@@ -3,6 +3,24 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.4.0](https://github.com/higorabreu/dev-cockpit/compare/v0.3.0...v0.4.0) (2026-11-13)
+
+
+### Features
+
+* connect a Jira Cloud account and show your open tasks in a Tasks tab ([a9d14aa](https://github.com/higorabreu/dev-cockpit/commit/a9d14aa7c6a34b7a3e1caecba86a7edb10be4a29))
+* enable and disable extensions with dck ext enable and dck ext disable ([efadc03](https://github.com/higorabreu/dev-cockpit/commit/efadc035ed480d7f5aa0951aeaf303773fa2f2cf))
+* make GitLab a built-in connector extension that can be turned off ([efadc03](https://github.com/higorabreu/dev-cockpit/commit/efadc035ed480d7f5aa0951aeaf303773fa2f2cf))
+* move through the tab menu with the arrow keys ([d5ae31e](https://github.com/higorabreu/dev-cockpit/commit/d5ae31e050a40b301495b1811857d7e6171cc100))
+* open file and folder paths from the terminal with Ctrl+click ([d5ae31e](https://github.com/higorabreu/dev-cockpit/commit/d5ae31e050a40b301495b1811857d7e6171cc100))
+
+
+### Bug Fixes
+
+* keep the focus in Settings while an account is checked ([efadc03](https://github.com/higorabreu/dev-cockpit/commit/efadc035ed480d7f5aa0951aeaf303773fa2f2cf))
+* keep the outline of a muted chip on a selected row in the light theme ([a9d14aa](https://github.com/higorabreu/dev-cockpit/commit/a9d14aa7c6a34b7a3e1caecba86a7edb10be4a29))
+* paste once in the terminal and keep the toggle key from reopening the window ([#20](https://github.com/higorabreu/dev-cockpit/issues/20)) ([5ec57c6](https://github.com/higorabreu/dev-cockpit/commit/5ec57c653a7b0dea27eb768ae04be1b3997a4d8a))
+
 ## [0.3.0](https://github.com/higorabreu/dev-cockpit/compare/v0.2.0...v0.3.0) (2026-11-13)
 
 
