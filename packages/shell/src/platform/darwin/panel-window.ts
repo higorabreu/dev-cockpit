@@ -10,9 +10,10 @@ export interface PanelApp {
 export function createPanelWindow(app: PanelApp): PlatformWindow {
   return {
     options: { type: 'panel' },
+    // Electron documents skipTransformProcessType for an app already a UI element: the Dock goes first
     place(window) {
-      anchorPanel(window)
       app.dock?.hide()
+      anchorPanel(window)
     },
     dock: (window, contents) =>
       activateOnFocus(

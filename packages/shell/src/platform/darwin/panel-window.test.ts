@@ -1,8 +1,9 @@
 import { FakeDockWindow } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
+import type { PlacedWindow } from '../platform-window.ts'
 import { activateOnFocus, buildAppMenu, createPanelWindow, type PanelApp } from './panel-window.ts'
 
-function recordingApp(calls: string[]): PanelApp {
+function recordingApp(calls: unknown[]): PanelApp {
   return {
     focus: (options) => void calls.push(`app.focus ${JSON.stringify(options)}`),
     hide: () => void calls.push('app.hide'),
@@ -10,7 +11,28 @@ function recordingApp(calls: string[]): PanelApp {
   }
 }
 
+// Records each window call with its arguments, so a missing or extra argument shows up
+function recordingWindow(calls: unknown[]): PlacedWindow {
+  return {
+    setAlwaysOnTop: (...args) => void calls.push(['setAlwaysOnTop', ...args]),
+    setVisibleOnAllWorkspaces: (...args) => void calls.push(['setVisibleOnAllWorkspaces', ...args]),
+  }
+}
+
 describe('createPanelWindow', () => {
+  it('should hide the Dock icon before anchoring when the panel is placed', () => {
+    // Arrange
+    const calls: unknown[] = []
+    const panel = createPanelWindow(recordingApp(calls))
+
+    // Act
+    panel.place(recordingWindow(calls))
+
+    // Assert
+    expect(calls[0]).toBe('dock.hide')
+    expect(calls).toHaveLength(3)
+  })
+
   it('should activate the app and then focus the page when the dock focuses the panel', () => {
     // Arrange
     const window = new FakeDockWindow()
