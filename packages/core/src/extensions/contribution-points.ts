@@ -7,10 +7,12 @@ export interface ContributionPoint<T> {
   readonly schema: z.ZodType<T>
   // The sources whose extensions may contribute here; undefined means every source
   readonly sources?: readonly ExtensionSource[]
+  // Why a declaration cannot live beside the ones loaded before it, or undefined when it can
+  conflict?(declaration: T, earlier: readonly T[]): string | undefined
 }
 
 export const defineContributionPoint = <T>(
   id: string,
   schema: z.ZodType<T>,
-  sources?: readonly ExtensionSource[],
-): ContributionPoint<T> => (sources === undefined ? { id, schema } : { id, schema, sources })
+  options: Omit<ContributionPoint<T>, 'id' | 'schema'> = {},
+): ContributionPoint<T> => ({ id, schema, ...options })

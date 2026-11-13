@@ -104,3 +104,58 @@ describe('connectors contribution point', () => {
     expect(new Set(views).size).toBe(views.length)
   })
 })
+
+describe('connectors with clashing ids', () => {
+  const builtIn = (id: string, connectors: unknown): ExtensionCandidate => ({
+    source: 'built-in',
+    location: 'built-in',
+    manifest: { ...manifest({ connectors }), id },
+  })
+
+  it('should refuse the later connector with the reason when its view id is already loaded', () => {
+    const clashing = { ...tracker, views: [{ ...tracker.views[0], id: 'review' }] }
+
+    const report = load([...builtInExtensions('0.3.0'), builtIn('dck.tracker', [clashing])])
+
+    expect(
+      contributionsFor(report, connectorsPoint).map(({ extension }) => extension.manifest.id),
+    ).toEqual(['dck.gitlab'])
+    expect(report.rejected.map(({ error }) => [error.data?.code, error.message])).toEqual([
+      [
+        'DCK-EXT-001',
+        'Invalid extension manifest: dck.tracker contributes.connectors: view id review is already used by connector gitlab',
+      ],
+    ])
+  })
+
+  it('should refuse the later connector when its id is already loaded', () => {
+    const report = load([
+      ...builtInExtensions('0.3.0'),
+      builtIn('dck.other', [{ ...tracker, id: 'gitlab' }]),
+    ])
+
+    expect(report.rejected[0]?.error.message).toContain('connector id gitlab is already used')
+  })
+
+  it('should load the later connector when the one it clashed with is disabled', () => {
+    const clashing = { ...tracker, views: [{ ...tracker.views[0], id: 'review' }] }
+
+    const report = load(
+      [...builtInExtensions('0.3.0'), builtIn('dck.tracker', [clashing])],
+      ['dck.gitlab'],
+    )
+
+    expect(report.rejected).toEqual([])
+    expect(report.active.map((extension) => extension.manifest.id)).toContain('dck.tracker')
+  })
+
+  it('should refuse one declaration that repeats a view id across its own connectors', () => {
+    const twin = { ...tracker, id: 'twin' }
+
+    const report = load([builtIn('dck.tracker', [tracker, twin])])
+
+    expect(report.rejected[0]?.error.message).toContain(
+      'view id tasks is already used by connector tracker',
+    )
+  })
+})

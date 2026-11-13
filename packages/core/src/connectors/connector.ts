@@ -45,10 +45,43 @@ export const connectorSchema = z.strictObject({
 export type Connector = z.output<typeof connectorSchema>
 export type ConnectorView = z.output<typeof connectorViewSchema>
 
+// A view id names the view across the whole product (host channels, daemon, cache), so it is never shared
+function clash(
+  connectors: readonly Connector[],
+  earlier: readonly Connector[],
+): string | undefined {
+  const connectorIds = new Set<string>()
+  const viewOwners = new Map<string, string>()
+  for (const connector of earlier) {
+    connectorIds.add(connector.id)
+    for (const view of connector.views) viewOwners.set(view.id, connector.id)
+  }
+  for (const connector of connectors) {
+    if (connectorIds.has(connector.id)) return `connector id ${connector.id} is already used`
+    connectorIds.add(connector.id)
+    for (const view of connector.views) {
+      const owner = viewOwners.get(view.id)
+      if (owner !== undefined) return `view id ${view.id} is already used by connector ${owner}`
+      viewOwners.set(view.id, connector.id)
+    }
+  }
+  return undefined
+}
+
 // Until extensions can run code, a connector's implementation ships with the app, so only built-in extensions
 // may declare one
 export const connectorsPoint = defineContributionPoint(
   'connectors',
-  z.array(connectorSchema).min(1).max(4),
-  ['built-in'],
+  z
+    .array(connectorSchema)
+    .min(1)
+    .max(4)
+    .superRefine((connectors, context) => {
+      const reason = clash(connectors, [])
+      if (reason !== undefined) context.addIssue({ code: 'custom', message: reason })
+    }),
+  {
+    sources: ['built-in'],
+    conflict: (connectors, earlier) => clash(connectors, earlier.flat()),
+  },
 )
