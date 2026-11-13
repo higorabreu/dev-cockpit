@@ -24,6 +24,8 @@ export const connectorViewSchema = z.strictObject({
   id: z.string().regex(VIEW_ID_PATTERN, 'must be a short lowercase id'),
   kind: z.enum(['mergeRequest', 'issue']),
   title: messageKey,
+  // What the tab's list holds, shown in its tooltip
+  description: messageKey,
   empty: messageKey,
   // The rail badge counts this view's items; the text says what they are, for the screen reader
   badge: pluralKey.optional(),

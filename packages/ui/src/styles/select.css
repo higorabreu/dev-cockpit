@@ -89,6 +89,17 @@
   flex: 1;
 }
 
+/* Counts line up on the right, kept clear of the longest label */
+.select-detail {
+  flex: none;
+  min-width: 3ch;
+  margin-left: 8px;
+  color: var(--muted);
+  text-align: right;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 .select-check {
   flex: none;
   width: 14px;

@@ -97,8 +97,21 @@ second connector, Jira, fitted it without a change.
     "token": { "label": "connections.gitlab.token", "hint": "connections.gitlab.token.hint" }
   },
   "views": [
-    { "id": "review", "kind": "mergeRequest", "title": "views.review", "empty": "views.empty.review", "badge": "views.waiting" },
-    { "id": "mine", "kind": "mergeRequest", "title": "views.mine", "empty": "views.empty.mine" }
+    {
+      "id": "review",
+      "kind": "mergeRequest",
+      "title": "views.review",
+      "description": "views.review.description",
+      "empty": "views.empty.review",
+      "badge": "views.waiting"
+    },
+    {
+      "id": "mine",
+      "kind": "mergeRequest",
+      "title": "views.mine",
+      "description": "views.mine.description",
+      "empty": "views.empty.mine"
+    }
   ]
 }
 ```
@@ -110,7 +123,7 @@ second connector, Jira, fitted it without a change.
 | `connection.address` | Always asked; `placeholder` is shown in the empty field |
 | `connection.email` | Optional; when present the account e-mail is asked too, with its `placeholder` |
 | `connection.token` | Always asked; `label` and `hint` are keys of the text catalogs |
-| `views` | 1 to 8 views. `id` is unique across connectors; `kind` is `mergeRequest` or `issue`; `title` and `empty` are catalog keys; `badge` is an optional plural catalog key, and the item count of that view becomes the rail badge |
+| `views` | 1 to 8 views. `id` is unique across connectors; `kind` is `mergeRequest` or `issue`; `title`, `description` and `empty` are catalog keys (the tab's name, its tooltip saying what the list holds, and the text of an empty list); `badge` is an optional plural catalog key, and the item count of that view becomes the rail badge |
 
 Jira declares the e-mail too, and a view of the other kind:
 
@@ -123,7 +136,15 @@ Jira declares the e-mail too, and a view of the other kind:
     "email": { "placeholder": "ana@example.com" },
     "token": { "label": "connections.jira.token", "hint": "connections.jira.token.hint" }
   },
-  "views": [{ "id": "tasks", "kind": "issue", "title": "views.tasks", "empty": "views.empty.tasks" }]
+  "views": [
+    {
+      "id": "tasks",
+      "kind": "issue",
+      "title": "views.tasks",
+      "description": "views.tasks.description",
+      "empty": "views.empty.tasks"
+    }
+  ]
 }
 ```
 
@@ -144,7 +165,7 @@ product:
 | `settings.json` | `connections.<id>` with `url` and, when declared, `email` (the token never) |
 | System keyring | `<id>.token`, prefixed with the profile in development (`dev:gitlab.token`) |
 | Daemon | One views service and one cache file per connector |
-| Work screen | One tab per view, only while the connector's account is connected |
+| Work screen | One tab per view, only while the connector's account is connected, grouped under the connector's `name` in the declared order |
 
 ## Sources and precedence
 

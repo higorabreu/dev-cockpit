@@ -39,10 +39,28 @@
 
 .vtabs {
   display: flex;
+  align-items: center;
   gap: 4px;
   margin-right: auto;
   /* One tab's height, so the header does not move when no account is connected and there is no tab */
   min-height: calc(1lh + 8px);
+}
+
+/* The service a group of tabs comes from: a quiet caption like the panel's section heads, not a control */
+.vgroup {
+  flex: none;
+  padding: 0 2px;
+  color: var(--muted);
+  font: 500 10.5px var(--font-sans);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.vtab + .vgroup {
+  margin-left: 6px;
+  padding-left: 16px;
+  border-left: 1px solid var(--line);
 }
 
 .vtab {
@@ -96,7 +114,9 @@
   background: var(--hover);
 }
 
+/* A pressed toggle changes its outline too, so its state is not told by the fill alone */
 .vbtn[aria-pressed="true"] {
+  border-color: var(--muted);
   background: var(--tab-active);
 }
 
@@ -198,6 +218,51 @@
 
 .vinner {
   position: relative;
+}
+
+/* The project select keeps the width of its longest option, so the filter keeps the rest of the line */
+.vproject {
+  flex: none;
+}
+
+.vproject[hidden] {
+  display: none;
+}
+
+/* As tall as the filter beside it */
+.vproject .select {
+  padding-block: 6px;
+}
+
+/* A section of the task list; its rows are placed from its top */
+.vsection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+/* A quiet caption like the panel's section heads, sitting on the rows it names */
+.vsection-head {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 0 12px 7px;
+  color: var(--muted);
+  font: 500 10.5px var(--font-sans);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.vsection-count {
+  font-size: 11px;
+  letter-spacing: 0;
 }
 
 .vrow {
