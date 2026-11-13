@@ -31,6 +31,12 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      # Saved so the restore step can give the runner its keychains back, even on a failure
+      - name: Save the keychain search list (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          security list-keychains -d user > "$RUNNER_TEMP/dck-keychains.txt"
+          security default-keychain -d user > "$RUNNER_TEMP/dck-default-keychain.txt"
       - name: Keychain integration test (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -41,6 +47,30 @@ jobs:
           security list-keychains -d user -s "$keychain"
           security default-keychain -d user -s "$keychain"
           DCK_KEYCHAIN_TEST=1 pnpm exec vitest run packages/adapters/macos-keychain
+      - name: Restore the keychain search list (macOS)
+        if: always() && runner.os == 'macOS'
+        run: |
+          set +e
+          status=0
+          # `security` prints each keychain as an indented, quoted path, one per line
+          unquote() { sed -e 's/^[[:space:]]*"//' -e 's/"[[:space:]]*$//' "$1"; }
+          saved="$RUNNER_TEMP/dck-keychains.txt"
+          if [ -s "$saved" ]; then
+            keychains=()
+            while IFS= read -r entry; do
+              [ -n "$entry" ] && keychains+=("$entry")
+            done < <(unquote "$saved")
+            security list-keychains -d user -s "${keychains[@]}" || status=1
+          fi
+          saved_default="$RUNNER_TEMP/dck-default-keychain.txt"
+          if [ -s "$saved_default" ]; then
+            security default-keychain -d user -s "$(unquote "$saved_default")" || status=1
+          fi
+          keychain="$RUNNER_TEMP/dck-test.keychain-db"
+          if [ -e "$keychain" ]; then
+            security delete-keychain "$keychain" || status=1
+          fi
+          exit "$status"
 
   package:
     name: Package preview (.deb)
