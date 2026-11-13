@@ -464,18 +464,13 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   elements.tabsNew.addEventListener('click', () => void open())
 
   createTabList(elements.tabList, elements.tabsAll, {
-    entries() {
-      const marks = attention.marks()
-      return state.tabs.map((tab) => {
-        const mark = marks.get(tab.id)
-        return {
-          id: tab.id,
-          label: tab.label,
-          current: tab.id === state.activeId,
-          ...(mark ? { mark } : {}),
-        }
-      })
-    },
+    // Only names: the state of each tab lives in the Sessions section
+    entries: () =>
+      state.tabs.map((tab) => ({
+        id: tab.id,
+        label: tab.label,
+        current: tab.id === state.activeId,
+      })),
     onPick: (id) => update(activateTab(state, id)),
     onClose: () => activeSession()?.focus(),
     barOnTop: () => document.body.classList.contains('full'),

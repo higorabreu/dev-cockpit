@@ -73,12 +73,3 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.tl-flag {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 11px;
-}
