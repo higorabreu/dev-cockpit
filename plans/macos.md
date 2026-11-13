@@ -104,12 +104,16 @@ The order is meant to bring the tester in as late as possible and once per batch
   A minimal menu with `Cmd+Q` and `Cmd+,`. Keep the rest of `createDockController` the same: the height
   and monitor math already belongs to `core`. This is the riskiest task; expect 2 or 3 rounds with the
   tester. (C6)
-- [ ] MAC-T6. Terminal environment and PATH. Find the login shell (`$SHELL`, otherwise `/bin/zsh`) and open
+- [x] MAC-T6. Terminal environment and PATH. Find the login shell (`$SHELL`, otherwise `/bin/zsh`) and open
   it as a login shell on the Mac, like Terminal.app. Read the login shell's PATH once at boot
   (`$SHELL -ilc 'printf %s "$PATH"'`, with a 2 s timeout and path validation) and hand the same PATH to
   the daemon, to the adapters that call `git`, `docker` and `claude` and to the PTY, so it does not
   depend on the app having been opened from a terminal. A failure falls back to the inherited PATH and logs
-  `warn`. (C9)
+  `warn`. (C9) Done: `shell/src/platform/darwin/login-path.ts` reads it between marks, so startup files
+  that print do not spoil it, and `main.ts` sets `process.env.PATH` before any child process, so the PTY,
+  the daemon and `git` or `docker` inherit it. `selectPlatform` gives the terminal (`$SHELL -l` on the Mac,
+  unchanged on Linux). Checked on a Mac with the packaged app started with a minimal PATH and no `SHELL`:
+  `brew`, `docker`, `claude` and `git` are found in the tab and the daemon has the full PATH.
 - [ ] MAC-T7. Keyboard and tooltip. In `ui/src/platform/shortcuts.ts`, replace `ctrlKey` and `event.key` with a
   `matches(event, shortcut)` function that uses `event.code`, and a primary modifier per platform
   (`metaKey` on the Mac, `ctrlKey` elsewhere), with the table of Q3. In `xterm.js`, `macOptionIsMeta: true`.
@@ -129,7 +133,7 @@ The order is meant to bring the tester in as late as possible and once per batch
   `~/Library/Application Support/dck`, logs at `~/Library/Logs/dck`. Sweep the code for fixed `~/.config`,
   `/usr`, `/opt` and `XDG_*` and move them into the same paths function. Update the `endpoint.ts` tests.
   (C1, C4)
-- [ ] MAC-T10. Packaging: `shell/scripts/package-mac.mjs`, sibling of `package-deb.mjs`, with no heavy packaging
+- [x] MAC-T10. Packaging: `shell/scripts/package-mac.mjs`, sibling of `package-deb.mjs`, with no heavy packaging
   tool. Copies the `Electron.app` the project already uses, renames the executable and the bundle, writes
   `Info.plist` (identifier, version, `LSUIElement`, `NSHighResolutionCapable`), generates the `.icns` with
   `iconutil` from the PNGs in `assets/`, puts the app in `Contents/Resources/app` and the `dck.mjs` CLI
@@ -140,7 +144,12 @@ The order is meant to bring the tester in as late as possible and once per batch
   `lipo -archs` that `pty.node` and `spawn-helper` have the right architecture. Ad hoc signing
   (`codesign --force --deep -s -`) with the entitlements `allow-jit`, `allow-unsigned-executable-memory` and
   `disable-library-validation`; a `.dmg` with `hdiutil`. The tester opens it with right click, Open, or
-  `xattr -dr com.apple.quarantine`. (C2)
+  `xattr -dr com.apple.quarantine`. (C2) Done: `pnpm package:mac` writes `release/mac/Dev Cockpit.app` and
+  `release/dev-cockpit_<version>_<arch>.dmg`. The helpers are renamed with the executable, since Electron finds
+  them by its name, and the `dck` CLI is `Contents/Resources/bin/dck`, to link into the PATH. No entitlements:
+  they only take effect with the hardened runtime, which is MAC-T14. `node-pty` comes from `dist`, already
+  rebuilt for Electron on the builder's architecture. Checked on macOS arm64: the app opens with no Dock
+  icon, runs the daemon and a terminal, and `dck ping` answers. Not in CI yet (MAC-T11).
 - [ ] MAC-T11. Smoke mode and diagnostics. A `DCK_SMOKE=1` variable makes the app start, create the window, open
   a PTY, run `echo ok`, talk to the daemon, print a JSON (platform, architecture, versions, paths, socket
   length, resolved PATH, Keychain ok, shortcut registered) and exit with 0 or 1. CI runs this mode on the
