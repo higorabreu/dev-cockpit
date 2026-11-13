@@ -7,7 +7,13 @@ import {
   defaultEndpoint,
   defaultStateDir,
 } from '@dck/adapter-node-net'
-import { createJsonLogger, createTranslator, pickLocale, silentLogger } from '@dck/core'
+import {
+  checkProfile,
+  createJsonLogger,
+  createTranslator,
+  pickLocale,
+  silentLogger,
+} from '@dck/core'
 import { createConnectorViews, startDaemon } from '@dck/daemon'
 import { systemSecretStore } from '@dck/daemon/secret-store'
 import packageJson from '../package.json' with { type: 'json' }
@@ -17,14 +23,18 @@ import { createExtDeps } from './ext-deps.ts'
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
 const args = process.argv.slice(2)
 
-if (args[0] === 'daemon') {
-  const logger = createJsonLogger((line) => process.stderr.write(line))
+const logger = createJsonLogger((line) => process.stderr.write(line))
+const profile = args[0] === 'daemon' ? checkProfile(process.env.DCK_PROFILE, logger) : undefined
+
+if (profile?.kind === 'invalid') {
+  process.exitCode = 1
+} else if (profile?.kind === 'valid') {
   let stopDaemon = async () => process.exit(0)
   const views = createConnectorViews({
     stateDir: process.env.DCK_STATE_DIR ?? defaultStateDir(),
     logger,
     secrets: systemSecretStore(),
-    profile: process.env.DCK_PROFILE,
+    profile: profile.profile,
   })
   const started = await startDaemon({
     endpoint,
