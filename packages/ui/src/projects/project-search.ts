@@ -1,5 +1,6 @@
 import { searchItems, type Translate } from '@dck/core'
 import { closeButton, keyHint } from '../kit/panel-frame.ts'
+import { watchOverflow } from '../kit/scrollbar.ts'
 import { h } from '../panel/dom.ts'
 
 export interface SearchEntry {
@@ -36,6 +37,7 @@ export function createProjectSearch(
     hint.replaceChildren(keyHint('Ctrl+D', t('projects.hint')))
   }
   drawHint()
+  watchOverflow(results)
   const row = h('div', { class: 'prow' })
   input.replaceWith(row)
   row.append(

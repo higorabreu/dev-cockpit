@@ -132,7 +132,7 @@
 
 .phead {
   flex: none;
-  padding: 10px 14px 8px;
+  padding: 10px 16px 8px;
   overflow: hidden;
   color: var(--muted);
   font: 11.5px var(--font-mono);
@@ -157,7 +157,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 14px;
+  /* With the scrollbar strip reserved on each side, the text sits 16px from the edge like the title */
+  padding: 9px 8px;
   border: 0;
   background: none;
   color: var(--muted);
@@ -209,7 +210,7 @@
 }
 
 .psec .body {
-  padding: 0 14px 12px;
+  padding: 0 8px 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
