@@ -11,7 +11,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { dckWrapper } from './mac-bundle.mjs'
+import { bundleVersion, dckWrapper } from './mac-bundle.mjs'
 
 let root = ''
 let resources = ''
@@ -78,4 +78,26 @@ describe('dckWrapper', () => {
       expect(output).toBe(`1 1 ${join(resources, 'bin')}/../dck.mjs ping\n`)
     },
   )
+})
+
+describe('bundleVersion', () => {
+  it.each([
+    { version: '0.4.0', expected: '0.4.0', when: 'it is a release' },
+    { version: '1.2.0-beta.3', expected: '1.2.0', when: 'it is a prerelease' },
+    { version: '1.2.0+abc', expected: '1.2.0', when: 'it carries build metadata' },
+  ])('should give the bundle only integers when $when', ({ version, expected }) => {
+    // Act
+    const bundle = bundleVersion(version)
+
+    // Assert
+    expect(bundle).toBe(expected)
+  })
+
+  it('should refuse the version when it has no integers to give', () => {
+    // Act
+    const read = () => bundleVersion('next')
+
+    // Assert
+    expect(read).toThrow('version next has no x.y.z for the bundle')
+  })
 })

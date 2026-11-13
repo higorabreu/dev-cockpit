@@ -16,3 +16,13 @@ here=$(cd -P "$(dirname "$self")" && pwd)
 exec env ELECTRON_RUN_AS_NODE=1 DCK_PACKAGED=1 "$here/../../MacOS/${product}" "$here/../dck.mjs" "$@"
 `
 }
+
+// CFBundleShortVersionString and CFBundleVersion take only up to three integers, so a prerelease
+// (1.2.0-beta.3) or build metadata keeps just its number; the full version stays in package.json
+export function bundleVersion(version) {
+  const [release = ''] = version.split(/[-+]/)
+  if (!/^\d+(\.\d+){0,2}$/.test(release)) {
+    throw new Error(`version ${version} has no x.y.z for the bundle`)
+  }
+  return release
+}

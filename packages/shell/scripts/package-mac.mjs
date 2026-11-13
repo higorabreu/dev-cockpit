@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { join } from 'node:path'
-import { dckWrapper } from './mac-bundle.mjs'
+import { bundleVersion, dckWrapper } from './mac-bundle.mjs'
 import {
   buildCli,
   electronDist,
@@ -29,6 +29,7 @@ const lipoArchitecture = { x64: 'x86_64', arm64: 'arm64' }[process.arch]
 if (!lipoArchitecture) throw new Error(`unsupported architecture: ${process.arch}`)
 
 const IDENTIFIER = 'io.github.devcockpit'
+const BUNDLE_VERSION = bundleVersion(version)
 const stage = join(release, 'mac')
 const bundle = join(stage, `${PRODUCT}.app`)
 const contents = join(bundle, 'Contents')
@@ -73,15 +74,17 @@ for (const [key, value] of [
   ['CFBundleName', PRODUCT],
   ['CFBundleExecutable', PRODUCT],
   ['CFBundleIdentifier', IDENTIFIER],
-  ['CFBundleShortVersionString', version],
-  ['CFBundleVersion', version],
+  ['CFBundleShortVersionString', BUNDLE_VERSION],
+  ['CFBundleVersion', BUNDLE_VERSION],
   ['CFBundleIconFile', `${NAME}.icns`],
 ]) {
   setPlist(plist, key, 'string', value)
 }
 setPlist(plist, 'LSUIElement', 'bool', 'true')
-// The hash points at the default app this script removes
-run('plutil', ['-remove', 'ElectronAsarIntegrity', plist])
+// The hash points at the default app this script removes; an Electron without it has nothing to remove
+if (run('plutil', ['-p', plist]).includes('"ElectronAsarIntegrity" =>')) {
+  run('plutil', ['-remove', 'ElectronAsarIntegrity', plist])
+}
 
 // 4. The icon, scaled down from the 512 px PNG
 const iconset = join(stage, `${NAME}.iconset`)
