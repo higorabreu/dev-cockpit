@@ -92,6 +92,37 @@ describe('createProcessScanner', () => {
     expect(found).toEqual([211])
   })
 
+  it.each([
+    { when: 'it is the last variable', env: 'DCK_ENDPOINT=/Users/ana/my dck/daemon.sock' },
+    {
+      when: 'another variable follows it',
+      env: 'DCK_ENDPOINT=/Users/ana/my dck/daemon.sock TERM=xterm-256color',
+    },
+  ])('should find the process when the endpoint has spaces and $when', async ({ env }) => {
+    const run = fakeRun({ [listingCommand]: `  211 ${daemon}\n`, ...environment(211, daemon, env) })
+
+    const found = await createProcessScanner(run).find({
+      argument: script,
+      endpoint: '/Users/ana/my dck/daemon.sock',
+    })
+
+    expect(found).toEqual([211])
+  })
+
+  it.each([
+    { when: 'only starts the same way', env: 'DCK_ENDPOINT=/Users/ana/my dck/daemon.sock.old' },
+    { when: 'is missing', env: '' },
+  ])('should skip the process when its endpoint $when', async ({ env }) => {
+    const run = fakeRun({ [listingCommand]: `  211 ${daemon}\n`, ...environment(211, daemon, env) })
+
+    const found = await createProcessScanner(run).find({
+      argument: script,
+      endpoint: '/Users/ana/my dck/daemon.sock',
+    })
+
+    expect(found).toEqual([])
+  })
+
   it('should skip the process when the pid runs something else by the second ps', async () => {
     const run = fakeRun({
       [listingCommand]: `  210 ${daemon}\n`,
