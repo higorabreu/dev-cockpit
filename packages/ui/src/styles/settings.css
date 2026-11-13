@@ -180,7 +180,6 @@
   opacity: 0.6;
 }
 
-.scontrol select,
 .scontrol input[type="text"],
 .scontrol input[type="password"],
 .scontrol input[type="number"] {
@@ -225,7 +224,6 @@
 }
 
 .scontrol input:focus-visible,
-.scontrol select:focus-visible,
 .srecord:focus-visible,
 .sreset-all:focus-visible {
   outline: 2px solid var(--fg);

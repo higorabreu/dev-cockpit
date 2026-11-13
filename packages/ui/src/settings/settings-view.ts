@@ -12,6 +12,7 @@ import {
 } from '@dck/core'
 import { trapFocus } from '../kit/focus-trap.ts'
 import { closeButton } from '../kit/panel-frame.ts'
+import { createSelect } from '../kit/select.ts'
 import { h } from '../panel/dom.ts'
 import { inputGate } from '../platform/input-gate.ts'
 import type { SettingsClient } from './settings-client.ts'
@@ -144,6 +145,8 @@ export function createSettingsView(
     }
   }
 
+  const labelId = (key: string) => `set-label-${key.replace(/\./g, '-')}`
+
   function row(
     key: string,
     label: string,
@@ -159,7 +162,7 @@ export function createSettingsView(
       h(
         'div',
         { class: 'slabel' },
-        h('span', { class: 'sname2' }, label),
+        h('span', { class: 'sname2', id: labelId(key) }, label),
         (locked ? t('settings.locked') : hint) &&
           h('span', { class: 'shint' }, locked ? t('settings.locked') : (hint ?? '')),
         error && h('span', { class: 'serror', role: 'alert' }, error),
@@ -170,18 +173,17 @@ export function createSettingsView(
 
   const disabled = (key: string) => settings.locked().includes(key)
 
-  function select(
-    key: string,
-    options: ReadonlyArray<readonly [string, string]>,
-  ): HTMLSelectElement {
-    const element = h('select', { 'data-focus': `set-${key}`, disabled: disabled(key) })
-    for (const [value, label] of options) {
-      const option = h('option', { value }, label)
-      option.selected = getPath(settings.current(), key) === value
-      element.append(option)
-    }
-    element.addEventListener('change', () => void commit(patchFor(key, element.value)))
-    return element
+  function select(key: string, options: ReadonlyArray<readonly [string, string]>): HTMLElement {
+    const control = createSelect({
+      id: `set-${key.replace(/\./g, '-')}`,
+      options: options.map(([value, label]) => ({ value, label })),
+      value: String(getPath(settings.current(), key)),
+      labelledBy: labelId(key),
+      disabled: disabled(key),
+      onChange: (value) => void commit(patchFor(key, value)),
+    })
+    control.button.dataset.focus = `set-${key}`
+    return control.element
   }
 
   // The stored value is a fraction (0.6); the bar and the text show a percentage (60)
