@@ -11,7 +11,10 @@ import type {
   SecretStore,
 } from '@dck/core'
 import { systemSecretStore } from '@dck/daemon/secret-store'
+import { createPanelWindow, type PanelApp } from './darwin/panel-window.ts'
+import { createRegularWindow } from './linux/regular-window.ts'
 import { createXdgAutostart, defaultAutostartDirectory } from './linux/xdg-autostart.ts'
+import type { PlatformWindow } from './platform-window.ts'
 
 export interface PlatformContext {
   readonly platform: NodeJS.Platform
@@ -22,6 +25,8 @@ export interface PlatformContext {
   readonly appPath: string
   readonly resourcesPath: string
   readonly logger: Logger
+  // Electron's app, which the Mac panel activates, hides and keeps out of the Dock
+  readonly app: PanelApp
 }
 
 export interface Platform {
@@ -30,6 +35,7 @@ export interface Platform {
   readonly secrets: SecretStore
   readonly autostart: Autostart
   readonly desktopShortcut: DesktopShortcut | undefined
+  readonly window: PlatformWindow
 }
 
 // Exported so a test can check which adapter a platform gets without inspecting the system
@@ -72,5 +78,6 @@ export function selectPlatform(context: PlatformContext): Platform {
             logger,
           })
         : undefined,
+    window: platform === 'darwin' ? createPanelWindow(context.app) : createRegularWindow(),
   }
 }

@@ -110,14 +110,19 @@ The order is meant to bring the tester in as late as possible and once per batch
   `ps -E -ww`. Open: a native Claude Code install shows its version (`2.1.323`) as `ucomm`, since the binary
   is named after it, so it is not recognized as an agent (an npm install, likely `node`, is not checked);
   the Energy Impact of polling while hidden is not measured yet.
-- [ ] MAC-T5. The anchored window on the Mac, in `shell/src/electron/dock-window.ts` and `main.ts`, only
+- [x] MAC-T5. The anchored window on the Mac, in `shell/src/electron/dock-window.ts` and `main.ts`, only
   when `platform === 'darwin'`: `type: 'panel'`, `setAlwaysOnTop(true, 'screen-saver')`,
   `setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true })`,
   no Dock (`LSUIElement` in `Info.plist`, `app.dock?.hide()` in dev mode) and keyboard focus on show (a panel
   does not activate the app by itself; `window.focus()` and `app.focus({ steal: true })`, to validate).
   A minimal menu with `Cmd+Q` and `Cmd+,`. Keep the rest of `createDockController` the same: the height
   and monitor math already belongs to `core`. This is the riskiest task; expect 2 or 3 rounds with the
-  tester. (C6)
+  tester. (C6) Done, not verified on a Mac: `shell/src/platform/darwin/panel-window.ts`, which
+  `selectPlatform` returns as the `window` part (Linux gets `platform/linux/regular-window.ts`, with the same
+  calls as before), so `main.ts` has no macOS branch. The panel hides the Dock icon before
+  `setVisibleOnAllWorkspaces`, activates the app on focus and calls `app.hide()` after hiding, so the
+  keyboard goes back to the previous app. `app.dock?.hide()` runs in every mode; `LSUIElement` in
+  `Info.plist` belongs to the packaging, MAC-T10.
 - [ ] MAC-T6. Terminal environment and PATH. Find the login shell (`$SHELL`, otherwise `/bin/zsh`) and open
   it as a login shell on the Mac, like Terminal.app. Read the login shell's PATH once at boot
   (`$SHELL -ilc 'printf %s "$PATH"'`, with a 2 s timeout and path validation) and hand the same PATH to
@@ -129,7 +134,8 @@ The order is meant to bring the tester in as late as possible and once per batch
   (`metaKey` on the Mac, `ctrlKey` elsewhere), with the table of Q3. In `xterm.js`, `macOptionIsMeta: true`.
   The `data-tip-key` formatter shows `⌘ ⇧ ⌥ ⌃` on the Mac. A new shortcut is born with its mouse path, as
   `AGENTS.md` already says. Tests with fake events; one of them pins that `Option+1` does not become
-  another character. (C7)
+  another character. (C7) The macOS app menu from T5 has no Edit menu yet, so Cmd+C/V/X/A/Z do not work in
+  inputs or the terminal; add the Edit roles together with the Q3 table.
 - [ ] MAC-T8. Autostart: `shell/src/platform/darwin/launchd-autostart.ts` with the same shape as
   `createXdgAutostart`: writes `~/Library/LaunchAgents/<label>.plist` (`RunAtLoad`, `ProgramArguments`,
   `EnvironmentVariables` with `DCK_START_HIDDEN`) atomically; turning on and off creates and deletes the

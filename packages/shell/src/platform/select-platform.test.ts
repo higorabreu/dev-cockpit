@@ -4,7 +4,9 @@ import { join } from 'node:path'
 import * as linuxProc from '@dck/adapter-linux-proc'
 import * as macosProc from '@dck/adapter-macos-proc'
 import { silentLogger } from '@dck/core'
+import { FakeDockWindow } from '@dck/core/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import type { PlacedWindow } from './platform-window.ts'
 import { type PlatformContext, processAdapters, selectPlatform } from './select-platform.ts'
 
 let directory = ''
@@ -24,8 +26,17 @@ const context = (overrides: Partial<PlatformContext>): PlatformContext => ({
   appPath: '/opt/dck/app',
   resourcesPath: '/opt/dck/resources',
   logger: silentLogger,
+  app: { focus: () => undefined, hide: () => undefined },
   ...overrides,
 })
+
+// Records each window call with its arguments, so a missing or extra argument shows up
+function recordingWindow(calls: unknown[][]): PlacedWindow {
+  return {
+    setAlwaysOnTop: (...args) => void calls.push(['setAlwaysOnTop', ...args]),
+    setVisibleOnAllWorkspaces: (...args) => void calls.push(['setVisibleOnAllWorkspaces', ...args]),
+  }
+}
 
 describe('selectPlatform', () => {
   it.each([
@@ -108,4 +119,46 @@ describe('selectPlatform', () => {
       expect(adapters).toBe(expected)
     },
   )
+
+  it.each([
+    {
+      expected: 'open a panel with its own app menu',
+      when: 'the app runs on macOS',
+      platform: 'darwin' as const,
+      options: { type: 'panel' },
+      menu: true,
+    },
+    {
+      expected: 'open a regular window with no app menu',
+      when: 'the app runs on Linux',
+      platform: 'linux' as const,
+      options: {},
+      menu: false,
+    },
+  ])('should $expected when $when', ({ platform, options, menu }) => {
+    // Arrange
+    const selected = context({ platform })
+
+    // Act
+    const { window } = selectPlatform(selected)
+
+    // Assert
+    expect(window.options).toStrictEqual(options)
+    expect(window.menu !== undefined).toBe(menu)
+  })
+
+  it('should keep the window on every workspace and its focus as it is when the app runs on Linux', () => {
+    // Arrange
+    const { window } = selectPlatform(context({}))
+    const calls: unknown[][] = []
+    const dockWindow = new FakeDockWindow()
+
+    // Act
+    window.place(recordingWindow(calls))
+    const docked = window.dock(dockWindow, { focus: () => calls.push(['contents.focus']) })
+
+    // Assert
+    expect(calls).toEqual([['setVisibleOnAllWorkspaces', true]])
+    expect(docked).toBe(dockWindow)
+  })
 })

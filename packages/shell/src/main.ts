@@ -99,6 +99,7 @@ app.whenReady().then(async () => {
     appPath: app.getAppPath(),
     resourcesPath: process.resourcesPath,
     logger,
+    app,
   })
   const toggleKey = createToggleKeyBinder({
     desktop: platform.desktopShortcut,
@@ -129,6 +130,7 @@ app.whenReady().then(async () => {
   logger.info('settings loaded', { fresh: loaded.fresh, locked: loaded.locked })
 
   const window = new BrowserWindow({
+    ...platform.window.options,
     show: false,
     frame: false,
     alwaysOnTop: true,
@@ -142,7 +144,7 @@ app.whenReady().then(async () => {
       nodeIntegration: false,
     },
   })
-  window.setVisibleOnAllWorkspaces(true)
+  platform.window.place(window)
   // Page content never opens an Electron window nor leaves the app; links go to the browser through the host
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
@@ -155,11 +157,12 @@ app.whenReady().then(async () => {
   const dockWindow = createElectronDockWindow(window, {
     onShown: () => send(hostChannels.windowShown),
   })
+  const focusedDockWindow = platform.window.dock(dockWindow, window.webContents)
   const traceDock = process.env.DCK_LOG_DOCK === '1'
 
   const dock = createDockController({
     screen: traceDock ? logScreen(electronScreen, logger) : electronScreen,
-    window: traceDock ? logDockWindow(dockWindow, logger) : dockWindow,
+    window: traceDock ? logDockWindow(focusedDockWindow, logger) : focusedDockWindow,
     scheduler: {
       after(milliseconds, task) {
         const timer = setTimeout(task, milliseconds)
@@ -421,6 +424,30 @@ app.whenReady().then(async () => {
     })
   }
 
+  // Read on every menu build: the language can change in settings while the app is open
+  const t = ((key, params) => {
+    const { language } = settingsStore.get().settings
+    return createTranslator(
+      language === 'auto' ? pickLocale(app.getPreferredSystemLanguages()) : language,
+    ).t(key, params)
+  }) as Translate
+  const openSettings = () => {
+    dock.show()
+    send(hostChannels.windowOpenSettings)
+  }
+
+  const appMenu = platform.window.menu
+  if (appMenu) {
+    const refreshAppMenu = () =>
+      Menu.setApplicationMenu(
+        Menu.buildFromTemplate(appMenu({ t, openSettings, quit: () => app.quit() })),
+      )
+    refreshAppMenu()
+    settingsStore.onChange((_settings, changed) => {
+      if (changed.includes('language')) refreshAppMenu()
+    })
+  }
+
   // DCK_NO_TRAY exists so automated tests do not flash icons in the user's bar
   if (!process.env.DCK_NO_TRAY) {
     const statusIcons = createElectronStatusIcon(
@@ -432,18 +459,9 @@ app.whenReady().then(async () => {
     )
     const menuDeps = {
       toggleWindow: () => dock.toggle(),
-      openSettings: () => {
-        dock.show()
-        send(hostChannels.windowOpenSettings)
-      },
+      openSettings,
       autostart: platform.autostart,
-      // Read on every menu build: the language can change in settings while the app is open
-      t: ((key, params) => {
-        const { language } = settingsStore.get().settings
-        return createTranslator(
-          language === 'auto' ? pickLocale(app.getPreferredSystemLanguages()) : language,
-        ).t(key, params)
-      }) as Translate,
+      t,
       quit: () => app.quit(),
       onChange: () => void refreshTrayMenu(),
     }
