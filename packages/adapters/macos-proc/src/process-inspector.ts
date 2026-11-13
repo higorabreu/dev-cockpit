@@ -46,12 +46,18 @@ const parseTable = (output: string | undefined) => {
   return table
 }
 
-// Resolves with undefined when the work fails or outlives the deadline
-const settle = <T>(work: Promise<T>, milliseconds: number) =>
+// Resolves with undefined when the work outlives the deadline, and then reports it as overdue
+const settle = <T>(work: Promise<T>, milliseconds: number, onOverdue: () => void) =>
   new Promise<T | undefined>((resolve) => {
-    const timer = setTimeout(() => resolve(undefined), milliseconds)
-    work.then(resolve, () => resolve(undefined)).finally(() => clearTimeout(timer))
+    const timer = setTimeout(() => {
+      onOverdue()
+      resolve(undefined)
+    }, milliseconds)
+    void work.then(resolve).finally(() => clearTimeout(timer))
   })
+
+const outputOf = <T>(result: PromiseSettledResult<T>) =>
+  result.status === 'fulfilled' ? result.value : undefined
 
 export function createProcessInspector(
   run: CommandRunner = runCommand,
@@ -59,19 +65,32 @@ export function createProcessInspector(
   deadlineMs = DEADLINE_MS,
 ): ProcessInspector {
   let queue: { pid: number; resolve: (info: ProcessInfo | undefined) => void }[] = []
+  // A command that survives its kill (an `lsof` stuck on a mount) would pile up a copy per poll
+  let overdue = 0
+
+  // A runner that throws at once still becomes a rejection, so no caller is left pending
+  const start = (command: Parameters<CommandRunner>[0], args: readonly string[]) =>
+    Promise.resolve().then(() => run(command, args))
 
   async function flush() {
     const batch = queue
     queue = []
+    if (overdue > 0) {
+      for (const { resolve } of batch) resolve(undefined)
+      return
+    }
     const pids = [...new Set(batch.map(({ pid }) => pid))]
-    const outputs = await settle(
-      Promise.all([
-        run('lsof', ['-b', '-w', '-a', '-d', 'cwd', '-Fn', '-p', pids.join(',')]),
-        run('ps', ['-axo', 'pid=,tpgid=,ucomm=']),
-      ]),
-      deadlineMs,
-    )
-    const [cwdOutput, tableOutput] = outputs ?? []
+    const work = Promise.allSettled([
+      start('lsof', ['-b', '-w', '-a', '-d', 'cwd', '-Fn', '-p', pids.join(',')]),
+      start('ps', ['-axo', 'pid=,tpgid=,ucomm=']),
+    ])
+    const outputs = await settle(work, deadlineMs, () => {
+      overdue += 1
+      void work.then(() => {
+        overdue -= 1
+      })
+    })
+    const [cwdOutput, tableOutput] = outputs?.map(outputOf) ?? []
     const cwds = parseCwds(cwdOutput)
     const table = parseTable(tableOutput)
     for (const { pid, resolve } of batch) {
