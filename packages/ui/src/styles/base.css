@@ -1,0 +1,25 @@
+/* Anything the user can click shows the pointer; one rule here instead of one per component */
+button,
+select,
+summary,
+a[href],
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"],
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]),
+[role="button"],
+[role="tab"],
+[role="option"],
+[role="menuitem"],
+[role="switch"],
+[role="link"] {
+  cursor: pointer;
+}
+
+/* A control that cannot be used does not invite a click */
+:disabled,
+[aria-disabled="true"],
+label:has(> input:disabled) {
+  cursor: default;
+}
