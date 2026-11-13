@@ -60,7 +60,7 @@ export interface ReviewDiff {
   // The repository's top folder
   readonly root: string
   readonly scope: DiffScope
-  // The branch the Branch scope compares with, like `main`
+  // The branch the Branch scope compares with, like `main`, named in either scope
   readonly base: string | undefined
   readonly files: readonly DiffFile[]
   readonly additions: number

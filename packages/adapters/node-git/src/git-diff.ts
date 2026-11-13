@@ -195,14 +195,14 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       const current = await head(root)
       if (!current.ok) return current
       let from = current.value
-      let base: string | undefined
+      // Named in both scopes, so the scope select can say what Branch compares with before it is chosen
+      const branch = await baseBranch(root)
       if (request.scope === 'branch') {
-        const branch = await baseBranch(root)
         const merge = branch && (await answer(root, ['merge-base', 'HEAD', branch.ref]))
         if (!branch || !merge) return ok({ kind: 'no-base', root })
         from = merge
-        base = branch.name
       }
+      const base = branch?.name
 
       const whitespace = request.ignoreWhitespace ? ['-w'] : []
       const [tracked, added] = await Promise.all([

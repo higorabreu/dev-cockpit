@@ -115,6 +115,7 @@ describe('createGitDiffSource', () => {
     const uncommitted = okDiff(await source.diff(request(path)))
 
     expect(branch.base).toBe('main')
+    expect(uncommitted.base).toBe('main')
     expect(branch.files.map((file) => file.path)).toEqual(['a.txt', 'b.txt'])
     expect(uncommitted.files.map((file) => file.path)).toEqual(['a.txt'])
   })
