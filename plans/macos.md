@@ -118,7 +118,12 @@ The order is meant to bring the tester in as late as possible and once per batch
   that print do not spoil it. `selectPlatform` gives it as `loginPath()` and the terminal (`$SHELL -l` on the
   Mac, unchanged on Linux). `main.ts` sets `process.env.PATH` when it arrives, off the boot path: the tabs are
   login shells and need nothing, the daemon waits for it, and `git` or `docker` get it from then on. Checked on a Mac with the packaged app started with a minimal PATH and no `SHELL`:
-  `brew`, `docker`, `claude` and `git` are found in the tab and the daemon has the full PATH.
+  `brew`, `docker`, `claude` and `git` are found in the tab and the daemon has the full PATH. Since then the
+  shell runs in its own process group with no stdin and is killed with the whole group after 2 s, so a
+  `read` or a slow `.zshrc` cannot hold the daemon back; invalid entries are dropped one by one; the log
+  carries only the exit code, signal and timeout. Not verified on a Mac yet. The git and docker inspectors
+  of the panel may run before the login PATH arrives and miss a tool the minimal PATH lacks; the next
+  refresh corrects it.
 - [ ] MAC-T7. Keyboard and tooltip. In `ui/src/platform/shortcuts.ts`, replace `ctrlKey` and `event.key` with a
   `matches(event, shortcut)` function that uses `event.code`, and a primary modifier per platform
   (`metaKey` on the Mac, `ctrlKey` elsewhere), with the table of Q3. In `xterm.js`, `macOptionIsMeta: true`.
@@ -155,7 +160,11 @@ The order is meant to bring the tester in as late as possible and once per batch
   they only take effect with the hardened runtime, which is MAC-T14. `node-pty` comes from `dist`, already
   rebuilt for Electron on the builder's architecture, without its sources and prebuilds. What the `.deb` and
   the `.dmg` share is in `shell/scripts/package-common.mjs`. Checked on macOS arm64: the app opens with no Dock
-  icon, runs the daemon and a terminal, and `dck ping` answers. Not in CI yet (MAC-T11).
+  icon, runs the daemon and a terminal, and `dck ping` answers. Not in CI yet (MAC-T11). Since then, not
+  verified on a Mac: the bundle is signed from the inside out (node-pty, helpers, frameworks, the app)
+  instead of with `--deep`; `bin/dck` follows its links with `readlink`, since macOS 12 has no `realpath`;
+  a prerelease gives the bundle only its x.y.z; and node-pty ships from an allowlist (`lib`, `package.json`,
+  `LICENSE`, `pty.node`, `spawn-helper`), in the `.deb` too.
 - [ ] MAC-T11. Smoke mode and diagnostics. A `DCK_SMOKE=1` variable makes the app start, create the window, open
   a PTY, run `echo ok`, talk to the daemon, print a JSON (platform, architecture, versions, paths, socket
   length, resolved PATH, Keychain ok, shortcut registered) and exit with 0 or 1. CI runs this mode on the
