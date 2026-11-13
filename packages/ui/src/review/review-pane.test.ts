@@ -328,6 +328,31 @@ describe('createReviewPane', () => {
     expect(current()).toBe('src/billing/invoice.ts, modified, 1 added, 1 removed')
   })
 
+  it('should span the visible width again when the diff is resized', async () => {
+    const observed: (() => void)[] = []
+    const native = globalThis.ResizeObserver
+    globalThis.ResizeObserver = class {
+      constructor(callback: () => void) {
+        observed.push(callback)
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver
+    const { pane } = setup(repository())
+    globalThis.ResizeObserver = native
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    const inner = pane.element.querySelector('.rv-inner') as HTMLElement
+
+    Object.defineProperty(lines, 'clientWidth', { value: 1200, configurable: true })
+    for (const callback of observed) callback()
+    await frame()
+
+    expect(inner.style.getPropertyValue('--rv-view')).toBe('1200px')
+  })
+
   it('should hide the index with its button and keep that for the next review', async () => {
     const { pane, memory } = setup(repository())
     pane.open()

@@ -424,6 +424,8 @@ export function createDiffView(deps: DiffViewDeps) {
     else if (row.kind === 'file' && isCollapsed(row.notice)) deps.showAnyway(file)
   }
 
+  // A new orientation or the index folding changes the visible width the headers and bands span
+  new ResizeObserver(schedule).observe(element)
   element.addEventListener(
     'scroll',
     () => {
