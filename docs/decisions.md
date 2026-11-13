@@ -552,3 +552,17 @@ a request for an id that is not an enabled connector is refused with `DCK-IPC-00
 address error.
 **How to revert:** revert the commits of phase A; the settings file and the keyring key did not change, so
 an existing setup keeps working on either side.
+
+## D42. Work tabs are named by the action they ask for and grouped by service
+
+**Decision:** the GitLab tabs become "To review" (`review`) and "Follow up" (`mine`); Jira keeps "Tasks". The
+Work header draws each connected connector's tabs after a group label with the connector's `name`, in the
+connectors' order, even when only one service is connected, with a thin `--line` divider between groups.
+The label is a muted uppercase caption like the panel's section heads, not a control. A view declares a
+`description` catalog key next to its title, shown as the tab's tooltip. The tablist still owns only tabs,
+so ←→ crosses the groups: the label is `aria-hidden`, and each tab's name carries the service
+("GitLab, To review, 6") with the description in `aria-description`.
+**Reason:** testing with a real Jira, the maintainer found "Assigned" and "Created" unclear and nothing said
+which service a list came from (2026-11-13).
+**How to revert:** restore the two catalog entries and draw the tabs without the group labels; the
+`description` key can stay in the declarations.

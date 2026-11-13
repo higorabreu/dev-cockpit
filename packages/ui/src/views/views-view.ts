@@ -63,6 +63,8 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const snapshots = new Map<string, ViewSnapshot>()
   // Every view of the enabled connectors; a tab only shows once its account is connected
   let views: readonly ConnectorView[] = []
+  // The name of the service each view comes from, which heads its group of tabs
+  let serviceOf: ReadonlyMap<string, string> = new Map()
   let current: string | undefined
   let query = ''
   let onlyPending = false
@@ -168,26 +170,40 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     )
   }
 
+  // A tablist may own only tabs, so the service's name is a visual label hidden from assistive technology and
+  // each tab says the service in its own name; the tabs stay siblings, so ←→ crosses the groups
   function drawTabs() {
-    tabs.replaceChildren(
-      ...connectedViews().map((view) => {
-        const count = snapshotOf(view.id).items.length
-        const tab = h(
-          'button',
-          {
-            type: 'button',
-            class: 'vtab',
-            role: 'tab',
-            'aria-selected': String(view.id === current),
-            tabindex: '-1',
-          },
-          t(view.title),
-          h('span', { class: 'vcount' }, String(count)),
-        )
-        tab.addEventListener('click', () => switchView(view.id))
-        return tab
-      }),
-    )
+    const children: HTMLElement[] = []
+    let group: string | undefined
+    for (const view of connectedViews()) {
+      const service = serviceOf.get(view.id) ?? ''
+      if (service !== group) {
+        group = service
+        children.push(h('span', { class: 'vgroup', 'aria-hidden': 'true' }, service))
+      }
+      const title = t(view.title)
+      const count = String(snapshotOf(view.id).items.length)
+      const description = t(view.description)
+      const tab = h(
+        'button',
+        {
+          type: 'button',
+          class: 'vtab',
+          role: 'tab',
+          'aria-selected': String(view.id === current),
+          'aria-label': `${service}, ${title}, ${count}`,
+          // The tooltip describes the list only under the mouse; this says it to a screen reader too
+          'aria-description': description,
+          'data-tip': description,
+          tabindex: '-1',
+        },
+        title,
+        h('span', { class: 'vcount' }, count),
+      )
+      tab.addEventListener('click', () => switchView(view.id))
+      children.push(tab)
+    }
+    tabs.replaceChildren(...children)
   }
 
   function flags(item: MergeRequestItem): HTMLElement[] {
@@ -482,6 +498,9 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     const connectors = await api.connections.list()
     views = connectors.flatMap((connector) =>
       connector.views.filter((view) => DRAWN_KINDS.has(view.kind)),
+    )
+    serviceOf = new Map(
+      connectors.flatMap((connector) => connector.views.map((view) => [view.id, connector.name])),
     )
     for (const view of snapshots.keys())
       if (!views.some((known) => known.id === view)) snapshots.delete(view)

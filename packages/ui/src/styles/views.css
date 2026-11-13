@@ -39,10 +39,28 @@
 
 .vtabs {
   display: flex;
+  align-items: center;
   gap: 4px;
   margin-right: auto;
   /* One tab's height, so the header does not move when no account is connected and there is no tab */
   min-height: calc(1lh + 8px);
+}
+
+/* The service a group of tabs comes from: a quiet caption like the panel's section heads, not a control */
+.vgroup {
+  flex: none;
+  padding: 0 2px;
+  color: var(--muted);
+  font: 500 10.5px var(--font-sans);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.vtab + .vgroup {
+  margin-left: 6px;
+  padding-left: 16px;
+  border-left: 1px solid var(--line);
 }
 
 .vtab {

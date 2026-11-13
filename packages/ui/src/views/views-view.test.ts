@@ -58,7 +58,11 @@ const snapshot = (
   error: undefined,
 })
 
-function setup(options: { connectors: readonly Connector[]; snapshots: ViewSnapshot[] }) {
+function setup(options: {
+  connectors: readonly Connector[]
+  snapshots: ViewSnapshot[]
+  language?: 'en' | 'pt-BR'
+}) {
   const stored = new Map(options.snapshots.map((entry) => [entry.view, entry]))
   const opened: string[] = []
   const badges: { count: number; label: PluralKey | undefined }[] = []
@@ -80,7 +84,7 @@ function setup(options: { connectors: readonly Connector[]; snapshots: ViewSnaps
   document.body.append(overlay)
   const view = createViewsView(overlay, {
     api,
-    i18n: createTranslator('en'),
+    i18n: createTranslator(options.language ?? 'en'),
     onClose: () => undefined,
     openSettings: () => {
       settingsOpened += 1
@@ -122,7 +126,7 @@ describe('views view tabs', () => {
 
     await view.open()
 
-    expect(tabs()).toEqual(['Assigned2', 'Created0'])
+    expect(tabs()).toEqual(['To review2', 'Follow up0'])
     expect(notice()).toBe('')
   })
 
@@ -284,7 +288,7 @@ describe('tasks tab', () => {
   it('should show the merge request tabs and then Tasks when both accounts are connected', async () => {
     const { tabs, overlay } = await openTasks(both)
 
-    expect(tabs()).toEqual(['Assigned2', 'Created0', 'Tasks3'])
+    expect(tabs()).toEqual(['To review2', 'Follow up0', 'Tasks3'])
     expect(overlay.querySelector('.vtab[aria-selected="true"]')?.textContent).toBe('Tasks3')
   })
 
@@ -444,5 +448,142 @@ describe('tasks tab', () => {
     const { notice } = await openTasks([...unconnected, snapshot('tasks', 'idle', [])])
 
     expect(notice()).toBe('No open tasks assigned to you.')
+  })
+})
+
+describe('views view tab groups', () => {
+  // What the header shows in order: a group label in brackets, then its tabs
+  const header = (overlay: HTMLElement) =>
+    [...overlay.querySelectorAll<HTMLElement>('.vtabs > *')].map((element) =>
+      element.classList.contains('vgroup') ? `[${element.textContent}]` : element.textContent,
+    )
+  const tabNames = (overlay: HTMLElement) =>
+    [...overlay.querySelectorAll('.vtab')].map((tab) => tab.getAttribute('aria-label'))
+  const selectedName = (overlay: HTMLElement) =>
+    overlay.querySelector('.vtab[aria-selected="true"]')?.getAttribute('aria-label')
+  const gitlabOnly = [...connected, snapshot('tasks', 'unconfigured')]
+
+  it('should put the name of each connected service before its tabs when both are connected', async () => {
+    const { view, overlay } = setup({
+      connectors: [GITLAB_CONNECTOR, JIRA_CONNECTOR],
+      snapshots: both,
+    })
+
+    await view.open()
+
+    expect(header(overlay)).toEqual(['[GitLab]', 'To review2', 'Follow up0', '[Jira]', 'Tasks3'])
+  })
+
+  it('should order the groups as the connectors are declared when Jira comes first', async () => {
+    const { view, overlay } = setup({
+      connectors: [JIRA_CONNECTOR, GITLAB_CONNECTOR],
+      snapshots: both,
+    })
+
+    await view.open()
+
+    expect(header(overlay)).toEqual(['[Jira]', 'Tasks3', '[GitLab]', 'To review2', 'Follow up0'])
+  })
+
+  it.each([
+    ['Jira', jiraOnly, ['[Jira]', 'Tasks3']],
+    ['GitLab', gitlabOnly, ['[GitLab]', 'To review2', 'Follow up0']],
+  ])(
+    'should still name the service when %s is the only one connected',
+    async (_name, snapshots, expected) => {
+      const { view, overlay } = setup({ connectors: [GITLAB_CONNECTOR, JIRA_CONNECTOR], snapshots })
+
+      await view.open()
+
+      expect(header(overlay)).toEqual(expected)
+    },
+  )
+
+  it('should expose only tabs in the tablist and name the service in each tab when both are connected', async () => {
+    const { view, overlay } = setup({
+      connectors: [GITLAB_CONNECTOR, JIRA_CONNECTOR],
+      snapshots: both,
+    })
+
+    await view.open()
+
+    const exposed = [...(overlay.querySelector('.vtabs')?.children ?? [])].filter(
+      (element) => element.getAttribute('aria-hidden') !== 'true',
+    )
+    expect(exposed.map((element) => element.getAttribute('role'))).toEqual(['tab', 'tab', 'tab'])
+    expect(tabNames(overlay)).toEqual([
+      'GitLab, To review, 2',
+      'GitLab, Follow up, 0',
+      'Jira, Tasks, 3',
+    ])
+    expect(overlay.querySelector('.vgroup')?.tagName).toBe('SPAN')
+    expect(overlay.querySelector('.vgroup')?.hasAttribute('tabindex')).toBe(false)
+  })
+
+  it('should describe each list in the tooltip of its tab from the connector declaration', async () => {
+    const { view, overlay } = setup({
+      connectors: [GITLAB_CONNECTOR, JIRA_CONNECTOR],
+      snapshots: both,
+    })
+
+    await view.open()
+
+    const tabs = [...overlay.querySelectorAll('.vtab')]
+    expect(tabs.map((tab) => tab.getAttribute('data-tip'))).toEqual([
+      'Merge requests waiting for your review',
+      'Merge requests you opened',
+      'Jira issues assigned to you',
+    ])
+    expect(tabs.map((tab) => tab.getAttribute('aria-description'))).toEqual(
+      tabs.map((tab) => tab.getAttribute('data-tip')),
+    )
+    expect(tabs.some((tab) => tab.hasAttribute('title'))).toBe(false)
+  })
+
+  it('should move across the groups and wrap around when ← and → are pressed', async () => {
+    const { view, overlay } = setup({
+      connectors: [GITLAB_CONNECTOR, JIRA_CONNECTOR],
+      snapshots: both,
+    })
+    await view.open()
+    const input = overlay.querySelector('.vinput')
+    const visited: (string | null | undefined)[] = []
+
+    for (const key of ['ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowLeft']) {
+      press(input, key)
+      await settle()
+      visited.push(selectedName(overlay))
+    }
+
+    expect(visited).toEqual([
+      'GitLab, Follow up, 0',
+      'Jira, Tasks, 3',
+      'GitLab, To review, 2',
+      'Jira, Tasks, 3',
+    ])
+  })
+
+  it('should name the tabs, their tooltips and the groups in Portuguese when the language is pt-BR', async () => {
+    const { view, overlay } = setup({
+      connectors: [GITLAB_CONNECTOR, JIRA_CONNECTOR],
+      snapshots: both,
+      language: 'pt-BR',
+    })
+
+    await view.open()
+
+    expect(header(overlay)).toEqual(['[GitLab]', 'Revisar2', 'Acompanhar0', '[Jira]', 'Tarefas3'])
+    expect(tabNames(overlay)).toEqual([
+      'GitLab, Revisar, 2',
+      'GitLab, Acompanhar, 0',
+      'Jira, Tarefas, 3',
+    ])
+    expect(
+      [...overlay.querySelectorAll('.vtab')].map((tab) => tab.getAttribute('data-tip')),
+    ).toEqual([
+      'MRs que aguardam a sua review',
+      'MRs que você abriu',
+      'Issues do Jira atribuídas a você',
+    ])
   })
 })
