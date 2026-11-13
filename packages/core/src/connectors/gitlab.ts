@@ -12,10 +12,17 @@ export const GITLAB_CONNECTOR = {
       id: 'review',
       kind: 'mergeRequest',
       title: 'views.review',
+      description: 'views.review.description',
       empty: 'views.empty.review',
       badge: 'views.waiting',
     },
-    { id: 'mine', kind: 'mergeRequest', title: 'views.mine', empty: 'views.empty.mine' },
+    {
+      id: 'mine',
+      kind: 'mergeRequest',
+      title: 'views.mine',
+      description: 'views.mine.description',
+      empty: 'views.empty.mine',
+    },
   ],
 } as const satisfies Connector
 

@@ -390,3 +390,26 @@ describe('createSelect', () => {
     expect(document.activeElement).toBe(second.button)
   })
 })
+
+describe('createSelect with a secondary text', () => {
+  it('should show the detail beside the option in the list and only the label when closed', () => {
+    document.body.replaceChildren()
+    const control = createSelect({
+      id: 'project',
+      options: [
+        { value: '', label: 'All projects', detail: '6' },
+        { value: 'NTF', label: 'NTF', detail: '4' },
+      ],
+      value: 'NTF',
+      labelledBy: 'project-label',
+      onChange: () => undefined,
+    })
+    document.body.append(control.element)
+
+    control.button.click()
+
+    const details = [...control.element.querySelectorAll('[role="option"] .select-detail')]
+    expect(details.map((detail) => detail.textContent)).toEqual(['6', '4'])
+    expect(shown(control.button)).toBe('NTF')
+  })
+})

@@ -552,3 +552,37 @@ a request for an id that is not an enabled connector is refused with `DCK-IPC-00
 address error.
 **How to revert:** revert the commits of phase A; the settings file and the keyring key did not change, so
 an existing setup keeps working on either side.
+
+## D43. Work tabs are named by the action they ask for and grouped by service
+
+**Decision:** the GitLab tabs become "To review" (`review`) and "Follow up" (`mine`); Jira keeps "Tasks". The
+Work header draws each connected connector's tabs after a group label with the connector's `name`, in the
+connectors' order, even when only one service is connected, with a thin `--line` divider between groups.
+The label is a muted uppercase caption like the panel's section heads, not a control. A view declares a
+`description` catalog key next to its title, shown as the tab's tooltip. The tablist still owns only tabs,
+so ←→ crosses the groups: the label is `aria-hidden`, and each tab's name carries the service
+("GitLab, To review, 6") with the description in `aria-description`.
+**Reason:** testing with a real Jira, the maintainer found "Assigned" and "Created" unclear and nothing said
+which service a list came from (2026-11-13).
+**How to revert:** restore the two catalog entries and draw the tabs without the group labels; the
+`description` key can stay in the declarations.
+
+## D44. The Tasks list is grouped by progress, filtered by project, and the Work lists search by word start
+
+**Decision:** the Tasks tab shows "In progress" and then "To do", each with its count and in the list's order
+(most recently updated first); an empty section is hidden and filtering keeps the sections. A section is a
+`role=group` labelled "In progress, 6" inside the listbox, its visible header is `aria-hidden`, and the
+rows' `aria-posinset` and `aria-setsize` count only tasks. ↑↓ and, with an empty filter, Home and End move
+over tasks only. Right after the filter, the kit's select (D38) named "Project" chooses one project: "All
+projects" with the total first, then every project of the list with its count beside it, most frequent first
+and then by key. It is as wide as its longest option, shows "All projects" or the chosen key when closed,
+gives the focus back to the filter after a pick, is hidden on a list with one project and resets when the
+screen closes. Toggles were tried first and dropped: with six or more projects they wrapped to a second line
+and a seventh was out of reach. Both Work lists (merge requests and tasks) search with `searchViewItems` in
+`core`: every typed word must start a word of the item, ignoring case and accents; the exact key or
+reference comes first, then the keys that start with the query, and a typed key selects its task even in a
+later section. The fuzzy search of the tabs and projects is unchanged.
+**Reason:** testing with a real Jira (45 tasks across projects), the maintainer found the flat list hard to
+scan and the fuzzy search too loose ("bug" matched "build") (2026-11-13).
+**How to revert:** draw the Tasks list as one group, drop the project select and call `searchItems` again in
+`filterViewItems`.
