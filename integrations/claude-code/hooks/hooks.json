@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v dck >/dev/null 2>&1 && dck agent signal working || true",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal working || true",
             "async": true
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v dck >/dev/null 2>&1 && dck agent signal working || true",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal working || true",
             "async": true
           }
         ]
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v dck >/dev/null 2>&1 && dck agent signal needs-you || true",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal needs-you || true",
             "async": true
           }
         ]
@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v dck >/dev/null 2>&1 && dck agent signal needs-you || true",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal needs-you || true",
             "async": true
           }
         ]
@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v dck >/dev/null 2>&1 && dck agent signal your-turn || true",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal your-turn || true",
             "async": true
           }
         ]
@@ -60,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v dck >/dev/null 2>&1 && dck agent signal your-turn || true",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal your-turn || true",
             "async": true
           }
         ]
@@ -71,7 +71,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v dck >/dev/null 2>&1 && dck agent signal ended || true",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal ended || true",
             "async": true
           }
         ]

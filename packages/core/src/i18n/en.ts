@@ -64,7 +64,7 @@ export const en: Record<MessageKey, string> = {
   'tabs.duplicate': 'Duplicate tab',
   'tabs.next': 'Next tab',
   'tabs.previous': 'Previous tab',
-  'tabs.nextFinished': 'Next finished',
+  'tabs.nextFinished': 'Next waiting for you',
   'tabs.finished': 'finished',
   'tabs.needsYou': 'needs you',
   'tabs.all': 'All tabs',
@@ -246,6 +246,7 @@ export const en: Record<MessageKey, string> = {
   'notify.title': 'Dev Cockpit',
   'notify.finished': '{tab}: {process} finished in {duration}',
   'notify.needsYou': '{tab}: the agent needs you',
+  'notify.agentAnswered': '{tab}: the agent answered in {duration}',
 
   'error.DCK-IPC-001': 'Unknown method',
   'error.DCK-IPC-002': 'The method failed',

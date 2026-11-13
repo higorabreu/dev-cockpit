@@ -125,6 +125,7 @@ export function createAttentionTracker(options: AttentionOptions) {
         state.process = undefined
         // The agent left the foreground: whatever it last signalled no longer holds
         clearAgent(state)
+        clearNeedsYou(tabId)
       }
       state.activity = current.activity
       state.foreground = current.process
@@ -140,11 +141,12 @@ export function createAttentionTracker(options: AttentionOptions) {
         clearNeedsYou(tabId)
         return undefined
       }
+      // Marked even on screen, because the agent stays blocked; only an unseen tab is notified
       if (agentState === 'needs-you') {
         state.agent = 'needs-you'
-        if (seen || unseen.get(tabId)?.kind === 'needs-you') return undefined
+        if (unseen.get(tabId)?.kind === 'needs-you') return undefined
         mark(tabId, { kind: 'needs-you' })
-        return { kind: 'needs-you', tabId, notify: true }
+        return seen ? undefined : { kind: 'needs-you', tabId, notify: true }
       }
       if (agentState === 'your-turn') return endTurn(tabId, state, now, seen)
       clearAgent(state)
@@ -159,24 +161,21 @@ export function createAttentionTracker(options: AttentionOptions) {
       state.workingAt = options.clock.now()
       clearNeedsYou(tabId)
     },
-    // Ends the turn of every working agent whose terminal has been quiet long enough
-    settle(
-      lastOutputAt: (tabId: string) => number | undefined,
-      seen: (tabId: string) => boolean,
-    ): readonly AgentEvent[] {
+    // A working agent whose terminal went quiet was interrupted (Esc fires no hook): the turn just ends,
+    // silently, since a quiet agent may still be working and the user who pressed Esc is looking
+    settle(lastOutputAt: (tabId: string) => number | undefined) {
       const now = options.clock.now()
-      const events: AgentEvent[] = []
       for (const [tabId, state] of tabs) {
         if (state.agent !== 'working') continue
         const quietSince = Math.max(lastOutputAt(tabId) ?? 0, state.workingAt ?? 0)
-        if (now - quietSince < quietAfter) continue
-        const event = endTurn(tabId, state, quietSince, seen(tabId))
-        if (event) events.push(event)
+        if (now - quietSince >= quietAfter) endTurn(tabId, state, quietSince, true)
       }
-      return events
     },
     hasWorkingAgent: () => [...tabs.values()].some((state) => state.agent === 'working'),
-    markSeen: (tabId: string) => unseen.delete(tabId),
+    // A tab that needs the user keeps its mark until the agent moves on, even after a look
+    markSeen(tabId: string) {
+      if (unseen.get(tabId)?.kind !== 'needs-you') unseen.delete(tabId)
+    },
     finished(tabId: string): FinishedCommand | undefined {
       const entry = unseen.get(tabId)
       return entry?.kind === 'finished' ? entry.command : undefined
@@ -186,8 +185,8 @@ export function createAttentionTracker(options: AttentionOptions) {
       new Map([...unseen].map(([tabId, entry]) => [tabId, entry.kind])),
     unseenIds: () => [...unseen.keys()],
     // Tabs that need the user come first: the agent is blocked until they answer
-    nextUnseen(): string | undefined {
-      const entries = [...unseen]
+    nextUnseen(currentId?: string): string | undefined {
+      const entries = [...unseen].filter(([tabId]) => tabId !== currentId)
       return (entries.find(([, entry]) => entry.kind === 'needs-you') ?? entries[0])?.[0]
     },
     forget(tabId: string) {

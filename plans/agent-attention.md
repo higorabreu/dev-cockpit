@@ -64,7 +64,7 @@ teammate without the cockpit sees nothing and Claude Code is never slowed down.
 | --- | --- | --- |
 | A1 | A state signalled by a tab's agent reaches that tab within one second | Test, and a run with the real Claude Code |
 | A2 | "Needs you" marks the tab and notifies when the tab is unseen, whatever the duration; "your turn" uses the existing finished rules (marked after 3 s of work, notified after the configured threshold) | Test |
-| A3 | A working tab whose terminal stays quiet for 5 s becomes "your turn" (Esc) | Test with a fake clock |
+| A3 | A working tab whose terminal stays quiet for 5 s goes back to "your turn" silently, without a mark or a notification (Esc) | Test with a fake clock |
 | A4 | With no integration installed, the tabs, marks and notifications behave exactly as today | The existing tests, unchanged |
 | A5 | `dck agent signal` outside a cockpit terminal, with the cockpit closed or with a bad argument exits 0, prints nothing and takes under 300 ms | Test and a measured run |
 | A6 | The Claude Code plugin installs with `/plugin` from this repository and maps the hooks as above | A run with the real Claude Code, and a test that reads `hooks.json` |
@@ -105,3 +105,16 @@ teammate without the cockpit sees nothing and Claude Code is never slowed down.
 | Claude Code renames or changes a hook | The marks stop or go wrong | The mapping lives in one `hooks.json`; the fallback still clears "working" |
 | A hook spawns `dck` on every tool call | CPU on long runs | `async` hooks, only `PostToolUse` among the tool events, and the command exits fast |
 | A stale "needs you" after the user answers in the terminal | A wrong mark | Typing in the tab or a `working` signal clears it |
+
+## Results of the review (2026-11-13)
+
+- The quiet fallback marked and notified, so an Esc before hiding the window, or an agent that draws
+  nothing while it works, produced a false "finished" notification. It now only ends the turn, silently.
+- "Needs you" disappeared after a look at the tab while the agent was still blocked. It now stays until
+  the agent moves on, is marked even on screen and notified only out of sight.
+- With the package installed, every hook outside a cockpit terminal started `dck` (about 90 ms of CPU and
+  100 MB each). The hooks now check `DCK_PTY_ID` first.
+- "Next finished" became "Next waiting for you", and an agent's answer is notified as "the agent answered
+  in {duration}" instead of "claude finished".
+- The tab search shows only the tab names; the state lives in the Sessions section and on the tab.
+

@@ -15,7 +15,8 @@ function filesUnder(directory: string): string[] {
   })
 }
 
-const signalCommand = /^command -v dck >\/dev\/null 2>&1 && dck agent signal ([a-z-]+) \|\| true$/
+const signalCommand =
+  /^\[ -n "\$DCK_PTY_ID" \] && command -v dck >\/dev\/null 2>&1 && dck agent signal ([a-z-]+) \|\| true$/
 
 const hooksFileSchema = z.strictObject({
   hooks: z.record(

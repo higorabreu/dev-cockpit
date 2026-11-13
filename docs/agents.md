@@ -12,7 +12,9 @@ and one command; it does not know which agent sent them. The design is in
 | Needs you | The agent stopped to ask (a permission, a question) | A mark on the tab and in the tab list, and a notification when the tab is not on screen |
 | Your turn | The agent finished answering | The usual "finished" mark and notification of a long command |
 
-Typing in the tab or a new `working` signal clears "needs you". Without an integration nothing changes:
+"Needs you" stays on the tab while the agent waits, even after a look at it, and is notified only when
+the tab is out of sight. Typing in the tab, a new `working` signal or the agent leaving the terminal clears
+it. "Next waiting for you" visits the tabs that need you first. Without an integration nothing changes:
 the tabs, marks and notifications behave as they always did.
 
 ## Claude Code
@@ -44,11 +46,12 @@ nothing and Claude Code shows nothing.
 | `Stop`, `Notification` (`idle_prompt`) | your-turn |
 | `SessionEnd` | ended |
 
-Every hook runs `command -v dck >/dev/null 2>&1 && dck agent signal <state> || true`, with `async`.
+Every hook runs `[ -n "$DCK_PTY_ID" ] && command -v dck >/dev/null 2>&1 && dck agent signal <state> || true`, with `async`.
 
 **Esc fires no hook.** An interrupted turn would stay "working", so a working tab whose terminal has been
-quiet for 5 s becomes "your turn": while Claude Code works it redraws its spinner several times a second,
-and when it waits it writes nothing.
+quiet for 5 s goes back to "your turn": while Claude Code works it redraws its spinner several times a
+second, and when it waits it writes nothing. This is silent, with no mark and no notification, because the
+user who pressed Esc is looking and a quiet agent may still be working.
 
 ## Another agent
 
@@ -66,5 +69,5 @@ a bad argument. For a configuration that is shared with people who do not use th
 the Claude Code plugin does:
 
 ```sh
-command -v dck >/dev/null 2>&1 && dck agent signal your-turn || true
+[ -n "$DCK_PTY_ID" ] && command -v dck >/dev/null 2>&1 && dck agent signal your-turn || true
 ```

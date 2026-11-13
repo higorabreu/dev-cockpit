@@ -187,9 +187,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       body:
         event.kind === 'needs-you'
           ? i18n.t('notify.needsYou', { tab: tab.label })
-          : i18n.t('notify.finished', {
+          : i18n.t('notify.agentAnswered', {
               tab: tab.label,
-              process: event.process,
               duration: formatDuration(event.durationMs),
             }),
       tabId: tab.id,
@@ -206,9 +205,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   function watchQuiet() {
     if (quietTimer || !attention.hasWorkingAgent()) return
     quietTimer = setInterval(() => {
-      const events = attention.settle((id) => sessions.get(id)?.lastOutputAt(), isSeen)
-      for (const event of events) announce(event)
-      if (events.length > 0) showAttention()
+      attention.settle((id) => sessions.get(id)?.lastOutputAt())
       if (attention.hasWorkingAgent()) return
       clearInterval(quietTimer)
       quietTimer = undefined
@@ -434,10 +431,11 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       hiddenAttention(kind) {
         if (kind) elements.tabsAll.dataset.attention = kind
         else delete elements.tabsAll.dataset.attention
-        elements.tabsAll.setAttribute(
-          'aria-label',
-          kind ? `${i18n.t('tabs.all')}, ${attentionMark(kind, i18n.t).label}` : i18n.t('tabs.all'),
-        )
+        const label = kind
+          ? `${i18n.t('tabs.all')}, ${attentionMark(kind, i18n.t).label}`
+          : i18n.t('tabs.all')
+        elements.tabsAll.setAttribute('aria-label', label)
+        elements.tabsAll.setAttribute('data-tip', label)
       },
       activate: (id) => update(activateTab(state, id)),
       reorder: (ids) => {
@@ -490,7 +488,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     togglePanel,
     toggleFullHeight: () => api.window.toggleFullHeight(),
     nextFinished() {
-      const id = attention.nextUnseen()
+      const id = attention.nextUnseen(state.activeId)
       if (id) update(activateTab(state, id))
     },
     changeOpacity(direction: 1 | -1) {

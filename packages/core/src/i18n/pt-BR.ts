@@ -63,7 +63,7 @@ export const ptBR = {
   'tabs.duplicate': 'Duplicar aba',
   'tabs.next': 'Próxima aba',
   'tabs.previous': 'Aba anterior',
-  'tabs.nextFinished': 'Próxima que terminou',
+  'tabs.nextFinished': 'Próxima esperando você',
   'tabs.finished': 'terminou',
   'tabs.needsYou': 'precisa de você',
   'tabs.all': 'Todas as abas',
@@ -245,6 +245,7 @@ export const ptBR = {
   'notify.title': 'Dev Cockpit',
   'notify.finished': '{tab}: {process} terminou em {duration}',
   'notify.needsYou': '{tab}: o agente precisa de você',
+  'notify.agentAnswered': '{tab}: o agente respondeu em {duration}',
 
   'error.DCK-IPC-001': 'Método desconhecido',
   'error.DCK-IPC-002': 'O método falhou',

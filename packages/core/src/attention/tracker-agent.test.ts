@@ -16,7 +16,6 @@ function setup() {
 
 const agent = { activity: 'busy' as const, process: 'claude' }
 const shell = { activity: 'idle' as const, process: 'zsh' }
-const outOfSight = () => false
 const outputAt = (time: number) => () => time
 
 describe('createAttentionTracker with agent signals', () => {
@@ -30,11 +29,30 @@ describe('createAttentionTracker with agent signals', () => {
     expect(tracker.unseenIds()).toEqual(['a'])
   })
 
-  it('should not mark the tab when the agent needs the user while they look at it', () => {
+  it('should mark without notifying when the agent needs the user while they look at it', () => {
     const { tracker } = setup()
 
     expect(tracker.signal('a', 'needs-you', true)).toBeUndefined()
-    expect(tracker.unseenIds()).toEqual([])
+    expect(tracker.attention('a')).toBe('needs-you')
+  })
+
+  it('should keep the needs you mark when the user only looks at the tab', () => {
+    const { tracker } = setup()
+    tracker.signal('a', 'needs-you', false)
+
+    tracker.markSeen('a')
+
+    expect(tracker.attention('a')).toBe('needs-you')
+  })
+
+  it('should clear the needs you mark when the agent process leaves the foreground', () => {
+    const { tracker } = setup()
+    tracker.update('a', agent, false)
+    tracker.signal('a', 'needs-you', false)
+
+    tracker.update('a', shell, false)
+
+    expect(tracker.attention('a')).toBeUndefined()
   })
 
   it('should notify once when the agent repeats that it needs the user', () => {
@@ -102,21 +120,20 @@ describe('createAttentionTracker with agent signals', () => {
     expect(tracker.signal('a', 'your-turn', false)).toBeUndefined()
   })
 
-  it('should end the turn when a working agent left the terminal quiet for five seconds', () => {
+  it('should end the turn without a mark when a working agent left the terminal quiet for five seconds', () => {
     const { tracker, advance, now } = setup()
     tracker.signal('a', 'working', false)
-    advance(4000)
+    advance(40_000)
     const lastOutput = now()
     advance(4999)
-    expect(tracker.settle(outputAt(lastOutput), outOfSight)).toEqual([])
+    tracker.settle(outputAt(lastOutput))
+    expect(tracker.hasWorkingAgent()).toBe(true)
     advance(1)
 
-    const events = tracker.settle(outputAt(lastOutput), outOfSight)
+    tracker.settle(outputAt(lastOutput))
 
-    expect(events).toEqual([
-      { kind: 'finished', tabId: 'a', process: '', durationMs: 4000, notify: false },
-    ])
     expect(tracker.hasWorkingAgent()).toBe(false)
+    expect(tracker.unseenIds()).toEqual([])
   })
 
   it('should not end the turn when the terminal was quiet only before the working signal', () => {
@@ -125,7 +142,8 @@ describe('createAttentionTracker with agent signals', () => {
     tracker.signal('a', 'working', false)
     advance(1000)
 
-    expect(tracker.settle(outputAt(0), outOfSight)).toEqual([])
+    tracker.settle(outputAt(0))
+
     expect(tracker.hasWorkingAgent()).toBe(true)
   })
 
@@ -135,7 +153,8 @@ describe('createAttentionTracker with agent signals', () => {
     tracker.signal('a', 'needs-you', false)
     advance(60_000)
 
-    expect(tracker.settle(outputAt(0), outOfSight)).toEqual([])
+    tracker.settle(outputAt(0))
+
     expect(tracker.attention('a')).toBe('needs-you')
   })
 
@@ -218,8 +237,9 @@ describe('createAttentionTracker with agent signals', () => {
     tracker.signal('c', 'needs-you', false)
 
     expect(tracker.nextUnseen()).toBe('b')
-    tracker.markSeen('b')
-    tracker.markSeen('c')
+    expect(tracker.nextUnseen('b')).toBe('c')
+    tracker.input('b')
+    tracker.input('c')
     expect(tracker.nextUnseen()).toBe('a')
   })
 
