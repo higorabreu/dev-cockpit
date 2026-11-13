@@ -1,21 +1,12 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import type { ProcessScanner } from '@dck/core'
 
-export interface ScanQuery {
-  // Path that must appear among the process arguments
-  readonly argument: string
-  // DCK_ENDPOINT value of the searched process; undefined for the default endpoint
-  readonly endpoint: string | undefined
-  readonly exclude?: number
-}
-
-// Finds processes by what was passed on the command line, for example an old daemon that
-// is still alive after an update
-export function createProcessScanner(procRoot = '/proc') {
+export function createProcessScanner(procRoot = '/proc'): ProcessScanner {
   const text = (path: string) => readFile(path, 'utf8').catch(() => undefined)
 
   return {
-    async find(query: ScanQuery): Promise<readonly number[]> {
+    async find(query) {
       const names = await readdir(procRoot).catch(() => [] as string[])
       const found: number[] = []
       for (const name of names) {

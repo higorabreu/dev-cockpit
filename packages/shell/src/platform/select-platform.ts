@@ -2,7 +2,14 @@ import { join } from 'node:path'
 import { createGnomeShortcut } from '@dck/adapter-gnome-shortcuts'
 import { createProcessInspector, createProcessScanner } from '@dck/adapter-linux-proc'
 import { createSecretToolStore } from '@dck/adapter-secret-tool'
-import type { Autostart, DesktopShortcut, Logger, ProcessInspector, SecretStore } from '@dck/core'
+import type {
+  Autostart,
+  DesktopShortcut,
+  Logger,
+  ProcessInspector,
+  ProcessScanner,
+  SecretStore,
+} from '@dck/core'
 import { createXdgAutostart, defaultAutostartDirectory } from './linux/xdg-autostart.ts'
 
 export interface PlatformContext {
@@ -18,7 +25,7 @@ export interface PlatformContext {
 
 export interface Platform {
   readonly processes: ProcessInspector
-  readonly processScanner: ReturnType<typeof createProcessScanner>
+  readonly processScanner: ProcessScanner
   readonly secrets: SecretStore
   readonly autostart: Autostart
   readonly desktopShortcut: DesktopShortcut | undefined
@@ -30,7 +37,7 @@ export function selectPlatform(context: PlatformContext): Platform {
   const onGnome =
     platform === 'linux' && (env.XDG_CURRENT_DESKTOP ?? '').split(':').includes('GNOME')
   // A Linux workaround for Chromium's sandbox helper; the Mac runs with the sandbox
-  const sandbox = platform === 'darwin' ? [] : ['--no-sandbox']
+  const sandbox = platform === 'linux' ? ['--no-sandbox'] : []
   const app = packaged ? [execPath] : [execPath, appPath]
 
   return {

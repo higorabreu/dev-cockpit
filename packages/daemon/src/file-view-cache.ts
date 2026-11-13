@@ -1,18 +1,22 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import {
-  type Logger,
-  mergeRequestSummarySchema,
-  type ViewCache,
-  type ViewCacheData,
-} from '@dck/core'
+import { type Logger, type ViewCache, type ViewCacheData, viewItemSchema } from '@dck/core'
 import { z } from 'zod'
 
-const cachedView = z.object({ items: z.array(mergeRequestSummarySchema), updatedAt: z.number() })
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+// A cache written before connectors held only merge requests and had no `kind`
+const cachedItem = z.preprocess(
+  (value) => (isRecord(value) && !('kind' in value) ? { ...value, kind: 'mergeRequest' } : value),
+  viewItemSchema,
+)
+
+const cachedView = z.object({ items: z.array(cachedItem), updatedAt: z.number() })
 
 const dataSchema = z.object({
   scope: z.string(),
-  views: z.object({ review: cachedView.optional(), mine: cachedView.optional() }),
+  views: z.record(z.string(), cachedView),
 })
 
 // An unreadable or otherwise broken file becomes "no cache": the server is the source, the file only speeds things up

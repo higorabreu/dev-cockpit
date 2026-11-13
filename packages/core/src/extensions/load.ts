@@ -82,6 +82,11 @@ function validate(
         errorBody('DCK-EXT-002', `${manifest.id} uses an unknown contribution point: ${pointId}`),
       )
     }
+    if (point.sources !== undefined && !point.sources.includes(candidate.source)) {
+      const allowed = point.sources.join(', ')
+      const detail = `${manifest.id} contributes ${pointId}, which only ${allowed} extensions can do in this version`
+      return fail(errorBody('DCK-EXT-002', detail))
+    }
     const checked = point.schema.safeParse(declaration)
     if (!checked.success) {
       const reason = checked.error.issues[0]?.message ?? 'invalid'
@@ -126,12 +131,46 @@ export function loadExtensions(options: LoadOptions): LoadReport {
   }
 
   const ordered = winners.sort(byPrecedence)
+  const active = withoutConflicts(
+    ordered.filter((extension) => !options.disabled.has(extension.manifest.id)),
+    options.points,
+    rejected,
+  )
   return {
-    active: ordered.filter((extension) => !options.disabled.has(extension.manifest.id)),
+    active,
     disabled: ordered.filter((extension) => options.disabled.has(extension.manifest.id)),
     shadowed,
     rejected,
   }
+}
+
+// Ids two extensions both claim (a view id, for example): the one loaded first keeps it, the later one is refused
+function withoutConflicts(
+  extensions: readonly LoadedExtension[],
+  points: readonly ContributionPoint<unknown>[],
+  rejected: RejectedExtension[],
+): LoadedExtension[] {
+  const earlier = new Map<string, unknown[]>()
+  return extensions.filter((extension) => {
+    for (const point of points) {
+      if (!extension.declarations.has(point.id)) continue
+      const reason = point.conflict?.(
+        extension.declarations.get(point.id),
+        earlier.get(point.id) ?? [],
+      )
+      if (reason === undefined) continue
+      const detail = `${extension.manifest.id} contributes.${point.id}: ${reason}`
+      rejected.push({
+        source: extension.source,
+        location: extension.location,
+        error: errorBody('DCK-EXT-001', detail),
+      })
+      return false
+    }
+    for (const [pointId, declaration] of extension.declarations)
+      earlier.set(pointId, [...(earlier.get(pointId) ?? []), declaration])
+    return true
+  })
 }
 
 export interface Contribution<T> {

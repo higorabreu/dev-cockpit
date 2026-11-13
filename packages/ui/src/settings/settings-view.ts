@@ -1,7 +1,9 @@
 import {
   acceleratorFromEvent,
   type ConnectionStatus,
+  type Connector,
   connectionErrorKey,
+  type DisabledConnector,
   defaultSettings,
   HOLD_TRIGGERS,
   type HostApi,
@@ -88,10 +90,23 @@ export function createSettingsView(
   let autostart = false
   let confirmingReset = false
   let activeTab: TabId = TABS[0].id
-  let gitlab: ConnectionStatus | 'checking' = { kind: 'none' }
-  // The token only exists here between typing and connecting, and the screen never gets it back
-  let draftUrl: string | undefined
-  let draftToken = ''
+  // The enabled connectors, each with its own section on the Connections page
+  let connectors: readonly Connector[] = []
+  // Turned off with `dck ext disable`; listed at the end with a way to turn them back on
+  let disabledConnectors: readonly DisabledConnector[] = []
+  // Until the first answer the page stays blank, so it does not flash the "none available" text
+  let listed = false
+  // Where the next drawing puts the focus, when an action replaced the control that had it
+  let focusNext: string | undefined
+  const statuses = new Map<string, ConnectionStatus | 'checking'>()
+  // What was typed and not connected yet. The token only exists here between typing and connecting, and
+  // the screen never gets it back
+  const drafts = new Map<string, { url?: string; email?: string; token: string }>()
+  const draftOf = (id: string) => {
+    const found = drafts.get(id) ?? { token: '' }
+    drafts.set(id, found)
+    return found
+  }
   // Mensagem de erro por chave, mostrada junto ao controle
   const errors = new Map<string, string>()
   // Changes made here need not redraw everything: the control already has the right value
@@ -314,52 +329,110 @@ export function createSettingsView(
     render()
   }
 
-  async function loadGitLab() {
-    gitlab = 'checking'
+  const statusOf = (id: string) => statuses.get(id) ?? { kind: 'none' as const }
+  const storedAccount = (id: string) => settings.current().connections[id]
+
+  async function loadConnections() {
+    const [enabled, disabled] = await Promise.all([
+      api.connections.list(),
+      api.connections.disabled(),
+    ])
+    connectors = enabled
+    disabledConnectors = disabled
+    listed = true
+    for (const { id } of connectors) statuses.set(id, 'checking')
     if (isOpen()) render()
-    gitlab = await api.connections.gitlab.status()
-    if (isOpen()) render()
+    await Promise.all(
+      connectors.map(async ({ id }) => {
+        statuses.set(id, await api.connections.status(id))
+        if (isOpen()) render()
+      }),
+    )
   }
 
-  async function connectGitLab() {
-    const url = draftUrl ?? settings.current().connections.gitlab.url ?? ''
-    const token = draftToken
-    draftToken = ''
-    gitlab = 'checking'
+  async function connect(connector: Connector) {
+    const { id } = connector
+    const draft = draftOf(id)
+    const url = draft.url ?? storedAccount(id)?.url ?? ''
+    const email = draft.email ?? storedAccount(id)?.email ?? ''
+    const token = draft.token
+    draft.token = ''
+    statuses.set(id, 'checking')
     render()
-    gitlab = await api.connections.gitlab.connect(url, token)
-    if (gitlab.kind === 'connected') draftUrl = undefined
+    const fields = connector.connection.email ? { url, email } : { url }
+    const status = await api.connections.connect(id, fields, token)
+    statuses.set(id, status)
+    if (status.kind === 'connected') drafts.delete(id)
+    // Connected: the next thing to do is disconnect. Failed: type the token again, with the reason read out
+    focusNext = status.kind === 'connected' ? `conn-${id}-disconnect` : `conn-${id}-token`
     render()
   }
 
-  async function disconnectGitLab() {
-    draftUrl = undefined
-    gitlab = await api.connections.gitlab.disconnect()
+  async function disconnect(id: string) {
+    drafts.delete(id)
+    statuses.set(id, await api.connections.disconnect(id))
+    focusNext = `conn-${id}-url`
     render()
   }
 
-  function gitlabStatusText(): string {
-    if (gitlab === 'checking') return t('connections.checking')
-    if (gitlab.kind === 'connected')
-      return t('connections.connectedAs', { user: gitlab.user.username })
-    if (gitlab.kind === 'error') return t(connectionErrorKey(gitlab.code))
+  // Through the settings model, like any other setting: the host applies it with no restart
+  async function enable(connector: DisabledConnector) {
+    focusNext = `conn-${connector.id}-url`
+    const disabled = settings.current().extensions.disabled
+    await settings.update({
+      extensions: { disabled: disabled.filter((id) => id !== connector.extension) },
+    })
+  }
+
+  function statusText(status: ConnectionStatus | 'checking'): string {
+    if (status === 'checking') return t('connections.checking')
+    if (status.kind === 'connected')
+      return t('connections.connectedAs', { user: status.user.username })
+    if (status.kind === 'error') return t(connectionErrorKey(status.code))
     return t('connections.none')
   }
 
-  function gitlabRows(): HTMLElement[] {
-    const state = gitlab === 'checking' ? 'checking' : gitlab.kind
-    const busy = gitlab === 'checking'
-    const urlInput = h('input', {
+  // While checking the fields are read only, not disabled, so the one in use keeps the focus
+  function textInput(focus: string, value: string, placeholder: string, busy: boolean) {
+    const input = h('input', {
       type: 'text',
       spellcheck: 'false',
       autocomplete: 'off',
-      placeholder: t('connections.url.placeholder'),
-      'data-focus': 'conn-url',
-      disabled: busy,
+      placeholder,
+      'data-focus': focus,
+      readonly: busy,
     })
-    urlInput.value = draftUrl ?? settings.current().connections.gitlab.url ?? ''
+    input.value = value
+    return input
+  }
+
+  // One section per connector, drawn from the fields it declares
+  function connectorRows(connector: Connector): HTMLElement[] {
+    const { id, connection } = connector
+    const status = statusOf(id)
+    const busy = status === 'checking'
+    const draft = draftOf(id)
+    const key = `connections.${id}`
+
+    const urlInput = textInput(
+      `conn-${id}-url`,
+      draft.url ?? storedAccount(id)?.url ?? '',
+      connection.address.placeholder,
+      busy,
+    )
     urlInput.addEventListener('input', () => {
-      draftUrl = urlInput.value
+      draft.url = urlInput.value
+    })
+    const emailInput = connection.email
+      ? textInput(
+          `conn-${id}-email`,
+          draft.email ?? storedAccount(id)?.email ?? '',
+          connection.email.placeholder,
+          busy,
+        )
+      : undefined
+    emailInput?.addEventListener('input', () => {
+      draft.email = emailInput.value
     })
 
     const tokenInput = h('input', {
@@ -367,62 +440,98 @@ export function createSettingsView(
       spellcheck: 'false',
       autocomplete: 'off',
       placeholder: t('connections.token.placeholder'),
-      'data-focus': 'conn-token',
-      disabled: busy,
+      'data-focus': `conn-${id}-token`,
+      readonly: busy,
     })
-    tokenInput.value = draftToken
-    const connect = h(
+    tokenInput.value = draft.token
+    const statusId = `conn-${id}-status`
+    if (status !== 'checking' && status.kind === 'error')
+      tokenInput.setAttribute('aria-describedby', statusId)
+    // While checking the button is busy rather than disabled, so it keeps the focus
+    const connectButton = h(
       'button',
       {
         type: 'button',
         class: 'srecord',
-        'data-focus': 'conn-connect',
-        disabled: busy || draftToken === '',
+        'data-focus': `conn-${id}-connect`,
+        disabled: !busy && draft.token === '',
+        'aria-disabled': busy ? 'true' : undefined,
+        'aria-busy': busy ? 'true' : undefined,
       },
       t('connections.connect'),
     )
     tokenInput.addEventListener('input', () => {
-      draftToken = tokenInput.value
-      connect.disabled = busy || draftToken.trim() === ''
+      draft.token = tokenInput.value
+      connectButton.disabled = draft.token.trim() === ''
     })
     tokenInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && !connect.disabled) void connectGitLab()
+      if (event.key === 'Enter' && !busy && !connectButton.disabled) void connect(connector)
     })
-    connect.addEventListener('click', () => void connectGitLab())
+    connectButton.addEventListener('click', () => {
+      if (!busy) void connect(connector)
+    })
 
-    const connected = gitlab !== 'checking' && gitlab.kind === 'connected'
-    const disconnect = connected
+    const connected = status !== 'checking' && status.kind === 'connected'
+    const disconnectButton = connected
       ? h(
           'button',
-          { type: 'button', class: 'srecord', 'data-focus': 'conn-disconnect' },
+          { type: 'button', class: 'srecord', 'data-focus': `conn-${id}-disconnect` },
           t('connections.disconnect'),
         )
       : undefined
-    disconnect?.addEventListener('click', () => void disconnectGitLab())
+    disconnectButton?.addEventListener('click', () => void disconnect(id))
 
-    const status = h(
+    const state = status === 'checking' ? 'checking' : status.kind
+    const statusLine = h(
       'span',
-      { class: 'sconn-status', 'data-state': state, role: 'status' },
-      gitlabStatusText(),
+      { class: 'sconn-status', id: statusId, 'data-state': state, role: 'status' },
+      statusText(status),
     )
     return [
-      row('connections.gitlab', t('connections.gitlab'), status, undefined, false),
-      row('connections.gitlab.url', t('connections.url'), urlInput, undefined, false),
+      row(key, connector.name, statusLine, undefined, false),
+      row(`${key}.url`, t('connections.url'), urlInput, undefined, false),
+      emailInput && row(`${key}.email`, t('connections.email'), emailInput, undefined, false),
+      row(`${key}.token`, t(connection.token.label), tokenInput, t(connection.token.hint), false),
       row(
-        'connections.gitlab.token',
-        t('connections.token'),
-        tokenInput,
-        t('connections.token.hint'),
-        false,
-      ),
-      row(
-        'connections.gitlab.actions',
+        `${key}.actions`,
         '',
-        h('span', { class: 'sconn-actions' }, connect, disconnect),
+        h('span', { class: 'sconn-actions' }, connectButton, disconnectButton),
         undefined,
         false,
       ),
-    ]
+    ].filter((element) => element !== undefined)
+  }
+
+  // One compact row per disabled connector; disabling stays in the CLI, where it is rare
+  function disabledRow(connector: DisabledConnector): HTMLElement {
+    const button = h(
+      'button',
+      { type: 'button', class: 'srecord', 'data-focus': `conn-${connector.id}-enable` },
+      t('connections.enable'),
+    )
+    button.addEventListener('click', () => void enable(connector))
+    return row(
+      `connections.${connector.id}.enable`,
+      `${connector.name} · ${t('connections.disabled')}`,
+      button,
+      undefined,
+      false,
+    )
+  }
+
+  function connectionGroups(): Node[] {
+    if (!listed) return []
+    const sections = connectors.map((connector) => group(undefined, ...connectorRows(connector)))
+    if (disabledConnectors.length > 0)
+      sections.push(group(undefined, ...disabledConnectors.map(disabledRow)))
+    if (sections.length === 0)
+      sections.push(
+        group(
+          undefined,
+          h('div', { class: 'srow2' }, h('span', { class: 'shint' }, t('connections.empty'))),
+        ),
+      )
+    return sections
   }
 
   function header(): HTMLElement {
@@ -435,6 +544,7 @@ export function createSettingsView(
   }
 
   function selectTab(id: TabId, focus = false) {
+    focusNext = undefined
     activeTab = id
     confirmingReset = false
     render()
@@ -495,7 +605,9 @@ export function createSettingsView(
     h('section', { class: 'sgroup' }, title && h('h2', {}, title), ...rows)
 
   function render() {
-    const focused = document.activeElement?.getAttribute('data-focus')
+    const pending = focusNext
+    const focused = pending ?? document.activeElement?.getAttribute('data-focus')
+    focusNext = undefined
     const value = settings.current()
     const holdOptions = HOLD_TRIGGERS.map(
       (id) => [id, t(`settings.holdTrigger.${id}` as const)] as const,
@@ -616,7 +728,7 @@ export function createSettingsView(
           ),
         ),
       ],
-      connections: [group(undefined, ...gitlabRows())],
+      connections: connectionGroups(),
       system: [
         group(
           undefined,
@@ -673,7 +785,10 @@ export function createSettingsView(
       ),
     )
     void value
-    if (focused) body.querySelector<HTMLElement>(`[data-focus="${focused}"]`)?.focus()
+    const target = focused ? body.querySelector<HTMLElement>(`[data-focus="${focused}"]`) : null
+    target?.focus()
+    // A target that cannot take the focus yet (a connector still loading) gets it on the next drawing
+    if (pending !== undefined && document.activeElement !== target) focusNext = pending
   }
 
   function open(tab: TabId = TABS[0].id) {
@@ -683,7 +798,7 @@ export function createSettingsView(
     overlay.classList.add('open')
     render()
     body.querySelector<HTMLElement>('.snav-item[aria-selected="true"]')?.focus()
-    void loadGitLab()
+    void loadConnections()
     void api.autostart.isEnabled().then((on) => {
       autostart = on
       if (isOpen()) render()
@@ -691,9 +806,9 @@ export function createSettingsView(
   }
 
   function closeView() {
+    focusNext = undefined
     if (recording) stopRecording()
-    draftToken = ''
-    draftUrl = undefined
+    drafts.clear()
     overlay.classList.remove('open')
     deps.onClose()
   }
@@ -714,8 +829,11 @@ export function createSettingsView(
   })
 
   // A change coming from outside (opacity shortcut, elsewhere) updates the open screen
-  settings.onChange(() => {
-    if (isOpen() && local === 0) render()
+  settings.onChange((_settings, changed) => {
+    if (!isOpen()) return
+    // `dck ext enable|disable` adds or removes a connector while the screen is open
+    if (changed.includes('extensions.disabled')) void loadConnections()
+    else if (local === 0) render()
   })
 
   return {

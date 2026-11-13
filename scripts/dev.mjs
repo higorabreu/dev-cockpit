@@ -30,7 +30,7 @@ const [command, args] =
         [
           join(repository, 'packages', 'shell'),
           // A Linux workaround for Chromium's sandbox helper; the Mac runs with the sandbox
-          ...(process.platform === 'darwin' ? [] : ['--no-sandbox']),
+          ...(process.platform === 'linux' ? ['--no-sandbox'] : []),
         ],
       ]
 

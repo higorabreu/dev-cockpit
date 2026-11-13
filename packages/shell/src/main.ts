@@ -1,23 +1,26 @@
 import { spawn } from 'node:child_process'
-import { mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, openSync, readFileSync, watch, writeFileSync } from 'node:fs'
 import { realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
-import { createGitLabClient } from '@dck/adapter-gitlab'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import { createGitInspector } from '@dck/adapter-node-git'
 import { connectTo, defaultConfigDir, defaultEndpoint } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
 import {
+  type ConnectionFields,
+  connectorCatalog,
+  createConnections,
   createDockController,
   createJsonLogger,
   createTranslator,
   errorBody,
   fail,
-  gitlabTokenKey,
   hostChannels,
   pickLocale,
+  type Settings,
+  storedAccount,
   type Translate,
 } from '@dck/core'
 import {
@@ -32,7 +35,7 @@ import {
   screen,
   Tray,
 } from 'electron'
-import { createGitLabConnection } from './connections/gitlab-connection.ts'
+import { createConnectorConnections } from './connections/connector-connections.ts'
 import { launchDaemon } from './daemon/daemon-launcher.ts'
 import { type DaemonLink, startDaemonLink } from './daemon/daemon-link.ts'
 import { createViewsGateway } from './daemon/views-gateway.ts'
@@ -56,6 +59,7 @@ import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
+import { watchSettingsFile } from './settings/settings-watch.ts'
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
@@ -97,8 +101,9 @@ app.whenReady().then(async () => {
   })
 
   // Changing the window key only holds if the system accepts the new one; otherwise the old one returns
+  const settingsFile = join(app.getPath('userData'), 'settings.json')
   const settingsStore = createSettingsStore({
-    file: join(app.getPath('userData'), 'settings.json'),
+    file: settingsFile,
     logger,
     env: process.env,
     async veto(next, changed) {
@@ -173,17 +178,40 @@ app.whenReady().then(async () => {
 
   logger.info('notifications available', { supported: Notification.isSupported() })
 
-  const http = createFetchHttpClient()
-  const gitlab = createGitLabConnection({
+  const implementations = createConnectorConnections({
     secrets: platform.secrets,
-    tokenKey: gitlabTokenKey(process.env.DCK_PROFILE),
-    createSource: (url, token) => createGitLabClient({ http, baseUrl: url, token }),
-    address: {
-      get: () => settingsStore.get().settings.connections.gitlab.url,
-      set: (url) => settingsStore.update({ connections: { gitlab: { url } } }),
-    },
+    http: createFetchHttpClient(),
+    profile: process.env.DCK_PROFILE,
+    account: (id) => ({
+      get: () => storedAccount(settingsStore.get().settings, id),
+      // The settings model drops an empty e-mail, so erasing the account leaves no e-mail behind
+      set: (fields) =>
+        settingsStore.update({
+          connections: { [id]: { url: fields?.url ?? null, email: fields?.email ?? '' } },
+        }),
+    }),
     logger,
   })
+  // Which connectors are enabled follows `extensions.disabled`; it is read again when that list changes
+  const readCatalog = () => {
+    const found = connectorCatalog({
+      appVersion: app.getVersion(),
+      disabled: new Set(settingsStore.get().settings.extensions.disabled),
+      implemented: new Set(implementations.keys()),
+    })
+    for (const connector of found.missing)
+      logger.warn('connector declared without an implementation, left out', { id: connector.id })
+    return found
+  }
+  let catalog = readCatalog()
+  const connections = createConnections({
+    connectors: () => catalog.ready,
+    disabled: () => catalog.disabled,
+    implementation: (id) => implementations.get(id),
+    logger,
+  })
+  const accountOf = (settings: Settings, id: string): ConnectionFields | null =>
+    catalog.ready.some((connector) => connector.id === id) ? storedAccount(settings, id) : null
 
   let daemonLink: DaemonLink | undefined
   const views = createViewsGateway({
@@ -191,8 +219,11 @@ app.whenReady().then(async () => {
       daemonLink ? daemonLink.request(method, params) : fail(errorBody('DCK-DMN-002')),
     logger,
   })
-  const configureViews = () =>
-    void views.configure(settingsStore.get().settings.connections.gitlab.url)
+  // A disabled connector is configured with no account: its views empty out, its token and address stay
+  const configureViews = () => {
+    const { settings } = settingsStore.get()
+    for (const id of implementations.keys()) void views.configure(id, accountOf(settings, id))
+  }
 
   const bridge = registerHostBridge({
     ipcMain: createElectronIpc(ipcMain),
@@ -202,11 +233,14 @@ app.whenReady().then(async () => {
       writeText: async (text) => clipboard.writeText(text),
     },
     settings: settingsStore,
-    gitlab,
+    connections,
     views,
     external: {
       open: (url) => void electronShell.openExternal(url),
-      allowedOrigin: () => settingsStore.get().settings.connections.gitlab.url,
+      allowedOrigins: () => {
+        const { settings } = settingsStore.get()
+        return catalog.ready.flatMap(({ id }) => accountOf(settings, id)?.url ?? [])
+      },
     },
     autostart: platform.autostart,
     projects: createProjectCatalog(
@@ -272,10 +306,28 @@ app.whenReady().then(async () => {
   settingsStore.onChange((settings, changed) => {
     window.webContents.send(hostChannels.settingsChanged, settings, changed)
     if (changed.includes('window.heightRatio')) dock.refresh()
-    if (changed.includes('connections.gitlab.url')) {
+    if (changed.includes('extensions.disabled')) {
+      catalog = readCatalog()
       configureViews()
-      if (!settings.connections.gitlab.url) void gitlab.forgetToken()
     }
+    for (const [id, connection] of implementations) {
+      const prefix = `connections.${id}`
+      if (!changed.some((key) => key === prefix || key.startsWith(`${prefix}.`))) continue
+      configureViews()
+      if (!settings.connections[id]?.url) void connection.forgetToken()
+    }
+  })
+  const stopWatchingSettings = watchSettingsFile({
+    file: settingsFile,
+    watch: (folder, listener) => watch(folder, listener),
+    onChange: () => void settingsStore.reloadExtensions(),
+    scheduler: {
+      after(milliseconds, task) {
+        const timer = setTimeout(task, milliseconds)
+        return () => clearTimeout(timer)
+      },
+    },
+    logger,
   })
 
   const daemonScript = join(__dirname, 'daemon.cjs')
@@ -423,6 +475,7 @@ app.whenReady().then(async () => {
   }
 
   app.on('before-quit', () => {
+    stopWatchingSettings()
     link.stop()
     bridge.killAll()
     toggleKey.release()

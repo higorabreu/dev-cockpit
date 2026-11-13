@@ -1,66 +1,73 @@
 import { errorCodeOf } from '../errors.ts'
 import type { Clock } from '../ports/clock.ts'
-import type { CodeReviewSource, MergeRequestView } from '../ports/code-review.ts'
+import type { ConnectionFields } from '../ports/connections.ts'
 import type { Logger } from '../ports/logger.ts'
 import type { Unsubscribe } from '../ports/pty.ts'
-import type { CachedView, ViewCache, ViewSnapshot } from '../ports/views.ts'
+import type { CachedView, ViewCache, ViewSnapshot, ViewSource } from '../ports/views.ts'
 
 export interface ViewsServiceOptions {
+  // The ids of the views of one connector
+  readonly views: readonly string[]
   // Undefined when there is no token for the account
-  source(scope: string): Promise<CodeReviewSource | undefined>
+  source(account: ConnectionFields): Promise<ViewSource | undefined>
   readonly cache: ViewCache
   readonly clock: Clock
   readonly logger: Logger
 }
 
 export interface ViewsService {
+  readonly views: readonly string[]
   // Returns what is stored right now, without waiting for the network
-  snapshot(view: MergeRequestView): Promise<ViewSnapshot>
+  snapshot(view: string): Promise<ViewSnapshot>
   // Fetches from the server; simultaneous calls for the same view share one fetch
-  refresh(view: MergeRequestView): Promise<void>
-  refreshIfStale(view: MergeRequestView, maxAgeMs: number): Promise<void>
-  // Switches the account: with another scope, what was stored is discarded
-  configure(scope: string | undefined): Promise<void>
+  refresh(view: string): Promise<void>
+  refreshIfStale(view: string, maxAgeMs: number): Promise<void>
+  // Switches the account: with another one, what was stored is discarded
+  configure(account: ConnectionFields | undefined): Promise<void>
   onChange(listener: (snapshot: ViewSnapshot) => void): Unsubscribe
 }
 
 type Memory = { -readonly [K in keyof ViewSnapshot]: ViewSnapshot[K] }
 
-const VIEWS: readonly MergeRequestView[] = ['review', 'mine']
+// The address alone for an account without an e-mail, so a cache written before connectors still matches
+export const accountScope = (account: ConnectionFields): string =>
+  account.email === undefined ? account.url : `${account.email} ${account.url}`
 
 export function createViewsService(options: ViewsServiceOptions): ViewsService {
-  const { cache, clock, logger } = options
+  const { cache, clock, logger, views } = options
+  let account: ConnectionFields | undefined
   let scope: string | undefined
   let loaded: Promise<void> | undefined
-  const memory = new Map<MergeRequestView, Memory>()
-  const running = new Map<MergeRequestView, Promise<void>>()
+  const memory = new Map<string, Memory>()
+  const running = new Map<string, Promise<void>>()
   const listeners = new Set<(snapshot: ViewSnapshot) => void>()
 
-  const blank = (view: MergeRequestView): Memory => ({
+  const blank = (view: string): Memory => ({
     view,
     items: [],
     updatedAt: undefined,
     state: scope === undefined ? 'unconfigured' : 'idle',
     error: undefined,
   })
-  const entry = (view: MergeRequestView) => {
+  const entry = (view: string) => {
+    if (!views.includes(view)) throw new Error(`invariant: ${view} is not a view of this service`)
     const found = memory.get(view) ?? blank(view)
     memory.set(view, found)
     return found
   }
-  const emit = (view: MergeRequestView) => {
+  const emit = (view: string) => {
     const snapshot = { ...entry(view) }
     for (const listener of listeners) listener(snapshot)
   }
 
   async function persist() {
     if (scope === undefined) return
-    const views: Partial<Record<MergeRequestView, CachedView>> = {}
-    for (const view of VIEWS) {
+    const stored: Record<string, CachedView> = {}
+    for (const view of views) {
       const { items, updatedAt } = entry(view)
-      if (updatedAt !== undefined) views[view] = { items, updatedAt }
+      if (updatedAt !== undefined) stored[view] = { items, updatedAt }
     }
-    await cache.save({ scope, views })
+    await cache.save({ scope, views: stored })
   }
 
   // The file only applies to the current account; reads once per scope
@@ -68,7 +75,7 @@ export function createViewsService(options: ViewsServiceOptions): ViewsService {
     loaded ??= (async () => {
       const data = await cache.load()
       if (!data || data.scope !== scope) return
-      for (const view of VIEWS) {
+      for (const view of views) {
         const cached = data.views[view]
         if (cached) Object.assign(entry(view), cached)
       }
@@ -76,10 +83,11 @@ export function createViewsService(options: ViewsServiceOptions): ViewsService {
     return loaded
   }
 
-  async function fetchView(view: MergeRequestView) {
+  async function fetchView(view: string) {
     const startedScope = scope
+    const startedAccount = account
     const state = entry(view)
-    const source = startedScope === undefined ? undefined : await options.source(startedScope)
+    const source = startedAccount === undefined ? undefined : await options.source(startedAccount)
     if (scope !== startedScope) return
     if (!source) {
       state.state = 'unconfigured'
@@ -89,7 +97,7 @@ export function createViewsService(options: ViewsServiceOptions): ViewsService {
     }
     state.state = 'refreshing'
     emit(view)
-    const result = await source.mergeRequests(view)
+    const result = await source.items(view)
     // The account changed during the fetch: the result belongs to another account and is dropped
     if (scope !== startedScope) return
     if (result.ok) {
@@ -106,7 +114,7 @@ export function createViewsService(options: ViewsServiceOptions): ViewsService {
     if (result.ok) await persist()
   }
 
-  async function refresh(view: MergeRequestView) {
+  async function refresh(view: string) {
     await load()
     const current = running.get(view)
     if (current) return current
@@ -116,6 +124,8 @@ export function createViewsService(options: ViewsServiceOptions): ViewsService {
   }
 
   return {
+    views,
+
     async snapshot(view) {
       await load()
       return { ...entry(view) }
@@ -131,11 +141,13 @@ export function createViewsService(options: ViewsServiceOptions): ViewsService {
     },
 
     async configure(next) {
-      if (next === scope) return
-      scope = next
+      const nextScope = next === undefined ? undefined : accountScope(next)
+      if (nextScope === scope) return
+      account = next
+      scope = nextScope
       memory.clear()
       loaded = undefined
-      for (const view of VIEWS) emit(view)
+      for (const view of views) emit(view)
     },
 
     onChange(listener) {
