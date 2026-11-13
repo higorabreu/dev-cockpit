@@ -560,7 +560,7 @@ an Electron `type: 'panel'` at the `screen-saver` level, visible on all workspac
 no Dock icon, focused on show with `focus()` and `app.focus({ steal: true })`. The default key stays `F12` on
 every platform, so there is no per-platform default; on a Mac keyboard it is `fn+F12`. The Keychain is
 reached through `security -i` with the command on stdin, and a value with a line break is refused, since
-`security` has no escape for it. Process inspection uses `ps` (`tpgid`, `comm`, `lstart`) and `lsof -a -d cwd -Fn`.
+`security` has no escape for it. Process inspection uses `ps` (`tpgid`, `ucomm`) and `lsof -a -d cwd -Fn`.
 Tested on macOS 26.5.1 arm64 with Electron 45.3.0: the panel showed over a fullscreen app and on another
 desktop and received the keyboard without a click; F12, `Ctrl+Backtick` and `Option+Space` fired with no
 Accessibility permission; `node-pty` opened `zsh -il`; `lsof` took about 20 ms.

@@ -17,7 +17,7 @@ make Linux worse.
 | Id | Question | Proposal |
 | --- | --- | --- |
 | Q1 | Where does CI on macOS run? | **Resolved:** the repository is on GitHub, so macOS CI runs on GitHub Actions |
-| Q2 | Default key on the Mac. F12 is volume or a system function on a Mac and only arrives as F12 with `fn` or with "use F1, F2 as standard function keys" on | **Resolved (D41):** `F12` on every platform, `fn+F12` on a Mac keyboard; no per-platform default |
+| Q2 | Default key on the Mac. F12 is volume or a system function on a Mac and only arrives as F12 with `fn` or with "use F1, F2 as standard function keys" on | **Resolved (D42):** `F12` on every platform, `fn+F12` on a Mac keyboard; no per-platform default |
 | Q3 | Tab and copy shortcuts: Cmd or Ctrl? | Cmd where Terminal.app and VS Code use it (`Cmd+T`, `Cmd+W`, `Cmd+C/V`, `Cmd+1..9`, `Cmd+,`); Ctrl stays free for the shell. Full table in MAC-T7, to confirm with the tester |
 | Q4 | Distribution: only the tester (ad hoc signing) or other people (Developer ID and notarization, US$ 99 a year)? | Only the tester for now. Notarization is MAC-T14, optional |
 
@@ -71,9 +71,9 @@ The order is meant to bring the tester in as late as possible and once per batch
   `pnpm dev`, and four questions: (a) does a `type: 'panel'` window at a high level open over a fullscreen
   app and receive the keyboard? (b) do F12, `Ctrl+Backtick` and `Option+Space` reach `globalShortcut`
   without asking for Accessibility? (c) does `node-pty` open `zsh`? (d) does `security -i` write an item
-  with a quoted value and does `find-generic-password -w` read it back? The result becomes decision D41
+  with a quoted value and does `find-generic-password -w` read it back? The result becomes decision D42
   in `docs/decisions.md` and closes Q2. If (a) fails, MAC-T5 changes design before any code is written.
-  (C5, C6) Done on 2026-11-13 (macOS 26.5.1, arm64): all four pass, see D41.
+  (C5, C6) Done on 2026-11-13 (macOS 26.5.1, arm64): all four pass, see D42.
 - [ ] MAC-T2. Platform choice at boot. A `selectPlatform(process.platform)` function in the shell's
   composition root returns the set of adapters (processes, secret store, autostart, shortcut, paths);
   `main.ts` stops importing `linux-proc` and `secret-tool` directly. Drop `--no-sandbox` on the Mac. A test
@@ -150,7 +150,7 @@ The order is meant to bring the tester in as late as possible and once per batch
   monitor, restart and check autostart, close and `dck toggle`. Measurements with `DCK_LOG_DOCK=1`,
   `ps -o rss` of the app and the daemon and the cold start time. Problems come back grouped by round.
   (C5, C6, C9, C10)
-- [ ] MAC-T13. Close: decision D41 in `docs/decisions.md` (the port, window, secret store and PATH choices), the
+- [ ] MAC-T13. Close: decision D42 in `docs/decisions.md` (the port, window, secret store and PATH choices), the
   "macOS packaging" item leaves the backlog of `docs/roadmap.md`, a Mac section in the `README` and check
   the full gate. (C11)
 - [ ] MAC-T14. Optional, only if Q4 asks for distribution: a Developer ID certificate, signing with the hardened
