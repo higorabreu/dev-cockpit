@@ -476,3 +476,16 @@ two ran in one directory; installing the `statusLine` edited the user's settings
 in the agent's own status line in the same terminal and asked for no action, while a blocked agent does.
 **How to revert:** the removed code is in the history before this decision; the signal path stands
 alone and can be removed without touching the tabs.
+
+## D38. Design system select in place of the native one
+
+**Decision:** every choice from a closed list uses the kit's select (`ui/src/kit/select.ts`), never a native
+`<select>`. It is a button with the WAI-ARIA select-only combobox pattern: the focus stays on the button,
+the list follows it with `aria-activedescendant`, and it opens under the button (above when there is no
+room). The closed control has the shape of the text inputs; the list has the look of the other popup
+lists: `--surface` card, `--list-selected` on the active option and a check on the selected one. Escape
+closes only the list, Tab and a click outside close it without changing the value.
+**Reason:** the native popup is drawn by the system, outside the tokens, the fonts and the dark theme,
+and did not match the settings rows. A request from the maintainer on 2026-11-13.
+**How to revert:** give the settings view's `select` helper back its `<select>` and delete the kit module
+and `styles/select.css`.
