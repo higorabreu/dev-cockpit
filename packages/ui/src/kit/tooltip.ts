@@ -50,7 +50,9 @@ const tipOf = (anchor: HTMLElement, text: string): Candidate => {
 // `data-tip` always shows the given text; text cut by an ellipsis shows its full content
 // (or `data-tip-full`, when the visible text is only part of what should be shown)
 function candidateAt(target: EventTarget | null): Candidate | undefined {
-  let element = target instanceof HTMLElement ? target : null
+  // An icon's SVG is not an HTML element: the mouse on its strokes asks the element that holds it
+  const start = target instanceof SVGElement ? target.closest('svg')?.parentElement : target
+  let element = start instanceof HTMLElement ? start : null
   for (let depth = 0; element && depth < MAX_DEPTH; depth++, element = element.parentElement) {
     const region = regions.get(element)
     if (region) return { anchor: element, ...region }
