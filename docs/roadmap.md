@@ -6,7 +6,7 @@ ones stay here as intent until their turn comes.
 | Milestone | Delivers | Proof | State |
 | --- | --- | --- | --- |
 | 0. Spike | Decides the shell (Electron or Tauri), the hotkey on X11, the permission hook and whether the review loop has signal | Five questions answered with numbers, no blind bet | Done: Electron confirmed (D3), the review loop dropped (D11) |
-| 1. Minimal shell | A hotkey window with terminal, panel, projects and hook-based approvals | The author uses it in place of Guake for a week | 0.1.0 shipped. Deferred: approvals through a hook and an attached background agent |
+| 1. Minimal shell | A hotkey window with terminal, panel, projects and hook-based approvals | The author uses it in place of Guake for a week | 0.1.0 shipped. Deferred: approvals through a hook. Agent attention, the tab that needs you, through the agent's own hooks: [plans/agent-attention.md](../plans/agent-attention.md) (D37) |
 | 2. Flow | Real GitLab and Jira, day-to-day views, a user settings screen | The Mine and Review views replace opening Jira and GitLab | In progress: GitLab connection and views done, Jira next |
 | E. Extensions | A small foundation (manifest, contribution points, sources), then connectors and interface contributions in an extension host, then a shared index | Each phase has its own criteria in the plan | Foundation done; the harness and packs were dropped (D36); the next phase waits for a real use: [plans/extensions.md](../plans/extensions.md) (D35) |
 | 3. Polish | A diff reader with comments, task refinement | Each item with its own criterion | Planned |

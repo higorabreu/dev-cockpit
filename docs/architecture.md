@@ -20,8 +20,8 @@ code.
 4. **An MCP server** (planned) for the Claude CLI to query the app: next task, briefing, project scope.
 
 Out of scope for now: team use, accounts and permissions; being an IDE (the code reader is read-only
-and prioritizes the diff of what the agent changed); Codex support (the per-agent adapter interface is
-already foreseen); a security model against prompt injection (postponed; the minimal rule is that
+and prioritizes the diff of what the agent changed); Codex support (an agent is wired by configuration
+through the neutral `dck agent signal`, D37); a security model against prompt injection (postponed; the minimal rule is that
 external writes need approval); environment ops actions.
 
 ## Premises
@@ -37,10 +37,10 @@ packages/
   design/     tokens.json and the CSS, terminal theme and contrast checks generated from it
   ui/         the app: DOM, xterm, styles
   daemon/     local process: IPC server, views, cache
-  cli/        the dck command (toggle, ping, agent)
+  cli/        the dck command (toggle, ping, daemon, agent signal, ext)
   shell/      Electron: window, global shortcut, PTY host
   adapters/   node-pty, node-git, node-net, node-fetch, gitlab, docker-cli, secret-tool,
-              gnome-shortcuts, linux-proc, agent-claude
+              gnome-shortcuts, linux-proc, extension-files
 ```
 
 ## How the pieces fit
@@ -58,6 +58,9 @@ packages/
   (`shell/src/main.ts`) and passes them to the code that needs them.
 - **The UI is plain TypeScript on the DOM.** It talks only to the shell, through a typed host API exposed
   by the preload script; the shell talks to the daemon and validates what comes back.
+- **Agents are wired by configuration.** An agent's own hooks call `dck agent signal <state>`; the daemon
+  relays it to the window, which marks the tab that needs the user. Nothing in the code knows which agent
+  sent it (D37).
 - **Design tokens** in `packages/design/tokens.json` generate the CSS variables and the terminal theme,
   so the terminal and the panel share one palette.
 - **Portability.** No Unix assumption: paths through a library, no fixed `~/.config`, IPC behind an
@@ -73,7 +76,7 @@ Source folders in `ui` and `shell` are grouped by feature or area, with tests be
 ui/src/        main.ts, app.ts, then terminal/ tabs/ hold-menu/ panel/ projects/ views/
                settings/ kit/ platform/ styles/ types/
 shell/src/     main.ts, preload.ts, then electron/ daemon/ projects/ settings/ inspectors/
-               connections/ agent/ platform/linux/
+               connections/ platform/linux/
 ```
 
 A folder holds at most 12 source files and file names are lowercase kebab case; a test enforces both.

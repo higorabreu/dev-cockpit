@@ -73,19 +73,26 @@ teammate without the cockpit sees nothing and Claude Code is never slowed down.
 
 ## Tasks
 
-- [ ] AA-T1. `core`: the neutral states and their rules in the attention tracker (needs you, your turn,
+- [x] AA-T1. `core`: the neutral states and their rules in the attention tracker (needs you, your turn,
   ended, the quiet terminal fallback), pure and tested. (A2, A3, A4)
-- [ ] AA-T2. `dck agent signal <state>`, an `agent.signal` daemon method relaying `{ ptyId, state }`, the
+  Done in the tracker itself; it also drops the agent state when the agent's process leaves the
+  foreground, and a repeated needs you notifies once while the tab is still marked.
+- [x] AA-T2. `dck agent signal <state>`, an `agent.signal` daemon method relaying `{ ptyId, state }`, the
   shell passing it to the window, and the window feeding the tracker; the terminal output time per tab
   for the fallback. (A1, A5)
-- [ ] AA-T3. Interface: the "needs you" mark on the tab and in the tab list, its notification text, "next
+  User input comes from xterm's key events, not the write path, which also carries xterm's own replies
+  (focus and cursor reports). Measured: about 200 ms per call with Node 22 and the source CLI.
+- [x] AA-T3. Interface: the "needs you" mark on the tab and in the tab list, its notification text, "next
   finished" also visiting tabs that need you, both catalogs, screenshots in both themes. (A2, A8)
+  Also in the Sessions panel and on the All tabs button for a hidden tab; the tab list dot, which had no
+  style, now shows.
 - [ ] AA-T4. The Claude Code plugin in `integrations/claude-code/` with a marketplace manifest, a test of
   its `hooks.json`, `docs/agents.md` (install, states, wiring another agent), and a run with the real
   Claude Code: install, a permission, an answer, Esc, a resumed session, a background subagent. (A6, A7)
-- [ ] AA-T5. Remove what D26 kept dormant and this replaces: the transcript and `statusLine` readers, `dck
+- [x] AA-T5. Remove what D26 kept dormant and this replaces: the transcript and `statusLine` readers, `dck
   agent report|install|uninstall`, the agent inspector and reports in the shell. Record D37, update the
   roadmap. (A4)
+  Also removed the `agent.report` method, the neutral session model and its texts; `AgentProfile` stays.
 
 ## Risks
 

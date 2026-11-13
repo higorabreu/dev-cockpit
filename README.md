@@ -91,7 +91,8 @@ architecture, decisions and roadmap, and [AGENTS.md](AGENTS.md) for the coding s
 - Linux with X11 only, tested on Ubuntu 24.04 and GNOME. macOS is planned ([plans/macos.md](plans/macos.md))
   and Windows after it, both as adapters.
 - The package runs with `--no-sandbox`, because of Ubuntu's sandbox restriction.
-- No Claude approvals banner and no agent data in the panel (the code is dormant, see D26).
+- No Claude approvals banner and no agent metrics in the panel: the cockpit marks the tab where an agent
+  needs you instead (D37).
 - GitLab only for now; Jira and key remapping for the remaining shortcuts are not done.
 - The GNOME tray icon opens the menu and does not toggle the window directly.
 
