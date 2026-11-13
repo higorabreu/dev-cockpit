@@ -243,8 +243,11 @@
 
 /* The diff: every file in one scroll, only the rows in view exist. It scrolls both ways and reserves the
    strip on both sides, so the rows run 8px in from each edge. `--rv-view` is its visible width and
-   `--rv-x` how far it scrolled sideways, both set by the view */
+   `--rv-x` how far it scrolled sideways, both set by the view. Chromium sticks to the edge of the
+   reserved strip, not to where the rows start, so what sticks sideways keeps the strip's width
+   (`--rv-edge`) */
 .rv-lines {
+  --rv-edge: var(--size-scrollbar);
   position: relative;
   flex: 1;
   min-width: 0;
@@ -261,6 +264,8 @@
   font: 12px / 20px var(--font-mono);
   /* A ligature would show characters the file does not have */
   font-variant-ligatures: none;
+  /* Scrolled sideways, the rows would paint into the left strip, which stays empty like the right one */
+  clip-path: inset(0 0 0 var(--rv-x, 0px));
 }
 
 .rv-row {
@@ -293,7 +298,7 @@
    start, so nothing shows through them on the translucent window */
 .rv-gutter {
   position: sticky;
-  left: 0;
+  left: var(--rv-edge);
   z-index: 1;
   display: grid;
   grid-template-columns: var(--rv-num) var(--rv-num) 2ch;
@@ -355,7 +360,7 @@
 
 .rv-band {
   position: sticky;
-  left: 0;
+  left: var(--rv-edge);
   box-sizing: border-box;
   width: var(--rv-view, 100%);
   height: 100%;
@@ -419,7 +424,7 @@
 .rv-pin {
   position: sticky;
   top: 0;
-  left: 0;
+  left: var(--rv-edge);
   z-index: 2;
   height: 0;
 }

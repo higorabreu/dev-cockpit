@@ -14,11 +14,16 @@ describe('review diff on a sideways scroll', () => {
     const gutter = bodyOf('.rv-gutter')
 
     expect(gutter).toMatch(/position:\s*sticky/)
-    expect(gutter).toMatch(/left:\s*0/)
+    expect(gutter).toContain('left: var(--rv-edge)')
   })
 
   it('should cut the code where the gutter starts so nothing shows through it', () => {
     expect(bodyOf('.rv-row[data-kind] .rv-code')).toContain('clip-path: inset(0 0 0 var(--rv-x')
+  })
+
+  it('should keep the left strip empty while the rows are scrolled sideways', () => {
+    expect(bodyOf('.rv-inner')).toContain('clip-path: inset(0 0 0 var(--rv-x')
+    expect(bodyOf('.rv-lines')).toContain('--rv-edge: var(--size-scrollbar)')
   })
 
   it('should keep the text of hunk headers, hidden lines and file headers in view', () => {
