@@ -78,14 +78,22 @@ extracted here, from the two real connectors, as D5 asks.
 
 ## Tasks
 
-- [ ] CN-T1. `core`: the `connectors` contribution point, the two built-in connector extensions, refusal
+- [x] CN-T1. `core`: the `connectors` contribution point, the two built-in connector extensions, refusal
   of connectors from other sources, the per-id connection and views ports, the view item union. (K2, K3)
-- [ ] CN-T2. Shell, daemon, host API and CLI move to connector ids; GitLab unchanged. (K1, K8)
-- [ ] CN-T3. Interface: Connections page and Work tabs drawn from the connected connectors, screenshots
-  in both themes and languages. (K1, K7, K9)
+  Only `dck.gitlab` is declared: `dck.jira` arrives with its code in CN-T4, so no enabled declaration ships
+  without an implementation. A contribution point can limit its sources; `connectors` allows only built-in.
+  A view also declares its empty text and, for one view, the rail badge, so the interface names no view id.
+- [x] CN-T2. Shell, daemon, host API and CLI move to connector ids; GitLab unchanged. (K1, K8) `dck ext
+  enable|disable` did not exist, so it was added for K2, and the window watches `settings.json` to apply
+  `extensions.disabled` at once. GitLab keeps `views-cache.json`, and an old cache loads as merge
+  requests. A malformed connect request now answers `DCK-IPC-003` instead of GitLab's address error.
+- [x] CN-T3. Interface: Connections page and Work tabs drawn from the connected connectors, screenshots
+  in both themes and languages. (K1, K7, K9) With every connector disabled the Connections page says how
+  to enable one. The Work header keeps its height when there is no tab.
 - [ ] CN-T4. `@dck/adapter-jira`, its schemas and error codes, and the Jira connection. (K4, K8)
 - [ ] CN-T5. The Tasks tab: row, filter, Ctrl+C, empty text, both catalogs, screenshots. (K5, K6, K9)
-- [ ] CN-T6. Docs: `docs/extensions.md` (the `connectors` point), the roadmap (milestone 2), D41.
+- [ ] CN-T6. Docs: `docs/extensions.md` (the `connectors` point), the roadmap (milestone 2), D41. Phase A
+  part done (the `connectors` point, `dck ext enable|disable`, D41); the roadmap waits for phase B.
 
 ## Risks
 
