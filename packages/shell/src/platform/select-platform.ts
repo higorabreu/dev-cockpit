@@ -1,8 +1,16 @@
 import { join } from 'node:path'
 import { createGnomeShortcut } from '@dck/adapter-gnome-shortcuts'
-import { createProcessInspector, createProcessScanner } from '@dck/adapter-linux-proc'
+import * as linuxProc from '@dck/adapter-linux-proc'
+import * as macosProc from '@dck/adapter-macos-proc'
 import { createSecretToolStore } from '@dck/adapter-secret-tool'
-import type { Autostart, DesktopShortcut, Logger, ProcessInspector, SecretStore } from '@dck/core'
+import type {
+  Autostart,
+  DesktopShortcut,
+  Logger,
+  ProcessInspector,
+  ProcessScanner,
+  SecretStore,
+} from '@dck/core'
 import { createXdgAutostart, defaultAutostartDirectory } from './linux/xdg-autostart.ts'
 
 export interface PlatformContext {
@@ -18,13 +26,13 @@ export interface PlatformContext {
 
 export interface Platform {
   readonly processes: ProcessInspector
-  readonly processScanner: ReturnType<typeof createProcessScanner>
+  readonly processScanner: ProcessScanner
   readonly secrets: SecretStore
   readonly autostart: Autostart
   readonly desktopShortcut: DesktopShortcut | undefined
 }
 
-// macOS still gets the Linux processes, secret store and autostart until MAC-T3, T4 and T8 replace them
+// macOS still gets the Linux secret store and autostart until MAC-T3 and T8 replace them
 export function selectPlatform(context: PlatformContext): Platform {
   const { platform, env, home, packaged, execPath, appPath, resourcesPath, logger } = context
   const onGnome =
@@ -32,10 +40,11 @@ export function selectPlatform(context: PlatformContext): Platform {
   // A Linux workaround for Chromium's sandbox helper; the Mac runs with the sandbox
   const sandbox = platform === 'darwin' ? [] : ['--no-sandbox']
   const app = packaged ? [execPath] : [execPath, appPath]
+  const proc = platform === 'darwin' ? macosProc : linuxProc
 
   return {
-    processes: createProcessInspector(),
-    processScanner: createProcessScanner(),
+    processes: proc.createProcessInspector(),
+    processScanner: proc.createProcessScanner(),
     secrets: createSecretToolStore(),
     autostart: createXdgAutostart({
       directory: env.DCK_AUTOSTART_DIR ?? defaultAutostartDirectory(env, home),

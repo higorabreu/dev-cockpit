@@ -56,8 +56,25 @@ export interface ProcessInfo {
   readonly foregroundStart?: string
 }
 
+// Foreground name when the process inspector cannot read it
+export const UNKNOWN_FOREGROUND = 'desconhecido'
+
 export interface ProcessInspector {
   inspect(pid: number): Promise<ProcessInfo | undefined>
+}
+
+export interface ScanQuery {
+  // Path that must appear among the process arguments
+  readonly argument: string
+  // DCK_ENDPOINT value of the searched process; undefined for the default endpoint
+  readonly endpoint: string | undefined
+  readonly exclude?: number
+}
+
+// Finds processes by what was passed on the command line, for example an old daemon that
+// is still alive after an update
+export interface ProcessScanner {
+  find(query: ScanQuery): Promise<readonly number[]>
 }
 
 export type SessionActivity = 'idle' | 'agent' | 'busy'

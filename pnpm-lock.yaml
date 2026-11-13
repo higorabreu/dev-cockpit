@@ -61,6 +61,12 @@ importers:
         specifier: workspace:^
         version: link:../../core
 
+  packages/adapters/macos-proc:
+    dependencies:
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../../core
+
   packages/adapters/node-fetch:
     dependencies:
       '@dck/core':
@@ -152,6 +158,9 @@ importers:
       '@dck/adapter-linux-proc':
         specifier: workspace:^
         version: link:../adapters/linux-proc
+      '@dck/adapter-macos-proc':
+        specifier: workspace:^
+        version: link:../adapters/macos-proc
       '@dck/adapter-node-fetch':
         specifier: workspace:^
         version: link:../adapters/node-fetch
