@@ -12,6 +12,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { join } from 'node:path'
+import { dckWrapper } from './mac-bundle.mjs'
 import {
   buildCli,
   electronDist,
@@ -113,15 +114,7 @@ for (const binary of ['pty.node', 'spawn-helper']) {
 // 7. The packaged `dck` CLI
 await buildCli(join(resources, 'dck.mjs'))
 mkdirSync(join(resources, 'bin'))
-writeFileSync(
-  join(resources, 'bin', 'dck'),
-  `#!/bin/sh
-# Runs the CLI inside the packaged Electron; link it into the PATH with ln -s
-here=$(dirname "$(realpath "$0")")
-exec env ELECTRON_RUN_AS_NODE=1 DCK_PACKAGED=1 "$here/../../MacOS/${PRODUCT}" "$here/../dck.mjs" "$@"
-`,
-  { mode: 0o755 },
-)
+writeFileSync(join(resources, 'bin', 'dck'), dckWrapper(PRODUCT), { mode: 0o755 })
 
 // 8. Ad hoc signature: renaming broke Electron's, and Apple Silicon refuses to run unsigned code
 run('codesign', ['--force', '--deep', '--sign', '-', bundle])
