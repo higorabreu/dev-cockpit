@@ -12,7 +12,10 @@ import type {
   SecretStore,
 } from '@dck/core'
 import { readLoginPath } from './darwin/login-path.ts'
+import { createPanelWindow, type PanelApp } from './darwin/panel-window.ts'
+import { createRegularWindow } from './linux/regular-window.ts'
 import { createXdgAutostart, defaultAutostartDirectory } from './linux/xdg-autostart.ts'
+import type { PlatformWindow } from './platform-window.ts'
 
 export interface PlatformContext {
   readonly platform: NodeJS.Platform
@@ -23,6 +26,8 @@ export interface PlatformContext {
   readonly appPath: string
   readonly resourcesPath: string
   readonly logger: Logger
+  // Electron's app, which the Mac panel activates, hides and keeps out of the Dock
+  readonly app: PanelApp
 }
 
 export interface Platform {
@@ -34,6 +39,7 @@ export interface Platform {
   readonly terminal: Pick<PtyOptions, 'file' | 'args'>
   // The PATH child processes should get, or undefined to keep the inherited one
   loginPath(): Promise<string | undefined>
+  readonly window: PlatformWindow
 }
 
 // macOS still gets the Linux processes, secret store and autostart until MAC-T3, T4 and T8 replace them
@@ -79,5 +85,6 @@ export function selectPlatform(context: PlatformContext): Platform {
     terminal,
     loginPath: async () =>
       platform === 'darwin' ? readLoginPath({ shell: terminal.file, logger }) : undefined,
+    window: platform === 'darwin' ? createPanelWindow(context.app) : createRegularWindow(),
   }
 }
