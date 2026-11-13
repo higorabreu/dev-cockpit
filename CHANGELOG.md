@@ -3,6 +3,25 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.3.0](https://github.com/higorabreu/dev-cockpit/compare/v0.2.0...v0.3.0) (2026-11-13)
+
+
+### Features
+
+* add the design system select and use it in the settings ([#18](https://github.com/higorabreu/dev-cockpit/issues/18)) ([168ee37](https://github.com/higorabreu/dev-cockpit/commit/168ee37a3c199204ebb77bbba457a16a9beae3ec))
+* add the extension finder port, the files adapter and the disabled ([#10](https://github.com/higorabreu/dev-cockpit/issues/10)) ([104b227](https://github.com/higorabreu/dev-cockpit/commit/104b22720696b60dfa91fc0de2b45299633fbd8d))
+* add the extension manifest, contribution points and loader to core ([#8](https://github.com/higorabreu/dev-cockpit/issues/8)) ([1af0998](https://github.com/higorabreu/dev-cockpit/commit/1af09982a66033ea912de3cca8aed1370ea96fe0))
+* mark the tabs where an agent needs you or finished its turn ([#15](https://github.com/higorabreu/dev-cockpit/issues/15)) ([527a211](https://github.com/higorabreu/dev-cockpit/commit/527a2111f0f0677e7cd55d299b0de0220273c0e5))
+* suggest connecting an agent from Sessions and the hold menu ([#19](https://github.com/higorabreu/dev-cockpit/issues/19)) ([eac782e](https://github.com/higorabreu/dev-cockpit/commit/eac782eb51372a425fb26e56d833bd5980040aa5))
+
+
+### Bug Fixes
+
+* keep the focus inside the open settings overlay ([#13](https://github.com/higorabreu/dev-cockpit/issues/13)) ([81a9bd9](https://github.com/higorabreu/dev-cockpit/commit/81a9bd9afac7cd6283b6d9312c7779ab2ca334d5))
+* open terminal links with Ctrl+click in the default browser ([#17](https://github.com/higorabreu/dev-cockpit/issues/17)) ([9b8d849](https://github.com/higorabreu/dev-cockpit/commit/9b8d8495065c68209e8ac3b51d55c9229543b055))
+* show the pointer on everything clickable ([#16](https://github.com/higorabreu/dev-cockpit/issues/16)) ([310b6fa](https://github.com/higorabreu/dev-cockpit/commit/310b6fa63ea5fc05761a6d8aecf2e157f096d2e0))
+* tighten the extension foundation and keep app data in a dev-cockpit folder ([#11](https://github.com/higorabreu/dev-cockpit/issues/11)) ([8328209](https://github.com/higorabreu/dev-cockpit/commit/83282093dcc672d1bf2a59d89a2a4335f8387797))
+
 ## [0.2.0](https://github.com/higorabreu/dev-cockpit/compare/v0.1.0...v0.2.0) (2026-11-12)
 
 
