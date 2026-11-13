@@ -3,6 +3,27 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.5.0](https://github.com/higorabreu/dev-cockpit/compare/v0.4.0...v0.5.0) (2026-11-13)
+
+
+### Features
+
+* group tasks by progress, filter them by project and search by word start ([#31](https://github.com/higorabreu/dev-cockpit/issues/31)) ([5a01ea6](https://github.com/higorabreu/dev-cockpit/commit/5a01ea6cb0f315f5ea5a88b210d2149d3f7e2b13))
+* name the work tabs by action and group them by service ([#30](https://github.com/higorabreu/dev-cockpit/issues/30)) ([9b6d9d6](https://github.com/higorabreu/dev-cockpit/commit/9b6d9d640cc3f78d5146bfa612e17ad8f0dd9691))
+* open the window as a panel over every macOS space ([#40](https://github.com/higorabreu/dev-cockpit/issues/40)) ([4d4d725](https://github.com/higorabreu/dev-cockpit/commit/4d4d7253670cc641f2c045e1a26dfdaa04fa0f54))
+* package a macOS app that finds the login shell's PATH ([#41](https://github.com/higorabreu/dev-cockpit/issues/41)) ([5ab9265](https://github.com/higorabreu/dev-cockpit/commit/5ab9265f42fb7d54e69bda4fa1ac3d5924f351db))
+* review the tab's changes beside its terminal with Ctrl+Shift+D ([3c4a059](https://github.com/higorabreu/dev-cockpit/commit/3c4a05934504ac5ff17dd823641a3114965538cf))
+* show each tab's folder and process on macOS ([#38](https://github.com/higorabreu/dev-cockpit/issues/38)) ([2161571](https://github.com/higorabreu/dev-cockpit/commit/21615715c024a3271a864fe425dce90011da6145))
+* store secrets in the macOS Keychain ([#36](https://github.com/higorabreu/dev-cockpit/issues/36)) ([c1f1046](https://github.com/higorabreu/dev-cockpit/commit/c1f10468918ea5e261b289fced437a905bd84130))
+
+
+### Bug Fixes
+
+* keep scrolling lists even between the card edges ([#33](https://github.com/higorabreu/dev-cockpit/issues/33)) ([f853a0d](https://github.com/higorabreu/dev-cockpit/commit/f853a0df8af9be11f73bb53c7d703ef0197b14a4))
+* save the views cache safely and stop sending to a destroyed window ([#37](https://github.com/higorabreu/dev-cockpit/issues/37)) ([64eb7a7](https://github.com/higorabreu/dev-cockpit/commit/64eb7a71af2c8230cca8559c296a62da6704ec4e))
+* show an icon's tooltip when the mouse is on its strokes ([3c4a059](https://github.com/higorabreu/dev-cockpit/commit/3c4a05934504ac5ff17dd823641a3114965538cf))
+* word an unknown command through i18n and harden the macOS process adapter ([#39](https://github.com/higorabreu/dev-cockpit/issues/39)) ([99322a2](https://github.com/higorabreu/dev-cockpit/commit/99322a2e0d087b62c7af1c48ec00ca4b154e14d9))
+
 ## [0.4.0](https://github.com/higorabreu/dev-cockpit/compare/v0.3.0...v0.4.0) (2026-11-13)
 
 
