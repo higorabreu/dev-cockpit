@@ -24,5 +24,9 @@ paths:
   and commands. No emoji.
 - New interface text goes through the translator in both catalogs; the language follows the system and the
   user's choice lives in settings.
+- **Pointer:** everything the user can click shows `cursor: pointer` and a disabled control does not. The
+  rule lives once in `styles/base.css` for native controls and clickable roles; a clickable element that is
+  neither (a `div` row with a click handler) sets it in its own style. A component never sets `cursor:
+  default` on a control. Text fields keep the text cursor.
 - Styles for a feature go in its file in `ui/src/styles/`, imported in order by `styles/index.css`.
 - Components are keyboard accessible with the shortcut visible beside the action (see the accessibility rule).
