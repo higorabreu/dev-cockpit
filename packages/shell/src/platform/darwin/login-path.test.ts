@@ -1,6 +1,7 @@
+import { execFileSync } from 'node:child_process'
 import type { Logger } from '@dck/core'
 import { describe, expect, it } from 'vitest'
-import { type LoginPathDeps, readLoginPath } from './login-path.ts'
+import { type LoginPathDeps, readLoginPath, runLoginShell } from './login-path.ts'
 
 function deps(run: NonNullable<LoginPathDeps['run']>) {
   const warnings: string[] = []
@@ -73,5 +74,74 @@ describe('readLoginPath', () => {
     // Assert
     expect(path).toBeUndefined()
     expect(warnings).toEqual(['login shell PATH is not valid, keeping the inherited one'])
+  })
+})
+
+// Real processes: what matters here is how the operating system stops a shell that will not end
+describe('runLoginShell', () => {
+  const running = (command: string) =>
+    execFileSync('ps', ['-eo', 'args'], { encoding: 'utf8' })
+      .split('\n')
+      .some((line) => line.trim() === command)
+  const gone = async (command: string) => {
+    for (let attempt = 0; attempt < 20 && running(command); attempt++)
+      await new Promise((resolve) => setTimeout(resolve, 25))
+    return !running(command)
+  }
+
+  it('should give up within the timeout and leave no process when the shell ignores SIGTERM', async () => {
+    // Arrange
+    const started = Date.now()
+
+    // Act
+    const result = await runLoginShell('/bin/sh', ['-c', "trap '' TERM; sleep 7.31; :"], 200).then(
+      () => 'resolved',
+      (error: unknown) => String(error),
+    )
+
+    // Assert
+    expect(result).toBe('Error: timed out after 200 ms')
+    expect(Date.now() - started).toBeLessThan(1000)
+    expect(await gone('sleep 7.31')).toBe(true)
+  })
+
+  it('should return as soon as the closing mark arrives when the shell keeps running after it', async () => {
+    // Arrange
+    const started = Date.now()
+
+    // Act
+    const output = await runLoginShell(
+      '/bin/sh',
+      ['-c', "printf 'hi __DCK_PATH__/usr/bin__DCK_PATH__'; sleep 7.32; :"],
+      5000,
+    )
+
+    // Assert
+    expect(output).toBe('hi __DCK_PATH__/usr/bin__DCK_PATH__')
+    expect(Date.now() - started).toBeLessThan(1000)
+    expect(await gone('sleep 7.32')).toBe(true)
+  })
+
+  it('should not wait for input when the startup files read from stdin', async () => {
+    // Arrange
+    const script = "read answer; printf '__DCK_PATH__/bin__DCK_PATH__'"
+
+    // Act
+    const output = await runLoginShell('/bin/sh', ['-c', script], 1000)
+
+    // Assert
+    expect(output).toBe('__DCK_PATH__/bin__DCK_PATH__')
+  })
+
+  it('should stop reading at the cap when the shell prints without end', async () => {
+    // Arrange
+    const started = Date.now()
+
+    // Act
+    const output = await runLoginShell('/bin/sh', ['-c', 'yes; :'], 5000)
+
+    // Assert
+    expect(output.length).toBe(64 * 1024)
+    expect(Date.now() - started).toBeLessThan(1000)
   })
 })
