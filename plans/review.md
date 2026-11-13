@@ -81,7 +81,7 @@ comment) into the tab's prompt without Enter, so any agent can take it. Detailed
 
 ## Tasks
 
-- [ ] RV-T1. `core`: the pane model of a tab (one or two panes, ratio, focus), pure and tested.
+- [x] RV-T1. `core`: the pane model of a tab (one or two panes, ratio, focus), pure and tested.
 - [ ] RV-T2. `core`: the diff model, the unified diff parser and the word change marking; the
   `DiffSource` port. (R3, R4)
 - [ ] RV-T3. `node-git`: the diff adapter for both scopes, untracked files, the base branch, edge cases,
