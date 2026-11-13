@@ -19,6 +19,19 @@ const shell = { activity: 'idle' as const, process: 'zsh' }
 const outputAt = (time: number) => () => time
 
 describe('createAttentionTracker with agent signals', () => {
+  it('should tell the last state of the agent when the review asks for it', () => {
+    const { tracker, advance } = setup()
+
+    tracker.signal('a', 'working', true)
+    const working = tracker.agent('a')
+    advance(1000)
+    tracker.signal('a', 'your-turn', true)
+
+    expect(working).toBe('working')
+    expect(tracker.agent('a')).toBe('your-turn')
+    expect(tracker.agent('b')).toBeUndefined()
+  })
+
   it('should mark the tab and ask for a notification when the agent needs the user out of sight', () => {
     const { tracker } = setup()
 

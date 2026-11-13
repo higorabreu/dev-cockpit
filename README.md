@@ -58,6 +58,7 @@ next launch, `--yes` restarts without asking and `--skip-build` installs the `.d
 | `Ctrl+Shift+P` | Project search (`Ctrl+D` pins or unpins a favorite) |
 | `Ctrl+Shift+M` | Merge request views |
 | `Ctrl+Shift+B` | Side panel |
+| `Ctrl+Shift+D` | Review what changed in the tab's repository beside its terminal (`Esc` back to the terminal; inside it `↑↓`, `Enter`, `[` `]` file, `n` `p` hunk, `Ctrl+R` refresh) |
 | `Ctrl+Shift+Up` / `Down` | Opacity |
 | `Ctrl +`, `-`, `0` | Font size |
 | `Ctrl+Shift+L` | Switch between light and dark theme |

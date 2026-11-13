@@ -5,7 +5,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
-import { createGitInspector } from '@dck/adapter-node-git'
+import { createGitDiffSource, createGitInspector } from '@dck/adapter-node-git'
 import { connectTo, defaultConfigDir, defaultEndpoint } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
 import {
@@ -255,6 +255,7 @@ app.whenReady().then(async () => {
       createRecencyStore(join(app.getPath('userData'), 'recent-projects.json'), logger),
       createFavoritesStore(join(app.getPath('userData'), 'favorite-projects.json'), logger),
     ),
+    review: createGitDiffSource(),
     sessions: createSessionInspector({
       processes: platform.processes,
       git: createGitInspector(),

@@ -96,7 +96,8 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
       if (element.offsetParent !== null) fit.fit()
     })
   })
-  observer.observe(options.host)
+  // The pane, not the tab: a split changes the terminal's width while the tab keeps its own
+  observer.observe(element)
 
   return {
     element,

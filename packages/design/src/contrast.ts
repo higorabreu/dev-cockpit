@@ -46,6 +46,18 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     ['warning mark on the window', rgb(color.warning), rgb(color.bg), GRAPHIC],
     ['warning mark on the active tab', rgb(color.warning), rgb(color.tabActive), GRAPHIC],
     ['critical on the surface', rgb(color.critical), surface, TEXT],
+    // A diff's code stays primary text on every tint; numbers and signs take the line's own ink
+    ['code on an added line', fg, rgb(color.diffAdd), TEXT],
+    ['code on an added word', fg, rgb(color.diffAddWord), TEXT],
+    ['number on an added line', rgb(color.diffAddInk), rgb(color.diffAdd), TEXT],
+    ['added count on the window', rgb(color.diffAddInk), rgb(color.bg), TEXT],
+    ['code on a removed line', fg, rgb(color.diffRemove), TEXT],
+    ['code on a removed word', fg, rgb(color.diffRemoveWord), TEXT],
+    ['number on a removed line', rgb(color.diffRemoveInk), rgb(color.diffRemove), TEXT],
+    ['removed count on the window', rgb(color.diffRemoveInk), rgb(color.bg), TEXT],
+    ['modified file mark on the window', rgb(color.warning), rgb(color.bg), GRAPHIC],
+    ['added file mark on the window', rgb(color.success), rgb(color.bg), GRAPHIC],
+    ['deleted file mark on the window', rgb(color.critical), rgb(color.bg), GRAPHIC],
   ]
 
   // The dark theme's black serves as background for colored text and is not read as text

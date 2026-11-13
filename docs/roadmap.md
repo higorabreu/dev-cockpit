@@ -9,7 +9,7 @@ ones stay here as intent until their turn comes.
 | 1. Minimal shell | A hotkey window with terminal, panel, projects and hook-based approvals | The author uses it in place of Guake for a week | 0.1.0 shipped. Deferred: approvals through a hook. Agent attention, the tab that needs you, through the agent's own hooks: [plans/agent-attention.md](../plans/agent-attention.md) (D37) |
 | 2. Flow | Real GitLab and Jira, day-to-day views, a user settings screen | The Mine and Review views replace opening Jira and GitLab | In progress: GitLab (To review, Follow up) and Jira Cloud (Tasks, read only) connected as built-in connectors (D41) |
 | E. Extensions | A small foundation (manifest, contribution points, sources), then connectors and interface contributions in an extension host, then a shared index | Each phase has its own criteria in the plan | Foundation done; the harness and packs were dropped (D36); the next phase waits for a real use: [plans/extensions.md](../plans/extensions.md) (D35) |
-| 3. Polish | A diff reader with comments, task refinement | Each item with its own criterion | Planned |
+| 3. Polish | A diff reader with comments, task refinement | Each item with its own criterion | In progress: the read-only review beside the terminal (Ctrl+Shift+D, D47) is phase 1 of [plans/review.md](../plans/review.md); comments back to the agent are phase 2 |
 
 ## Why this order
 

@@ -1,0 +1,73 @@
+/* A tab: its terminal and, beside it, an optional second pane. Only the active tab is visible, and the
+   others keep their size so their terminals stay fitted */
+.tabview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  visibility: hidden;
+}
+
+.tabview.active {
+  visibility: visible;
+}
+
+.session {
+  box-sizing: border-box;
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 8px 0 8px 10px;
+  overflow: hidden;
+}
+
+.session[hidden] {
+  display: none;
+}
+
+/* 1px of line between the panes; the grip around it is 9px wide. Under the mouse and while dragging the
+   line becomes 2px of muted, like the panel's; only the keyboard focus (`:focus-visible`, never a click
+   or a drag) draws it in the foreground, 2px like every other focus ring */
+.pane-divider {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  width: 1px;
+  background: var(--line);
+  outline: none;
+  cursor: col-resize;
+}
+
+.pane-divider[hidden] {
+  display: none;
+}
+
+.pane-divider::before {
+  content: "";
+  position: absolute;
+  inset: 0 -4px;
+}
+
+.pane-divider::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1px;
+  width: 2px;
+  background: transparent;
+  transition: background var(--motion-fast);
+}
+
+.pane-divider:hover::after,
+.pane-divider[data-drag]::after {
+  background: var(--muted);
+}
+
+.pane-divider:focus-visible::after {
+  background: var(--fg);
+}
+
+/* A drag that starts on a divider already focused by the keyboard stays a drag, not a focus ring */
+.pane-divider[data-drag]:focus-visible::after {
+  background: var(--muted);
+}
