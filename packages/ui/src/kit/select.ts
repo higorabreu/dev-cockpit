@@ -109,7 +109,8 @@ export function createSelect(deps: SelectDeps) {
     const fitsBelow = anchor.bottom + GAP + height <= window.innerHeight - EDGE
     const fitsAbove = anchor.top - GAP - height >= EDGE
     const top = fitsBelow || !fitsAbove ? anchor.bottom + GAP : anchor.top - GAP - height
-    const left = Math.max(EDGE, Math.min(anchor.left, window.innerWidth - width - EDGE))
+    // Settings controls sit on the right of their row, so the list keeps the button's right edge
+    const left = Math.max(EDGE, Math.min(anchor.right - width, window.innerWidth - width - EDGE))
     list.style.top = `${Math.round(top)}px`
     list.style.left = `${Math.round(left)}px`
   }
@@ -117,6 +118,15 @@ export function createSelect(deps: SelectDeps) {
   // The list is fixed to the window, so it closes when the page under it scrolls or resizes
   function onScroll(event: Event) {
     if (event.target !== list) close()
+  }
+
+  // A click outside only closes the list, like a native select, instead of reaching the screen behind it
+  function onOutside(event: MouseEvent) {
+    const target = event.target
+    if (target instanceof Node && (button.contains(target) || list.contains(target))) return
+    event.preventDefault()
+    event.stopPropagation()
+    close()
   }
 
   function open(index: number) {
@@ -127,6 +137,7 @@ export function createSelect(deps: SelectDeps) {
       button.setAttribute('aria-expanded', 'true')
       place()
       document.addEventListener('scroll', onScroll, true)
+      document.addEventListener('mousedown', onOutside, true)
       window.addEventListener('resize', close)
     }
     setActive(index)
@@ -134,6 +145,7 @@ export function createSelect(deps: SelectDeps) {
 
   function close() {
     document.removeEventListener('scroll', onScroll, true)
+    document.removeEventListener('mousedown', onOutside, true)
     window.removeEventListener('resize', close)
     if (!isOpen()) return
     list.hidden = true

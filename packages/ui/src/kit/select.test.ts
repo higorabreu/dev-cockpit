@@ -291,6 +291,38 @@ describe('createSelect', () => {
     expect(button.getAttribute('aria-expanded')).toBe('false')
   })
 
+  it('should only close the list when the mouse presses outside it while open', () => {
+    const { button, list, changes } = setup()
+    const outside = document.createElement('div')
+    document.body.append(outside)
+    let reached = false
+    document.body.addEventListener('mousedown', () => {
+      reached = true
+    })
+    button.click()
+
+    outside.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+
+    expect(list.hidden).toBe(true)
+    expect(reached).toBe(false)
+    expect(changes).toEqual([])
+  })
+
+  it('should let a mouse press outside reach the page when the list is closed', () => {
+    const { list } = setup()
+    const outside = document.createElement('div')
+    document.body.append(outside)
+    let reached = false
+    document.body.addEventListener('mousedown', () => {
+      reached = true
+    })
+
+    outside.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+
+    expect(list.hidden).toBe(true)
+    expect(reached).toBe(true)
+  })
+
   it('should close without changing when the focus leaves the button', () => {
     const { button, changes } = setup()
     const outside = document.createElement('button')

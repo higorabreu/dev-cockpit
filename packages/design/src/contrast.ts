@@ -39,6 +39,7 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     ['control border on the surface', rgb(color.controlLine), surface, GRAPHIC],
     ['control border on the window', rgb(color.controlLine), rgb(color.bg), GRAPHIC],
     ['primary button text', rgb(color.accentInk), rgb(color.accent), TEXT],
+    ['checked box on the surface', rgb(color.accent), surface, GRAPHIC],
     ['success on the surface', rgb(color.success), surface, TEXT],
     ['warning on the surface', rgb(color.warning), surface, TEXT],
     // The needs you mark sits on the tab bar and on the active tab or the selected row of the tab list

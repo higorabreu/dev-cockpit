@@ -331,3 +331,8 @@
   color: var(--muted);
   font-size: 12px;
 }
+
+/* A checked box uses the design system's accent, not the browser's blue */
+.scontrol input[type="checkbox"] {
+  accent-color: var(--accent);
+}
