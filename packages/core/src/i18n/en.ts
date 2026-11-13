@@ -320,4 +320,9 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-JRA-006': 'Unexpected Jira response',
   'error.DCK-JRA-007': 'Invalid Jira address',
   'error.DCK-JRA-008': 'Invalid Atlassian account email',
+  'error.DCK-GIT-001': 'Git could not read the changes',
+  'error.DCK-GIT-002': 'Git took too long to answer',
+  'error.DCK-GIT-003': 'The changes are too large to show',
+  'error.DCK-GIT-004': 'The file is outside the repository',
+  'error.DCK-GIT-005': 'Git is not installed',
 }

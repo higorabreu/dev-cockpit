@@ -50,6 +50,8 @@ export interface DiffFile {
   readonly hunks: readonly DiffHunk[]
   // The size in bytes of a binary file, when known
   readonly size?: number
+  // Too large to read: only its size is shown
+  readonly omitted?: true
   // How many lines the new version has, so the unchanged lines after the last hunk can be shown
   readonly newLineCount?: number
 }

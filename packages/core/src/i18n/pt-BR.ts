@@ -320,6 +320,11 @@ export const ptBR = {
   'error.DCK-JRA-006': 'Resposta inesperada do Jira',
   'error.DCK-JRA-007': 'Endereço do Jira inválido',
   'error.DCK-JRA-008': 'E-mail da conta Atlassian inválido',
+  'error.DCK-GIT-001': 'O Git não conseguiu ler as alterações',
+  'error.DCK-GIT-002': 'O Git demorou demais para responder',
+  'error.DCK-GIT-003': 'As alterações são grandes demais para mostrar',
+  'error.DCK-GIT-004': 'O arquivo está fora do repositório',
+  'error.DCK-GIT-005': 'O Git não está instalado',
 } as const
 
 export type MessageKey = keyof typeof ptBR
