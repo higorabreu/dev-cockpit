@@ -524,17 +524,46 @@ is logged by kind, never by path.
 app of a launcher or a script runs it.
 **How to revert:** drop `attachPaths` from the terminal session and the `paths` channels from the bridge.
 
-## D41. macOS: a panel window, F12 on every platform and the Keychain through `security -i`
+## D41. GitLab becomes a built-in connector, and the product speaks of connectors by id
+
+**Decision:** a connector is a contribution of the extension system (`connectors`, the first registered
+point, `plans/connectors.md`). It declares its id, its name, the fields of its connection (address, an
+optional account e-mail, a token with its hint) and its views (id, title, item kind `mergeRequest` or
+`issue`, and which one feeds the rail badge). GitLab ships as the built-in extension `dck.gitlab`; Jira
+arrives as `dck.jira` only with its code, so no extension is declared without an implementation. Only
+built-in extensions may declare a connector until the extension host exists (D35): one from another source
+is refused with `DCK-EXT-002`. The window and the daemon find a connector's code by its id; an enabled
+connector with no code is logged and left out. Everything outside a connector's own files is per id:
+`connections.<id>` in the settings (GitLab's `connections.gitlab.url` keeps its path and meaning), the
+keyring key `<id>.token` with the profile prefix (`gitlab.token` and `dev:gitlab.token` are unchanged),
+the host channels `connections:list|status|connect|disconnect` and `views:*` by view id, one views service
+and one cache file per connector in the daemon (GitLab keeps `views-cache.json`, and a cache written before
+reads as merge requests), view items as a union by `kind`, and daemon protocol 5. The Connections page
+draws one section per enabled connector from its declaration, and the Work screen shows only the tabs of
+connected accounts, with the "Account not connected" notice and an "Open Connections" button when there is
+none. `dck ext enable` and `dck ext disable` manage `extensions.disabled`; the window watches the settings
+file and applies that list at once, and a disabled connector keeps its address and token. Connections lists
+the disabled built-in connectors with an Enable button; disabling stays in the CLI. A connector or view id
+already used by an extension loaded before refuses the later one.
+**Reason:** not every company uses GitLab, and Jira is next (D5): two real connectors before an external
+contract. Keeping the contract internal and the code built in avoids designing the host before it is needed.
+**Accepted cost:** the CLI now writes `settings.json` (only `extensions.disabled`, in the window's format);
+a request for an id that is not an enabled connector is refused with `DCK-IPC-003` instead of GitLab's
+address error.
+**How to revert:** revert the commits of phase A; the settings file and the keyring key did not change, so
+an existing setup keeps working on either side.
+
+## D42. macOS: a panel window, F12 on every platform and the Keychain through `security -i`
 
 **Decision:** the MAC-T1 spike settles the macOS design of [plans/macos.md](../plans/macos.md). The window is
 an Electron `type: 'panel'` at the `screen-saver` level, visible on all workspaces and over fullscreen, with
 no Dock icon, focused on show with `focus()` and `app.focus({ steal: true })`. The default key stays `F12` on
 every platform, so there is no per-platform default; on a Mac keyboard it is `fn+F12`. The Keychain is
 reached through `security -i` with the command on stdin, and a value with a line break is refused, since
-`security` has no escape for it. Process inspection uses `ps` (`tpgid`, `comm`, `lstart`) and
-`lsof -a -d cwd -Fn`. Tested on macOS 26.5.1 arm64 with Electron 45.3.0: the panel showed over a fullscreen
-app and on another desktop and received the keyboard without a click; F12, `Ctrl+Backtick` and
-`Option+Space` fired with no Accessibility permission; `node-pty` opened `zsh -il`; `lsof` took about 20 ms.
+`security` has no escape for it. Process inspection uses `ps` (`tpgid`, `comm`, `lstart`) and `lsof -a -d cwd -Fn`.
+Tested on macOS 26.5.1 arm64 with Electron 45.3.0: the panel showed over a fullscreen app and on another
+desktop and received the keyboard without a click; F12, `Ctrl+Backtick` and `Option+Space` fired with no
+Accessibility permission; `node-pty` opened `zsh -il`; `lsof` took about 20 ms.
 **Reason:** the spike on a tester's Mac on 2026-11-13; F12 keeps one key across platforms and was the
 tester's choice.
 **How to revert:** the plan B of the plan's risks (a regular high-level window with the Dock hidden), or a

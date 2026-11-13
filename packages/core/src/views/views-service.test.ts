@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { errorBody } from '../ipc/protocol.ts'
-import type { CodeReviewSource, MergeRequestSummary } from '../ports/code-review.ts'
 import { silentLogger } from '../ports/logger.ts'
-import type { ViewCache, ViewCacheData, ViewSnapshot } from '../ports/views.ts'
+import type {
+  ViewCache,
+  ViewCacheData,
+  ViewItem,
+  ViewSnapshot,
+  ViewSource,
+} from '../ports/views.ts'
 import { fail, ok } from '../result.ts'
 import { FakeClock } from '../testing/index.ts'
-import { createViewsService } from './views-service.ts'
+import { accountScope, createViewsService } from './views-service.ts'
 
-const item = (number: number): MergeRequestSummary => ({
+const item = (number: number): ViewItem => ({
+  kind: 'mergeRequest',
   id: `g/p!${number}`,
   number,
   title: `MR ${number}`,
@@ -35,19 +41,19 @@ class MemoryCache implements ViewCache {
   }
 }
 
-function setup(options: { cache?: MemoryCache; source?: CodeReviewSource | 'none' } = {}) {
+function setup(options: { cache?: MemoryCache; source?: ViewSource | 'none' } = {}) {
   const clock = new FakeClock(1_000)
   const cache = options.cache ?? new MemoryCache()
   let calls = 0
-  const defaultSource: CodeReviewSource = {
-    currentUser: async () => ok({ id: '7', username: 'higor', name: 'Higor' }),
-    mergeRequests: async () => {
+  const defaultSource: ViewSource = {
+    items: async () => {
       calls += 1
       return ok([item(1)])
     },
   }
   const source = options.source === 'none' ? undefined : (options.source ?? defaultSource)
   const service = createViewsService({
+    views: ['review', 'mine'],
     source: async () => source,
     cache,
     clock,
@@ -65,11 +71,11 @@ describe('snapshot', () => {
       views: { review: { items: [item(9)], updatedAt: 500 } },
     })
     const { service, calls } = setup({ cache })
-    await service.configure('https://gl.test')
+    await service.configure({ url: 'https://gl.test' })
 
     const snapshot = await service.snapshot('review')
 
-    expect(snapshot.items.map((entry) => entry.number)).toEqual([9])
+    expect(snapshot.items.map((entry) => entry.id)).toEqual(['g/p!9'])
     expect(snapshot.updatedAt).toBe(500)
     expect(calls()).toBe(0)
   })
@@ -80,7 +86,7 @@ describe('snapshot', () => {
       views: { review: { items: [item(9)], updatedAt: 500 } },
     })
     const { service } = setup({ cache })
-    await service.configure('https://gl.test')
+    await service.configure({ url: 'https://gl.test' })
 
     const snapshot = await service.snapshot('review')
 
@@ -98,7 +104,7 @@ describe('snapshot', () => {
 describe('refresh', () => {
   it('should store the items, stamp the time and save the cache when the server answers', async () => {
     const { service, cache, clock } = setup()
-    await service.configure('https://gl.test')
+    await service.configure({ url: 'https://gl.test' })
     clock.time = 2_000
 
     await service.refresh('review')
@@ -111,7 +117,7 @@ describe('refresh', () => {
 
   it('should announce refreshing and then idle when refreshing', async () => {
     const { service, changes } = setup()
-    await service.configure('https://gl.test')
+    await service.configure({ url: 'https://gl.test' })
     changes.length = 0
 
     await service.refresh('review')
@@ -120,16 +126,15 @@ describe('refresh', () => {
   })
 
   it('should keep the old items and report the error code when the server fails', async () => {
-    const failing: CodeReviewSource = {
-      currentUser: async () => ok({ id: '7', username: 'h', name: 'H' }),
-      mergeRequests: async () => fail(errorBody('DCK-GLB-004')),
+    const failing: ViewSource = {
+      items: async () => fail(errorBody('DCK-GLB-004')),
     }
     const cache = new MemoryCache({
       scope: 'https://gl.test',
       views: { review: { items: [item(9)], updatedAt: 500 } },
     })
     const { service } = setup({ cache, source: failing })
-    await service.configure('https://gl.test')
+    await service.configure({ url: 'https://gl.test' })
 
     await service.refresh('review')
 
@@ -140,7 +145,7 @@ describe('refresh', () => {
 
   it('should share one server call when the same view is refreshed twice at once', async () => {
     const { service, calls } = setup()
-    await service.configure('https://gl.test')
+    await service.configure({ url: 'https://gl.test' })
 
     await Promise.all([service.refresh('review'), service.refresh('review')])
 
@@ -149,7 +154,7 @@ describe('refresh', () => {
 
   it('should become unconfigured and drop the items when there is no source', async () => {
     const { service } = setup({ source: 'none' })
-    await service.configure('https://gl.test')
+    await service.configure({ url: 'https://gl.test' })
 
     await service.refresh('review')
 
@@ -158,20 +163,19 @@ describe('refresh', () => {
 
   it('should discard the result when the account changes during the refresh', async () => {
     let finish: (() => void) | undefined
-    const slow: CodeReviewSource = {
-      currentUser: async () => ok({ id: '7', username: 'h', name: 'H' }),
-      mergeRequests: () =>
+    const slow: ViewSource = {
+      items: () =>
         new Promise((resolve) => {
           finish = () => resolve(ok([item(1)]))
         }),
     }
     const { service } = setup({ source: slow })
-    await service.configure('https://a.test')
+    await service.configure({ url: 'https://a.test' })
     const pending = service.refresh('review')
     await Promise.resolve()
     await Promise.resolve()
 
-    await service.configure('https://b.test')
+    await service.configure({ url: 'https://b.test' })
     finish?.()
     await pending
 
@@ -182,7 +186,7 @@ describe('refresh', () => {
 describe('refreshIfStale', () => {
   it('should skip the server when the data is younger than the limit', async () => {
     const { service, calls, clock } = setup()
-    await service.configure('https://gl.test')
+    await service.configure({ url: 'https://gl.test' })
     await service.refresh('review')
     clock.time += 10_000
 
@@ -193,7 +197,7 @@ describe('refreshIfStale', () => {
 
   it('should refresh when the data is older than the limit', async () => {
     const { service, calls, clock } = setup()
-    await service.configure('https://gl.test')
+    await service.configure({ url: 'https://gl.test' })
     await service.refresh('review')
     clock.time += 61_000
 
@@ -204,10 +208,35 @@ describe('refreshIfStale', () => {
 
   it('should refresh when nothing was fetched yet', async () => {
     const { service, calls } = setup()
-    await service.configure('https://gl.test')
+    await service.configure({ url: 'https://gl.test' })
 
     await service.refreshIfStale('mine', 60_000)
 
     expect(calls()).toBe(1)
+  })
+})
+
+describe('accountScope', () => {
+  it('should be the address alone when the account has no e-mail', () => {
+    expect(accountScope({ url: 'https://gl.test' })).toBe('https://gl.test')
+  })
+
+  it('should tell two people on the same site apart when the account has an e-mail', () => {
+    const ana = accountScope({ url: 'https://acme.example.com', email: 'ana@example.com' })
+    const bruno = accountScope({ url: 'https://acme.example.com', email: 'bruno@example.com' })
+
+    expect(ana).not.toBe(bruno)
+  })
+})
+
+describe('configure', () => {
+  it('should drop what was stored when the account changes to another e-mail on the same site', async () => {
+    const { service } = setup()
+    await service.configure({ url: 'https://acme.example.com', email: 'ana@example.com' })
+    await service.refresh('review')
+
+    await service.configure({ url: 'https://acme.example.com', email: 'bruno@example.com' })
+
+    expect((await service.snapshot('review')).items).toEqual([])
   })
 })

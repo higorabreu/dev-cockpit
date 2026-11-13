@@ -41,6 +41,8 @@
   display: flex;
   gap: 4px;
   margin-right: auto;
+  /* One tab's height, so the header does not move when no account is connected and there is no tab */
+  min-height: calc(1lh + 8px);
 }
 
 .vtab {
@@ -102,6 +104,22 @@
 .vtab:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 1px;
+}
+
+.vheading {
+  margin: 0 auto 0 0;
+  padding: 4px 10px;
+  color: var(--fg);
+  font: inherit;
+  font-weight: 600;
+}
+
+.vtabs[hidden],
+.vheading[hidden],
+.vstatus[hidden],
+.vbar[hidden],
+.vbtn[hidden] {
+  display: none;
 }
 
 .vbar {
@@ -237,6 +255,15 @@
   max-width: 200px;
 }
 
+/* A task's key copies on click, like Ctrl+C on the selected row */
+.vcopy {
+  cursor: pointer;
+}
+
+.vcopy:hover {
+  color: var(--fg);
+}
+
 .vflags {
   flex: none;
   display: flex;
@@ -267,6 +294,39 @@
 
 .vflag[data-kind="muted"] {
   color: var(--muted);
+}
+
+/* The row's highlight hides the line color, so a muted chip (Draft) would lose its outline there */
+.vrow:is(:hover, [aria-selected="true"]) .vflag[data-kind="muted"] {
+  border-color: var(--control-line);
+}
+
+/* A task's status is plain text with its category glyph: it is not something that needs the user */
+.vstate {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.vstate svg {
+  flex: none;
+  stroke-width: 2.6;
+}
+
+/* In progress stands out by contrast alone, without a semantic color */
+.vstate[data-category="progress"] {
+  color: var(--fg);
+}
+
+/* A workflow can name a status at length; the tooltip shows the rest */
+.vstate-text {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .vflag[data-kind="warning"] {

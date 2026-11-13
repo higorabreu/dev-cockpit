@@ -13,11 +13,11 @@ app reads the manifests, validates them, decides which ones win and reports the 
 | Shipped | Planned, not in the code |
 | --- | --- |
 | The manifest (version 1) and its validation | Extensions with code in a dedicated host process (phase 3) |
-| Contribution points as a mechanism, with none registered | Interface contributions and a shared index (phases 4 and 5) |
-| Four sources with precedence and shadowing | |
-| The built-in extension, empty | |
+| Contribution points as a mechanism, with one registered: `connectors` | Connectors from installed extensions (phase 3) |
+| Four sources with precedence and shadowing | Interface contributions and a shared index (phases 4 and 5) |
+| The built-in extensions: `dck.built-in` (empty), `dck.gitlab` and `dck.jira` | |
 | The `extensions.disabled` setting | |
-| `dck ext list` | |
+| `dck ext list`, `dck ext enable`, `dck ext disable` | |
 
 ## The manifest
 
@@ -72,9 +72,79 @@ extension declares under that id in `contributes`. The loader validates each dec
 its point and hands the valid ones to whoever consumes the point, from the lowest to the highest
 precedence.
 
-**No contribution point is registered yet**, so today a valid manifest has an empty `contributes` (or
-none), and any key in it is refused as unknown. The first point arrives with the first real use;
-`connectors`, `themes` and `sections` are the candidates.
+A point can also limit the sources whose extensions may contribute to it. A declaration from another
+source refuses the whole extension (`DCK-EXT-002`), with the point and the allowed sources in the detail.
+
+One point is registered: `connectors`. Any other key in `contributes` is refused as unknown; `themes` and
+`sections` are the next candidates.
+
+### `connectors`
+
+A connector brings the developer's work from a service (GitLab and Jira Cloud today) into the Work screen.
+Its code still ships with the app, because extensions cannot run code yet: **only built-in extensions may
+declare a connector**, and a connector from an installed, global or repository extension is refused with
+`DCK-EXT-002` until the extension host exists (phase 3). The contract below is internal until then; the
+second connector, Jira, fitted it without a change.
+
+`contributes.connectors` is a list of 1 to 4 connectors:
+
+```json
+{
+  "id": "gitlab",
+  "name": "GitLab",
+  "connection": {
+    "address": { "placeholder": "https://gitlab.example.com" },
+    "token": { "label": "connections.gitlab.token", "hint": "connections.gitlab.token.hint" }
+  },
+  "views": [
+    { "id": "review", "kind": "mergeRequest", "title": "views.review", "empty": "views.empty.review", "badge": "views.waiting" },
+    { "id": "mine", "kind": "mergeRequest", "title": "views.mine", "empty": "views.empty.mine" }
+  ]
+}
+```
+
+| Field | Rule |
+| --- | --- |
+| `id` | A lowercase letter, then up to 31 lowercase letters, digits or hyphens. It names the settings entry `connections.<id>` and the keyring key `<id>.token` |
+| `name` | The product name, 1 to 60 characters, the same in every language |
+| `connection.address` | Always asked; `placeholder` is shown in the empty field |
+| `connection.email` | Optional; when present the account e-mail is asked too, with its `placeholder` |
+| `connection.token` | Always asked; `label` and `hint` are keys of the text catalogs |
+| `views` | 1 to 8 views. `id` is unique across connectors; `kind` is `mergeRequest` or `issue`; `title` and `empty` are catalog keys; `badge` is an optional plural catalog key, and the item count of that view becomes the rail badge |
+
+Jira declares the e-mail too, and a view of the other kind:
+
+```json
+{
+  "id": "jira",
+  "name": "Jira",
+  "connection": {
+    "address": { "placeholder": "https://acme.atlassian.net" },
+    "email": { "placeholder": "ana@example.com" },
+    "token": { "label": "connections.jira.token", "hint": "connections.jira.token.hint" }
+  },
+  "views": [{ "id": "tasks", "kind": "issue", "title": "views.tasks", "empty": "views.empty.tasks" }]
+}
+```
+
+Every text is a key of the text catalogs (`core/src/i18n`), checked when the declaration is read, so a
+connector is translated like the rest of the interface. The declaration is strict: an unknown field is an
+error.
+
+A connector or view id that an extension loaded before already uses refuses the later extension
+(`DCK-EXT-001`, with the id and its owner in the detail), so a view id always names one view.
+
+The app finds the code of a connector by its `id`, in the window and in the daemon. An enabled connector
+with no code in the app is logged and left out, never drawn half-working. What a connector has in the
+product:
+
+| Where | What |
+| --- | --- |
+| Settings, Connections | One section per enabled connector, with the fields it declares |
+| `settings.json` | `connections.<id>` with `url` and, when declared, `email` (the token never) |
+| System keyring | `<id>.token`, prefixed with the profile in development (`dev:gitlab.token`) |
+| Daemon | One views service and one cache file per connector |
+| Work screen | One tab per view, only while the connector's account is connected |
 
 ## Sources and precedence
 
@@ -99,28 +169,52 @@ the same `id` in the same source are an error: the first by location is kept and
 In the extensions folder a subfolder without a manifest is skipped, and a linked folder counts as a folder.
 A manifest that cannot be read or is not valid JSON is still listed, as refused.
 
-### The built-in extension
+### The built-in extensions
 
-The app ships one extension, `dck.built-in`, as data. It is empty for now. It takes the version of the running app and goes through the same loader as an
-installed extension: it can be disabled or refused by the same rules.
+The app ships its extensions as data, and each takes the version of the running app and goes through the
+same loader as an installed extension: it can be disabled or refused by the same rules.
+
+| Id | Contributes |
+| --- | --- |
+| `dck.built-in` | Nothing yet |
+| `dck.gitlab` | The GitLab connector: merge requests waiting for your review and the ones you opened |
+| `dck.jira` | The Jira Cloud connector: the open issues assigned to you, read only, in the Tasks tab |
 
 ### Implicit extensions
 
 The global folder and a repository's `.dck/` have no manifest. Each is treated as one implicit extension,
 `dck.global` and `dck.repository`, whose `contributes` lists the contribution points it has a folder for
 (for example `.dck/standards/` for `standards`). A folder that holds nothing this version knows is not
-listed. Because no contribution point is registered yet, **neither shows up today**.
+listed. `connectors` has no folder, because a connector only comes built in, so **neither shows up
+today**.
 
 ## Disabling an extension
 
 The setting `extensions.disabled` in `settings.json` is a list of extension ids, empty by default. A
 disabled extension is still loaded and listed, and contributes nothing. An entry that is not a valid id is
-dropped when the settings are read, and the list holds up to 200 ids. The commands `dck ext enable` and
-`dck ext disable` that will manage the list are planned (phase 1b); until then it is edited by hand. A
-running window reads the file again before it saves a change, so it keeps the edit.
+dropped when the settings are read, and the list holds up to 200 ids.
 
 ```json
-{ "extensions": { "disabled": ["acme.conventional-commits"] } }
+{ "extensions": { "disabled": ["dck.gitlab"] } }
+```
+
+`dck ext disable <id>` adds an id to the list and `dck ext enable <id>` takes it out. Both write
+`settings.json` in the window's own format and change nothing else in it; the id must be one `dck ext list`
+shows, or one already in the list (so an extension that was removed can still be enabled). A file that is
+not valid JSON is left as it is and the command fails with 1. A running window watches the file and applies
+the new list at once; any other field edited by hand still applies at the next start.
+
+Disabling a connector hides its section in Connections and its tabs in the Work screen, and stops its views
+in the daemon. Its address and its token stay where they are, so enabling it again finds the account still
+connected. A disabled built-in connector is listed at the end of Settings, Connections, as a row with an
+Enable button, which takes its extension out of `extensions.disabled` through the settings model, with no
+restart. Disabling has no button: it stays in the CLI.
+
+```
+$ dck ext disable dck.gitlab
+dck.gitlab disabled
+$ dck ext enable dck.gitlab
+dck.gitlab enabled
 ```
 
 A disabled extension still shadows a lower source with the same `id`.
@@ -133,7 +227,7 @@ reported with its location, an error code and a detail.
 | Code | Message | When |
 | --- | --- | --- |
 | `DCK-EXT-001` | Invalid extension manifest | The manifest is not a JSON object; an installed extension uses the reserved `dck` owner; a field is missing, has the wrong shape or is not known (up to three problems are named, each with its field); a declaration does not fit the schema of its contribution point; the same `id` twice in one source |
-| `DCK-EXT-002` | Extension feature not supported by this version | The manifest has `run`, `main`, `permissions` or `activationEvents`; `contributes` names a contribution point this version does not know |
+| `DCK-EXT-002` | Extension feature not supported by this version | The manifest has `run`, `main`, `permissions` or `activationEvents`; `contributes` names a contribution point this version does not know; it contributes to a point its source may not contribute to (a connector outside a built-in extension) |
 | `DCK-EXT-003` | Extension not compatible with this version | `apiVersion` differs from the supported one; the app version is outside `engines.dck` |
 
 ## `dck ext list`
@@ -146,13 +240,15 @@ system language; the detail after the message is always in English.
 ```
 $ dck ext list
 dck.built-in  0.3.0  built-in   active
+dck.gitlab    0.3.0  built-in   active
 acme.commits  1.0.0  installed  active
 acme.reviews  0.4.1  installed  disabled
 
 Rejected:
-  /home/ana/.config/dev-cockpit/extensions/acme.old     installed  Extension not compatible with this version: acme.old needs dck <0.2.0, this is 0.3.0
-  /home/ana/.config/dev-cockpit/extensions/acme.runner  installed  Extension feature not supported by this version: this version cannot run code: main
-  /home/ana/.config/dev-cockpit/extensions/broken       installed  Invalid extension manifest: the manifest must be a JSON object
+  /home/ana/.config/dev-cockpit/extensions/acme.old      installed  Extension not compatible with this version: acme.old needs dck <0.2.0, this is 0.3.0
+  /home/ana/.config/dev-cockpit/extensions/acme.runner   installed  Extension feature not supported by this version: this version cannot run code: main
+  /home/ana/.config/dev-cockpit/extensions/acme.tracker  installed  Extension feature not supported by this version: acme.tracker contributes connectors, which only built-in extensions can do in this version
+  /home/ana/.config/dev-cockpit/extensions/broken        installed  Invalid extension manifest: the manifest must be a JSON object
 ```
 
 A shadowed copy is one more row, with the source that replaced it and its own location. No pair of today's
@@ -164,12 +260,15 @@ acme.commits  0.9.0  built-in  shadowed by installed  built-in
 
 Control characters in a manifest or in a folder name are printed as `?`.
 
-With nothing installed, only the built-in extension shows:
+With nothing installed, only the built-in extensions show:
 
 ```
 $ dck ext list
 dck.built-in  0.3.0  built-in  active
+dck.gitlab    0.3.0  built-in  active
 ```
 
 The command reads files and never talks to the daemon. It exits with 0 even when an extension is refused,
-because the listing is a report; an unknown subcommand prints `Usage: dck ext list` and exits with 64.
+because the listing is a report; an unknown subcommand prints
+`Usage: dck ext list | enable <id> | disable <id>` and exits with 64, and so does `enable` or `disable`
+with an id no extension has.
