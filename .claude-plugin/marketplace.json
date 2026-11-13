@@ -1,0 +1,12 @@
+{
+  "name": "dev-cockpit",
+  "description": "Dev Cockpit integrations for coding agents",
+  "owner": { "name": "Higor Abreu Freiberger" },
+  "plugins": [
+    {
+      "name": "dck",
+      "source": "./integrations/claude-code",
+      "description": "Marks the Dev Cockpit tab when Claude Code needs you or has finished its turn"
+    }
+  ]
+}
