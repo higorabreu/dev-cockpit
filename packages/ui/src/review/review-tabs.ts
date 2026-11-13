@@ -11,6 +11,9 @@ export interface ReviewTabsDeps {
   // The tab's folder right now
   cwd(tabId: string): Promise<string | undefined>
   agent(tabId: string): AgentState | undefined
+  // The base the user picked for the repository that holds a folder, and the way to keep a new one
+  baseFor(cwd: string): string | undefined
+  chooseBase(root: string, name: string | undefined): Promise<void>
   // The header's layout button: show the review in this orientation from now on
   chooseLayout(orientation: Orientation): void
 }
@@ -34,6 +37,8 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
       modifier: deps.modifier,
       isModified: deps.isModified,
       cwd: () => deps.cwd(tabId),
+      baseFor: deps.baseFor,
+      chooseBase: deps.chooseBase,
       onEscape: () => view.focus(tabId),
       onClose: () => close(tabId),
       onToggleLayout: () => toggleLayout(tabId),

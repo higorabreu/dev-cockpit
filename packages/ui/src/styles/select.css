@@ -87,6 +87,15 @@
   background: var(--list-selected);
 }
 
+/* Listed so its tip can say why it cannot be picked; muted, and its shape stays plain under the mouse */
+.select-option[aria-disabled="true"] {
+  color: var(--muted);
+}
+
+.select-option[aria-disabled="true"].on {
+  background: var(--hover);
+}
+
 .select-label {
   flex: 1;
 }

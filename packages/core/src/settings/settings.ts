@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { parseServerUrl } from '../connections/url.ts'
 import { CONNECTOR_ID_PATTERN } from '../connectors/connector.ts'
+import { isBaseRef } from '../diff/base.ts'
 import { EXTENSION_ID_MAX, EXTENSION_ID_PATTERN } from '../extensions/manifest.ts'
 import { PANE_RATIO, SPLIT_PREFERENCES } from '../panes/panes.ts'
 import type { ConnectionFields } from '../ports/connections.ts'
@@ -19,6 +20,8 @@ export const LIMITS = {
   connections: { max: 20 },
   email: { max: 254 },
   paneRatio: { min: PANE_RATIO.min, max: PANE_RATIO.max },
+  reviewBases: { max: 100 },
+  path: { max: 4096 },
 } as const
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -73,6 +76,23 @@ const connectionsSchema = z.preprocess(
   z.record(z.string(), connectionSchema),
 )
 
+// The base picked per repository folder; an entry that is not a branch name (null included) is dropped
+const reviewBasesSchema = z.preprocess(
+  (value) =>
+    Object.fromEntries(
+      Object.entries(asObject(value))
+        .filter(
+          ([folder, name]) =>
+            folder.length > 0 &&
+            folder.length <= LIMITS.path.max &&
+            typeof name === 'string' &&
+            isBaseRef(name),
+        )
+        .slice(0, LIMITS.reviewBases.max),
+    ),
+  z.record(z.string(), z.string()),
+)
+
 export const settingsSchema = z.preprocess(
   asObject,
   z.object({
@@ -110,6 +130,8 @@ export const settingsSchema = z.preprocess(
       // The terminal's share of the width side by side and of the height stacked, kept by the divider
       sideRatio: bounded(LIMITS.paneRatio.min, LIMITS.paneRatio.max, PANE_RATIO.initial),
       stackedRatio: bounded(LIMITS.paneRatio.min, LIMITS.paneRatio.max, PANE_RATIO.initial),
+      // The branch the user compares a repository with, by the repository's folder
+      bases: reviewBasesSchema,
     }),
     extensions: section({
       // Managed by `dck ext enable` and `dck ext disable`, not by the settings screen
@@ -136,6 +158,23 @@ export function storedAccount(settings: Settings, id: string): ConnectionFields 
   const entry = settings.connections[id]
   if (!entry?.url) return null
   return entry.email === undefined ? { url: entry.url } : { url: entry.url, email: entry.email }
+}
+
+// The base picked for a repository, or undefined to go back to the one found; null removes the entry
+// when the patch is merged, which a partial patch cannot say otherwise
+export function reviewBasePatch(folder: string, name: string | undefined): SettingsPatch {
+  return { review: { bases: { [folder]: name ?? null } } } as unknown as SettingsPatch
+}
+
+// The base picked for the repository that holds `cwd`: the deepest folder that contains it
+export function reviewBaseFor(settings: Settings, cwd: string): string | undefined {
+  let found: { folder: string; name: string } | undefined
+  for (const [folder, name] of Object.entries(settings.review.bases)) {
+    const inside = cwd === folder || cwd.startsWith(`${folder}/`) || cwd.startsWith(`${folder}\\`)
+    if (inside && (found === undefined || folder.length > found.folder.length))
+      found = { folder, name }
+  }
+  return found?.name
 }
 
 // Reads anything (old, hand-edited or corrupted file) and returns valid settings

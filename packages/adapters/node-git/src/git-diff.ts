@@ -13,6 +13,7 @@ import {
   type Result,
   reviewDiff,
 } from '@dck/core'
+import { createBaseFinder } from './git-base.ts'
 import { type GitAnswer, type GitFailure, type GitRun, runGit } from './git-run.ts'
 
 const QUICK = { timeoutMs: 5000, maxBytes: 1024 * 1024 }
@@ -75,6 +76,7 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
     const result = await quick(cwd, args)
     return result.ok ? result.stdout.trim() : undefined
   }
+  const bases = createBaseFinder(answer)
 
   // HEAD, or the empty tree in a repository without commits, so its files read as added
   async function head(root: string): Promise<Result<string, ErrorBody>> {
@@ -82,22 +84,6 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
     if (commit) return ok(commit)
     const empty = await quick(root, ['hash-object', '-t', 'tree', '--stdin'], '')
     return empty.ok ? ok(empty.stdout.trim()) : fail(failed(empty.failure, 'empty tree'))
-  }
-
-  // The remote's default branch, else main, else master; the name shown is the branch's own
-  async function baseBranch(root: string): Promise<{ ref: string; name: string } | undefined> {
-    const remote = await answer(root, [
-      'symbolic-ref',
-      '--quiet',
-      '--short',
-      'refs/remotes/origin/HEAD',
-    ])
-    if (remote) return { ref: remote, name: remote.replace(/^origin\//, '') }
-    for (const name of ['main', 'master']) {
-      if (await answer(root, ['rev-parse', '--verify', '--quiet', `refs/heads/${name}`]))
-        return { ref: name, name }
-    }
-    return undefined
   }
 
   async function untracked(root: string, whitespace: readonly string[]): Promise<DiffFile[]> {
@@ -195,14 +181,14 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       const current = await head(root)
       if (!current.ok) return current
       let from = current.value
-      // Named in both scopes, so the scope select can say what Branch compares with before it is chosen
-      const branch = await baseBranch(root)
+      // Found in both scopes, so the scope select can name what the second one compares with
+      const branch = await bases.find(root, current.value, request.base)
       if (request.scope === 'branch') {
-        const merge = branch && (await answer(root, ['merge-base', 'HEAD', branch.ref]))
-        if (!branch || !merge) return ok({ kind: 'no-base', root })
+        const against = branch.onBase ? branch.upstream : branch.base?.name
+        const merge = against && (await answer(root, ['merge-base', 'HEAD', against]))
+        if (!merge) return ok({ kind: branch.onBase ? 'no-upstream' : 'no-base', root })
         from = merge
       }
-      const base = branch?.name
 
       const whitespace = request.ignoreWhitespace ? ['-w'] : []
       const [tracked, added] = await Promise.all([
@@ -220,7 +206,7 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       const completed = await inBatches(parsed, (file) =>
         complete(root, file, marked.has(file.path)),
       )
-      return ok({ kind: 'ok', diff: reviewDiff(root, request.scope, base, completed) })
+      return ok({ kind: 'ok', diff: reviewDiff(root, request.scope, branch, completed) })
     },
 
     async fileLines(root, path): Promise<Result<readonly string[], ErrorBody>> {

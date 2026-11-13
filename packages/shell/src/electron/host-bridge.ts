@@ -11,6 +11,7 @@ import {
   errorBody,
   fail,
   hostChannels,
+  isBaseRef,
   type Logger,
   type Notifier,
   type ProjectCatalog,
@@ -103,6 +104,8 @@ const diffRequestSchema = z.object({
   cwd: absolutePathSchema,
   scope: z.enum(['uncommitted', 'branch']),
   ignoreWhitespace: z.boolean(),
+  // Handed to git as a revision, so only a plain branch name passes
+  base: z.string().refine(isBaseRef).optional(),
 })
 const fileLinesSchema = z.object({
   root: absolutePathSchema,

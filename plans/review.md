@@ -79,6 +79,17 @@ change.
   when the review is wide (always in the stacked layout); `n` and `p` cross files, `[` and `]` jump to the
   previous and next file.
 
+- **The base of the Branch scope** (decided with the maintainer, like VS Code): the branch the current one
+  was created from, not the remote's default. In order: `branch.<name>.vscode-merge-base` when it resolves;
+  the branch's own reflog ("branch: Created from <ref>", and for "Created from HEAD" the HEAD reflog's first
+  "checkout: moving from <ref> to <name>"), skipping commits, the branch's own remote copy and refs that no
+  longer resolve, the local branch before `origin/`; else the nearest of at most 20 base-like branches
+  (the remote default, `develop`, `main`, `master`, `release/*`, `release-*`, local or `origin/`) by the
+  fewest commits ahead, then the latest merge base. The user can pick another from the scope select, kept
+  per repository folder in settings (`review.bases`). The option reads "Since develop" with how it was found
+  in its tooltip. On a base branch itself the second scope is "Not pushed" (the upstream's merge base to
+  the working tree), disabled with the reason when there is no upstream.
+
 | Id | Criterion | Verification |
 | --- | --- | --- |
 | R9 | At 1400x760 the review opens stacked with the terminal on top; at full height on a 1920px screen it opens side by side; below both, it takes the tab | Tests with sizes, screenshots |

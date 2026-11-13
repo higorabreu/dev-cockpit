@@ -7,12 +7,16 @@ export interface DiffRequest {
   readonly cwd: string
   readonly scope: DiffScope
   readonly ignoreWhitespace: boolean
+  // The base the user picked for this repository, instead of the one found
+  readonly base?: string
 }
 
 export type DiffOutcome =
   | { readonly kind: 'not-repository' }
-  // The Branch scope found no `origin/HEAD`, `main` or `master` to compare with
+  // The Branch scope found no branch to compare with
   | { readonly kind: 'no-base'; readonly root: string }
+  // On a base branch, the second scope has no upstream to compare with
+  | { readonly kind: 'no-upstream'; readonly root: string }
   | { readonly kind: 'ok'; readonly diff: ReviewDiff }
 
 // What changed in a repository, read only

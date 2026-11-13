@@ -7,6 +7,8 @@ import {
   LIMITS,
   mergeSettings,
   parseSettings,
+  reviewBaseFor,
+  reviewBasePatch,
   storedAccount,
 } from './settings.ts'
 
@@ -29,7 +31,7 @@ describe('parseSettings', () => {
       projects: { root: null, depth: 2 },
       connections: {},
       system: { notifyAfterSeconds: 30, agentConnectHint: true },
-      review: { layout: 'auto', sideRatio: 0.5, stackedRatio: 0.5 },
+      review: { layout: 'auto', sideRatio: 0.5, stackedRatio: 0.5, bases: {} },
       extensions: { disabled: [] },
     })
   })
@@ -153,6 +155,34 @@ describe('parseSettings, extensions.disabled', () => {
 
     expect(settings.extensions.disabled).toHaveLength(LIMITS.disabledExtensions.max)
     expect(settings.extensions.disabled).not.toContain(long)
+  })
+})
+
+describe('review bases', () => {
+  it('should keep a branch per repository folder and drop an entry that is not a branch name', () => {
+    const settings = parseSettings({
+      review: { bases: { '/home/ana/acme': 'develop', '/home/ana/web': '--output=x', '': 'main' } },
+    })
+
+    expect(settings.review.bases).toEqual({ '/home/ana/acme': 'develop' })
+  })
+
+  it('should find the base of the deepest repository that holds the folder', () => {
+    const settings = parseSettings({
+      review: { bases: { '/home/ana/acme': 'develop', '/home/ana/acme/vendor/lib': 'main' } },
+    })
+
+    expect(reviewBaseFor(settings, '/home/ana/acme/src')).toBe('develop')
+    expect(reviewBaseFor(settings, '/home/ana/acme/vendor/lib/src')).toBe('main')
+    expect(reviewBaseFor(settings, '/home/ana/acme-web')).toBeUndefined()
+  })
+
+  it('should add a choice and remove it when the found base is picked again', () => {
+    const chosen = mergeSettings(defaultSettings, reviewBasePatch('/home/ana/acme', 'main'))
+    const back = mergeSettings(chosen, reviewBasePatch('/home/ana/acme', undefined))
+
+    expect(chosen.review.bases).toEqual({ '/home/ana/acme': 'main' })
+    expect(back.review.bases).toEqual({})
   })
 })
 

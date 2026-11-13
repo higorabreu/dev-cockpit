@@ -6,6 +6,7 @@ import {
   GITLAB_CONNECTOR,
   hostChannels,
   type LogContext,
+  noBranchInfo,
   ok,
   reviewDiff,
   type TabNotification,
@@ -103,7 +104,7 @@ function setup() {
         diffRequests.push(request)
         return ok({
           kind: 'ok' as const,
-          diff: reviewDiff('/srv/acme/backend', request.scope, undefined, []),
+          diff: reviewDiff('/srv/acme/backend', request.scope, noBranchInfo, []),
         })
       },
       fileLines: async (root, path) => {
@@ -730,9 +731,13 @@ describe('registerHostBridge review', () => {
     const { call, diffRequests } = setup()
 
     const result = await call(hostChannels.reviewDiff, request('/srv/acme/backend/src'))
+    await call(hostChannels.reviewDiff, request('/srv/acme/backend', { base: 'origin/develop' }))
 
     expect(result).toMatchObject({ ok: true, value: { kind: 'ok' } })
-    expect(diffRequests).toEqual([request('/srv/acme/backend/src')])
+    expect(diffRequests).toEqual([
+      request('/srv/acme/backend/src'),
+      request('/srv/acme/backend', { base: 'origin/develop' }),
+    ])
   })
 
   it.each([
@@ -741,6 +746,8 @@ describe('registerHostBridge review', () => {
     ['a file instead of a folder', request('/srv/acme/backend/src/app.ts')],
     ['a NUL in the folder', request('/srv/acme/backend\0')],
     ['an unknown scope', request('/srv/acme/backend', { scope: 'stash' })],
+    ['a base that reads as an option', request('/srv/acme/backend', { base: '--output=/tmp/x' })],
+    ['a base that is a range', request('/srv/acme/backend', { base: 'main..HEAD' })],
     ['a payload that is not an object', '/srv/acme/backend'],
   ])('should refuse the request without running git when it has %s', async (_label, payload) => {
     const { call, diffRequests, warnings } = setup()

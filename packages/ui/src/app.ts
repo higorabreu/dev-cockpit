@@ -20,6 +20,8 @@ import {
   type Project,
   recentTabs,
   reorderTabs,
+  reviewBaseFor,
+  reviewBasePatch,
   type SessionSnapshot,
   stepFontSize,
   stepOpacity,
@@ -207,6 +209,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     },
     agent: (tabId) => attention.agent(tabId),
     chooseLayout: (orientation) => split.setPreference(orientation),
+    baseFor: (cwd) => reviewBaseFor(settings.current(), cwd),
+    chooseBase: (root, name) => settings.update(reviewBasePatch(root, name)).then(() => undefined),
   })
 
   let activeSnapshot: SessionSnapshot | undefined

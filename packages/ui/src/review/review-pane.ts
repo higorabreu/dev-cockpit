@@ -1,5 +1,7 @@
 import {
   type AgentState,
+  type BranchInfo,
+  branchName,
   changeRows,
   type DiffFile,
   type DiffGap,
@@ -10,11 +12,12 @@ import {
   type HostApi,
   type Orientation,
   type PaneGrid,
+  type ReviewBase,
   type Translator,
 } from '@dck/core'
 import { tokens } from '@dck/design'
 import { actionHint, hintBar, keyHint } from '../kit/panel-frame.ts'
-import { createSelect } from '../kit/select.ts'
+import { createSelect, type SelectOption } from '../kit/select.ts'
 import { h, icon } from '../panel/dom.ts'
 import { displayPath } from '../panel/format.ts'
 import { REVIEW_KEY } from '../tabs/attention-mark.ts'
@@ -68,6 +71,10 @@ export interface ReviewPaneDeps {
   isModified(event: MouseEvent): boolean
   // The tab's folder right now, or undefined when it is not known
   cwd(): Promise<string | undefined>
+  // The base the user picked for the repository that holds this folder
+  baseFor(cwd: string): string | undefined
+  // Keeps the user's base for a repository; undefined goes back to the one found
+  chooseBase(root: string, name: string | undefined): Promise<void>
   // Esc: the keys go back to the terminal, the review stays
   onEscape(): void
   onClose(): void
@@ -96,7 +103,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   let state: PaneState = { kind: 'loading' }
   let busy = false
   let showLoading = false
-  let base: string | undefined
+  // What the second scope compares with, from the last read of a repository, and that repository
+  let branch: BranchInfo | undefined
+  let root: string | undefined
   let cwd: string | undefined
   let orientation: Orientation | undefined
   let focusInside = false
@@ -108,7 +117,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const shownAnyway = new Set<string>()
   // A file whose hunks moved since the last read loses its open gaps, which named the old hunks
   const shapes = new Map<string, string>()
-  let drawnBase: string | undefined
+  let drawnOptions = ''
 
   const scopeLabel = h('span', { id: `${deps.id}-scope-label`, hidden: true })
   const select = createSelect({
@@ -116,11 +125,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     options: [],
     value: scope,
     labelledBy: scopeLabel.id,
-    onChange: (value) => {
-      scope = value === 'branch' ? 'branch' : 'uncommitted'
-      resetReading = true
-      refresh.request()
-    },
+    onChange: (value) => void pickScope(value),
   })
   const totals = h('span', { class: 'rv-totals' })
   const status = h('span', { class: 'rv-status', role: 'status' })
@@ -198,8 +203,14 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     }, LOADING_TEXT_MS)
     drawStatus()
     cwd = await deps.cwd()
+    const chosen = cwd ? deps.baseFor(cwd) : undefined
     const result = cwd
-      ? await api.review.diff({ cwd, scope, ignoreWhitespace })
+      ? await api.review.diff({
+          cwd,
+          scope,
+          ignoreWhitespace,
+          ...(chosen === undefined ? {} : { base: chosen }),
+        })
       : { ok: true as const, value: undefined }
     clearTimeout(loadingTimer)
     busy = false
@@ -207,8 +218,10 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     if (!result.ok) state = { kind: 'error', error: result.error }
     else if (result.value === undefined) state = { kind: 'no-folder' }
     else state = result.value
+    if (state.kind === 'no-base' || state.kind === 'no-upstream') root = state.root
     if (state.kind === 'ok') {
-      base = state.diff.base ?? base
+      root = state.diff.root
+      branch = state.diff.branch
       texts.clear()
       for (const file of state.diff.files) {
         const shape = file.hunks.map((hunk) => `${hunk.newStart},${hunk.newCount}`).join(' ')
@@ -236,8 +249,65 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     drawDiff()
   }
 
+  // Another base is a choice kept for the repository; the one found again goes back to finding it
+  async function pickScope(value: string) {
+    if (value.startsWith('base:') && root !== undefined) {
+      const name = value.slice('base:'.length)
+      await deps.chooseBase(root, name === branch?.found?.name ? undefined : name)
+      scope = 'branch'
+      select.setValue('branch')
+    } else scope = value === 'branch' ? 'branch' : 'uncommitted'
+    resetReading = true
+    refresh.request()
+  }
+
+  function baseTip(base: ReviewBase): string {
+    if (base.source === 'created') return t('review.base.created', { base: base.name })
+    if (base.source === 'vscode') return t('review.base.vscode')
+    if (base.source === 'nearest') return t('review.base.nearest')
+    return t('review.base.chosen')
+  }
+
+  // Uncommitted, then the branch since its base with the other bases to pick from; on a base branch
+  // itself, what is not pushed to its upstream
+  function scopeOptions(): SelectOption[] {
+    const options: SelectOption[] = [{ value: 'uncommitted', label: t('review.scope.uncommitted') }]
+    const since = (name: string) => t('review.scope.since', { base: name })
+    if (branch?.onBase) {
+      const { upstream } = branch
+      options.push({
+        value: 'branch',
+        label: t('review.scope.unpushed'),
+        tip: upstream ? t('review.scope.unpushed.tip', { upstream }) : t('review.scope.noUpstream'),
+        disabled: upstream === undefined,
+      })
+      return options
+    }
+    const base = branch?.base
+    if (!branch || !base) return [...options, { value: 'branch', label: t('review.scope.branch') }]
+    options.push({ value: 'branch', label: since(base.name), tip: baseTip(base) })
+    const listed = new Set([branchName(base.name)])
+    const { found } = branch
+    for (const name of [...(found ? [found.name] : []), ...branch.candidates]) {
+      if (listed.has(branchName(name))) continue
+      listed.add(branchName(name))
+      const tip = name === found?.name ? baseTip(found) : undefined
+      options.push({ value: `base:${name}`, label: since(name), ...(tip ? { tip } : {}) })
+    }
+    return options
+  }
+
+  function drawScope() {
+    const options = scopeOptions()
+    const key = JSON.stringify(options)
+    if (key === drawnOptions) return
+    drawnOptions = key
+    select.setOptions(options)
+    select.setValue(scope)
+  }
+
   function drawStatic() {
-    drawnBase = base
+    drawnOptions = ''
     scopeLabel.textContent = t('review.scope')
     element.setAttribute('aria-label', t('review.title'))
     whitespace.dataset.tip = t('review.whitespace')
@@ -246,14 +316,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     back.setAttribute('aria-label', t('review.terminal'))
     close.dataset.tip = t('review.close')
     close.setAttribute('aria-label', t('review.close'))
-    select.setOptions([
-      { value: 'uncommitted', label: t('review.scope.uncommitted') },
-      {
-        value: 'branch',
-        label: base ? t('review.scope.branchBase', { base }) : t('review.scope.branch'),
-      },
-    ])
-    select.setValue(scope)
+    drawScope()
     drawIndexToggle()
     drawLayoutToggle()
     hintsFor = undefined
@@ -368,19 +431,24 @@ export function createReviewPane(deps: ReviewPaneDeps) {
         t('review.notRepository.text', { path: folder }),
       )
     if (state.kind === 'no-base') return showMessage(t('review.noBase'), t('review.noBase.text'))
+    if (state.kind === 'no-upstream')
+      return showMessage(t('review.noUpstream'), t('review.noUpstream.text'))
     if (state.kind === 'error') {
       const retry = retryButton()
       showMessage(t(`error.${errorCodeOf(state.error)}`), t('review.error'), retry)
       if (focusInside) retry.focus()
       return
     }
-    // The Branch option names its base once a read found it
-    if (base !== drawnBase) drawStatic()
+    // The second option names its base once a read found it
+    drawScope()
     if (state.diff.files.length === 0) {
+      const { base, onBase, upstream } = state.diff.branch
       return showMessage(
-        scope === 'branch'
-          ? t('review.empty.branch', { base: state.diff.base ?? '' })
-          : t('review.empty.uncommitted'),
+        scope !== 'branch'
+          ? t('review.empty.uncommitted')
+          : onBase
+            ? t('review.empty.unpushed', { upstream: upstream ?? '' })
+            : t('review.empty.branch', { base: base?.name ?? '' }),
         t('review.empty.text', { path: displayPath(state.diff.root) }),
       )
     }
@@ -396,7 +464,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     // Outside a repository there is no scope to pick or whitespace to hide
     const repository = state.kind !== 'not-repository' && state.kind !== 'no-folder'
     select.element.hidden = !repository
-    whitespace.hidden = !repository || state.kind === 'no-base'
+    whitespace.hidden = !repository || state.kind === 'no-base' || state.kind === 'no-upstream'
     const withFiles = state.kind === 'ok' && state.diff.files.length > 0
     indexToggle.hidden = !withFiles
     drawState()

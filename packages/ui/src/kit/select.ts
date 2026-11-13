@@ -6,6 +6,10 @@ export interface SelectOption {
   readonly label: string
   // Secondary text shown at the right of the option in the list (a count), never in the closed control
   readonly detail?: string
+  // Why the option is what it is, in the design system's tooltip; the closed control shows the chosen one's
+  readonly tip?: string
+  // Listed but not pickable, with its tip saying why
+  readonly disabled?: boolean
 }
 
 export interface SelectDeps {
@@ -61,6 +65,9 @@ export function createSelect(deps: SelectDeps) {
   const optionId = (index: number) => `${deps.id}-option-${index}`
 
   function drawValue() {
+    const tip = options[selectedIndex()]?.tip
+    if (tip) button.dataset.tip = tip
+    else delete button.dataset.tip
     current.replaceChildren(
       ...options.map((option) =>
         h('span', { 'data-current': option.value === value ? 'true' : undefined }, option.label),
@@ -78,7 +85,9 @@ export function createSelect(deps: SelectDeps) {
             role: 'option',
             id: optionId(index),
             'aria-selected': String(option.value === value),
+            'aria-disabled': option.disabled ? 'true' : undefined,
             'data-index': String(index),
+            'data-tip': option.tip,
           },
           h('span', { class: 'select-label' }, option.label),
           option.detail !== undefined && h('span', { class: 'select-detail' }, option.detail),
@@ -160,6 +169,7 @@ export function createSelect(deps: SelectDeps) {
 
   function pick(index: number) {
     const option = options[index]
+    if (option?.disabled) return
     close()
     if (!option || option.value === value) return
     value = option.value

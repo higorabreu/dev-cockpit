@@ -3,6 +3,7 @@ import {
   type AgentState,
   createTranslator,
   type HostApi,
+  noBranchInfo,
   type Orientation,
   ok,
   reviewDiff,
@@ -25,7 +26,7 @@ function setup(width = 1201, height = 700) {
         reads += 1
         return ok({
           kind: 'ok' as const,
-          diff: reviewDiff('/home/ana/acme', 'uncommitted', 'main', []),
+          diff: reviewDiff('/home/ana/acme', 'uncommitted', noBranchInfo, []),
         })
       },
       fileLines: async () => ok([]),
@@ -58,6 +59,8 @@ function setup(width = 1201, height = 700) {
     cwd: async () => '/home/ana/acme',
     agent: () => agent,
     chooseLayout: (orientation) => layouts.push(orientation),
+    baseFor: () => undefined,
+    chooseBase: async () => undefined,
   })
   return {
     reviews,
