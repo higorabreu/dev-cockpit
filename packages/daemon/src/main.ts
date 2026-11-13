@@ -1,7 +1,7 @@
 import { defaultEndpoint, defaultStateDir } from '@dck/adapter-node-net'
 import { createJsonLogger } from '@dck/core'
+import { createConnectorViews } from './connector-views.ts'
 import { startDaemon } from './daemon.ts'
-import { createGitLabViews } from './gitlab-views.ts'
 import { systemSecretStore } from './secret-store.ts'
 
 async function main() {
@@ -9,7 +9,7 @@ async function main() {
   const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
   const stateDir = process.env.DCK_STATE_DIR ?? defaultStateDir()
 
-  const views = createGitLabViews({
+  const views = createConnectorViews({
     stateDir,
     logger,
     secrets: systemSecretStore(),

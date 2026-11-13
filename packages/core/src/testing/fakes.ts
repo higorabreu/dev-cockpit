@@ -196,12 +196,10 @@ export class FakePtyHost implements PtyHost {
 }
 
 // Views service with no network or file: every fetch returns an empty list
-export function createFakeViews() {
+export function createFakeViews(views: readonly string[] = ['review', 'mine']) {
   return createViewsService({
-    source: async () => ({
-      currentUser: async () => ok({ id: '1', username: 'user', name: 'User' }),
-      mergeRequests: async () => ok([]),
-    }),
+    views,
+    source: async () => ({ items: async () => ok([]) }),
     cache: { load: async () => undefined, save: async () => undefined },
     clock: { now: () => 1000 },
     logger: silentLogger,

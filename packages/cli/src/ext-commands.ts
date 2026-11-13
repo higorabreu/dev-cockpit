@@ -1,5 +1,5 @@
 import {
-  builtInExtension,
+  builtInExtensions,
   CONTRIBUTION_POINTS,
   describeError,
   type ErrorBody,
@@ -13,10 +13,19 @@ import {
   type Translate,
 } from '@dck/core'
 
+// What happened to the settings file when the disabled list was written
+export type SaveDisabled =
+  | { readonly kind: 'saved' }
+  // Not JSON: it is left as it is rather than replaced by the defaults
+  | { readonly kind: 'invalid'; readonly file: string }
+  | { readonly kind: 'unwritable'; readonly file: string }
+
 export interface ExtDeps {
   readonly finder: ExtensionFinder
   // The ids in the `extensions.disabled` setting
   disabled(): Promise<ReadonlySet<string>>
+  // Replaces the `extensions.disabled` setting; a running window picks the change up
+  saveDisabled(ids: ReadonlySet<string>): Promise<SaveDisabled>
   readonly appVersion: string
 }
 
@@ -27,6 +36,7 @@ interface Io {
 }
 
 const EXIT_OK = 0
+const EXIT_FAILED = 1
 const EXIT_USAGE = 64
 
 const byPrecedence = (a: LoadedExtension, b: LoadedExtension) =>
@@ -100,17 +110,48 @@ export function formatExtensionList(report: LoadReport, t: Translate): string[] 
   return [...lines, ...separator, t('cli.ext.rejected'), ...rejected.map((line) => `  ${line}`)]
 }
 
-async function list(io: Io, deps: ExtDeps): Promise<number> {
+async function loadReport(deps: ExtDeps) {
   const [found, disabled] = await Promise.all([deps.finder.find(), deps.disabled()])
   const report = loadExtensions({
-    candidates: [builtInExtension(deps.appVersion), ...found],
+    candidates: [...builtInExtensions(deps.appVersion), ...found],
     points: CONTRIBUTION_POINTS,
     disabled,
     apiVersion: EXTENSION_API_VERSION,
     appVersion: deps.appVersion,
   })
+  return { report, disabled }
+}
+
+async function list(io: Io, deps: ExtDeps): Promise<number> {
+  const { report } = await loadReport(deps)
   // A refused extension is part of the report, not a failure of the command
   io.out(`${formatExtensionList(report, io.t).join('\n')}\n`)
+  return EXIT_OK
+}
+
+// An id already in the list can always be enabled again, even when its extension is gone
+async function setEnabled(id: string, enabled: boolean, io: Io, deps: ExtDeps): Promise<number> {
+  const { report, disabled } = await loadReport(deps)
+  const known = [...report.active, ...report.disabled].some(
+    (extension) => extension.manifest.id === id,
+  )
+  if (!known && !disabled.has(id)) {
+    io.err(`${io.t('cli.ext.unknown', { id })}\n`)
+    return EXIT_USAGE
+  }
+  const next = new Set(disabled)
+  if (enabled) next.delete(id)
+  else next.add(id)
+  if (next.size !== disabled.size) {
+    const saved = await deps.saveDisabled(next)
+    if (saved.kind !== 'saved') {
+      const key =
+        saved.kind === 'invalid' ? 'cli.ext.settingsInvalid' : 'cli.ext.settingsUnwritable'
+      io.err(`${io.t(key, { file: saved.file })}\n`)
+      return EXIT_FAILED
+    }
+  }
+  io.out(`${io.t(enabled ? 'cli.ext.enabled' : 'cli.ext.disabled', { id })}\n`)
   return EXIT_OK
 }
 
@@ -121,6 +162,10 @@ export async function runExtCommand(
 ): Promise<number> {
   const [subcommand, ...rest] = args
   if (subcommand === 'list' && rest.length === 0) return list(io, deps)
+  const [id, ...extra] = rest
+  if ((subcommand === 'enable' || subcommand === 'disable') && id && extra.length === 0) {
+    return setEnabled(id, subcommand === 'enable', io, deps)
+  }
   io.err(`${io.t('cli.ext.usage')}\n`)
   return subcommand === '--help' ? EXIT_OK : EXIT_USAGE
 }

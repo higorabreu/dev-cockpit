@@ -28,7 +28,11 @@ function run(argv: string[], endpoint: string, locale: 'pt-BR' | 'en' = 'pt-BR')
 
 async function bootDaemon() {
   const endpoint = join(mkdtempSync(join(tmpdir(), 'dck-cli-')), 'daemon.sock')
-  const started = await startDaemon({ endpoint, logger: silentLogger, views: createFakeViews() })
+  const started = await startDaemon({
+    endpoint,
+    logger: silentLogger,
+    views: new Map([['gitlab', createFakeViews()]]),
+  })
   if (!started.ok) throw new Error(started.error.message)
   cleanups.push(() => started.value.stop())
   return endpoint

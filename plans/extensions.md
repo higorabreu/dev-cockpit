@@ -5,7 +5,8 @@
 Phase 0 (the foundation) is done. Phases 1 (the AI agent harness) and 1b (standards packs) were built, then
 dropped before any release (D36): the harness was configuration a developer sets once, needed too many
 concepts for checks a commit tool already does, and wrote files into the team's repository. The text below
-is kept as the record of what was planned; the foundation waits for its first real contribution point.
+is kept as the record of what was planned. The first real contribution point, `connectors`, came with
+`plans/connectors.md` (D41), which also did the provider-neutral refactor sketched below.
 
 ## Goal
 
