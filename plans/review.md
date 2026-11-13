@@ -109,6 +109,24 @@ change.
   header of the file being read is pinned on top. A collapsed or binary file is its header alone, with
   "Show anyway" (Enter on the header). The index sits beside the diff from 720px of review width.
 
+From a usability test of phase 1 (2026-11-13), done in 1b, each with a test:
+
+- [x] The keys fell to the page when `]`, `[` or `n` landed on a collapsed or binary file; in one scroll the
+  cursor lands on the file's header, focus stays on the diff and a redraw that hides the focused part gives
+  the keys back to the review.
+- [x] Ctrl+Shift+D from the terminal gives the keys to an open review, and closes it only from the review; a
+  reopened review keeps its file and line.
+- [x] The divider's share survives a restart (settings, checked with a real restart).
+- [x] The hint bar follows the focus: the review's keys while it has them, else Ctrl+Shift+D.
+- [x] `p` crosses files like `n`.
+- [x] The line numbers, the sign, hunk headers and gap rows stay in view on a sideways scroll.
+- [x] The file header that repeated the selected row, and opening on a two-line deleted file, are gone with
+  the continuous diff.
+
+Measured under Xvfb at 1400x760 and 1920x1040: Ctrl+Shift+D to the index 130-210 ms; "Show anyway" on a
+10 000-line file to the painted rows 24-26 ms; 239 scrolled frames at a 16.7 ms median, none dropped, with
+41 rows in the page (73 at full height).
+
 ## Phase 2: comments back to the agent
 
 Select one or more lines, write a comment, and "Send to the agent" types a short review (file, line,

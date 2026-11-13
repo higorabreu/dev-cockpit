@@ -116,7 +116,7 @@ Four groups, all outside the keys Claude Code uses (Ctrl+C, D, G, L, O, R, V, B,
 P, T, O, M, Esc, Shift+Tab, Ctrl+Enter, PgUp, PgDn, Ctrl+Home and End, and Ctrl+Shift+C when there is a
 selection): window (F9 or F12, F11, Ctrl+Shift+Up and Down, Ctrl+Shift+L, Ctrl plus and minus), tabs
 (Alt+1 to 9, Ctrl+Shift+T, Ctrl+Shift+W, Ctrl+Tab), panel and navigation (Ctrl+Shift+P palette,
-Ctrl+Shift+B panel, Ctrl+Shift+O projects) and agent flow (Ctrl+Shift+D diff, Ctrl+Shift+J next waiting
+Ctrl+Shift+B panel, Ctrl+Shift+O projects) and agent flow (Ctrl+Shift+D diff, Ctrl+Shift+E its layout (D48), Ctrl+Shift+J next waiting
 session, Ctrl+Shift+Y and N to approve and deny). The first prototype's Ctrl+K and Ctrl+B were dropped
 because they collide with Claude.
 
@@ -670,3 +670,38 @@ tab's agent changes state (debounced 400 ms), and never while the review is clos
 in the same tab; a request from the maintainer on 2026-11-13 (`plans/review.md`).
 **How to revert:** drop `createReviewTabs` and `createTabView` from `app.ts`, the `review` channels from
 the bridge and the preload, and the `review/` and `panes/` folders; the terminal goes back to filling the tab.
+
+## D48. The review fits the tab's shape, reads as one scroll and compares with where the branch started
+
+**Decision:** the split chooses its orientation from the tab's size and each pane's real text grid
+(`chooseOrientation` in `core/src/panes/panes.ts`): side by side when the terminal and the review each keep
+about 100 columns (the terminal's measured cell, the diff's 12px cell and gutters), stacked with the
+terminal on top when each keeps 15 rows, else the focused pane alone as in D47. The setting `review.layout`
+(Automatic, Side by side, Stacked) has a row in Settings; a chosen orientation holds while it fits its
+minimums. Each orientation keeps its own divider share in settings (`review.sideRatio`,
+`review.stackedRatio`, clamped), saved 400 ms after the divider rests and only when the panes really moved.
+The stacked divider is a horizontal `separator` that resizes with ↑↓. A header button names the orientation
+it switches to and Ctrl+Shift+E does the same: free in D13 and in Claude Code, and the split key of
+Terminator and Guake. Ctrl+Shift+D now gives the keys to an open review from the terminal and closes it
+only from the review; a closed review keeps its place in the diff until its tab closes.
+Every file reads in one virtualized scroll (`changeRows` in `core/src/diff/change-rows.ts`): a 40px header
+row per file (8px of air and a 32px band with state, path, labels and counts), the header of the file being
+read pinned on top, a generated, large or binary file as its header alone with "Show anyway". Each file's
+rows sit in a `group` named after the file inside the diff's `listbox`, the header row being an option the
+cursor lands on, so `]` and `[` never leave the keys on the page. `n` and `p` cross files both ways. The file
+list is an index beside the diff from 720px of review width (above it when narrower), collapsible for the
+session, following the file at the top. The gutter, the hunk and gap rows and the headers stay in view on a
+sideways scroll. The hint bar shows the review's keys only while it has the focus, else Ctrl+Shift+D.
+The Branch scope compares with where the branch started, like VS Code: `branch.<name>.vscode-merge-base`,
+else the branch's creation in its reflog (and the HEAD reflog for "Created from HEAD"), else the base-like
+branch (`develop`, `main`, `master`, `release/*`, `release-*`, the remote default; local before `origin/`,
+at most 20) HEAD is fewest commits ahead of, the latest merge base breaking a tie. The scope select reads
+"Since develop" with how the base was found in its tooltip, lists the other bases, and keeps the user's
+pick per repository folder in settings (`review.bases`); the bridge passes only a plain branch name. On a
+base branch the second scope is "Not pushed", against the upstream's merge base, disabled with its reason
+when there is none.
+**Reason:** at a usual window size side by side squeezed both panes, one file at a time broke the reading of
+a change, and git flow branches start from develop, not from the remote default; the maintainer's
+decisions and a usability test on 2026-11-13 (`plans/review.md`, phase 1b).
+**How to revert:** set `review.layout` to `side` and drop `chooseOrientation` for `PANE_MIN_WIDTH`; draw one
+file with `diffRows` again; drop `createBaseFinder` for the remote default.
