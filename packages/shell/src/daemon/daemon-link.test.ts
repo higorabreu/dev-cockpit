@@ -1,4 +1,5 @@
 import {
+  type AgentSignal,
   createHub,
   DAEMON_PROTOCOL,
   type ErrorBody,
@@ -20,11 +21,11 @@ type Attempt = () => Result<Transport, ErrorBody>
 function start(
   attempts: Attempt[],
   replaceDaemon?: (shutdown: () => Promise<boolean>) => Promise<void>,
-  onAgentReport?: (message: unknown) => void,
+  onAgentSignal?: (signal: AgentSignal) => void,
 ) {
   const scheduler = new FakeScheduler()
   const toggles: number[] = []
-  const reports: unknown[] = []
+  const signals: AgentSignal[] = []
   const queue = [...attempts]
   let calls = 0
   const link = startDaemonLink({
@@ -37,15 +38,11 @@ function start(
     scheduler,
     logger: silentLogger,
     onToggle: () => toggles.push(1),
-    onAgentReport:
-      onAgentReport ??
-      ((message) => {
-        reports.push(message)
-      }),
+    onAgentSignal: onAgentSignal ?? ((signal) => void signals.push(signal)),
     replaceDaemon,
     retryMs: 2000,
   })
-  return { scheduler, toggles, reports, link, calls: () => calls }
+  return { scheduler, toggles, signals, link, calls: () => calls }
 }
 
 describe('startDaemonLink', () => {
@@ -147,15 +144,31 @@ describe('startDaemonLink', () => {
     link.stop()
   })
 
-  it('should pass an agent report to the handler when the daemon publishes one', async () => {
+  it('should pass an agent signal to the handler when the daemon publishes a valid one', async () => {
     const hub = createHub({}, silentLogger)
-    const { reports, link } = start([() => ok(connectLoopback(hub))])
+    const { signals, link } = start([() => ok(connectLoopback(hub))])
     await tick()
 
-    hub.publish('agent', { agent: 'claude', ptyId: 1, payload: { a: 1 } })
+    hub.publish('agent', { ptyId: 2, state: 'needs-you' })
+    hub.publish('agent', { ptyId: 2, state: 'unknown' })
     await tick()
 
-    expect(reports).toEqual([{ agent: 'claude', ptyId: 1, payload: { a: 1 } }])
+    expect(signals).toEqual([{ ptyId: 2, state: 'needs-you' }])
+    link.stop()
+  })
+
+  it('should keep the link working when the agent signal handler throws', async () => {
+    const hub = createHub({}, silentLogger)
+    const { toggles, link } = start([() => ok(connectLoopback(hub))], undefined, () => {
+      throw new Error('boom')
+    })
+    await tick()
+
+    hub.publish('agent', { ptyId: 1, state: 'working' })
+    hub.publish('window', { action: 'toggle' })
+    await tick()
+
+    expect(toggles).toHaveLength(1)
     link.stop()
   })
 
@@ -223,20 +236,5 @@ describe('startDaemonLink', () => {
       expect(replaced).toBe(2)
       link.stop()
     })
-  })
-
-  it('should keep the link working when the agent report handler throws', async () => {
-    const hub = createHub({}, silentLogger)
-    const { toggles, link } = start([() => ok(connectLoopback(hub))], undefined, () => {
-      throw new Error('boom')
-    })
-    await tick()
-
-    hub.publish('agent', { agent: 'claude', ptyId: 1, payload: {} })
-    hub.publish('window', { action: 'toggle' })
-    await tick()
-
-    expect(toggles).toHaveLength(1)
-    link.stop()
   })
 })

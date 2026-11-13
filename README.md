@@ -66,6 +66,8 @@ next launch, `--yes` restarts without asking and `--skip-build` installs the `.d
 Selecting text copies it; the right and middle buttons paste. The `dck` command controls the window from
 outside (`dck toggle`, `dck ping`): useful to bind to a system shortcut if the global key is refused.
 
+A tab running a coding agent is marked when it needs you; [docs/agents.md](docs/agents.md) wires Claude Code in two commands.
+
 ## Settings
 
 `Ctrl+,` opens the screen: language, theme, opacity, font, window height, global key, hold menu key,
@@ -91,7 +93,8 @@ architecture, decisions and roadmap, and [AGENTS.md](AGENTS.md) for the coding s
 - Linux with X11 only, tested on Ubuntu 24.04 and GNOME. macOS is planned ([plans/macos.md](plans/macos.md))
   and Windows after it, both as adapters.
 - The package runs with `--no-sandbox`, because of Ubuntu's sandbox restriction.
-- No Claude approvals banner and no agent data in the panel (the code is dormant, see D26).
+- No Claude approvals banner and no agent metrics in the panel: the cockpit marks the tab where an agent
+  needs you instead (D37).
 - GitLab only for now; Jira and key remapping for the remaining shortcuts are not done.
 - The GNOME tray icon opens the menu and does not toggle the window directly.
 

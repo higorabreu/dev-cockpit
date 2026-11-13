@@ -1,0 +1,81 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal working || true",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal working || true",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal needs-you || true",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt|elicitation_dialog",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal needs-you || true",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal your-turn || true",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal your-turn || true",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$DCK_PTY_ID\" ] && command -v dck >/dev/null 2>&1 && dck agent signal ended || true",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,4 +1,5 @@
 import {
+  type AgentEvent,
   activateTab,
   activateTabAt,
   type ComposeStatus,
@@ -37,6 +38,7 @@ import { createProjectSearch } from './projects/project-search.ts'
 import { applyOpacity } from './settings/preferences.ts'
 import type { SettingsClient } from './settings/settings-client.ts'
 import { createSettingsView } from './settings/settings-view.ts'
+import { attentionMark } from './tabs/attention-mark.ts'
 import { createNotice } from './tabs/notice.ts'
 import { createSessionWatcher } from './tabs/sessions-watcher.ts'
 import { createTabBar } from './tabs/tab-bar.ts'
@@ -177,11 +179,57 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   // Seen means the active tab in a focused window; otherwise the notice stays pending
   const isSeen = (tabId: string) => tabId === state.activeId && document.hasFocus()
 
+  function announce(event: AgentEvent) {
+    const tab = state.tabs.find((candidate) => candidate.id === event.tabId)
+    if (!event.notify || !tab) return
+    api.notifications.show({
+      title: i18n.t('notify.title'),
+      body:
+        event.kind === 'needs-you'
+          ? i18n.t('notify.needsYou', { tab: tab.label })
+          : i18n.t('notify.agentAnswered', {
+              tab: tab.label,
+              duration: formatDuration(event.durationMs),
+            }),
+      tabId: tab.id,
+    })
+  }
+
+  function showAttention() {
+    tabBar.render(state, attention.marks())
+    panel.render()
+  }
+
+  // Esc fires no agent signal, so a working agent's terminal is checked for silence while one works
+  let quietTimer: ReturnType<typeof setInterval> | undefined
+  function watchQuiet() {
+    if (quietTimer || !attention.hasWorkingAgent()) return
+    quietTimer = setInterval(() => {
+      attention.settle((id) => sessions.get(id)?.lastOutputAt())
+      if (attention.hasWorkingAgent()) return
+      clearInterval(quietTimer)
+      quietTimer = undefined
+    }, 1000)
+  }
+
+  function tabOfPty(ptyId: number) {
+    for (const [id, session] of sessions) if (session.ptyId === ptyId) return id
+    return undefined
+  }
+
+  api.agent.onSignal((signal) => {
+    const tabId = tabOfPty(signal.ptyId)
+    if (!tabId) return
+    const event = attention.signal(tabId, signal.state, isSeen(tabId))
+    if (event) announce(event)
+    watchQuiet()
+    showAttention()
+  })
+
   function markActiveSeen() {
     if (state.activeId && document.hasFocus() && attention.unseenIds().includes(state.activeId)) {
       attention.markSeen(state.activeId)
-      tabBar.render(state, new Set(attention.unseenIds()))
-      panel.render()
+      showAttention()
     }
   }
 
@@ -193,20 +241,9 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         const info = watcher.get(tab.id)
         if (!info) continue
         const finished = attention.update(tab.id, info, isSeen(tab.id))
-        if (finished?.notify) {
-          api.notifications.show({
-            title: i18n.t('notify.title'),
-            body: i18n.t('notify.finished', {
-              tab: tab.label,
-              process: finished.process,
-              duration: formatDuration(finished.durationMs),
-            }),
-            tabId: tab.id,
-          })
-        }
+        if (finished) announce({ kind: 'finished', ...finished })
       }
-      tabBar.render(state, new Set(attention.unseenIds()))
-      panel.render()
+      showAttention()
     },
   })
 
@@ -225,6 +262,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
           activeId: () => state.activeId,
           info: (id) => watcher.get(id),
           finished: (id) => attention.finished(id),
+          needsYou: (id) => attention.attention(id) === 'needs-you',
           finishedCount: () => attention.unseenIds().length,
           select: (id) => update(activateTab(state, id)),
         },
@@ -261,7 +299,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   }
 
   function render() {
-    tabBar.render(state, new Set(attention.unseenIds()))
+    tabBar.render(state, attention.marks())
     for (const [id, session] of sessions) {
       session.element.classList.toggle('active', id === state.activeId)
     }
@@ -309,6 +347,10 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       exitedText: i18n.t('terminal.exited'),
       onCopied: (text) => notice.copied(text),
       onExit: () => close(id),
+      onInput() {
+        attention.input(id)
+        watchQuiet()
+      },
     })
     sessions.set(id, session)
     if (options.project) projectTabs.set(options.project, id)
@@ -369,7 +411,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       viewsView.retranslate()
       showReviewCount(reviewCount)
       settingsView.rerender()
-      tabBar.render(state, new Set(attention.unseenIds()))
+      tabBar.render(state, attention.marks())
     }
     // The folder and depth are only read when listing: reload for the menu and the search
     if (changed.some((key) => key.startsWith('projects.'))) void refreshProjects()
@@ -386,12 +428,14 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const tabBar = createTabBar(
     elements.tabs,
     {
-      hiddenAttention(hidden) {
-        elements.tabsAll.dataset.attention = String(hidden)
-        elements.tabsAll.setAttribute(
-          'aria-label',
-          hidden ? `${i18n.t('tabs.all')}, ${i18n.t('tabs.finished')}` : i18n.t('tabs.all'),
-        )
+      hiddenAttention(kind) {
+        if (kind) elements.tabsAll.dataset.attention = kind
+        else delete elements.tabsAll.dataset.attention
+        const label = kind
+          ? `${i18n.t('tabs.all')}, ${attentionMark(kind, i18n.t).label}`
+          : i18n.t('tabs.all')
+        elements.tabsAll.setAttribute('aria-label', label)
+        elements.tabsAll.setAttribute('data-tip', label)
       },
       activate: (id) => update(activateTab(state, id)),
       reorder: (ids) => {
@@ -412,21 +456,19 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         )
       },
     },
-    () => i18n.t('tabs.finished'),
+    i18n.t,
   )
 
   elements.tabsNew.addEventListener('click', () => void open())
 
   createTabList(elements.tabList, elements.tabsAll, {
-    entries() {
-      const finished = new Set(attention.unseenIds())
-      return state.tabs.map((tab) => ({
+    // Only names: the state of each tab lives in the Sessions section
+    entries: () =>
+      state.tabs.map((tab) => ({
         id: tab.id,
         label: tab.label,
         current: tab.id === state.activeId,
-        finished: finished.has(tab.id),
-      }))
-    },
+      })),
     onPick: (id) => update(activateTab(state, id)),
     onClose: () => activeSession()?.focus(),
     barOnTop: () => document.body.classList.contains('full'),
@@ -446,7 +488,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     togglePanel,
     toggleFullHeight: () => api.window.toggleFullHeight(),
     nextFinished() {
-      const id = attention.unseenIds()[0]
+      const id = attention.nextUnseen(state.activeId)
       if (id) update(activateTab(state, id))
     },
     changeOpacity(direction: 1 | -1) {

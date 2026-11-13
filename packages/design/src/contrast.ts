@@ -41,6 +41,9 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     ['primary button text', rgb(color.accentInk), rgb(color.accent), TEXT],
     ['success on the surface', rgb(color.success), surface, TEXT],
     ['warning on the surface', rgb(color.warning), surface, TEXT],
+    // The needs you mark sits on the tab bar and on the active tab or the selected row of the tab list
+    ['warning mark on the window', rgb(color.warning), rgb(color.bg), GRAPHIC],
+    ['warning mark on the active tab', rgb(color.warning), rgb(color.tabActive), GRAPHIC],
     ['critical on the surface', rgb(color.critical), surface, TEXT],
   ]
 

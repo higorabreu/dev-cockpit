@@ -1,0 +1,8 @@
+{
+  "name": "dck",
+  "description": "Marks the Dev Cockpit tab when Claude Code needs you or has finished its turn",
+  "author": { "name": "Higor Abreu Freiberger" },
+  "homepage": "https://github.com/higorabreu/dev-cockpit/blob/main/docs/agents.md",
+  "repository": "https://github.com/higorabreu/dev-cockpit",
+  "license": "AGPL-3.0-only"
+}

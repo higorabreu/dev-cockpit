@@ -5,7 +5,6 @@ export interface TabListEntry {
   readonly id: string
   readonly label: string
   readonly current: boolean
-  readonly finished: boolean
 }
 
 export interface TabListDeps {
@@ -56,8 +55,6 @@ export function createTabList(panel: HTMLElement, button: HTMLElement, deps: Tab
             'data-index': String(index),
           },
           h('span', { class: 'tl-label' }, entry.label),
-          entry.finished &&
-            h('span', { class: 'tl-flag' }, h('i', { class: 'pip' }), t('tabs.finished')),
           entry.current && icon(CHECK, 13),
         ),
       ),

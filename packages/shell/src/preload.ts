@@ -1,4 +1,4 @@
-import type { PtyExit, Settings, ViewSnapshot } from '@dck/core'
+import type { AgentSignal, PtyExit, Settings, ViewSnapshot } from '@dck/core'
 import { type HostApi, hostChannels } from '@dck/core/host-api'
 import { contextBridge, ipcRenderer } from 'electron'
 
@@ -59,6 +59,9 @@ const api: HostApi = {
   session: {
     activity: (ptyId) => ipcRenderer.invoke(hostChannels.sessionActivity, ptyId),
     inspect: (ptyId) => ipcRenderer.invoke(hostChannels.sessionInspect, ptyId),
+  },
+  agent: {
+    onSignal: (listener) => subscribe<[AgentSignal]>(hostChannels.agentSignal, listener),
   },
   projects: {
     list: () => ipcRenderer.invoke(hostChannels.projectsList),

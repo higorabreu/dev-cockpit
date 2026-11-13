@@ -1,5 +1,6 @@
 import { listenOn } from '@dck/adapter-node-net'
 import {
+  agentSignalSchema,
   createHub,
   DAEMON_PROTOCOL,
   type ErrorBody,
@@ -10,14 +11,6 @@ import {
   type ViewsService,
 } from '@dck/core'
 import { z } from 'zod'
-
-const MAX_REPORT_BYTES = 256 * 1024
-
-const agentReport = z.object({
-  agent: z.string().min(1).max(64),
-  ptyId: z.number().int().nonnegative(),
-  payload: z.unknown().refine((value) => JSON.stringify(value ?? null).length <= MAX_REPORT_BYTES),
-})
 
 const viewParams = z.object({
   view: z.enum(['review', 'mine']),
@@ -54,8 +47,10 @@ export async function startDaemon(
         return { stopping: true }
       },
       'window.toggle': () => ({ delivered: hub.publish('window', { action: 'toggle' }) }),
-      // The agent (for example through the statusLine) pushes data for a tab; the daemon just relays it
-      'agent.report': (params) => ({ delivered: hub.publish('agent', agentReport.parse(params)) }),
+      // A coding agent tells what it is doing in a tab; the daemon only relays it to the window
+      'agent.signal': (params) => ({
+        delivered: hub.publish('agent', agentSignalSchema.parse(params)),
+      }),
       'views.configure': async (params) => {
         await views.configure(configureParams.parse(params).url ?? undefined)
         return {}

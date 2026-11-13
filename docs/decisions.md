@@ -303,6 +303,7 @@ pass `onAgentReport` to `startDaemonLink` and `agents` (profiles) to the session
 point is the attached background agent.
 **Attention:** a `statusLine` already installed in a user's `settings.json` keeps calling
 `dck agent report`, which is harmless without the shell listening; `dck agent uninstall` removes it.
+**Replaced by D37** (2026-11-12): the dormant code was removed instead of reactivated.
 
 ## D27. System settings
 
@@ -454,3 +455,24 @@ reviewing what an agent changed, and getting back to a project's context.
 **How to revert:** revert the commit that removed it; the code, its tests, its docs and the two reviews
 are in the history of pull request #12.
 
+## D37. Agent attention through the agent's own hooks and a neutral signal
+
+**Decision:** the cockpit tells which tab needs the user, not how many tokens an agent spent. It knows
+four neutral states per tab (working, needs you, your turn, ended) and one command, `dck agent signal
+<state>`, which reads `DCK_PTY_ID`, goes through the daemon's `agent.signal` method and reaches the
+window, where the attention tracker marks the tab: needs you with a warning diamond and a notification
+whatever the duration, your turn with the existing finished rules. A working tab whose terminal stays
+quiet for 5 s becomes your turn, because Esc fires no hook. Each agent is wired with its own public
+mechanism calling that command (Claude Code: a plugin with its hooks, in `integrations/claude-code/`);
+nothing in `core`, the shell or the UI knows which agent sent a signal. The command never fails, prints
+nothing and does not read stdin, so a hook is harmless outside the cockpit.
+**Replaces D26's dormant metrics path:** the `agent-claude` adapter (transcript, process record,
+`statusLine` normalizer, install planning), the agent inspector and reports in the shell,
+`dck agent report|install|uninstall`, the `agent.report` daemon method and the neutral session, report,
+limit and detail models were deleted. `AgentProfile` and the `agent` activity stay for the session
+inspector.
+**Reason:** Claude Code's internal files changed between versions and mapped to the wrong session when
+two ran in one directory; installing the `statusLine` edited the user's settings; the metrics were already
+in the agent's own status line in the same terminal and asked for no action, while a blocked agent does.
+**How to revert:** the removed code is in the history before this decision; the signal path stands
+alone and can be removed without touching the tabs.

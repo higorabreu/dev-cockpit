@@ -10,11 +10,6 @@
       "extra-files": [
         {
           "type": "json",
-          "path": "packages/adapters/agent-claude/package.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
           "path": "packages/adapters/docker-cli/package.json",
           "jsonpath": "$.version"
         },
