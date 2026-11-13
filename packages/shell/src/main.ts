@@ -145,6 +145,9 @@ app.whenReady().then(async () => {
     },
   })
   window.setVisibleOnAllWorkspaces(true)
+  // Page content never opens an Electron window nor leaves the app; links go to the browser through the host
+  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  window.webContents.on('will-navigate', (event) => event.preventDefault())
 
   const electronScreen = createElectronScreen(
     screen,

@@ -96,6 +96,7 @@ export const ptBR = {
   'notice.chars.other': '{count} caracteres',
 
   'terminal.exited': '[processo encerrado]',
+  'terminal.openLink': '{modifier}+clique',
 
   'projects.search': 'Buscar projeto',
   'projects.none': 'Nenhum projeto encontrado',

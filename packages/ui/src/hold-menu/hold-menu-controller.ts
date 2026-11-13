@@ -181,6 +181,8 @@ export function createHoldMenuController(
 
   window.addEventListener('keydown', onKeyDown, true)
   window.addEventListener('keyup', onKeyUp, true)
+  // A click while the trigger is down is Ctrl+click on a link, not the start of the menu
+  window.addEventListener('mousedown', () => gesture.otherKey(), true)
   window.addEventListener('blur', () => {
     gesture.cancel()
     close()

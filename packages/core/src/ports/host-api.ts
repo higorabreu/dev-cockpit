@@ -58,6 +58,8 @@ export interface HostApi {
   readonly external: {
     // Only opens addresses from the connected GitLab's origin; any other is ignored
     open(url: string): void
+    // Any http or https link the user Ctrl+clicked in a terminal; anything else is refused
+    openLink(url: string): void
   }
   readonly autostart: {
     isEnabled(): Promise<boolean>
@@ -105,6 +107,7 @@ export const hostChannels = {
   connectionsGitlabConnect: 'connections:gitlab:connect',
   connectionsGitlabDisconnect: 'connections:gitlab:disconnect',
   externalOpen: 'external:open',
+  externalOpenLink: 'external:open-link',
   viewsSnapshot: 'views:snapshot',
   viewsRefresh: 'views:refresh',
   viewsChanged: 'views:changed',

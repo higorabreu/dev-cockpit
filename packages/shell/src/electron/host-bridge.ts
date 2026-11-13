@@ -51,6 +51,25 @@ function parseOwnUrl(input: string, origin: string | null): string | undefined {
   }
 }
 
+// Terminal output is not trusted: only the web, no credentials in the address and a sane length
+const MAX_LINK_LENGTH = 2048
+const webLinkSchema = z
+  .string()
+  .max(MAX_LINK_LENGTH)
+  .transform((text) => URL.parse(text))
+  .refine(
+    (url) =>
+      url !== null &&
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      url.username === '' &&
+      url.password === '',
+  )
+
+// Only the scheme reaches the log: the rest of a refused address may carry a token
+function schemeOf(input: unknown): string {
+  return (typeof input === 'string' && URL.parse(input)?.protocol) || 'invalid'
+}
+
 export interface IpcMainApi {
   handle(channel: string, listener: (event: unknown, ...args: never[]) => unknown): void
   on(channel: string, listener: (event: unknown, ...args: never[]) => void): void
@@ -69,7 +88,7 @@ export interface BridgeOptions {
   readonly autostart: Autostart
   readonly gitlab: GitLabConnection
   readonly views: ViewsGateway
-  // Opens in the system browser; `allowedOrigin` is the connected GitLab's origin, if any
+  // Opens in the system browser; `allowedOrigin` is the connected GitLab's origin, if any, and only limits `open`
   readonly external: { open(url: string): void; allowedOrigin(): string | null }
   readonly environment: { status(pid: number): Promise<ComposeStatus> }
   readonly sessions: {
@@ -147,6 +166,11 @@ export function registerHostBridge(options: BridgeOptions) {
     const target = typeof url === 'string' ? parseOwnUrl(url, origin) : undefined
     if (target) options.external.open(target)
     else logger.warn('external address refused', { origin })
+  })
+  ipcMain.on(hostChannels.externalOpenLink, (_event, url: unknown) => {
+    const parsed = webLinkSchema.safeParse(url)
+    if (parsed.success && parsed.data) options.external.open(parsed.data.href)
+    else logger.warn('terminal link refused', { scheme: schemeOf(url) })
   })
   ipcMain.handle(hostChannels.viewsSnapshot, (_event, view: unknown) => {
     const parsed = viewRequestSchema.shape.view.safeParse(view)
