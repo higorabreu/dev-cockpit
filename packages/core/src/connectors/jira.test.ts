@@ -8,7 +8,13 @@ describe('JIRA_CONNECTOR', () => {
 
     expect(parsed.connection.email).toEqual({ placeholder: 'ana@example.com' })
     expect(parsed.views).toEqual([
-      { id: 'tasks', kind: 'issue', title: 'views.tasks', empty: 'views.empty.tasks' },
+      {
+        id: 'tasks',
+        kind: 'issue',
+        title: 'views.tasks',
+        description: 'views.tasks.description',
+        empty: 'views.empty.tasks',
+      },
     ])
   })
 })

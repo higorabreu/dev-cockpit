@@ -370,7 +370,15 @@ describe('runExtCommand with connectors from other sources', () => {
         address: { placeholder: 'https://tracker.example.com' },
         token: { label: 'connections.gitlab.token', hint: 'connections.gitlab.token.hint' },
       },
-      views: [{ id: 'tasks', kind: 'issue', title: 'views.review', empty: 'views.empty.review' }],
+      views: [
+        {
+          id: 'tasks',
+          kind: 'issue',
+          title: 'views.review',
+          description: 'views.review.description',
+          empty: 'views.empty.review',
+        },
+      ],
     }
     const cli = setup([
       candidate('installed', '/home/ana/.config/dev-cockpit/extensions/acme.tracker', {

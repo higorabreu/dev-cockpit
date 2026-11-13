@@ -11,7 +11,15 @@ export const JIRA_CONNECTOR = {
     email: { placeholder: 'ana@example.com' },
     token: { label: 'connections.jira.token', hint: 'connections.jira.token.hint' },
   },
-  views: [{ id: 'tasks', kind: 'issue', title: 'views.tasks', empty: 'views.empty.tasks' }],
+  views: [
+    {
+      id: 'tasks',
+      kind: 'issue',
+      title: 'views.tasks',
+      description: 'views.tasks.description',
+      empty: 'views.empty.tasks',
+    },
+  ],
 } as const satisfies Connector
 
 export const JIRA_EXTENSION = {
