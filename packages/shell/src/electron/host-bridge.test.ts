@@ -1,4 +1,12 @@
-import { defaultSettings, hostChannels, type LogContext, type TabNotification } from '@dck/core'
+import {
+  type ConnectionFields,
+  type Connector,
+  defaultSettings,
+  GITLAB_CONNECTOR,
+  hostChannels,
+  type LogContext,
+  type TabNotification,
+} from '@dck/core'
 import { FakePtyHost, MemoryClipboard } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
 import { type IpcMainApi, registerHostBridge } from './host-bridge.ts'
@@ -41,7 +49,8 @@ function setup() {
   const touched: string[] = []
   let autostartOn = false
   const notified: TabNotification[] = []
-  const gitlabConnects: { url: string; token: string }[] = []
+  const connects: { id: string; fields: ConnectionFields; token: string }[] = []
+  let connectors: readonly Connector[] = [GITLAB_CONNECTOR]
   const viewRefreshes: { view: string; maxAgeMs: number | undefined }[] = []
   const opened: string[] = []
   const warnings: { message: string; context: LogContext | undefined }[] = []
@@ -99,10 +108,11 @@ function setup() {
         autostartOn = enabled
       },
     },
-    gitlab: {
+    connections: {
+      list: () => connectors,
       status: async () => ({ kind: 'none' as const }),
-      connect: async (url, token) => {
-        gitlabConnects.push({ url, token })
+      connect: async (id, fields, token) => {
+        connects.push({ id, fields, token })
         return { kind: 'none' as const }
       },
       disconnect: async () => ({ kind: 'none' as const }),
@@ -122,7 +132,10 @@ function setup() {
       configure: async () => undefined,
       parse: () => undefined,
     },
-    external: { open: (url) => void opened.push(url), allowedOrigin: () => 'https://gl.test' },
+    external: {
+      open: (url) => void opened.push(url),
+      allowedOrigins: () => ['https://gl.test'],
+    },
     notifier: { notify: (notification) => void notified.push(notification) },
     projects: {
       list: async () => [{ name: 'alpha', path: '/p/alpha' }],
@@ -151,7 +164,10 @@ function setup() {
     bridge,
     touched,
     notified,
-    gitlabConnects,
+    connects,
+    disableConnectors: () => {
+      connectors = []
+    },
     viewRefreshes,
     opened,
     warnings,
@@ -377,29 +393,49 @@ describe('registerHostBridge clipboard and window', () => {
   })
 })
 
-describe('registerHostBridge gitlab connection', () => {
-  it('should forward the address and the trimmed token when the request is valid', async () => {
-    const { call, gitlabConnects } = setup()
+describe('registerHostBridge connections', () => {
+  it('should forward the connector, the address and the trimmed token when the request is valid', async () => {
+    const { call, connects } = setup()
 
-    await call(hostChannels.connectionsGitlabConnect, {
-      url: 'https://gl.test',
+    await call(hostChannels.connectionsConnect, {
+      id: 'gitlab',
+      fields: { url: 'https://gl.test' },
       token: ' glpat-x ',
     })
 
-    expect(gitlabConnects).toEqual([{ url: 'https://gl.test', token: 'glpat-x' }])
+    expect(connects).toEqual([
+      { id: 'gitlab', fields: { url: 'https://gl.test' }, token: 'glpat-x' },
+    ])
   })
 
   it.each([
-    ['no token', { url: 'https://gl.test', token: '  ' }],
+    ['no token', { id: 'gitlab', fields: { url: 'https://gl.test' }, token: '  ' }],
     ['a payload that is not an object', 'glpat-x'],
-    ['a token that is too long', { url: 'https://gl.test', token: 'x'.repeat(513) }],
+    [
+      'a token that is too long',
+      { id: 'gitlab', fields: { url: 'https://gl.test' }, token: 'x'.repeat(513) },
+    ],
+    ['no connector', { fields: { url: 'https://gl.test' }, token: 'glpat-x' }],
+    ['the address outside the fields', { id: 'gitlab', url: 'https://gl.test', token: 'glpat-x' }],
   ])('should refuse the request without connecting when it has %s', async (_label, payload) => {
-    const { call, gitlabConnects } = setup()
+    const { call, connects } = setup()
 
-    const status = await call(hostChannels.connectionsGitlabConnect, payload)
+    const status = await call(hostChannels.connectionsConnect, payload)
 
-    expect(status).toEqual({ kind: 'error', url: undefined, code: 'DCK-GLB-007' })
-    expect(gitlabConnects).toEqual([])
+    expect(status).toEqual({ kind: 'error', url: undefined, code: 'DCK-IPC-003' })
+    expect(connects).toEqual([])
+  })
+
+  it('should list the enabled connectors when asked', async () => {
+    const { call } = setup()
+
+    expect(await call(hostChannels.connectionsList)).toEqual([GITLAB_CONNECTOR])
+  })
+
+  it('should answer none when the status asks for an id that is not text', async () => {
+    const { call } = setup()
+
+    expect(await call(hostChannels.connectionsStatus, 42)).toEqual({ kind: 'none' })
   })
 })
 
@@ -428,10 +464,19 @@ describe('registerHostBridge views', () => {
     expect(await call(hostChannels.viewsRefresh, payload)).toBeUndefined()
     expect(viewRefreshes).toEqual([])
   })
+
+  it('should not ask the daemon when the view belongs to a disabled connector', async () => {
+    const { call, viewRefreshes, disableConnectors } = setup()
+    disableConnectors()
+
+    expect(await call(hostChannels.viewsSnapshot, 'review')).toBeUndefined()
+    expect(await call(hostChannels.viewsRefresh, { view: 'review' })).toBeUndefined()
+    expect(viewRefreshes).toEqual([])
+  })
 })
 
 describe('registerHostBridge external', () => {
-  it('should open the address when it belongs to the connected GitLab', () => {
+  it('should open the address when it belongs to a connected account', () => {
     const { call, opened } = setup()
 
     call(hostChannels.externalOpen, 'https://gl.test/g/p/-/merge_requests/5')

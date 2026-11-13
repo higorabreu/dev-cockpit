@@ -1,5 +1,5 @@
 import {
-  builtInExtension,
+  builtInExtensions,
   CONTRIBUTION_POINTS,
   describeError,
   type ErrorBody,
@@ -100,15 +100,20 @@ export function formatExtensionList(report: LoadReport, t: Translate): string[] 
   return [...lines, ...separator, t('cli.ext.rejected'), ...rejected.map((line) => `  ${line}`)]
 }
 
-async function list(io: Io, deps: ExtDeps): Promise<number> {
+async function loadReport(deps: ExtDeps) {
   const [found, disabled] = await Promise.all([deps.finder.find(), deps.disabled()])
   const report = loadExtensions({
-    candidates: [builtInExtension(deps.appVersion), ...found],
+    candidates: [...builtInExtensions(deps.appVersion), ...found],
     points: CONTRIBUTION_POINTS,
     disabled,
     apiVersion: EXTENSION_API_VERSION,
     appVersion: deps.appVersion,
   })
+  return { report, disabled }
+}
+
+async function list(io: Io, deps: ExtDeps): Promise<number> {
+  const { report } = await loadReport(deps)
   // A refused extension is part of the report, not a failure of the command
   io.out(`${formatExtensionList(report, io.t).join('\n')}\n`)
   return EXIT_OK

@@ -1,7 +1,11 @@
 // @vitest-environment happy-dom
 import {
+  type ConnectionFields,
+  type ConnectionStatus,
+  type Connector,
   createTranslator,
   defaultSettings,
+  GITLAB_CONNECTOR,
   type HostApi,
   type Settings,
   type SettingsPatch,
@@ -13,6 +17,7 @@ import { createSettingsView } from './settings-view.ts'
 function fakeSettings(locked: readonly string[] = []) {
   let current: Settings = defaultSettings
   const patches: SettingsPatch[] = []
+  const listeners = new Set<(settings: Settings, changed: readonly string[]) => void>()
   const client: SettingsClient = {
     current: () => current,
     locked: () => locked,
@@ -21,18 +26,24 @@ function fakeSettings(locked: readonly string[] = []) {
       current = { ...current, ...patch } as Settings
       return { settings: current, locked, fresh: false, rejected: [] }
     },
-    onChange: () => () => undefined,
+    onChange: (listener) => {
+      listeners.add(listener)
+      return () => void listeners.delete(listener)
+    },
   }
-  return { client, patches }
+  const emit = (changed: readonly string[]) => {
+    for (const listener of listeners) listener(current, changed)
+  }
+  return { client, patches, emit }
 }
 
 // Only what opening the screen asks the host for
 const api = {
-  connections: { gitlab: { status: async () => ({ kind: 'none' }) } },
+  connections: { list: async () => [GITLAB_CONNECTOR], status: async () => ({ kind: 'none' }) },
   autostart: { isEnabled: async () => false },
 } as unknown as HostApi
 
-function open(locked: readonly string[] = []) {
+function open(locked: readonly string[] = [], host: HostApi = api) {
   document.body.replaceChildren()
   const overlay = document.createElement('div')
   const body = document.createElement('div')
@@ -44,7 +55,7 @@ function open(locked: readonly string[] = []) {
     { overlay, body },
     {
       settings: settings.client,
-      api,
+      api: host,
       i18n: createTranslator('en'),
       onClose: () => {
         closed = true
@@ -58,7 +69,14 @@ function open(locked: readonly string[] = []) {
     if (!found) throw new Error(`invariant: ${key} has a control`)
     return found
   }
-  return { view, body, combobox, patches: settings.patches, isClosed: () => closed }
+  return {
+    view,
+    body,
+    combobox,
+    patches: settings.patches,
+    emit: settings.emit,
+    isClosed: () => closed,
+  }
 }
 
 const press = (target: HTMLElement, key: string) =>
@@ -150,6 +168,111 @@ describe('settings view, agent connect hint', () => {
       { system: { agentConnectHint: false } },
       { system: { agentConnectHint: true } },
     ])
+    view.close()
+  })
+})
+
+const tracker: Connector = {
+  id: 'tracker',
+  name: 'Acme Tracker',
+  connection: {
+    address: { placeholder: 'https://tracker.example.com' },
+    email: { placeholder: 'ana@example.com' },
+    token: { label: 'connections.gitlab.token', hint: 'connections.gitlab.token.hint' },
+  },
+  views: [{ id: 'tasks', kind: 'issue', title: 'views.review', empty: 'views.empty.review' }],
+}
+
+function connectionsHost(initial: readonly Connector[]) {
+  let connectors = initial
+  const connects: { id: string; fields: ConnectionFields; token: string }[] = []
+  const host = {
+    connections: {
+      list: async () => connectors,
+      status: async (): Promise<ConnectionStatus> => ({ kind: 'none' }),
+      connect: async (id: string, fields: ConnectionFields, token: string) => {
+        connects.push({ id, fields, token })
+        return {
+          kind: 'connected',
+          url: fields.url,
+          user: { username: 'ana', name: 'Ana' },
+        } satisfies ConnectionStatus
+      },
+      disconnect: async (): Promise<ConnectionStatus> => ({ kind: 'none' }),
+    },
+    autostart: { isEnabled: async () => false },
+  } as unknown as HostApi
+  return {
+    host,
+    connects,
+    set: (next: readonly Connector[]) => {
+      connectors = next
+    },
+  }
+}
+
+const connectionsPage = async (host: HostApi) => {
+  const page = open([], host)
+  page.body.querySelector<HTMLElement>('#settings-tab-connections')?.click()
+  await settle()
+  await settle()
+  const sections = () =>
+    [...page.body.querySelectorAll('.spanel .sgroup')].map((section) =>
+      [...section.querySelectorAll('.sname2')].map((label) => label.textContent),
+    )
+  return { ...page, sections }
+}
+
+describe('settings view, connections', () => {
+  it('should draw the GitLab section with the same rows as before when GitLab is the only connector', async () => {
+    const { sections, body, view } = await connectionsPage(connectionsHost([GITLAB_CONNECTOR]).host)
+
+    expect(sections()).toEqual([['GitLab', 'Address', 'Personal access token', '']])
+    expect(
+      body.querySelector<HTMLInputElement>('[data-focus="conn-gitlab-url"]')?.placeholder,
+    ).toBe('https://gitlab.example.com')
+    expect(body.textContent).toContain(
+      'read_api scope. Kept in the system keyring, never in a file.',
+    )
+    view.close()
+  })
+
+  it('should draw one section per connector with the fields each one declares', async () => {
+    const { sections, view } = await connectionsPage(
+      connectionsHost([GITLAB_CONNECTOR, tracker]).host,
+    )
+
+    expect(sections()).toEqual([
+      ['GitLab', 'Address', 'Personal access token', ''],
+      ['Acme Tracker', 'Address', 'Email', 'Personal access token', ''],
+    ])
+    view.close()
+  })
+
+  it('should send the address, the e-mail and the token of that connector when connecting', async () => {
+    const fake = connectionsHost([tracker])
+    const { body, view } = await connectionsPage(fake.host)
+    const type = (focus: string, value: string) => {
+      const input = body.querySelector<HTMLInputElement>(`[data-focus="${focus}"]`)
+      if (!input) throw new Error(`invariant: ${focus} exists`)
+      input.value = value
+      input.dispatchEvent(new Event('input'))
+    }
+    type('conn-tracker-url', 'https://tracker.example.com')
+    type('conn-tracker-email', 'ana@example.com')
+    type('conn-tracker-token', 'secret-token')
+
+    body.querySelector<HTMLButtonElement>('[data-focus="conn-tracker-connect"]')?.click()
+    await settle()
+
+    expect(fake.connects).toEqual([
+      {
+        id: 'tracker',
+        fields: { url: 'https://tracker.example.com', email: 'ana@example.com' },
+        token: 'secret-token',
+      },
+    ])
+    expect(body.textContent).toContain('Connected as ana')
     view.close()
   })
 })

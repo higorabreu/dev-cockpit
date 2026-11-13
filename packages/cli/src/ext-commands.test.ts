@@ -209,13 +209,15 @@ describe('runExtCommand', () => {
     expect(err.join('')).toBe('Usage: dck ext list\n')
   })
 
-  it('should show only the built-in extension with its source when nothing else is found', async () => {
+  it('should show only the built-in extensions with their source when nothing else is found', async () => {
     const cli = setup([])
 
     const code = await cli.run(['list'])
 
     expect(code).toBe(EXIT.ok)
-    expect(cli.out.join('')).toBe(`${BUILT_IN_EXTENSION_ID}  0.3.0  built-in  active\n`)
+    expect(cli.out.join('')).toBe(
+      `${BUILT_IN_EXTENSION_ID}  0.3.0  built-in  active\ndck.gitlab    0.3.0  built-in  active\n`,
+    )
     expect(cli.err).toEqual([])
   })
 
@@ -228,6 +230,7 @@ describe('runExtCommand', () => {
     expect(cli.out.join('')).toBe(
       [
         'dck.built-in  0.3.0  built-in    active',
+        'dck.gitlab    0.3.0  built-in    active',
         'acme.commits  1.0.0  installed   active',
         'ana.personal  2.0.0  global      disabled',
         'acme.backend  0.1.0  repository  active',
@@ -252,7 +255,9 @@ describe('runExtCommand', () => {
 
     await cli.run(['list'])
 
-    expect(cli.out.join('')).toBe('dck.built-in  0.3.0  embutida  ativa\n')
+    expect(cli.out.join('')).toBe(
+      'dck.built-in  0.3.0  embutida  ativa\ndck.gitlab    0.3.0  embutida  ativa\n',
+    )
   })
 
   it('should print the usage and fail when the subcommand is unknown', async () => {
@@ -272,6 +277,32 @@ describe('runExtCommand', () => {
 
     expect(code).toBe(EXIT.usage)
     expect(cli.err.join('')).toBe('Uso: dck ext list\n')
+  })
+})
+
+describe('runExtCommand with connectors from other sources', () => {
+  it('should list an installed extension that contributes a connector as rejected with the reason', async () => {
+    const connector = {
+      id: 'tracker',
+      name: 'Acme Tracker',
+      connection: {
+        address: { placeholder: 'https://tracker.example.com' },
+        token: { label: 'connections.gitlab.token', hint: 'connections.gitlab.token.hint' },
+      },
+      views: [{ id: 'tasks', kind: 'issue', title: 'views.review', empty: 'views.empty.review' }],
+    }
+    const cli = setup([
+      candidate('installed', '/home/ana/.config/dev-cockpit/extensions/acme.tracker', {
+        id: 'acme.tracker',
+        contributes: { connectors: [connector] },
+      }),
+    ])
+
+    await cli.run(['list'])
+
+    expect(cli.out.join('')).toContain(
+      'Rejected:\n  /home/ana/.config/dev-cockpit/extensions/acme.tracker  installed  Extension feature not supported by this version: acme.tracker contributes connectors, which only built-in extensions can do in this version\n',
+    )
   })
 })
 

@@ -16,6 +16,7 @@ import {
   type HostApi,
   type MenuCategory,
   openTab,
+  type PluralKey,
   type Project,
   recentTabs,
   reorderTabs,
@@ -159,17 +160,17 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     i18n,
     onClose: () => activeSession()?.focus(),
     openSettings: () => settingsView.open('connections'),
-    onReviewCount: showReviewCount,
+    onBadge: showBadge,
   })
 
-  let reviewCount = 0
-  function showReviewCount(count: number) {
-    reviewCount = count
+  let badge: { count: number; label: PluralKey | undefined } = { count: 0, label: undefined }
+  function showBadge(count: number, label: PluralKey | undefined) {
+    badge = { count, label }
     elements.viewsButton.setAttribute(
       'aria-label',
-      reviewCount === 0
+      count === 0 || label === undefined
         ? i18n.t('views.title')
-        : `${i18n.t('views.title')}. ${i18n.plural('views.waiting', reviewCount)}`,
+        : `${i18n.t('views.title')}. ${i18n.plural(label, count)}`,
     )
   }
 
@@ -484,7 +485,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       panel.retranslate()
       search.retranslate()
       viewsView.retranslate()
-      showReviewCount(reviewCount)
+      showBadge(badge.count, badge.label)
       settingsView.rerender()
       tabBar.render(state, attention.marks())
     }
@@ -710,7 +711,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   })
   elements.settingsButton.addEventListener('click', () => settingsView.toggle())
   elements.viewsButton.addEventListener('click', () => viewsView.toggle())
-  showReviewCount(0)
+  showBadge(0, undefined)
   void viewsView.warm()
   api.window.onShown(() => void viewsView.warm())
   api.window.onOpenSettings(() => settingsView.open())

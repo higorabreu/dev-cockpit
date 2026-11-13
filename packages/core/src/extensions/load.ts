@@ -82,6 +82,11 @@ function validate(
         errorBody('DCK-EXT-002', `${manifest.id} uses an unknown contribution point: ${pointId}`),
       )
     }
+    if (point.sources !== undefined && !point.sources.includes(candidate.source)) {
+      const allowed = point.sources.join(', ')
+      const detail = `${manifest.id} contributes ${pointId}, which only ${allowed} extensions can do in this version`
+      return fail(errorBody('DCK-EXT-002', detail))
+    }
     const checked = point.schema.safeParse(declaration)
     if (!checked.success) {
       const reason = checked.error.issues[0]?.message ?? 'invalid'

@@ -5,7 +5,8 @@ import {
   type Clipboard,
   type ComposeStatus,
   type ConnectionStatus,
-  type GitLabConnection,
+  type Connections,
+  connectorOfView,
   hostChannels,
   type Logger,
   type Notifier,
@@ -18,6 +19,7 @@ import {
   type SettingsPatch,
   type SettingsUpdate,
   type SettingsView,
+  VIEW_ID_MAX,
 } from '@dck/core'
 import { z } from 'zod'
 import type { ViewsGateway } from '../daemon/views-gateway.ts'
@@ -26,14 +28,20 @@ import { createTerminalPaths, type TerminalFiles } from './terminal-paths.ts'
 // Each field's value is validated and corrected by the settings model itself
 const patchSchema = z.record(z.string(), z.unknown())
 
+const connectorIdSchema = z.string().min(1).max(32)
+
 // The token only passes through here, is never returned nor logged
 const connectSchema = z.object({
-  url: z.string().max(512),
+  id: connectorIdSchema,
+  fields: z.object({
+    url: z.string().max(512),
+    email: z.string().trim().min(1).max(254).optional(),
+  }),
   token: z.string().trim().min(1).max(512),
 })
 
 const viewRequestSchema = z.object({
-  view: z.enum(['review', 'mine']),
+  view: z.string().min(1).max(VIEW_ID_MAX),
   maxAgeMs: z.number().int().nonnegative().optional(),
 })
 
@@ -43,15 +51,11 @@ const notificationSchema = z.object({
   tabId: z.string().max(100),
 })
 
-// Only addresses from the connected GitLab's origin; the data comes from the server, so it is not trusted
-function parseOwnUrl(input: string, origin: string | null): string | undefined {
-  if (origin === null) return undefined
-  try {
-    const url = new URL(input)
-    return url.origin === new URL(origin).origin ? url.href : undefined
-  } catch {
-    return undefined
-  }
+// Only addresses from the origin of a connected account; the data comes from the server, so it is not trusted
+function parseOwnUrl(input: string, origins: readonly string[]): string | undefined {
+  const url = URL.parse(input)
+  if (url === null) return undefined
+  return origins.some((origin) => URL.parse(origin)?.origin === url.origin) ? url.href : undefined
 }
 
 // Terminal output is not trusted: only the web, no credentials in the address and a sane length
@@ -105,10 +109,10 @@ export interface BridgeOptions {
     update(patch: SettingsPatch): Promise<SettingsUpdate>
   }
   readonly autostart: Autostart
-  readonly gitlab: GitLabConnection
+  readonly connections: Connections
   readonly views: ViewsGateway
-  // Opens in the system browser; `allowedOrigin` is the connected GitLab's origin, if any, and only limits `open`
-  readonly external: { open(url: string): void; allowedOrigin(): string | null }
+  // Opens in the system browser; `allowedOrigins` are the addresses of the connected accounts and only limit `open`
+  readonly external: { open(url: string): void; allowedOrigins(): readonly string[] }
   readonly environment: { status(pid: number): Promise<ComposeStatus> }
   readonly files: TerminalFiles
   readonly sessions: {
@@ -173,21 +177,29 @@ export function registerHostBridge(options: BridgeOptions) {
   ipcMain.handle(hostChannels.settingsUpdate, (_event, patch: unknown) =>
     options.settings.update(patchSchema.parse(patch) as SettingsPatch),
   )
-  ipcMain.handle(hostChannels.connectionsGitlabStatus, () => options.gitlab.status())
-  ipcMain.handle(hostChannels.connectionsGitlabConnect, (_event, payload: unknown) => {
+  const { connections } = options
+  const byId =
+    (action: (id: string) => Promise<ConnectionStatus>) => (_event: unknown, id: unknown) => {
+      const parsed = connectorIdSchema.safeParse(id)
+      return parsed.success ? action(parsed.data) : ({ kind: 'none' } satisfies ConnectionStatus)
+    }
+  ipcMain.handle(hostChannels.connectionsList, () => connections.list())
+  ipcMain.handle(hostChannels.connectionsStatus, byId(connections.status))
+  ipcMain.handle(hostChannels.connectionsConnect, (_event, payload: unknown) => {
     const parsed = connectSchema.safeParse(payload)
     if (!parsed.success) {
-      logger.warn('invalid gitlab connect request ignored')
-      return { kind: 'error', url: undefined, code: 'DCK-GLB-007' } satisfies ConnectionStatus
+      logger.warn('invalid connect request ignored')
+      return { kind: 'error', url: undefined, code: 'DCK-IPC-003' } satisfies ConnectionStatus
     }
-    return options.gitlab.connect(parsed.data.url, parsed.data.token)
+    const { id, fields, token } = parsed.data
+    return connections.connect(id, fields, token)
   })
-  ipcMain.handle(hostChannels.connectionsGitlabDisconnect, () => options.gitlab.disconnect())
+  ipcMain.handle(hostChannels.connectionsDisconnect, byId(connections.disconnect))
   ipcMain.on(hostChannels.externalOpen, (_event, url: unknown) => {
-    const origin = options.external.allowedOrigin()
-    const target = typeof url === 'string' ? parseOwnUrl(url, origin) : undefined
+    const origins = options.external.allowedOrigins()
+    const target = typeof url === 'string' ? parseOwnUrl(url, origins) : undefined
     if (target) options.external.open(target)
-    else logger.warn('external address refused', { origin })
+    else logger.warn('external address refused', { origins })
   })
   ipcMain.on(hostChannels.externalOpenLink, (_event, url: unknown) => {
     const parsed = webLinkSchema.safeParse(url)
@@ -210,13 +222,17 @@ export function registerHostBridge(options: BridgeOptions) {
     }
   ipcMain.on(hostChannels.pathsOpenFile, openRequest('file', paths.openFile))
   ipcMain.on(hostChannels.pathsOpenFolder, openRequest('dir', paths.openFolder))
+  // Only the views of the enabled connectors reach the daemon
+  const enabledView = (view: string) => connectorOfView(connections.list(), view) !== undefined
   ipcMain.handle(hostChannels.viewsSnapshot, (_event, view: unknown) => {
     const parsed = viewRequestSchema.shape.view.safeParse(view)
-    return parsed.success ? options.views.snapshot(parsed.data) : undefined
+    return parsed.success && enabledView(parsed.data)
+      ? options.views.snapshot(parsed.data)
+      : undefined
   })
   ipcMain.handle(hostChannels.viewsRefresh, (_event, payload: unknown) => {
     const parsed = viewRequestSchema.safeParse(payload)
-    return parsed.success
+    return parsed.success && enabledView(parsed.data.view)
       ? options.views.refresh(parsed.data.view, parsed.data.maxAgeMs)
       : undefined
   })

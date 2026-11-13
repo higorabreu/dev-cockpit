@@ -1,14 +1,14 @@
 import { defaultEndpoint, defaultStateDir } from '@dck/adapter-node-net'
 import { createJsonLogger } from '@dck/core'
+import { createConnectorViews } from './connector-views.ts'
 import { startDaemon } from './daemon.ts'
-import { createGitLabViews } from './gitlab-views.ts'
 
 async function main() {
   const logger = createJsonLogger((line) => process.stderr.write(line))
   const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
   const stateDir = process.env.DCK_STATE_DIR ?? defaultStateDir()
 
-  const views = createGitLabViews({ stateDir, logger, profile: process.env.DCK_PROFILE })
+  const views = createConnectorViews({ stateDir, logger, profile: process.env.DCK_PROFILE })
 
   let stopDaemon = async () => process.exit(0)
   const started = await startDaemon({

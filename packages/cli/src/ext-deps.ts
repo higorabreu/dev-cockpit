@@ -13,31 +13,32 @@ export interface ExtDepsOptions {
   readFile(path: string): Promise<string | undefined>
 }
 
-function parseJson(text: string | undefined): unknown {
-  if (text === undefined) return undefined
+// Undefined when the text is not JSON
+function parseJson(text: string): unknown {
   try {
     return JSON.parse(text.replace(/^\uFEFF/, ''))
   } catch {
-    // A corrupted settings file reads as the defaults, the same way the window treats it
     return undefined
   }
 }
 
 export function createExtDeps(options: ExtDepsOptions): ExtDeps {
   const { configDir, appVersion, logger } = options
+  const settingsFile = join(configDir, 'settings.json')
   return {
     appVersion,
     finder: createFileExtensionFinder({
       installedDir: join(configDir, 'extensions'),
       globalDir: configDir,
       repositoryDir: join(options.repositoryRoot, '.dck'),
-      // No contribution point is registered yet
+      // No contribution point has a folder of its own: connectors only come built in
       implicit: { apiVersion: EXTENSION_API_VERSION, appVersion, points: {} },
       logger,
     }),
     async disabled() {
-      const text = await options.readFile(join(configDir, 'settings.json'))
-      return new Set(parseSettings(parseJson(text)).extensions.disabled)
+      const text = await options.readFile(settingsFile)
+      // A corrupted settings file reads as the defaults, the same way the window treats it
+      return new Set(parseSettings(text === undefined ? {} : parseJson(text)).extensions.disabled)
     },
   }
 }

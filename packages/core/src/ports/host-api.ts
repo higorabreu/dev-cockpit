@@ -1,8 +1,8 @@
 import type { AgentSignal } from '../attention/agent-signal.ts'
+import type { Connector } from '../connectors/connector.ts'
 import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
 import type { AgentProfile } from './agent.ts'
-import type { MergeRequestView } from './code-review.ts'
-import type { ConnectionStatus } from './connections.ts'
+import type { ConnectionFields, ConnectionStatus } from './connections.ts'
 import type { ComposeStatus } from './environment.ts'
 import type { TabNotification } from './notifier.ts'
 import type { Project } from './projects.ts'
@@ -51,22 +51,23 @@ export interface HostApi {
     update(patch: SettingsPatch): Promise<SettingsUpdate>
     onChange(listener: (settings: Settings, changed: readonly string[]) => void): Unsubscribe
   }
+  // By connector id; only the enabled connectors this app implements are listed or answered
   readonly connections: {
-    readonly gitlab: {
-      status(): Promise<ConnectionStatus>
-      connect(url: string, token: string): Promise<ConnectionStatus>
-      disconnect(): Promise<ConnectionStatus>
-    }
+    list(): Promise<readonly Connector[]>
+    status(id: string): Promise<ConnectionStatus>
+    connect(id: string, fields: ConnectionFields, token: string): Promise<ConnectionStatus>
+    disconnect(id: string): Promise<ConnectionStatus>
   }
+  // By view id, as the connectors declared them
   readonly views: {
     // Undefined when the daemon does not answer
-    snapshot(view: MergeRequestView): Promise<ViewSnapshot | undefined>
+    snapshot(view: string): Promise<ViewSnapshot | undefined>
     // With a max age, only fetches from the server if what is stored is older
-    refresh(view: MergeRequestView, maxAgeMs?: number): Promise<ViewSnapshot | undefined>
+    refresh(view: string, maxAgeMs?: number): Promise<ViewSnapshot | undefined>
     onChange(listener: (snapshot: ViewSnapshot) => void): Unsubscribe
   }
   readonly external: {
-    // Only opens addresses from the connected GitLab's origin; any other is ignored
+    // Only opens addresses from the origin of a connected account; any other is ignored
     open(url: string): void
     // Any http or https link the user Ctrl+clicked in a terminal; anything else is refused
     openLink(url: string): void
@@ -123,9 +124,10 @@ export const hostChannels = {
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
   settingsChanged: 'settings:changed',
-  connectionsGitlabStatus: 'connections:gitlab:status',
-  connectionsGitlabConnect: 'connections:gitlab:connect',
-  connectionsGitlabDisconnect: 'connections:gitlab:disconnect',
+  connectionsList: 'connections:list',
+  connectionsStatus: 'connections:status',
+  connectionsConnect: 'connections:connect',
+  connectionsDisconnect: 'connections:disconnect',
   externalOpen: 'external:open',
   externalOpenLink: 'external:open-link',
   pathsResolve: 'paths:resolve',

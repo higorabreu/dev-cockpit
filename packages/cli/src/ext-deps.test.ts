@@ -51,11 +51,14 @@ async function list() {
 }
 
 describe('createExtDeps', () => {
-  it('should list only the built-in extension when the config folder is empty', async () => {
+  it('should list only the built-in extensions when the config folder is empty', async () => {
     const { code, lines } = await list()
 
     expect(code).toBe(0)
-    expect(lines).toEqual(['dck.built-in  0.3.0  built-in  active'])
+    expect(lines).toEqual([
+      'dck.built-in  0.3.0  built-in  active',
+      'dck.gitlab    0.3.0  built-in  active',
+    ])
   })
 
   it('should show an installed extension as disabled when the settings file lists its id', async () => {
@@ -70,6 +73,7 @@ describe('createExtDeps', () => {
 
     expect(lines).toEqual([
       'dck.built-in  0.3.0  built-in   active',
+      'dck.gitlab    0.3.0  built-in   active',
       'acme.commits  1.0.0  installed  active',
       'acme.reviews  1.0.0  installed  disabled',
     ])

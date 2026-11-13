@@ -41,6 +41,8 @@
   display: flex;
   gap: 4px;
   margin-right: auto;
+  /* One tab's height, so the header does not move when no account is connected and there is no tab */
+  min-height: calc(1lh + 8px);
 }
 
 .vtab {
