@@ -21,7 +21,7 @@ describe('parseSettings', () => {
       shortcuts: { toggleWindow: 'F12', holdTrigger: 'ControlRight' },
       projects: { root: null, depth: 2 },
       connections: { gitlab: { url: null } },
-      system: { notifyAfterSeconds: 30 },
+      system: { notifyAfterSeconds: 30, agentConnectHint: true },
       extensions: { disabled: [] },
     })
   })
@@ -54,6 +54,13 @@ describe('parseSettings', () => {
   it('should keep a chosen projects root and drop an empty one when reading', () => {
     expect(parseSettings({ projects: { root: '/work' } }).projects.root).toBe('/work')
     expect(parseSettings({ projects: { root: '   ' } }).projects.root).toBeNull()
+  })
+
+  it('should keep the agent connect hint on unless it was turned off when reading', () => {
+    expect(parseSettings({ system: { agentConnectHint: false } }).system.agentConnectHint).toBe(
+      false,
+    )
+    expect(parseSettings({ system: { agentConnectHint: 'no' } }).system.agentConnectHint).toBe(true)
   })
 
   it('should ignore unknown fields when reading', () => {

@@ -1,0 +1,50 @@
+/* Under its session row, aligned with the row's text: the glyph and the gap come first */
+.sconnect {
+  margin-bottom: 4px;
+  padding-left: 23px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sconnect-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sconnect-go {
+  padding: 1px 8px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+}
+
+.sconnect-go:hover {
+  background: var(--hover);
+}
+
+.sconnect-later {
+  padding: 1px 2px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.sconnect-later:hover {
+  color: var(--fg);
+}
+
+.sconnect-go:focus-visible,
+.sconnect-later:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}

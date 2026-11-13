@@ -1,11 +1,13 @@
 import {
   type AgentEvent,
+  type AgentProfile,
   activateTab,
   activateTabAt,
   type ComposeStatus,
   closeOtherTabs,
   closeTab,
   createAttentionTracker,
+  createConnectHint,
   createLiveTranslator,
   defaultSettings,
   duplicateLabel,
@@ -23,6 +25,7 @@ import {
   stepTab,
   type TabsState,
 } from '@dck/core'
+import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
 import { createHoldMenuController } from './hold-menu/hold-menu-controller.ts'
 import { setFullHeight } from './kit/layout-mode.ts'
 import { translateStatic } from './kit/static-text.ts'
@@ -179,6 +182,29 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     notifyAfterMs: () => settings.current().system.notifyAfterSeconds * 1000,
   })
 
+  const connectHint = createConnectHint({
+    clock: { now: () => Date.now() },
+    enabled: () => settings.current().system.agentConnectHint,
+  })
+  let agentProfiles: readonly AgentProfile[] = []
+  void api.agent.profiles().then((profiles) => {
+    agentProfiles = profiles
+  })
+  const agentConnect = createAgentConnect({
+    profiles: () => agentProfiles,
+    info: (tabId) => watcher.get(tabId),
+    write: (tabId, text) => sessions.get(tabId)?.write(text),
+  })
+
+  // The command lands in the tab on screen, with the focus, so the user reads it and presses Enter
+  function connectTab(tabId: string) {
+    if (!agentConnect.connect(tabId)) return
+    connectHint.handled(tabId)
+    update(activateTab(state, tabId))
+    sessions.get(tabId)?.focus()
+    panel.render()
+  }
+
   // Seen means the active tab in a focused window; otherwise the notice stays pending
   const isSeen = (tabId: string) => tabId === state.activeId && document.hasFocus()
 
@@ -223,6 +249,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   api.agent.onSignal((signal) => {
     const tabId = tabOfPty(signal.ptyId)
     if (!tabId) return
+    connectHint.signal(tabId)
     const event = attention.signal(tabId, signal.state, isSeen(tabId))
     if (event) announce(event)
     watchQuiet()
@@ -243,6 +270,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       for (const tab of state.tabs) {
         const info = watcher.get(tab.id)
         if (!info) continue
+        connectHint.update(tab.id, info.activity === 'agent' ? info.agent : undefined)
         const finished = attention.update(tab.id, info, isSeen(tab.id))
         if (finished) announce({ kind: 'finished', ...finished })
       }
@@ -268,6 +296,12 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
           needsYou: (id) => attention.attention(id) === 'needs-you',
           finishedCount: () => attention.unseenIds().length,
           select: (id) => update(activateTab(state, id)),
+          connectHint: (id) => connectHint.shown(id),
+          connect: connectTab,
+          dismissConnect() {
+            void settings.update({ system: { agentConnectHint: false } })
+            activeSession()?.focus()
+          },
         },
         i18n,
       ),
@@ -323,6 +357,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     sessions.get(id)?.dispose()
     sessions.delete(id)
     attention.forget(id)
+    connectHint.forget(id)
     for (const [path, tabId] of projectTabs) if (tabId === id) projectTabs.delete(path)
   }
 
@@ -425,6 +460,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     // The folder and depth are only read when listing: reload for the menu and the search
     if (changed.some((key) => key.startsWith('projects.'))) void refreshProjects()
     if (changed.includes('opacity')) applyOpacity(next.opacity)
+    if (changed.includes('system.agentConnectHint')) panel.render()
     if (changed.includes('fontSize')) {
       for (const session of sessions.values()) session.setFontSize(next.fontSize)
     }
@@ -521,6 +557,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     'tab:finished': actions.nextFinished,
     'agent:claude': () => activeSession()?.write('claude\r'),
     'agent:resume': () => activeSession()?.write('claude --resume\r'),
+    [CONNECT_ITEM]: () => state.activeId && connectTab(state.activeId),
     'system:full-height': () => api.window.toggleFullHeight(),
     'system:theme': toggleTheme,
     'system:settings': () => settingsView.open(),
@@ -575,6 +612,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         items: [
           { id: 'agent:claude', label: i18n.t('menu.agent.start') },
           { id: 'agent:resume', label: i18n.t('menu.agent.resume') },
+          ...agentConnect.menuItems(i18n.t),
         ],
       },
       {

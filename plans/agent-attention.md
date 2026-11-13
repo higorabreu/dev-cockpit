@@ -99,6 +99,22 @@ teammate without the cockpit sees nothing and Claude Code is never slowed down.
   roadmap. (A4)
   Also removed the `agent.report` method, the neutral session model and its texts; `AgentProfile` stays.
 
+## Finding it (2026-11-13)
+
+The marks only appear once the plugin is installed and nothing in the app said so. Two changes, approved
+by the maintainer: a hint in the Sessions row of an agent that sent no signal in its first 10 s, and a
+Connect action (in the hint and in the hold menu) that types the agent's connect command without Enter.
+
+- [x] AA-T6. `AgentProfile.connect` with a shell form and an in-agent form; the Claude Code profile is data
+  in the shell, passed to the session inspector and to the window, so the `agent` activity happens again.
+- [x] AA-T7. The hint rules in `core` (`createConnectHint`), the row in Sessions, "Not now" stored as
+  `system.agentConnectHint` with its row in the System page, and the hold menu item.
+- [x] AA-T8. `SessionStart` signals `your-turn`, so a connected session never shows the hint.
+  Verified with Claude Code 2.1.323: startup and `--continue` signal `your-turn` within a second, `/clear`
+  does not. Typing `!` and the install line into Claude's prompt shows the whole line in shell mode and
+  installs with one Enter; the hooks run from the next session or after `/reload-plugins`. The slash form
+  (`/plugin marketplace add`, then `/plugin install`) needs three confirmations.
+
 ## Risks
 
 | Risk | Effect | Mitigation |

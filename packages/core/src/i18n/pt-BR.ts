@@ -13,6 +13,9 @@ export const ptBR = {
   'sessions.finished': 'Terminou, {process} em {duration}',
   'sessions.needsYou': 'O agente precisa de você',
   'sessions.new': 'novo',
+  'sessions.connect.hint': 'Conecte e veja quando ele precisa de você',
+  'sessions.connect.action': 'Conectar',
+  'sessions.connect.dismiss': 'Agora não',
 
   'git.label': 'Git',
   'git.staged': 'Alterações preparadas',
@@ -76,6 +79,7 @@ export const ptBR = {
   'menu.cat.system': 'Sistema',
   'menu.agent.start': 'Iniciar Claude',
   'menu.agent.resume': 'Retomar conversa',
+  'menu.agent.connect': 'Conectar ao cockpit',
   'menu.system.fullHeight': 'Altura total',
   'menu.system.panel': 'Painel lateral',
   'menu.system.theme': 'Tema claro ou escuro',
@@ -229,6 +233,9 @@ export const ptBR = {
   'settings.autostart': 'Iniciar com o sistema',
   'settings.notifyAfter': 'Avisar comando longo após',
   'settings.notifyAfter.unit': 'segundos',
+  'settings.agentConnectHint': 'Sugerir conectar o agente',
+  'settings.agentConnectHint.hint':
+    'Em Sessões, quando um agente roda sem avisar o cockpit do que está fazendo',
   'settings.group.reference': 'Atalhos da interface',
   'settings.ref.opacity': 'Opacidade',
   'settings.ref.font': 'Tamanho da fonte',

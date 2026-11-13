@@ -1,4 +1,5 @@
 import {
+  type AgentProfile,
   type FinishedCommand,
   formatDuration,
   type SessionActivityInfo,
@@ -18,6 +19,11 @@ export interface SessionsSource {
   needsYou(id: string): boolean
   finishedCount(): number
   select(id: string): void
+  // The agent to suggest connecting in this tab, when it runs without sending any signal
+  connectHint(id: string): AgentProfile | undefined
+  connect(id: string): void
+  // "Not now": the hint stops showing until it is turned back on in settings
+  dismissConnect(): void
 }
 
 const RANK = { agent: 0, busy: 1, idle: 2 } as const
@@ -33,6 +39,33 @@ function describe(i18n: Translator, info: SessionActivityInfo | undefined) {
 }
 
 export function createSessionsSection(source: SessionsSource, i18n: Translator): PanelSection {
+  function connectHint(tabId: string): HTMLElement {
+    const textId = `sconnect-${tabId}`
+    const connect = h(
+      'button',
+      {
+        type: 'button',
+        class: 'sconnect-go',
+        'data-focus': `connect-${tabId}`,
+        'aria-describedby': textId,
+      },
+      i18n.t('sessions.connect.action'),
+    )
+    connect.addEventListener('click', () => source.connect(tabId))
+    const later = h(
+      'button',
+      { type: 'button', class: 'sconnect-later', 'data-focus': `connect-later-${tabId}` },
+      i18n.t('sessions.connect.dismiss'),
+    )
+    later.addEventListener('click', () => source.dismissConnect())
+    return h(
+      'div',
+      { class: 'sconnect' },
+      h('span', { id: textId }, i18n.t('sessions.connect.hint')),
+      h('span', { class: 'sconnect-actions' }, connect, later),
+    )
+  }
+
   return {
     id: 'sessions',
     get label() {
@@ -59,7 +92,7 @@ export function createSessionsSection(source: SessionsSource, i18n: Translator):
             RANK[a.info?.activity ?? 'idle'] - RANK[b.info?.activity ?? 'idle'] ||
             a.order - b.order,
         )
-        .map(({ tab, info, done, asks }) => {
+        .flatMap(({ tab, info, done, asks }) => {
           const row = h(
             'button',
             {
@@ -96,7 +129,7 @@ export function createSessionsSection(source: SessionsSource, i18n: Translator):
               : info && h('span', { class: 'smeta' }, folder(info.cwd)),
           )
           row.addEventListener('click', () => source.select(tab.id))
-          return row
+          return source.connectHint(tab.id) ? [row, connectHint(tab.id)] : [row]
         })
       return h('div', { class: 'slist' }, ...rows)
     },

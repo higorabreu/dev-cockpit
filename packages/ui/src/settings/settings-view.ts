@@ -635,6 +635,12 @@ export function createSettingsView(
               t('settings.notifyAfter.unit'),
             ),
           ),
+          row(
+            'system.agentConnectHint',
+            t('settings.agentConnectHint'),
+            checkbox('system.agentConnectHint'),
+            t('settings.agentConnectHint.hint'),
+          ),
         ),
         group(
           undefined,

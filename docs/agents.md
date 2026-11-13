@@ -17,6 +17,21 @@ the tab is out of sight. Typing in the tab, a new `working` signal or the agent 
 it. "Next waiting for you" visits the tabs that need you first. Without an integration nothing changes:
 the tabs, marks and notifications behave as they always did.
 
+## How you find it
+
+- **The hint in Sessions.** When a known agent runs in a tab and the cockpit has received no signal from
+  that tab for 10 s, its row in the Sessions section shows "Connect it to see when it needs you", with
+  Connect and Not now. A connected agent signals as soon as it starts, so it never shows the hint. The
+  hint goes away on the first signal, when the agent leaves the terminal, after Connect, or with Not now,
+  which turns it off until **Suggest connecting the agent** is checked again in Settings, System.
+- **The hold menu.** Agent, **Connect to the cockpit** does the same from a shell prompt.
+
+Connect types the agent's connect command into its tab without pressing Enter, so you read what will run
+and confirm it yourself. At a shell prompt it types the shell command below. With the agent running it
+types the agent's own form instead, since a shell command typed there would be sent as a message: for
+Claude Code that is the same command after `!`, Claude Code's shell mode, which runs it without leaving
+the session. The plugin then applies from the next session; `/reload-plugins` loads it in the open one.
+
 ## Claude Code
 
 The integration is a Claude Code plugin in this repository, `integrations/claude-code/`, installed with
@@ -27,9 +42,13 @@ Claude Code's own commands. Inside a Claude Code session:
 /plugin install dck@dev-cockpit
 ```
 
-From a shell the same two steps are `claude plugin marketplace add higorabreu/dev-cockpit` and
-`claude plugin install dck@dev-cockpit`; they apply to the next session, and `/reload-plugins` loads
-them in one already open.
+From a shell the same two steps are one line, the one Connect types:
+
+```sh
+claude plugin marketplace add higorabreu/dev-cockpit && claude plugin install dck@dev-cockpit
+```
+
+They apply to the next session, and `/reload-plugins` loads them in one already open.
 
 To remove it: `/plugin uninstall dck@dev-cockpit`, or `/plugin marketplace remove dev-cockpit`, which
 also uninstalls the plugin.

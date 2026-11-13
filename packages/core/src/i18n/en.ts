@@ -14,6 +14,9 @@ export const en: Record<MessageKey, string> = {
   'sessions.finished': 'Finished, {process} in {duration}',
   'sessions.needsYou': 'The agent needs you',
   'sessions.new': 'new',
+  'sessions.connect.hint': 'Connect it to see when it needs you',
+  'sessions.connect.action': 'Connect',
+  'sessions.connect.dismiss': 'Not now',
 
   'git.label': 'Git',
   'git.staged': 'Staged Changes',
@@ -77,6 +80,7 @@ export const en: Record<MessageKey, string> = {
   'menu.cat.system': 'System',
   'menu.agent.start': 'Start Claude',
   'menu.agent.resume': 'Resume conversation',
+  'menu.agent.connect': 'Connect to the cockpit',
   'menu.system.fullHeight': 'Full height',
   'menu.system.panel': 'Side panel',
   'menu.system.theme': 'Light or dark theme',
@@ -230,6 +234,9 @@ export const en: Record<MessageKey, string> = {
   'settings.autostart': 'Start with the system',
   'settings.notifyAfter': 'Notify a long command after',
   'settings.notifyAfter.unit': 'seconds',
+  'settings.agentConnectHint': 'Suggest connecting the agent',
+  'settings.agentConnectHint.hint':
+    'In Sessions, when an agent runs without telling the cockpit what it is doing',
   'settings.group.reference': 'Interface shortcuts',
   'settings.ref.opacity': 'Opacity',
   'settings.ref.font': 'Font size',

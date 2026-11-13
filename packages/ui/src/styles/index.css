@@ -1,6 +1,7 @@
 @import "./base.css";
 @import "./layout.css";
 @import "./panel.css";
+@import "./connect-hint.css";
 @import "./tab-notice-and-menu.css";
 @import "./terminal.css";
 @import "./hold-menu.css";
