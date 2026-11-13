@@ -1,4 +1,5 @@
 import { searchItems, type Translate } from '@dck/core'
+import { watchOverflow } from '../kit/scrollbar.ts'
 import { h, icon } from '../panel/dom.ts'
 
 export interface TabListEntry {
@@ -34,6 +35,7 @@ export function createTabList(panel: HTMLElement, button: HTMLElement, deps: Tab
   })
   const list = h('div', { class: 'tl-list scroll', role: 'listbox' })
   panel.replaceChildren(input, list)
+  watchOverflow(list)
 
   const isOpen = () => !panel.hidden
 

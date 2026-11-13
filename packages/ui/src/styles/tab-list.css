@@ -34,8 +34,10 @@
   border-bottom-color: var(--fg);
 }
 
+/* Ten whole rows of 32px with their 1px gaps, as in the select; the 4px padding adds to it */
 .tl-list {
   min-height: 0;
+  max-height: 329px;
   padding: 4px;
   display: flex;
   flex-direction: column;
@@ -54,6 +56,7 @@
   background: none;
   color: var(--fg);
   font: inherit;
+  line-height: 20px;
   text-align: left;
   cursor: pointer;
 }

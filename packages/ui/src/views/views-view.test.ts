@@ -185,6 +185,14 @@ describe('views view tabs', () => {
     expect(document.activeElement).toBe(overlay.querySelector('.vinput'))
   })
 
+  it('should reserve the scrollbar strip on both sides of the list so its rows stay centred', async () => {
+    const { view, overlay } = setup({ connectors: [GITLAB_CONNECTOR], snapshots: connected })
+
+    await view.open()
+
+    expect(overlay.querySelector('.vlist')?.className).toBe('vlist scroll scroll-edges')
+  })
+
   it('should show no tab and the setup notice when the only connector is disabled', async () => {
     const { view, tabs, notice } = setup({ connectors: [], snapshots: connected })
 

@@ -55,7 +55,8 @@
 .select-list {
   position: fixed;
   z-index: 1;
-  max-height: min(50vh, 280px);
+  /* Ten whole options of 32px with their 1px gaps; the 4px padding above and below adds to it */
+  max-height: min(50vh, 329px);
   padding: 4px;
   display: flex;
   flex-direction: column;
@@ -78,6 +79,7 @@
   padding: 6px 8px;
   border-radius: var(--radius-medium);
   color: var(--fg);
+  line-height: 20px;
   white-space: nowrap;
 }
 

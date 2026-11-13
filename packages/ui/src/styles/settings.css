@@ -83,6 +83,11 @@
   overflow-y: auto;
 }
 
+/* The page reserves the scrollbar strip on both sides, so the groups give it back to keep the text at 16px */
+.spanel .sgroup {
+  padding-inline: calc(16px - var(--size-scrollbar));
+}
+
 .spanel .sgroup:last-child {
   border-bottom: 0;
 }

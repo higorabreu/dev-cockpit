@@ -19,3 +19,21 @@ export function installScrollbars() {
     true,
   )
 }
+
+export const overflows = (list: HTMLElement) => list.scrollHeight > list.clientHeight
+
+// A padded list marks when its content overflows, so its style can trade the right padding for the
+// scrollbar strip and match it on the left. It follows the list's size and its rows; the returned function
+// stops watching
+export function watchOverflow(list: HTMLElement): () => void {
+  const update = () => list.toggleAttribute('data-overflow', overflows(list))
+  const resized = new ResizeObserver(update)
+  const changed = new MutationObserver(update)
+  resized.observe(list)
+  changed.observe(list, { childList: true })
+  update()
+  return () => {
+    resized.disconnect()
+    changed.disconnect()
+  }
+}
