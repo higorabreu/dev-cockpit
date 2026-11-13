@@ -17,7 +17,7 @@ make Linux worse.
 | Id | Question | Proposal |
 | --- | --- | --- |
 | Q1 | Where does CI on macOS run? | **Resolved:** the repository is on GitHub, so macOS CI runs on GitHub Actions |
-| Q2 | Default key on the Mac. F12 is volume or a system function on a Mac and only arrives as F12 with `fn` or with "use F1, F2 as standard function keys" on | A per-platform default passed in by the host (`core` does not read `process.platform`). Candidate: `Ctrl+Backtick`. F12 stays configurable. Decide in the spike (MAC-T1), with the key really working |
+| Q2 | Default key on the Mac. F12 is volume or a system function on a Mac and only arrives as F12 with `fn` or with "use F1, F2 as standard function keys" on | **Resolved (D42):** `F12` on every platform, `fn+F12` on a Mac keyboard; no per-platform default |
 | Q3 | Tab and copy shortcuts: Cmd or Ctrl? | Cmd where Terminal.app and VS Code use it (`Cmd+T`, `Cmd+W`, `Cmd+C/V`, `Cmd+1..9`, `Cmd+,`); Ctrl stays free for the shell. Full table in MAC-T7, to confirm with the tester |
 | Q4 | Distribution: only the tester (ad hoc signing) or other people (Developer ID and notarization, US$ 99 a year)? | Only the tester for now. Notarization is MAC-T14, optional |
 
@@ -67,13 +67,13 @@ The order is meant to bring the tester in as late as possible and once per batch
 
 - [ ] MAC-T0. CI. Create the macOS job on GitHub Actions (install, lint, typecheck, test), now that Q1 is
   resolved. Without it the tasks below have no safety net. (C1)
-- [ ] MAC-T1. **Spike on the tester's Mac, half an hour.** A script they run and paste back: `pnpm install`,
+- [x] MAC-T1. **Spike on the tester's Mac, half an hour.** A script they run and paste back: `pnpm install`,
   `pnpm dev`, and four questions: (a) does a `type: 'panel'` window at a high level open over a fullscreen
   app and receive the keyboard? (b) do F12, `Ctrl+Backtick` and `Option+Space` reach `globalShortcut`
   without asking for Accessibility? (c) does `node-pty` open `zsh`? (d) does `security -i` write an item
-  with a quoted value and does `find-generic-password -w` read it back? The result becomes decision D36
+  with a quoted value and does `find-generic-password -w` read it back? The result becomes decision D42
   in `docs/decisions.md` and closes Q2. If (a) fails, MAC-T5 changes design before any code is written.
-  (C5, C6)
+  (C5, C6) Done on 2026-11-13 (macOS 26.5.1, arm64): all four pass, see D42.
 - [x] MAC-T2. Platform choice at boot. A `selectPlatform(process.platform)` function in the shell's
   composition root returns the set of adapters (processes, secret store, autostart, shortcut, paths);
   `main.ts` stops importing `linux-proc` and `secret-tool` directly. Drop `--no-sandbox` on the Mac. A test
@@ -86,8 +86,10 @@ The order is meant to bring the tester in as late as possible and once per batch
   `security add-generic-password` command does not read the value from stdin, and `-w value` shows in
   `ps`; the design is to use `security -i` and send the command line, with the value in escaped quotes,
   through stdin (which is how RubyGems and go-keyring do it). `find-generic-password -w` reads,
-  `delete-generic-password` deletes. A missing item exits with code 44 (to confirm in MAC-T1). A test
-  with a fake runner, including a value with quotes, a space, `$` and a line break, and an integration
+  `delete-generic-password` deletes. A missing item exits with code 44 (confirmed in MAC-T1). `security -i` has no escape
+  for a line break, and one splits the command and stores the value cut short, so a value with a line
+  break is refused before it is sent. A test
+  with a fake runner, including a value with quotes, a space and `$`, a refused line break, and an integration
   test that only runs on macOS CI. (C3)
 - [x] MAC-T4. Processes: `adapters/macos-proc` (`@dck/adapter-macos-proc`) behind the same
   `ProcessInspector` and scanner ports. The foreground group through `ps -o tpgid= -p <pid>`, the name through
