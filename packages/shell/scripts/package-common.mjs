@@ -2,9 +2,10 @@
 import { execFileSync } from 'node:child_process'
 import { cpSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
+import { shipsNodePtyFile } from './node-pty-files.mjs'
 
 export const NAME = 'dev-cockpit'
 export const PRODUCT = 'Dev Cockpit'
@@ -16,12 +17,7 @@ export const { version } = JSON.parse(readFileSync(join(shell, 'package.json'), 
 const require = createRequire(import.meta.url)
 const dist = join(shell, 'dist')
 const nodePty = join(dist, 'node_modules', 'node-pty')
-// Sources, Windows code and other platforms' prebuilds: the app loads only build/Release
-const unused = new Set(
-  ['prebuilds', 'src', 'deps', 'third_party', join('build', 'Release', 'obj.target')].map((path) =>
-    join(nodePty, path),
-  ),
-)
+const insideNodePty = (source) => source === nodePty || source.startsWith(`${nodePty}${sep}`)
 
 if (!existsSync(join(dist, 'main.cjs'))) {
   throw new Error('run `pnpm --filter @dck/shell build` first (dist does not exist)')
@@ -41,9 +37,11 @@ export function stageApp(target) {
   cpSync(dist, target, {
     recursive: true,
     dereference: true,
-    // dist's package.json is for the build only; node-pty's and its dependencies' stay
+    // dist's package.json is for the build only; node-pty keeps only what the app loads
     filter: (source) =>
-      !source.endsWith('.map') && source !== join(dist, 'package.json') && !unused.has(source),
+      !source.endsWith('.map') &&
+      source !== join(dist, 'package.json') &&
+      (!insideNodePty(source) || shipsNodePtyFile(relative(nodePty, source))),
   })
   const manifest = {
     name: NAME,
