@@ -1,6 +1,30 @@
 import { FakeDockWindow } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
-import { activateOnFocus, buildAppMenu } from './panel-window.ts'
+import { activateOnFocus, buildAppMenu, createPanelWindow, type PanelApp } from './panel-window.ts'
+
+function recordingApp(calls: string[]): PanelApp {
+  return {
+    focus: (options) => void calls.push(`app.focus ${JSON.stringify(options)}`),
+    dock: { hide: () => void calls.push('dock.hide') },
+  }
+}
+
+describe('createPanelWindow', () => {
+  it('should activate the app and then focus the page when the dock focuses the panel', () => {
+    // Arrange
+    const window = new FakeDockWindow()
+    const dock = createPanelWindow(recordingApp(window.calls)).dock(window, {
+      focus: () => window.calls.push('contents.focus'),
+    })
+    dock.show()
+
+    // Act
+    dock.focus()
+
+    // Assert
+    expect(window.calls.slice(-3)).toEqual(['focus', 'app.focus {"steal":true}', 'contents.focus'])
+  })
+})
 
 describe('activateOnFocus', () => {
   it('should activate the app after focusing the window when the window is focused', () => {

@@ -1,9 +1,37 @@
-import type { DockWindow, Translate } from '@dck/core'
+import type { DockWindow } from '@dck/core'
+import type { AppMenuDeps, AppMenuItem, PlacedWindow, PlatformWindow } from '../platform-window.ts'
+
+export interface PanelApp {
+  focus(options: { steal: boolean }): void
+  readonly dock?: { hide(): void }
+}
+
+export function createPanelWindow(app: PanelApp): PlatformWindow {
+  return {
+    options: { type: 'panel' },
+    place(window) {
+      anchorPanel(window)
+      app.dock?.hide()
+    },
+    dock: (window, contents) =>
+      activateOnFocus(window, () => {
+        app.focus({ steal: true })
+        contents.focus()
+      }),
+    menu: buildAppMenu,
+  }
+}
 
 // A panel does not activate the app by itself, so the keyboard would stay with the other app
 export function activateOnFocus(window: DockWindow, activate: () => void): DockWindow {
+  // Delegates by name: spreading would drop the methods of a class instance
   return {
-    ...window,
+    isVisible: () => window.isVisible(),
+    isFocused: () => window.isFocused(),
+    bounds: () => window.bounds(),
+    setBounds: (bounds) => window.setBounds(bounds),
+    show: () => window.show(),
+    hide: () => window.hide(),
     focus() {
       window.focus()
       activate()
@@ -11,35 +39,13 @@ export function activateOnFocus(window: DockWindow, activate: () => void): DockW
   }
 }
 
-export interface PanelWindowApi {
-  setAlwaysOnTop(flag: boolean, level: 'screen-saver'): void
-  setVisibleOnAllWorkspaces(
-    visible: boolean,
-    options: { visibleOnFullScreen: boolean; skipTransformProcessType: boolean },
-  ): void
-}
-
 // The level and the fullscreen option put the panel above a fullscreen app, as the MAC-T1 spike checked
-export function anchorPanel(window: PanelWindowApi) {
+export function anchorPanel(window: PlacedWindow) {
   window.setAlwaysOnTop(true, 'screen-saver')
   window.setVisibleOnAllWorkspaces(true, {
     visibleOnFullScreen: true,
     skipTransformProcessType: true,
   })
-}
-
-export interface AppMenuItem {
-  readonly label?: string
-  readonly accelerator?: string
-  readonly type?: 'separator'
-  readonly click?: () => void
-  readonly submenu?: AppMenuItem[]
-}
-
-export interface AppMenuDeps {
-  t: Translate
-  openSettings(): void
-  quit(): void
 }
 
 // Without an application menu the Mac has no Cmd+Q

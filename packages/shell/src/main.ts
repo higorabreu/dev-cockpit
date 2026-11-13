@@ -52,7 +52,6 @@ import { buildTrayMenu } from './electron/tray-menu.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
-import { activateOnFocus, anchorPanel, buildAppMenu } from './platform/darwin/panel-window.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
 import { selectPlatform } from './platform/select-platform.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
@@ -92,6 +91,7 @@ app.whenReady().then(async () => {
     appPath: app.getAppPath(),
     resourcesPath: process.resourcesPath,
     logger,
+    app,
   })
   const toggleKey = createToggleKeyBinder({
     desktop: platform.desktopShortcut,
@@ -121,9 +121,8 @@ app.whenReady().then(async () => {
   const loaded = await settingsStore.load()
   logger.info('settings loaded', { fresh: loaded.fresh, locked: loaded.locked })
 
-  const mac = process.platform === 'darwin'
   const window = new BrowserWindow({
-    type: mac ? 'panel' : undefined,
+    ...platform.window.options,
     show: false,
     frame: false,
     alwaysOnTop: true,
@@ -137,10 +136,7 @@ app.whenReady().then(async () => {
       nodeIntegration: false,
     },
   })
-  if (mac) {
-    anchorPanel(window)
-    app.dock?.hide()
-  } else window.setVisibleOnAllWorkspaces(true)
+  platform.window.place(window)
   // Page content never opens an Electron window nor leaves the app; links go to the browser through the host
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
@@ -152,12 +148,7 @@ app.whenReady().then(async () => {
   const dockWindow = createElectronDockWindow(window, {
     onShown: () => window.webContents.send(hostChannels.windowShown),
   })
-  const focusedDockWindow = mac
-    ? activateOnFocus(dockWindow, () => {
-        app.focus({ steal: true })
-        window.webContents.focus()
-      })
-    : dockWindow
+  const focusedDockWindow = platform.window.dock(dockWindow, window.webContents)
   const traceDock = process.env.DCK_LOG_DOCK === '1'
 
   const dock = createDockController({
@@ -436,10 +427,11 @@ app.whenReady().then(async () => {
     window.webContents.send(hostChannels.windowOpenSettings)
   }
 
-  if (mac) {
+  const appMenu = platform.window.menu
+  if (appMenu) {
     const refreshAppMenu = () =>
       Menu.setApplicationMenu(
-        Menu.buildFromTemplate(buildAppMenu({ t, openSettings, quit: () => app.quit() })),
+        Menu.buildFromTemplate(appMenu({ t, openSettings, quit: () => app.quit() })),
       )
     refreshAppMenu()
     settingsStore.onChange((_settings, changed) => {

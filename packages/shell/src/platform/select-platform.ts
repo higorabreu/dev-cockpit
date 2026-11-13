@@ -10,7 +10,10 @@ import type {
   ProcessScanner,
   SecretStore,
 } from '@dck/core'
+import { createPanelWindow, type PanelApp } from './darwin/panel-window.ts'
+import { createRegularWindow } from './linux/regular-window.ts'
 import { createXdgAutostart, defaultAutostartDirectory } from './linux/xdg-autostart.ts'
+import type { PlatformWindow } from './platform-window.ts'
 
 export interface PlatformContext {
   readonly platform: NodeJS.Platform
@@ -21,6 +24,8 @@ export interface PlatformContext {
   readonly appPath: string
   readonly resourcesPath: string
   readonly logger: Logger
+  // Electron's app: the Mac panel activates it and hides its Dock icon
+  readonly app: PanelApp
 }
 
 export interface Platform {
@@ -29,6 +34,7 @@ export interface Platform {
   readonly secrets: SecretStore
   readonly autostart: Autostart
   readonly desktopShortcut: DesktopShortcut | undefined
+  readonly window: PlatformWindow
 }
 
 // macOS still gets the Linux processes, secret store and autostart until MAC-T3, T4 and T8 replace them
@@ -66,5 +72,6 @@ export function selectPlatform(context: PlatformContext): Platform {
             logger,
           })
         : undefined,
+    window: platform === 'darwin' ? createPanelWindow(context.app) : createRegularWindow(),
   }
 }
