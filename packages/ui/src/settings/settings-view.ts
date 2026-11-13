@@ -91,6 +91,8 @@ export function createSettingsView(
   let activeTab: TabId = TABS[0].id
   // The enabled connectors, each with its own section on the Connections page
   let connectors: readonly Connector[] = []
+  // Until the first answer the page stays blank, so it does not flash the "none available" text
+  let listed = false
   const statuses = new Map<string, ConnectionStatus | 'checking'>()
   // What was typed and not connected yet. The token only exists here between typing and connecting, and
   // the screen never gets it back
@@ -327,6 +329,7 @@ export function createSettingsView(
 
   async function loadConnections() {
     connectors = await api.connections.list()
+    listed = true
     for (const { id } of connectors) statuses.set(id, 'checking')
     if (isOpen()) render()
     await Promise.all(
@@ -469,6 +472,23 @@ export function createSettingsView(
   }
 
   function connectionGroups(): Node[] {
+    if (!listed) return []
+    if (connectors.length === 0)
+      return [
+        group(
+          undefined,
+          h(
+            'div',
+            { class: 'srow2' },
+            h(
+              'span',
+              { class: 'shint' },
+              `${t('connections.empty')} `,
+              h('code', { class: 'scode' }, 'dck ext enable <id>'),
+            ),
+          ),
+        ),
+      ]
     return connectors.map((connector) => group(undefined, ...connectorRows(connector)))
   }
 
@@ -760,8 +780,11 @@ export function createSettingsView(
   })
 
   // A change coming from outside (opacity shortcut, elsewhere) updates the open screen
-  settings.onChange(() => {
-    if (isOpen() && local === 0) render()
+  settings.onChange((_settings, changed) => {
+    if (!isOpen()) return
+    // `dck ext enable|disable` adds or removes a connector while the screen is open
+    if (changed.includes('extensions.disabled')) void loadConnections()
+    else if (local === 0) render()
   })
 
   return {

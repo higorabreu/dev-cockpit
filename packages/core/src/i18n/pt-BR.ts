@@ -119,11 +119,17 @@ export const ptBR = {
   'tray.quit': 'Sair',
 
   'cli.usage':
-    'Uso: dck <comando>\n\nComandos:\n  toggle   Mostra ou esconde a janela\n  ping     Confere se o daemon está respondendo\n  daemon   Roda o daemon em primeiro plano\n  agent    Informa ao cockpit o que um agente de código faz numa aba (signal)\n  ext      Lista as extensões e de onde vem cada uma (list)\n',
+    'Uso: dck <comando>\n\nComandos:\n  toggle   Mostra ou esconde a janela\n  ping     Confere se o daemon está respondendo\n  daemon   Roda o daemon em primeiro plano\n  agent    Informa ao cockpit o que um agente de código faz numa aba (signal)\n  ext      Lista as extensões, ou ativa e desativa uma (list, enable, disable)\n',
   'cli.agent.usage': 'Uso: dck agent signal <working|needs-you|your-turn|ended>',
   'cli.startDaemon': 'Inicie o daemon com: dck daemon',
   'cli.noWindow': 'Nenhuma janela está conectada ao daemon.',
-  'cli.ext.usage': 'Uso: dck ext list',
+  'cli.ext.usage': 'Uso: dck ext list | enable <id> | disable <id>',
+  'cli.ext.enabled': '{id} ativada',
+  'cli.ext.disabled': '{id} desativada',
+  'cli.ext.unknown': 'Nenhuma extensão tem o id {id}. Veja dck ext list.',
+  'cli.ext.settingsInvalid':
+    'O arquivo de configurações não é um JSON válido, então ficou como estava: {file}',
+  'cli.ext.settingsUnwritable': 'Não foi possível salvar o arquivo de configurações: {file}',
   'cli.ext.source.built-in': 'embutida',
   'cli.ext.source.installed': 'instalada',
   'cli.ext.source.global': 'global',
@@ -214,6 +220,7 @@ export const ptBR = {
   'connections.token.placeholder': 'Cole o token para conectar',
   'connections.connect': 'Conectar',
   'connections.disconnect': 'Desconectar',
+  'connections.empty': 'Nenhuma conexão disponível. Ative uma num terminal com',
   'connections.checking': 'Verificando',
   'connections.none': 'Não conectado',
   'connections.connectedAs': 'Conectado como {user}',

@@ -275,4 +275,19 @@ describe('settings view, connections', () => {
     expect(body.textContent).toContain('Connected as ana')
     view.close()
   })
+
+  it('should take the section away when the connector is disabled while the page is open', async () => {
+    const fake = connectionsHost([GITLAB_CONNECTOR])
+    const { sections, emit, body, view } = await connectionsPage(fake.host)
+    fake.set([])
+
+    emit(['extensions.disabled'])
+    await settle()
+
+    expect(sections()).toEqual([[]])
+    expect(body.textContent).toContain(
+      'No connections available. Turn one on in a terminal with dck ext enable <id>',
+    )
+    view.close()
+  })
 })

@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, openSync, readFileSync, watch, writeFileSync } from 'node:fs'
 import { realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -60,6 +60,7 @@ import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
+import { watchSettingsFile } from './settings/settings-watch.ts'
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
@@ -107,8 +108,9 @@ app.whenReady().then(async () => {
   })
 
   // Changing the window key only holds if the system accepts the new one; otherwise the old one returns
+  const settingsFile = join(app.getPath('userData'), 'settings.json')
   const settingsStore = createSettingsStore({
-    file: join(app.getPath('userData'), 'settings.json'),
+    file: settingsFile,
     logger,
     env: process.env,
     async veto(next, changed) {
@@ -317,6 +319,18 @@ app.whenReady().then(async () => {
       if (!settings.connections[id]?.url) void connection.forgetToken()
     }
   })
+  const stopWatchingSettings = watchSettingsFile({
+    file: settingsFile,
+    watch: (folder, listener) => watch(folder, listener),
+    onChange: () => void settingsStore.reloadExtensions(),
+    scheduler: {
+      after(milliseconds, task) {
+        const timer = setTimeout(task, milliseconds)
+        return () => clearTimeout(timer)
+      },
+    },
+    logger,
+  })
 
   const daemonScript = join(__dirname, 'daemon.cjs')
   const processScanner = createProcessScanner()
@@ -450,6 +464,7 @@ app.whenReady().then(async () => {
   }
 
   app.on('before-quit', () => {
+    stopWatchingSettings()
     link.stop()
     bridge.killAll()
     toggleKey.release()

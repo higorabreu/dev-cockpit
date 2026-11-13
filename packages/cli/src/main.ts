@@ -1,4 +1,5 @@
-import { readFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import { findRepositoryRoot } from '@dck/adapter-extension-files'
 import {
   connectTo,
@@ -62,6 +63,16 @@ if (args[0] === 'daemon') {
       appVersion: packageJson.version,
       logger: silentLogger,
       readFile: (path) => readFile(path, 'utf8').catch(() => undefined),
+      writeFile: async (path, text) => {
+        const temporary = `${path}.tmp`
+        return mkdir(dirname(path), { recursive: true })
+          .then(() => writeFile(temporary, text))
+          .then(() => rename(temporary, path))
+          .then(
+            () => true,
+            () => false,
+          )
+      },
     }),
   })
 }

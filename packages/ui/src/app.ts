@@ -493,6 +493,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     if (changed.some((key) => key.startsWith('projects.'))) void refreshProjects()
     if (changed.includes('opacity')) applyOpacity(next.opacity)
     if (changed.includes('system.agentConnectHint')) panel.render()
+    // A connector was enabled or disabled: its tabs and the badge follow
+    if (changed.includes('extensions.disabled')) void viewsView.warm()
     if (changed.includes('fontSize')) {
       for (const session of sessions.values()) session.setFontSize(next.fontSize)
     }

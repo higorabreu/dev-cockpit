@@ -255,6 +255,10 @@
   font-size: 12px;
 }
 
+.scode {
+  font: 11.5px var(--font-mono);
+}
+
 .skbd {
   padding: 1px 6px;
   border: 1px solid var(--line);
