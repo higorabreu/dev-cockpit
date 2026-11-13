@@ -116,8 +116,16 @@ await buildCli(join(resources, 'dck.mjs'))
 mkdirSync(join(resources, 'bin'))
 writeFileSync(join(resources, 'bin', 'dck'), dckWrapper(PRODUCT), { mode: 0o755 })
 
-// 8. Ad hoc signature: renaming broke Electron's, and Apple Silicon refuses to run unsigned code
-run('codesign', ['--force', '--deep', '--sign', '-', bundle])
+// 8. Ad hoc signature: renaming broke Electron's, and Apple Silicon refuses to run unsigned code. From the
+// inside out, since Apple discourages --deep for signing: node-pty, the helpers, the frameworks, the bundle
+const sign = (path) => run('codesign', ['--force', '--sign', '-', path])
+for (const binary of ['pty.node', 'spawn-helper']) sign(join(nodePty, 'build', 'Release', binary))
+const nested = readdirSync(frameworks)
+for (const helper of nested.filter((name) => name.endsWith('.app'))) sign(join(frameworks, helper))
+for (const framework of nested.filter((name) => name.endsWith('.framework'))) {
+  sign(join(frameworks, framework))
+}
+sign(bundle)
 run('codesign', ['--verify', '--deep', '--strict', bundle])
 
 // 9. The .dmg, with a link to /Applications to drag the app onto
