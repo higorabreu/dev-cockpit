@@ -358,6 +358,23 @@ describe('createReviewPane', () => {
     expect(text('.phint')).toBe('Ctrl+Shift+D review')
   })
 
+  it('should keep the reading when the review is closed and opened again', async () => {
+    const { pane, key } = setup(repository())
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+    key(lines, ']')
+    const before = lines.getAttribute('aria-activedescendant')
+
+    pane.close()
+    pane.open()
+    await flush()
+
+    expect(before).toBe('review-tab-1-row-1')
+    expect(lines.getAttribute('aria-activedescendant')).toBe(before)
+  })
+
   it('should give the keys back to the terminal on Esc and read again on Ctrl+R', async () => {
     const { pane, key, escapes, requests } = setup(repository())
     pane.open()

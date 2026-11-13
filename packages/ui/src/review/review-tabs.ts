@@ -18,9 +18,11 @@ export interface ReviewTabsDeps {
 const paneId = (tabId: string) => `${tabId}:review`
 
 // The review pane of each tab: opened beside or below the terminal, closed with the same key, and
-// reading the diff only while it is open
+// reading the diff only while it is open. A closed review is kept with its reading, so it reopens where
+// it was left; the tab closing drops it
 export function createReviewTabs(deps: ReviewTabsDeps) {
   const panes = new Map<string, ReviewPane>()
+  const parked = new Map<string, ReviewPane>()
   const memory: ReviewMemory = { indexHidden: false }
 
   function create(tabId: string, view: TabView): ReviewPane {
@@ -41,7 +43,8 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
   function open(tabId: string) {
     const view = deps.view(tabId)
     if (!view) return
-    const pane = create(tabId, view)
+    const pane = parked.get(tabId) ?? create(tabId, view)
+    parked.delete(tabId)
     panes.set(tabId, pane)
     pane.agentState(deps.agent(tabId))
     view.open({
@@ -60,6 +63,7 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
     if (!pane) return
     pane.close()
     panes.delete(tabId)
+    parked.set(tabId, pane)
     deps.view(tabId)?.close(paneId(tabId))
   }
 
@@ -72,13 +76,14 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
 
   return {
     isOpen: (tabId: string) => panes.has(tabId),
-    // Opens and focuses the review; closes it when it is on screen; in a narrow tab where the terminal
-    // is showing, brings the review back instead of closing what cannot be seen
+    // Opens and focuses the review. Open and on screen: from the terminal it takes the keys, and with the
+    // keys it closes. In a narrow tab showing the terminal it comes back instead
     toggle(tabId: string) {
       const view = deps.view(tabId)
       if (!view) return
-      if (!panes.has(tabId)) return open(tabId)
-      if (view.isShown(paneId(tabId))) close(tabId)
+      const pane = panes.get(tabId)
+      if (!pane) return open(tabId)
+      if (view.isShown(paneId(tabId)) && pane.hasFocus()) close(tabId)
       else view.focus(paneId(tabId))
     },
     close,
@@ -93,9 +98,10 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
     forget(tabId: string) {
       panes.get(tabId)?.close()
       panes.delete(tabId)
+      parked.delete(tabId)
     },
     retranslate() {
-      for (const pane of panes.values()) pane.retranslate()
+      for (const pane of [...panes.values(), ...parked.values()]) pane.retranslate()
     },
   }
 }

@@ -460,8 +460,15 @@ export function createReviewPane(deps: ReviewPaneDeps) {
 
   const pane = {
     element,
-    open: () => refresh.open(),
-    close: () => refresh.close(),
+    open() {
+      refresh.open()
+      diff.unpark()
+    },
+    // The reading stays: reopened in the same tab, the review is where it was left
+    close() {
+      diff.park()
+      refresh.close()
+    },
     // The diff or the index, whichever had the keys last, else the pane so Esc and Ctrl+R still work
     focus() {
       if (!body.hidden && files().length > 0) {
@@ -469,6 +476,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
         else diff.focus()
       } else element.focus()
     },
+    hasFocus: () => element.contains(document.activeElement),
     agentState: (agent: AgentState | undefined) => refresh.agentState(agent),
     // How the tab shows the review: beside or below the terminal, or alone in a narrow tab
     setArrangement(next: Orientation | undefined, narrow: boolean) {

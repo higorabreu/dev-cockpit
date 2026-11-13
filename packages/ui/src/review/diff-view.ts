@@ -69,6 +69,7 @@ export function createDiffView(deps: DiffViewDeps) {
   let pinned: { file: number; row: ChangeRow } | undefined
   let viewWidth = 0
   let scrollX = 0
+  let parked: { top: number; left: number } | undefined
   // Removed and added lines that replace each other, per file and hunk, and their marks once computed
   let partners = new Map<string, Map<number, number>>()
   let marks = new Map<string, LineMarks>()
@@ -548,6 +549,17 @@ export function createDiffView(deps: DiffViewDeps) {
     nextHunk: (step: 1 | -1) => stepHunk(step),
     nextFile: (step: 1 | -1) => stepFile(step),
     revealFile,
+    // Detached from the page the scroll is lost; it is kept on close and given back on open
+    park() {
+      parked = { top: element.scrollTop, left: element.scrollLeft }
+    },
+    unpark() {
+      if (!parked) return
+      scrollTo(parked.top)
+      element.scrollLeft = parked.left
+      parked = undefined
+      draw()
+    },
     redraw: draw,
   }
 }

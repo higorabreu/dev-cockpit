@@ -134,6 +134,32 @@ describe('createReviewTabs', () => {
     expect(reviews.isOpen('tab-1')).toBe(true)
   })
 
+  it('should give the review the keys from the terminal and close it only from the review', async () => {
+    const { reviews, terminal } = setup()
+    reviews.toggle('tab-1')
+    await flush()
+    terminal.focus()
+
+    reviews.toggle('tab-1')
+    const focusedReview = document.activeElement?.closest('.review') !== null
+    reviews.toggle('tab-1')
+
+    expect(focusedReview).toBe(true)
+    expect(reviews.isOpen('tab-1')).toBe(false)
+  })
+
+  it('should reopen the same review in the tab so its reading is kept', async () => {
+    const { reviews, view } = setup()
+    reviews.toggle('tab-1')
+    await flush()
+    const first = view.element.querySelector('.review')
+    reviews.close('tab-1')
+
+    reviews.toggle('tab-1')
+
+    expect(view.element.querySelector('.review')).toBe(first)
+  })
+
   it('should choose the other orientation from the header button and ignore it in a narrow tab', async () => {
     const wide = setup()
     wide.reviews.toggle('tab-1')

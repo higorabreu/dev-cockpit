@@ -601,7 +601,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
             {
               label: i18n.t(reviews.isOpen(id) ? 'review.close' : 'review.toggle'),
               enabled: true,
-              run: () => toggleReview(id),
+              run: () => (reviews.isOpen(id) ? reviews.close(id) : toggleReview(id)),
             },
           ],
           x,
