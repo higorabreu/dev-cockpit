@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { chmod, mkdir, mkdtemp, rm, symlink, unlink, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, realpath, rm, symlink, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { DiffOutcome, DiffRequest, ErrorBody, Result } from '@dck/core'
@@ -46,7 +46,8 @@ const numbered = (count: number, mark = '') =>
   `${Array.from({ length: count }, (_, index) => `line ${index + 1}${mark}`).join('\n')}\n`
 
 beforeEach(async () => {
-  directory = await mkdtemp(join(tmpdir(), 'dck-diff-'))
+  // macOS links /var to /private/var and Git reports the real path
+  directory = await realpath(await mkdtemp(join(tmpdir(), 'dck-diff-')))
 })
 
 afterEach(() => rm(directory, { recursive: true, force: true }))
