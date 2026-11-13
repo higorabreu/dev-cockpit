@@ -35,4 +35,19 @@ describe('contrastChecks', () => {
 
     expect(failures.map((check) => check.name)).toContain('secondary text on the window')
   })
+
+  it('should check the text and the numbers on the diff tints when checking each theme', () => {
+    for (const theme of themeNames) {
+      const names = contrastChecks(tokens, theme).map((check) => check.name)
+
+      expect(names).toEqual(
+        expect.arrayContaining([
+          'code on an added word',
+          'number on an added line',
+          'code on a removed word',
+          'number on a removed line',
+        ]),
+      )
+    }
+  })
 })

@@ -35,6 +35,13 @@ export interface ThemeTokens {
     readonly success: string
     readonly warning: string
     readonly critical: string
+    // Added and removed lines of a diff, the changed words inside them, and their numbers and signs
+    readonly diffAdd: string
+    readonly diffAddWord: string
+    readonly diffAddInk: string
+    readonly diffRemove: string
+    readonly diffRemoveWord: string
+    readonly diffRemoveInk: string
   }
   readonly overlay: {
     readonly selection: string
