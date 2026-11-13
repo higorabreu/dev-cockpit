@@ -116,6 +116,9 @@ Every text is a key of the text catalogs (`core/src/i18n`), checked when the dec
 connector is translated like the rest of the interface. The declaration is strict: an unknown field is an
 error.
 
+A connector or view id that an extension loaded before already uses refuses the later extension
+(`DCK-EXT-001`, with the id and its owner in the detail), so a view id always names one view.
+
 The app finds the code of a connector by its `id`, in the window and in the daemon. An enabled connector
 with no code in the app is logged and left out, never drawn half-working. What a connector has in the
 product:
@@ -190,7 +193,9 @@ the new list at once; any other field edited by hand still applies at the next s
 
 Disabling a connector hides its section in Connections and its tabs in the Work screen, and stops its views
 in the daemon. Its address and its token stay where they are, so enabling it again finds the account still
-connected.
+connected. A disabled built-in connector is listed at the end of Settings, Connections, as a row with an
+Enable button, which takes its extension out of `extensions.disabled` through the settings model, with no
+restart. Disabling has no button: it stays in the CLI.
 
 ```
 $ dck ext disable dck.gitlab

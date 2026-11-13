@@ -542,7 +542,9 @@ reads as merge requests), view items as a union by `kind`, and daemon protocol 5
 draws one section per enabled connector from its declaration, and the Work screen shows only the tabs of
 connected accounts, with the "Account not connected" notice and an "Open Connections" button when there is
 none. `dck ext enable` and `dck ext disable` manage `extensions.disabled`; the window watches the settings
-file and applies that list at once, and a disabled connector keeps its address and token.
+file and applies that list at once, and a disabled connector keeps its address and token. Connections lists
+the disabled built-in connectors with an Enable button; disabling stays in the CLI. A connector or view id
+already used by an extension loaded before refuses the later one.
 **Reason:** not every company uses GitLab, and Jira is next (D5): two real connectors before an external
 contract. Keeping the contract internal and the code built in avoids designing the host before it is needed.
 **Accepted cost:** the CLI now writes `settings.json` (only `extensions.disabled`, in the window's format);

@@ -88,8 +88,11 @@ extracted here, from the two real connectors, as D5 asks.
   `extensions.disabled` at once. GitLab keeps `views-cache.json`, and an old cache loads as merge
   requests. A malformed connect request now answers `DCK-IPC-003` instead of GitLab's address error.
 - [x] CN-T3. Interface: Connections page and Work tabs drawn from the connected connectors, screenshots
-  in both themes and languages. (K1, K7, K9) With every connector disabled the Connections page says how
-  to enable one. The Work header keeps its height when there is no tab.
+  in both themes and languages. (K1, K7, K9) Connections lists the disabled connectors with an Enable
+  button. With nothing connected the Work screen shows only its title, the notice and the close button,
+  with the focus on "Open Connections". Focus stays put while an account is checked and lands on
+  Disconnect, the token field or the address after connect, a failure or disconnect. A view id that
+  another loaded connector uses refuses the later extension.
 - [ ] CN-T4. `@dck/adapter-jira`, its schemas and error codes, and the Jira connection. (K4, K8)
 - [ ] CN-T5. The Tasks tab: row, filter, Ctrl+C, empty text, both catalogs, screenshots. (K5, K6, K9)
 - [ ] CN-T6. Docs: `docs/extensions.md` (the `connectors` point), the roadmap (milestone 2), D41. Phase A
