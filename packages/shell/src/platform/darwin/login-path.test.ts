@@ -2,16 +2,14 @@ import type { Logger } from '@dck/core'
 import { describe, expect, it } from 'vitest'
 import { type LoginPathDeps, readLoginPath } from './login-path.ts'
 
-const INHERITED = '/usr/bin:/bin:/usr/sbin:/sbin'
-
-function deps(run: LoginPathDeps['run']) {
+function deps(run: NonNullable<LoginPathDeps['run']>) {
   const warnings: string[] = []
   const logger: Logger = {
     info() {},
     warn: (message) => void warnings.push(message),
     error() {},
   }
-  return { warnings, deps: { shell: '/bin/zsh', inherited: INHERITED, run, logger } }
+  return { warnings, deps: { shell: '/bin/zsh', run, logger } }
 }
 
 describe('readLoginPath', () => {
@@ -46,7 +44,7 @@ describe('readLoginPath', () => {
     expect(warnings).toEqual([])
   })
 
-  it('should keep the inherited PATH and warn when the shell fails or times out', async () => {
+  it('should return nothing and warn when the shell fails or times out', async () => {
     // Arrange
     const { deps: options, warnings } = deps(async () => {
       throw new Error('timed out')
@@ -56,7 +54,7 @@ describe('readLoginPath', () => {
     const path = await readLoginPath(options)
 
     // Assert
-    expect(path).toBe(INHERITED)
+    expect(path).toBeUndefined()
     expect(warnings).toEqual(['login shell PATH not read, keeping the inherited one'])
   })
 
@@ -65,7 +63,7 @@ describe('readLoginPath', () => {
     { when: 'an entry is relative', output: '__DCK_PATH__/usr/bin:bin__DCK_PATH__' },
     { when: 'an entry is empty', output: '__DCK_PATH__/usr/bin::/bin__DCK_PATH__' },
     { when: 'the value has a line break', output: '__DCK_PATH__/usr/bin\n/bin__DCK_PATH__' },
-  ])('should keep the inherited PATH and warn when $when', async ({ output }) => {
+  ])('should return nothing and warn when $when', async ({ output }) => {
     // Arrange
     const { deps: options, warnings } = deps(async () => output)
 
@@ -73,7 +71,7 @@ describe('readLoginPath', () => {
     const path = await readLoginPath(options)
 
     // Assert
-    expect(path).toBe(INHERITED)
+    expect(path).toBeUndefined()
     expect(warnings).toEqual(['login shell PATH is not valid, keeping the inherited one'])
   })
 })

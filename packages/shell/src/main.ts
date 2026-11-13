@@ -1,4 +1,4 @@
-import { execFile, spawn } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { mkdirSync, openSync, readFileSync, watch, writeFileSync } from 'node:fs'
 import { realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -52,7 +52,6 @@ import { buildTrayMenu } from './electron/tray-menu.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
-import { readLoginPath } from './platform/darwin/login-path.ts'
 import { activateOnFocus, anchorPanel, buildAppMenu } from './platform/darwin/panel-window.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
 import { selectPlatform } from './platform/select-platform.ts'
@@ -94,20 +93,10 @@ app.whenReady().then(async () => {
     resourcesPath: process.resourcesPath,
     logger,
   })
-  const loginPath =
-    process.platform === 'darwin'
-      ? readLoginPath({
-          shell: platform.terminal.file,
-          inherited: process.env.PATH,
-          run: (file, args, timeout) =>
-            new Promise((resolve, reject) =>
-              execFile(file, [...args], { timeout }, (error, stdout) =>
-                error ? reject(error) : resolve(stdout),
-              ),
-            ),
-          logger,
-        })
-      : undefined
+  // Off the boot path: the tabs open a login shell and need nothing; only the daemon waits for it
+  const loginPath = platform.loginPath().then((path) => {
+    if (path) process.env.PATH = path
+  })
   const toggleKey = createToggleKeyBinder({
     desktop: platform.desktopShortcut,
     electron: createElectronShortcuts(globalShortcut),
@@ -240,10 +229,6 @@ app.whenReady().then(async () => {
     for (const id of implementations.keys()) void views.configure(id, accountOf(settings, id))
   }
 
-  // Set before any child process starts: the terminal, the daemon, git and docker all inherit it
-  const path = await loginPath
-  if (path) process.env.PATH = path
-
   const bridge = registerHostBridge({
     ipcMain: createElectronIpc(ipcMain),
     ptyHost: createNodePtyHost(),
@@ -351,7 +336,8 @@ app.whenReady().then(async () => {
 
   const daemonScript = join(__dirname, 'daemon.cjs')
 
-  function startDaemonProcess() {
+  async function startDaemonProcess() {
+    await loginPath
     mkdirSync(dirname(endpoint), { recursive: true, mode: 0o700 })
     launchDaemon(
       {
@@ -385,7 +371,7 @@ app.whenReady().then(async () => {
       },
     },
     logger,
-    onUnavailable: startDaemonProcess,
+    onUnavailable: () => void startDaemonProcess(),
     // A daemon from a previous version survives the update and would refuse the new methods
     replaceDaemon: async (shutdown) => {
       if (!(await shutdown())) {
@@ -406,7 +392,7 @@ app.whenReady().then(async () => {
         logger.warn('stale daemon stopped', { pids })
       }
       await new Promise((resolve) => setTimeout(resolve, 400))
-      startDaemonProcess()
+      await startDaemonProcess()
     },
     onToggle: () => {
       logger.info('toggle requested by the daemon')

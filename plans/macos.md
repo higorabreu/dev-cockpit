@@ -110,9 +110,9 @@ The order is meant to bring the tester in as late as possible and once per batch
   the daemon, to the adapters that call `git`, `docker` and `claude` and to the PTY, so it does not
   depend on the app having been opened from a terminal. A failure falls back to the inherited PATH and logs
   `warn`. (C9) Done: `shell/src/platform/darwin/login-path.ts` reads it between marks, so startup files
-  that print do not spoil it, and `main.ts` sets `process.env.PATH` before any child process, so the PTY,
-  the daemon and `git` or `docker` inherit it. `selectPlatform` gives the terminal (`$SHELL -l` on the Mac,
-  unchanged on Linux). Checked on a Mac with the packaged app started with a minimal PATH and no `SHELL`:
+  that print do not spoil it. `selectPlatform` gives it as `loginPath()` and the terminal (`$SHELL -l` on the
+  Mac, unchanged on Linux). `main.ts` sets `process.env.PATH` when it arrives, off the boot path: the tabs are
+  login shells and need nothing, the daemon waits for it, and `git` or `docker` get it from then on. Checked on a Mac with the packaged app started with a minimal PATH and no `SHELL`:
   `brew`, `docker`, `claude` and `git` are found in the tab and the daemon has the full PATH.
 - [ ] MAC-T7. Keyboard and tooltip. In `ui/src/platform/shortcuts.ts`, replace `ctrlKey` and `event.key` with a
   `matches(event, shortcut)` function that uses `event.code`, and a primary modifier per platform
@@ -148,7 +148,8 @@ The order is meant to bring the tester in as late as possible and once per batch
   `release/dev-cockpit_<version>_<arch>.dmg`. The helpers are renamed with the executable, since Electron finds
   them by its name, and the `dck` CLI is `Contents/Resources/bin/dck`, to link into the PATH. No entitlements:
   they only take effect with the hardened runtime, which is MAC-T14. `node-pty` comes from `dist`, already
-  rebuilt for Electron on the builder's architecture. Checked on macOS arm64: the app opens with no Dock
+  rebuilt for Electron on the builder's architecture, without its sources and prebuilds. What the `.deb` and
+  the `.dmg` share is in `shell/scripts/package-common.mjs`. Checked on macOS arm64: the app opens with no Dock
   icon, runs the daemon and a terminal, and `dck ping` answers. Not in CI yet (MAC-T11).
 - [ ] MAC-T11. Smoke mode and diagnostics. A `DCK_SMOKE=1` variable makes the app start, create the window, open
   a PTY, run `echo ok`, talk to the daemon, print a JSON (platform, architecture, versions, paths, socket

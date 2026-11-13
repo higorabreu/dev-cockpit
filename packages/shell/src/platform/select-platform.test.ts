@@ -128,4 +128,15 @@ describe('selectPlatform', () => {
     // Assert
     expect(platform.terminal).toEqual(terminal)
   })
+
+  it('should keep the inherited PATH when the app runs on Linux', async () => {
+    // Arrange
+    const platform = selectPlatform(context({}))
+
+    // Act
+    const path = await platform.loginPath()
+
+    // Assert
+    expect(path).toBeUndefined()
+  })
 })

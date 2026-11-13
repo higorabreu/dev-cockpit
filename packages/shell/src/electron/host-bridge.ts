@@ -13,6 +13,7 @@ import {
   type ProjectCatalog,
   type PtyCreateOptions,
   type PtyHost,
+  type PtyOptions,
   type PtySession,
   type SessionActivityInfo,
   type SessionSnapshot,
@@ -121,7 +122,7 @@ export interface BridgeOptions {
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
   }
   readonly agents: readonly AgentProfile[]
-  readonly shell: { readonly file: string; readonly args: readonly string[] }
+  readonly shell: Pick<PtyOptions, 'file' | 'args'>
   readonly home: string
   readonly logger: Logger
   send(channel: string, ...args: unknown[]): void
