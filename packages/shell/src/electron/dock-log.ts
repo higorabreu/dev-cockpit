@@ -25,6 +25,11 @@ export function logDockWindow(window: DockWindow, logger: Logger): DockWindow {
       logger.info('dock setBounds', { ...bounds })
       window.setBounds(bounds)
     },
+    isFocused() {
+      const focused = window.isFocused()
+      logger.info('dock toggle sees', { visible: window.isVisible(), focused })
+      return focused
+    },
     show() {
       window.show()
       logger.info('dock after show', { ...window.bounds() })

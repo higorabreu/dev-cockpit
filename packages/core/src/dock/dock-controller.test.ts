@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Display } from '../ports/index.ts'
-import { FakeDockWindow, FakeScheduler, FakeScreen } from '../testing/index.ts'
+import { FakeClock, FakeDockWindow, FakeScheduler, FakeScreen } from '../testing/index.ts'
 import { createDockController, dockBounds } from './dock-controller.ts'
 
 const display = (
@@ -24,8 +24,9 @@ function setup(cursor = { x: 300, y: 300 }, ignoresOrigin = false) {
   const screen = new FakeScreen([left, center, right], cursor)
   const window = new FakeDockWindow(ignoresOrigin)
   const scheduler = new FakeScheduler()
-  const dock = createDockController({ screen, window, scheduler })
-  return { screen, window, scheduler, dock }
+  const clock = new FakeClock(10_000)
+  const dock = createDockController({ screen, window, scheduler, clock })
+  return { screen, window, scheduler, clock, dock }
 }
 
 describe('dockBounds', () => {
@@ -117,6 +118,30 @@ describe('show', () => {
     scheduler.advance(500)
 
     expect(window.calls.length).toBe(callsBefore)
+  })
+})
+
+describe('toggle repeats', () => {
+  it('should ignore a toggle that comes right after another when a key is held or delivered twice', () => {
+    const { window, clock, dock } = setup()
+    dock.toggle()
+    window.focus()
+
+    clock.time += 100
+    dock.toggle()
+
+    expect(window.isVisible()).toBe(true)
+  })
+
+  it('should hide on the next toggle when it comes after the repeat window', () => {
+    const { window, clock, dock } = setup()
+    dock.toggle()
+    window.focus()
+
+    clock.time += 400
+    dock.toggle()
+
+    expect(window.isVisible()).toBe(false)
   })
 })
 
