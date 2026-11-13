@@ -98,5 +98,45 @@
     "category": "invalid_argument",
     "retryable": false,
     "rpc": -32016
+  },
+  "DCK-JRA-001": {
+    "category": "permission_denied",
+    "retryable": false,
+    "rpc": -32017
+  },
+  "DCK-JRA-002": {
+    "category": "permission_denied",
+    "retryable": false,
+    "rpc": -32018
+  },
+  "DCK-JRA-003": {
+    "category": "not_found",
+    "retryable": false,
+    "rpc": -32019
+  },
+  "DCK-JRA-004": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32020
+  },
+  "DCK-JRA-005": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32021
+  },
+  "DCK-JRA-006": {
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32022
+  },
+  "DCK-JRA-007": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32023
+  },
+  "DCK-JRA-008": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32024
   }
 }

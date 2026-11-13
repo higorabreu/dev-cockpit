@@ -118,6 +118,17 @@ export function createSettingsStore(options: SettingsStoreOptions) {
       if (effective.length > 0) for (const listener of listeners) listener(view.settings, effective)
       return { ...view, rejected }
     },
+    // `dck ext enable|disable` writes the file while the window runs. Only that section is taken: a hand
+    // edit of another field still applies at the next start, as it did before
+    async reloadExtensions(): Promise<void> {
+      const before = view.settings
+      const next = parse(await readText())
+      if (next === undefined) return
+      stored = mergeSettings(stored, { extensions: next.extensions })
+      recompute()
+      const changed = changedKeys(before, view.settings)
+      if (changed.length > 0) for (const listener of listeners) listener(view.settings, changed)
+    },
     onChange(listener: Listener) {
       listeners.add(listener)
       return () => void listeners.delete(listener)

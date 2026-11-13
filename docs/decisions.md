@@ -523,3 +523,32 @@ is logged by kind, never by path.
 **Reason:** a request from the maintainer on 2026-11-13; terminal output is not trusted, and the default
 app of a launcher or a script runs it.
 **How to revert:** drop `attachPaths` from the terminal session and the `paths` channels from the bridge.
+
+## D41. GitLab becomes a built-in connector, and the product speaks of connectors by id
+
+**Decision:** a connector is a contribution of the extension system (`connectors`, the first registered
+point, `plans/connectors.md`). It declares its id, its name, the fields of its connection (address, an
+optional account e-mail, a token with its hint) and its views (id, title, item kind `mergeRequest` or
+`issue`, and which one feeds the rail badge). GitLab ships as the built-in extension `dck.gitlab`; Jira
+arrives as `dck.jira` only with its code, so no extension is declared without an implementation. Only
+built-in extensions may declare a connector until the extension host exists (D35): one from another source
+is refused with `DCK-EXT-002`. The window and the daemon find a connector's code by its id; an enabled
+connector with no code is logged and left out. Everything outside a connector's own files is per id:
+`connections.<id>` in the settings (GitLab's `connections.gitlab.url` keeps its path and meaning), the
+keyring key `<id>.token` with the profile prefix (`gitlab.token` and `dev:gitlab.token` are unchanged),
+the host channels `connections:list|status|connect|disconnect` and `views:*` by view id, one views service
+and one cache file per connector in the daemon (GitLab keeps `views-cache.json`, and a cache written before
+reads as merge requests), view items as a union by `kind`, and daemon protocol 5. The Connections page
+draws one section per enabled connector from its declaration, and the Work screen shows only the tabs of
+connected accounts, with the "Account not connected" notice and an "Open Connections" button when there is
+none. `dck ext enable` and `dck ext disable` manage `extensions.disabled`; the window watches the settings
+file and applies that list at once, and a disabled connector keeps its address and token. Connections lists
+the disabled built-in connectors with an Enable button; disabling stays in the CLI. A connector or view id
+already used by an extension loaded before refuses the later one.
+**Reason:** not every company uses GitLab, and Jira is next (D5): two real connectors before an external
+contract. Keeping the contract internal and the code built in avoids designing the host before it is needed.
+**Accepted cost:** the CLI now writes `settings.json` (only `extensions.disabled`, in the window's format);
+a request for an id that is not an enabled connector is refused with `DCK-IPC-003` instead of GitLab's
+address error.
+**How to revert:** revert the commits of phase A; the settings file and the keyring key did not change, so
+an existing setup keeps working on either side.

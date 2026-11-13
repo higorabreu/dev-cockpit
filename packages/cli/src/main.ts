@@ -1,4 +1,5 @@
-import { readFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import { findRepositoryRoot } from '@dck/adapter-extension-files'
 import {
   connectTo,
@@ -7,7 +8,7 @@ import {
   defaultStateDir,
 } from '@dck/adapter-node-net'
 import { createJsonLogger, createTranslator, pickLocale, silentLogger } from '@dck/core'
-import { createGitLabViews, startDaemon } from '@dck/daemon'
+import { createConnectorViews, startDaemon } from '@dck/daemon'
 import packageJson from '../package.json' with { type: 'json' }
 import { runCli } from './cli.ts'
 import { createExtDeps } from './ext-deps.ts'
@@ -18,7 +19,7 @@ const args = process.argv.slice(2)
 if (args[0] === 'daemon') {
   const logger = createJsonLogger((line) => process.stderr.write(line))
   let stopDaemon = async () => process.exit(0)
-  const views = createGitLabViews({
+  const views = createConnectorViews({
     stateDir: process.env.DCK_STATE_DIR ?? defaultStateDir(),
     logger,
     profile: process.env.DCK_PROFILE,
@@ -62,6 +63,16 @@ if (args[0] === 'daemon') {
       appVersion: packageJson.version,
       logger: silentLogger,
       readFile: (path) => readFile(path, 'utf8').catch(() => undefined),
+      writeFile: async (path, text) => {
+        const temporary = `${path}.tmp`
+        return mkdir(dirname(path), { recursive: true })
+          .then(() => writeFile(temporary, text))
+          .then(() => rename(temporary, path))
+          .then(
+            () => true,
+            () => false,
+          )
+      },
     }),
   })
 }

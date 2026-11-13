@@ -35,7 +35,7 @@ describe('connect', () => {
   it('should store the token and the address when the token is valid', async () => {
     const { connection, secrets, address } = setup()
 
-    const status = await connection.connect('https://gl.test/', 'glpat-x')
+    const status = await connection.connect({ url: 'https://gl.test/' }, 'glpat-x')
 
     expect(status).toEqual({
       kind: 'connected',
@@ -49,7 +49,7 @@ describe('connect', () => {
   it('should keep nothing when the token is refused', async () => {
     const { connection, secrets, address } = setup({ valid: false })
 
-    const status = await connection.connect('https://gl.test', 'glpat-x')
+    const status = await connection.connect({ url: 'https://gl.test' }, 'glpat-x')
 
     expect(status).toEqual({ kind: 'error', url: 'https://gl.test', code: 'DCK-GLB-001' })
     expect(await secrets.get('gitlab.token')).toEqual({ ok: true, value: undefined })
@@ -59,7 +59,7 @@ describe('connect', () => {
   it('should refuse the address without calling GitLab when it is not secure', async () => {
     const { connection, seen } = setup()
 
-    const status = await connection.connect('http://gl.test', 'glpat-x')
+    const status = await connection.connect({ url: 'http://gl.test' }, 'glpat-x')
 
     expect(status).toEqual({ kind: 'error', url: undefined, code: 'DCK-GLB-007' })
     expect(seen).toEqual([])
@@ -104,7 +104,7 @@ describe('status', () => {
 describe('disconnect', () => {
   it('should remove the token and the address when disconnecting', async () => {
     const { connection, secrets, address } = setup()
-    await connection.connect('https://gl.test', 'glpat-x')
+    await connection.connect({ url: 'https://gl.test' }, 'glpat-x')
 
     const status = await connection.disconnect()
 
@@ -133,5 +133,33 @@ describe('profiles sharing one vault', () => {
     await make('dev:gitlab.token').disconnect()
 
     expect(await secrets.get('gitlab.token')).toEqual({ ok: true, value: 'token-do-app-instalado' })
+  })
+})
+
+describe('where the token goes', () => {
+  it('should keep the token out of the logs and the settings when connecting succeeds or fails', async () => {
+    const logged: unknown[] = []
+    const saved: unknown[] = []
+    const make = (valid: boolean) =>
+      createGitLabConnection({
+        secrets: new MemorySecretStore(),
+        tokenKey: 'gitlab.token',
+        logger: {
+          info: (message, context) => void logged.push(message, context),
+          warn: (message, context) => void logged.push(message, context),
+          error: (message, context) => void logged.push(message, context),
+        },
+        address: { get: () => null, set: async (url) => void saved.push(url) },
+        createSource: () => ({
+          currentUser: async () => (valid ? ok(user) : fail(errorBody('DCK-GLB-001', 'HTTP 401'))),
+          mergeRequests: async () => ok([]),
+        }),
+      })
+
+    await make(true).connect({ url: 'https://gl.test' }, 'glpat-secret-value')
+    await make(false).connect({ url: 'https://gl.test' }, 'glpat-secret-value')
+
+    expect(logged.length).toBeGreaterThan(0)
+    expect(JSON.stringify([logged, saved])).not.toContain('glpat-secret-value')
   })
 })
