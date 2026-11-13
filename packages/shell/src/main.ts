@@ -4,13 +4,10 @@ import { realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
-import { createGnomeShortcut } from '@dck/adapter-gnome-shortcuts'
-import { createProcessInspector, createProcessScanner } from '@dck/adapter-linux-proc'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import { createGitInspector } from '@dck/adapter-node-git'
 import { connectTo, defaultConfigDir, defaultEndpoint } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
-import { createSecretToolStore } from '@dck/adapter-secret-tool'
 import {
   type ConnectionFields,
   connectorCatalog,
@@ -56,7 +53,7 @@ import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
-import { createXdgAutostart, defaultAutostartDirectory } from './platform/linux/xdg-autostart.ts'
+import { selectPlatform } from './platform/select-platform.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
@@ -85,24 +82,18 @@ app.whenReady().then(async () => {
   let activeKey = ''
   const toggleWindow = () => dock.toggle()
 
-  const onGnome = (process.env.XDG_CURRENT_DESKTOP ?? '').split(':').includes('GNOME')
+  const platform = selectPlatform({
+    platform: process.platform,
+    env: process.env,
+    home: homedir(),
+    packaged: app.isPackaged,
+    execPath: process.execPath,
+    appPath: app.getAppPath(),
+    resourcesPath: process.resourcesPath,
+    logger,
+  })
   const toggleKey = createToggleKeyBinder({
-    // O atalho do sistema chama o CLI empacotado; em modo dev o Electron registra a tecla
-    desktop:
-      app.isPackaged && onGnome
-        ? createGnomeShortcut({
-            command: [
-              'env',
-              'ELECTRON_RUN_AS_NODE=1',
-              'DCK_PACKAGED=1',
-              process.execPath,
-              join(process.resourcesPath, 'dck.mjs'),
-              'toggle',
-            ],
-            name: 'Dev Cockpit',
-            logger,
-          })
-        : undefined,
+    desktop: platform.desktopShortcut,
     electron: createElectronShortcuts(globalShortcut),
     onToggle: toggleWindow,
     onInvalid: (key, error) => logger.warn('shortcut is not valid', { key, error: String(error) }),
@@ -129,14 +120,6 @@ app.whenReady().then(async () => {
   const loaded = await settingsStore.load()
   logger.info('settings loaded', { fresh: loaded.fresh, locked: loaded.locked })
 
-  const autostart = createXdgAutostart({
-    directory: process.env.DCK_AUTOSTART_DIR ?? defaultAutostartDirectory(process.env, homedir()),
-    name: 'Dev Cockpit',
-    command: app.isPackaged
-      ? [process.execPath, '--no-sandbox']
-      : [process.execPath, app.getAppPath(), '--no-sandbox'],
-    env: { DCK_START_HIDDEN: '1' },
-  })
   const window = new BrowserWindow({
     show: false,
     frame: false,
@@ -184,7 +167,7 @@ app.whenReady().then(async () => {
   logger.info('notifications available', { supported: Notification.isSupported() })
 
   const implementations = createConnectorConnections({
-    secrets: createSecretToolStore(),
+    secrets: platform.secrets,
     http: createFetchHttpClient(),
     profile: process.env.DCK_PROFILE,
     account: (id) => ({
@@ -247,7 +230,7 @@ app.whenReady().then(async () => {
         return catalog.ready.flatMap(({ id }) => accountOf(settings, id)?.url ?? [])
       },
     },
-    autostart,
+    autostart: platform.autostart,
     projects: createProjectCatalog(
       () => {
         const { projects } = settingsStore.get().settings
@@ -257,14 +240,14 @@ app.whenReady().then(async () => {
       createFavoritesStore(join(app.getPath('userData'), 'favorite-projects.json'), logger),
     ),
     sessions: createSessionInspector({
-      processes: createProcessInspector(),
+      processes: platform.processes,
       git: createGitInspector(),
       agents: agentProfiles,
     }),
     agents: agentProfiles,
 
     environment: createEnvironmentInspector({
-      processes: createProcessInspector(),
+      processes: platform.processes,
       compose: createComposeInspector({ stopAt: homedir() }),
     }),
     files: {
@@ -336,7 +319,6 @@ app.whenReady().then(async () => {
   })
 
   const daemonScript = join(__dirname, 'daemon.cjs')
-  const processScanner = createProcessScanner()
 
   function startDaemonProcess() {
     mkdirSync(dirname(endpoint), { recursive: true, mode: 0o700 })
@@ -377,7 +359,7 @@ app.whenReady().then(async () => {
     replaceDaemon: async (shutdown) => {
       if (!(await shutdown())) {
         // Old daemons do not even know `shutdown`: finds the processes of our own script
-        const pids = await processScanner.find({
+        const pids = await platform.processScanner.find({
           argument: daemonScript,
           endpoint: process.env.DCK_ENDPOINT,
           exclude: process.pid,
@@ -445,7 +427,7 @@ app.whenReady().then(async () => {
         dock.show()
         window.webContents.send(hostChannels.windowOpenSettings)
       },
-      autostart,
+      autostart: platform.autostart,
       // Read on every menu build: the language can change in settings while the app is open
       t: ((key, params) => {
         const { language } = settingsStore.get().settings

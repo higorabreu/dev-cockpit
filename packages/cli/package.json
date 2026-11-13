@@ -13,6 +13,7 @@
   "dependencies": {
     "@dck/adapter-extension-files": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
+    "@dck/adapter-secret-tool": "workspace:^",
     "@dck/core": "workspace:^",
     "@dck/daemon": "workspace:^"
   },
