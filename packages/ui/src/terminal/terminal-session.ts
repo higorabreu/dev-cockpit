@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import { terminalTheme } from '../platform/theme.ts'
 import { attachClipboard } from './clipboard-behavior.ts'
+import { attachLinks, type LinkOptions } from './terminal-links.ts'
 
 export interface TerminalSession {
   readonly element: HTMLElement
@@ -25,6 +26,8 @@ export interface SessionOptions {
   readonly fontSize: number
   readonly cwd?: string
   readonly exitedText: string
+  // How a link printed in the terminal opens and shows its tooltip
+  readonly links: Omit<LinkOptions, 'open'>
   onCopied(text: string): void
   onExit(): void
   // A key the user typed, not the replies xterm sends by itself (focus and cursor reports)
@@ -48,6 +51,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   terminal.loadAddon(fit)
   terminal.open(element)
 
+  attachLinks(terminal, { ...options.links, open: (url) => api.external.openLink(url) })
   const clipboard = attachClipboard(terminal, element, api.clipboard, options.onCopied)
   // Keys xterm must not send to the shell: Ctrl+Shift+C and V copy and paste
   terminal.attachCustomKeyEventHandler((event) => {

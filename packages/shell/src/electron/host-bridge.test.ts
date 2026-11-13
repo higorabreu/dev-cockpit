@@ -1,4 +1,4 @@
-import { defaultSettings, hostChannels, silentLogger, type TabNotification } from '@dck/core'
+import { defaultSettings, hostChannels, type LogContext, type TabNotification } from '@dck/core'
 import { FakePtyHost, MemoryClipboard } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
 import { type IpcMainApi, registerHostBridge } from './host-bridge.ts'
@@ -19,6 +19,7 @@ function setup() {
   const gitlabConnects: { url: string; token: string }[] = []
   const viewRefreshes: { view: string; maxAgeMs: number | undefined }[] = []
   const opened: string[] = []
+  const warnings: { message: string; context: LogContext | undefined }[] = []
   const bridge = registerHostBridge({
     ipcMain,
     ptyHost,
@@ -85,7 +86,11 @@ function setup() {
     },
     shell: '/bin/zsh',
     home: '/home/usuario',
-    logger: silentLogger,
+    logger: {
+      info() {},
+      warn: (message, context) => void warnings.push({ message, context }),
+      error() {},
+    },
     send: (channel, ...args) => sent.push([channel, ...args]),
     toggleFullHeight: () => {
       fullHeightToggles += 1
@@ -104,6 +109,7 @@ function setup() {
     gitlabConnects,
     viewRefreshes,
     opened,
+    warnings,
     fullHeights: () => fullHeightToggles,
   }
 }
@@ -389,6 +395,46 @@ describe('registerHostBridge external', () => {
     const { call, opened } = setup()
 
     call(hostChannels.externalOpen, url)
+
+    expect(opened).toEqual([])
+  })
+})
+
+describe('registerHostBridge terminal links', () => {
+  it.each([
+    ['an https address', 'https://example.com/docs?q=1#top', 'https://example.com/docs?q=1#top'],
+    ['an http address', 'http://localhost:5173/', 'http://localhost:5173/'],
+    ['an address on any host', 'https://evil.test/x', 'https://evil.test/x'],
+  ])('should open %s when the terminal asks to open a link', (_label, url, expected) => {
+    const { call, opened } = setup()
+
+    call(hostChannels.externalOpenLink, url)
+
+    expect(opened).toEqual([expected])
+  })
+
+  it.each([
+    ['a file address', 'file:///etc/passwd', 'file:'],
+    ['a script address', 'javascript:alert(1)', 'javascript:'],
+    ['a data address', 'data:text/html,<b>x</b>', 'data:'],
+    ['a user and password', 'https://ana:secret@example.com/', 'https:'],
+    ['only a user', 'https://ana@example.com/', 'https:'],
+    ['an address that is too long', `https://example.com/${'a'.repeat(2048)}`, 'https:'],
+    ['text that is not an address', 'nada', 'invalid'],
+    ['a value that is not text', 42, 'invalid'],
+  ])('should refuse and log only the scheme when the link has %s', (_label, url, scheme) => {
+    const { call, opened, warnings } = setup()
+
+    call(hostChannels.externalOpenLink, url)
+
+    expect(opened).toEqual([])
+    expect(warnings).toEqual([{ message: 'terminal link refused', context: { scheme } }])
+  })
+
+  it('should keep the GitLab only rule when the old channel gets any other address', () => {
+    const { call, opened } = setup()
+
+    call(hostChannels.externalOpen, 'https://example.com/docs')
 
     expect(opened).toEqual([])
   })

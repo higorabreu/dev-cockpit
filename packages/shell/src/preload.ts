@@ -46,6 +46,7 @@ const api: HostApi = {
   },
   external: {
     open: (url) => ipcRenderer.send(hostChannels.externalOpen, url),
+    openLink: (url) => ipcRenderer.send(hostChannels.externalOpenLink, url),
   },
   views: {
     snapshot: (view) => ipcRenderer.invoke(hostChannels.viewsSnapshot, view),

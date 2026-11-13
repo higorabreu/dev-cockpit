@@ -26,6 +26,7 @@ import {
 import { createHoldMenuController } from './hold-menu/hold-menu-controller.ts'
 import { setFullHeight } from './kit/layout-mode.ts'
 import { translateStatic } from './kit/static-text.ts'
+import { setTipRegion } from './kit/tooltip.ts'
 import { createEnvironmentSection } from './panel/environment-section.ts'
 import { displayPath } from './panel/format.ts'
 import { createGitSection } from './panel/git-section.ts'
@@ -44,6 +45,7 @@ import { createSessionWatcher } from './tabs/sessions-watcher.ts'
 import { createTabBar } from './tabs/tab-bar.ts'
 import { createTabList } from './tabs/tab-list.ts'
 import { createTabMenu } from './tabs/tab-menu.ts'
+import { linkModifierFor } from './terminal/terminal-links.ts'
 import { createTerminalSession, type TerminalSession } from './terminal/terminal-session.ts'
 import { createViewsView } from './views/views-view.ts'
 
@@ -90,6 +92,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const projectTabs = new Map<string, string>()
   const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
+  const linkModifier = linkModifierFor(navigator.platform)
   const notice = createNotice(elements.notice, i18n)
   const menu = createTabMenu(elements.menu)
   let state: TabsState = emptyTabs
@@ -345,6 +348,12 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       fontSize: settings.current().fontSize,
       ...(options.cwd ? { cwd: options.cwd } : {}),
       exitedText: i18n.t('terminal.exited'),
+      links: {
+        modifier: linkModifier,
+        keyLabel: () =>
+          i18n.t('terminal.openLink', { modifier: linkModifier === 'meta' ? 'Cmd' : 'Ctrl' }),
+        tip: setTipRegion,
+      },
       onCopied: (text) => notice.copied(text),
       onExit: () => close(id),
       onInput() {

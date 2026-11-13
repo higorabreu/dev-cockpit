@@ -97,6 +97,7 @@ export const en: Record<MessageKey, string> = {
   'notice.chars.other': '{count} characters',
 
   'terminal.exited': '[process exited]',
+  'terminal.openLink': '{modifier}+click',
 
   'projects.search': 'Search project',
   'projects.none': 'No project found',
