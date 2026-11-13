@@ -93,10 +93,13 @@ extracted here, from the two real connectors, as D5 asks.
   with the focus on "Open Connections". Focus stays put while an account is checked and lands on
   Disconnect, the token field or the address after connect, a failure or disconnect. A view id that
   another loaded connector uses refuses the later extension.
-- [ ] CN-T4. `@dck/adapter-jira`, its schemas and error codes, and the Jira connection. (K4, K8)
-- [ ] CN-T5. The Tasks tab: row, filter, Ctrl+C, empty text, both catalogs, screenshots. (K5, K6, K9)
-- [ ] CN-T6. Docs: `docs/extensions.md` (the `connectors` point), the roadmap (milestone 2), D41. Phase A
-  part done (the `connectors` point, `dck ext enable|disable`, D41); the roadmap waits for phase B.
+- [x] CN-T4. `@dck/adapter-jira`, its schemas and error codes, and the Jira connection. (K4, K8)
+  `DCK-JRA-001` to `008`: refused credentials, no permission, address not found, rate limited, not
+  responding, not Jira, invalid address, invalid e-mail. The last two are checked before any request.
+- [x] CN-T5. The Tasks tab: row, filter, Ctrl+C, empty text, both catalogs, screenshots. (K5, K6, K9)
+- [x] CN-T6. Docs: `docs/extensions.md` (the `connectors` point), the roadmap (milestone 2), D41. Phase A
+  part done (the `connectors` point, `dck ext enable|disable`, D41); phase B added `dck.jira` to the
+  extensions reference, the roadmap and the architecture.
 
 ## Risks
 
@@ -105,3 +108,24 @@ extracted here, from the two real connectors, as D5 asks.
 | The refactor changes GitLab behaviour | A regression for the only current user | Phase A ships alone, with GitLab's tests unchanged and screenshots before and after |
 | Atlassian changes the search API (the old `/search` was retired in 2025) | Tasks stop loading | One adapter file; the error shows in the tab with what was stored |
 | The contract fits two connectors and not the third | A rework when the host arrives | It is kept internal until phase 3 and not published as an API |
+
+## Results
+
+Phase B (2026-11-13). Jira Cloud fitted the phase A contract with no change to it: a declaration, an
+adapter, a connection in the window and a views service in the daemon, and the Work screen drew a second
+item kind.
+
+- The search uses `GET /rest/api/3/search/jql` with `nextPageToken`; finished issues are left out even if
+  one slips past the query, and the update date is stored as ISO because Jira writes `+0000`.
+- The address keeps only the site root, so a pasted board or issue link connects; an e-mail that is not an
+  address is refused before any request (`DCK-JRA-008`). The e-mail is never logged.
+- "Connected as" shows the display name, since Jira Cloud has no username. Disconnecting erases the address,
+  the e-mail and the token; the settings model drops an empty e-mail, which is how it is erased.
+- In progress reads in the text color with a dot and to do in the muted color with a ring; no semantic
+  color, since a status is not a problem. A long status is cut at 160 px with its tooltip. A neutral chip
+  keeps its outline on a highlighted row, merge request chips included, where the line color vanished.
+- Ctrl+C copies the key only on Tasks and only when no text is selected in the filter; a click on the key is
+  the mouse path, with its tooltip and shortcut. The "copied" notice is the app's own, in the tab bar.
+- The hint bar leaves out switching tabs when there is only one.
+- Verified against a fake Jira server (two pages, 12 issues) in both themes and languages, with GitLab and
+  Jira together, Jira alone, an empty list, a wrong token and a narrow window.
