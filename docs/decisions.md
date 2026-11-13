@@ -552,3 +552,12 @@ a request for an id that is not an enabled connector is refused with `DCK-IPC-00
 address error.
 **How to revert:** revert the commits of phase A; the settings file and the keyring key did not change, so
 an existing setup keeps working on either side.
+
+## D43. The secret store is chosen in `@dck/daemon`, for the window and the daemon alike
+
+**Decision:** `systemSecretStore(platform)` in `@dck/daemon/secret-store` picks the Keychain on macOS and
+`secret-tool` elsewhere. The daemon's entry point and `dck daemon` build it once and pass it to every
+connector's views; the shell's `selectPlatform` calls the same function instead of choosing on its own.
+**Reason:** the window writes the token and the daemon reads it, so both processes must pick the same store;
+one chooser that both import cannot drift, while two copies of the choice could.
+**How to revert:** move the choice back into `selectPlatform` and into each daemon entry point.
