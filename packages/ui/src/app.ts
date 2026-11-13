@@ -96,6 +96,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
   const linkModifier = linkModifierFor(navigator.platform)
+  const nativeMiddlePaste = navigator.platform.startsWith('Linux')
   const notice = createNotice(elements.notice, i18n)
   const menu = createTabMenu(elements.menu)
   let state: TabsState = emptyTabs
@@ -383,6 +384,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       fontSize: settings.current().fontSize,
       ...(options.cwd ? { cwd: options.cwd } : {}),
       exitedText: i18n.t('terminal.exited'),
+      nativeMiddlePaste,
       links: {
         modifier: linkModifier,
         keyLabel: () =>
