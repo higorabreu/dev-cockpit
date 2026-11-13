@@ -359,6 +359,7 @@ export const en: Record<MessageKey, string> = {
   'review.hint.hunk': 'hunk',
   'review.hint.expand': 'show lines',
   'review.hint.terminal': 'terminal',
+  'review.hint.review': 'review',
   'review.a11y.dividerStacked': 'Height of the review',
   'review.a11y.changes.one': 'Changes in {count} file',
   'review.a11y.changes.other': 'Changes in {count} files',

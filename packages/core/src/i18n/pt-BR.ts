@@ -358,6 +358,7 @@ export const ptBR = {
   'review.hint.hunk': 'trecho',
   'review.hint.expand': 'mostrar linhas',
   'review.hint.terminal': 'terminal',
+  'review.hint.review': 'revisão',
   'review.a11y.dividerStacked': 'Altura da revisão',
   'review.a11y.changes.one': 'Alterações em {count} arquivo',
   'review.a11y.changes.other': 'Alterações em {count} arquivos',

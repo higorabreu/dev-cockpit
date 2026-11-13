@@ -343,6 +343,21 @@ describe('createReviewPane', () => {
     expect(pane.element.querySelector('[data-tip-key="Esc"]')?.hasAttribute('hidden')).toBe(false)
   })
 
+  it('should show the review keys only while it has the focus and the way back when it does not', async () => {
+    const { pane, text } = setup(repository())
+    const outside = document.createElement('textarea')
+    document.body.append(outside)
+    pane.open()
+    await flush()
+
+    ;(pane.element.querySelector('.rv-lines') as HTMLElement).focus()
+    const inside = text('.phint')
+    outside.focus()
+
+    expect(inside).toBe('↑↓ navigate[ ] filen p hunkEsc terminalCtrl+R Refresh')
+    expect(text('.phint')).toBe('Ctrl+Shift+D review')
+  })
+
   it('should give the keys back to the terminal on Esc and read again on Ctrl+R', async () => {
     const { pane, key, escapes, requests } = setup(repository())
     pane.open()

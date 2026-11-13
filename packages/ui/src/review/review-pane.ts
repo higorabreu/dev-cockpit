@@ -279,13 +279,19 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     layout.replaceChildren(icon(ICONS[next], 16))
   }
 
-  // The file and hunk keys only while there are files; Esc and Ctrl+R always
+  // The keys of the review while it has the focus; from the terminal, only the key that comes back here
   let hintsFor: string | undefined
   function drawHints() {
     const withFiles = state.kind === 'ok' && state.diff.files.length > 0
-    const key = String(withFiles)
+    const key = `${withFiles} ${focusInside}`
     if (hintsFor === key) return
     hintsFor = key
+    if (!focusInside) {
+      const come = actionHint(REVIEW_KEY, t('review.hint.review'))
+      come.addEventListener('click', () => pane.focus())
+      hints.replaceChildren(come)
+      return
+    }
     const refreshAction = actionHint('Ctrl+R', t('review.refresh'))
     refreshAction.addEventListener('click', () => refresh.request())
     hints.replaceChildren(
@@ -424,15 +430,17 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     event.preventDefault()
     event.stopPropagation()
   })
-  // Whether the keys are in the review, so a redraw that hides the focused part does not drop them
+  // Where the keys are decides the hints: the review's own, or the way back to it
   element.addEventListener('focusin', () => {
     focusInside = true
+    drawHints()
   })
   element.addEventListener('focusout', (event) => {
     const next = event.relatedTarget
     if (next instanceof Node && element.contains(next)) return
     if (next === null) return
     focusInside = false
+    drawHints()
   })
   whitespace.addEventListener('click', () => {
     ignoreWhitespace = !ignoreWhitespace
