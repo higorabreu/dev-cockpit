@@ -4,7 +4,9 @@ import { join } from 'node:path'
 import * as linuxProc from '@dck/adapter-linux-proc'
 import * as macosProc from '@dck/adapter-macos-proc'
 import { silentLogger } from '@dck/core'
+import { FakeDockWindow } from '@dck/core/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import type { PlacedWindow } from './platform-window.ts'
 import { type PlatformContext, processAdapters, selectPlatform } from './select-platform.ts'
 
 let directory = ''
@@ -24,8 +26,17 @@ const context = (overrides: Partial<PlatformContext>): PlatformContext => ({
   appPath: '/opt/dck/app',
   resourcesPath: '/opt/dck/resources',
   logger: silentLogger,
+  app: { focus: () => undefined, hide: () => undefined },
   ...overrides,
 })
+
+// Records each window call with its arguments, so a missing or extra argument shows up
+function recordingWindow(calls: unknown[][]): PlacedWindow {
+  return {
+    setAlwaysOnTop: (...args) => void calls.push(['setAlwaysOnTop', ...args]),
+    setVisibleOnAllWorkspaces: (...args) => void calls.push(['setVisibleOnAllWorkspaces', ...args]),
+  }
+}
 
 describe('selectPlatform', () => {
   it.each([
@@ -108,4 +119,93 @@ describe('selectPlatform', () => {
       expect(adapters).toBe(expected)
     },
   )
+
+  it.each([
+    {
+      expected: 'open the SHELL as a login shell',
+      when: 'the app runs on macOS',
+      overrides: { platform: 'darwin' as const, env: { SHELL: '/opt/homebrew/bin/fish' } },
+      terminal: { file: '/opt/homebrew/bin/fish', args: ['-l'] },
+    },
+    {
+      expected: 'open zsh as a login shell',
+      when: 'macOS gives no SHELL',
+      overrides: { platform: 'darwin' as const, env: {} },
+      terminal: { file: '/bin/zsh', args: ['-l'] },
+    },
+    {
+      expected: 'open the SHELL as it is',
+      when: 'the app runs on Linux',
+      overrides: { env: { SHELL: '/usr/bin/fish' } },
+      terminal: { file: '/usr/bin/fish', args: [] },
+    },
+    {
+      expected: 'open bash',
+      when: 'Linux gives no SHELL',
+      overrides: { env: {} },
+      terminal: { file: '/bin/bash', args: [] },
+    },
+  ])('should $expected when $when', ({ overrides, terminal }) => {
+    // Arrange
+    const selected = context(overrides)
+
+    // Act
+    const platform = selectPlatform(selected)
+
+    // Assert
+    expect(platform.terminal).toEqual(terminal)
+  })
+
+  it('should keep the inherited PATH when the app runs on Linux', async () => {
+    // Arrange
+    const platform = selectPlatform(context({}))
+
+    // Act
+    const path = await platform.loginPath()
+
+    // Assert
+    expect(path).toBeUndefined()
+  })
+
+  it.each([
+    {
+      expected: 'open a panel with its own app menu',
+      when: 'the app runs on macOS',
+      platform: 'darwin' as const,
+      options: { type: 'panel' },
+      menu: true,
+    },
+    {
+      expected: 'open a regular window with no app menu',
+      when: 'the app runs on Linux',
+      platform: 'linux' as const,
+      options: {},
+      menu: false,
+    },
+  ])('should $expected when $when', ({ platform, options, menu }) => {
+    // Arrange
+    const selected = context({ platform })
+
+    // Act
+    const { window } = selectPlatform(selected)
+
+    // Assert
+    expect(window.options).toStrictEqual(options)
+    expect(window.menu !== undefined).toBe(menu)
+  })
+
+  it('should keep the window on every workspace and its focus as it is when the app runs on Linux', () => {
+    // Arrange
+    const { window } = selectPlatform(context({}))
+    const calls: unknown[][] = []
+    const dockWindow = new FakeDockWindow()
+
+    // Act
+    window.place(recordingWindow(calls))
+    const docked = window.dock(dockWindow, { focus: () => calls.push(['contents.focus']) })
+
+    // Assert
+    expect(calls).toEqual([['setVisibleOnAllWorkspaces', true]])
+    expect(docked).toBe(dockWindow)
+  })
 })

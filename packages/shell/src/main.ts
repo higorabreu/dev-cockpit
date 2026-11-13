@@ -99,6 +99,11 @@ app.whenReady().then(async () => {
     appPath: app.getAppPath(),
     resourcesPath: process.resourcesPath,
     logger,
+    app,
+  })
+  // Off the boot path: the tabs open a login shell and need nothing; only the daemon waits for it
+  const loginPath = platform.loginPath().then((path) => {
+    if (path) process.env.PATH = path
   })
   const toggleKey = createToggleKeyBinder({
     desktop: platform.desktopShortcut,
@@ -129,6 +134,7 @@ app.whenReady().then(async () => {
   logger.info('settings loaded', { fresh: loaded.fresh, locked: loaded.locked })
 
   const window = new BrowserWindow({
+    ...platform.window.options,
     show: false,
     frame: false,
     alwaysOnTop: true,
@@ -142,7 +148,7 @@ app.whenReady().then(async () => {
       nodeIntegration: false,
     },
   })
-  window.setVisibleOnAllWorkspaces(true)
+  platform.window.place(window)
   // Page content never opens an Electron window nor leaves the app; links go to the browser through the host
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
@@ -155,11 +161,12 @@ app.whenReady().then(async () => {
   const dockWindow = createElectronDockWindow(window, {
     onShown: () => send(hostChannels.windowShown),
   })
+  const focusedDockWindow = platform.window.dock(dockWindow, window.webContents)
   const traceDock = process.env.DCK_LOG_DOCK === '1'
 
   const dock = createDockController({
     screen: traceDock ? logScreen(electronScreen, logger) : electronScreen,
-    window: traceDock ? logDockWindow(dockWindow, logger) : dockWindow,
+    window: traceDock ? logDockWindow(focusedDockWindow, logger) : focusedDockWindow,
     scheduler: {
       after(milliseconds, task) {
         const timer = setTimeout(task, milliseconds)
@@ -285,7 +292,7 @@ app.whenReady().then(async () => {
         send(hostChannels.notificationsClick, tabId)
       },
     ),
-    shell: process.env.SHELL ?? '/bin/bash',
+    shell: platform.terminal,
     home: homedir(),
     logger,
     send,
@@ -330,7 +337,8 @@ app.whenReady().then(async () => {
 
   const daemonScript = join(__dirname, 'daemon.cjs')
 
-  function startDaemonProcess() {
+  async function startDaemonProcess() {
+    await loginPath
     mkdirSync(dirname(endpoint), { recursive: true, mode: 0o700 })
     launchDaemon(
       {
@@ -364,7 +372,7 @@ app.whenReady().then(async () => {
       },
     },
     logger,
-    onUnavailable: startDaemonProcess,
+    onUnavailable: () => void startDaemonProcess(),
     // A daemon from a previous version survives the update and would refuse the new methods
     replaceDaemon: async (shutdown) => {
       if (!(await shutdown())) {
@@ -385,7 +393,7 @@ app.whenReady().then(async () => {
         logger.warn('stale daemon stopped', { pids })
       }
       await new Promise((resolve) => setTimeout(resolve, 400))
-      startDaemonProcess()
+      await startDaemonProcess()
     },
     onToggle: () => {
       logger.info('toggle requested by the daemon')
@@ -422,6 +430,30 @@ app.whenReady().then(async () => {
     })
   }
 
+  // Read on every menu build: the language can change in settings while the app is open
+  const t = ((key, params) => {
+    const { language } = settingsStore.get().settings
+    return createTranslator(
+      language === 'auto' ? pickLocale(app.getPreferredSystemLanguages()) : language,
+    ).t(key, params)
+  }) as Translate
+  const openSettings = () => {
+    dock.show()
+    send(hostChannels.windowOpenSettings)
+  }
+
+  const appMenu = platform.window.menu
+  if (appMenu) {
+    const refreshAppMenu = () =>
+      Menu.setApplicationMenu(
+        Menu.buildFromTemplate(appMenu({ t, openSettings, quit: () => app.quit() })),
+      )
+    refreshAppMenu()
+    settingsStore.onChange((_settings, changed) => {
+      if (changed.includes('language')) refreshAppMenu()
+    })
+  }
+
   // DCK_NO_TRAY exists so automated tests do not flash icons in the user's bar
   if (!process.env.DCK_NO_TRAY) {
     const statusIcons = createElectronStatusIcon(
@@ -433,18 +465,9 @@ app.whenReady().then(async () => {
     )
     const menuDeps = {
       toggleWindow: () => dock.toggle(),
-      openSettings: () => {
-        dock.show()
-        send(hostChannels.windowOpenSettings)
-      },
+      openSettings,
       autostart: platform.autostart,
-      // Read on every menu build: the language can change in settings while the app is open
-      t: ((key, params) => {
-        const { language } = settingsStore.get().settings
-        return createTranslator(
-          language === 'auto' ? pickLocale(app.getPreferredSystemLanguages()) : language,
-        ).t(key, params)
-      }) as Translate,
+      t,
       quit: () => app.quit(),
       onChange: () => void refreshTrayMenu(),
     }

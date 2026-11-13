@@ -16,6 +16,7 @@ import {
   type ProjectCatalog,
   type PtyCreateOptions,
   type PtyHost,
+  type PtyOptions,
   type PtySession,
   type SessionActivityInfo,
   type SessionSnapshot,
@@ -136,7 +137,7 @@ export interface BridgeOptions {
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
   }
   readonly agents: readonly AgentProfile[]
-  readonly shell: string
+  readonly shell: Pick<PtyOptions, 'file' | 'args'>
   readonly home: string
   readonly logger: Logger
   send(channel: string, ...args: unknown[]): void
@@ -153,8 +154,8 @@ export function registerHostBridge(options: BridgeOptions) {
   ipcMain.handle(hostChannels.ptyCreate, (_event, create: PtyCreateOptions) => {
     const id = nextId++
     const session = ptyHost.spawn({
-      file: options.shell,
-      args: [],
+      file: options.shell.file,
+      args: options.shell.args,
       cwd: create.cwd ?? options.home,
       // Anything running in this terminal, like an agent's hooks, knows which tab it belongs to
       env: { DCK_PTY_ID: String(id) },
