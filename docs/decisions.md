@@ -567,7 +567,7 @@ which service a list came from (2026-11-13).
 **How to revert:** restore the two catalog entries and draw the tabs without the group labels; the
 `description` key can stay in the declarations.
 
-## D43. The Tasks list is grouped by progress, filtered by project, and the Work lists search by word start
+## D44. The Tasks list is grouped by progress, filtered by project, and the Work lists search by word start
 
 **Decision:** the Tasks tab shows "In progress" and then "To do", each with its count and in the list's order
 (most recently updated first); an empty section is hidden and filtering keeps the sections. A section is a
