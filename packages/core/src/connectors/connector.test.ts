@@ -17,7 +17,15 @@ const tracker = {
     email: { placeholder: 'ana@example.com' },
     token: { label: 'connections.gitlab.token', hint: 'connections.gitlab.token.hint' },
   },
-  views: [{ id: 'tasks', kind: 'issue', title: 'views.review', empty: 'views.empty.review' }],
+  views: [
+    {
+      id: 'tasks',
+      kind: 'issue',
+      title: 'views.review',
+      description: 'views.review.description',
+      empty: 'views.empty.review',
+    },
+  ],
 }
 
 const manifest = (contributes: unknown) => ({
@@ -91,6 +99,10 @@ describe('connectors contribution point', () => {
     ['no view', { ...tracker, views: [] }],
     ['an unknown item kind', { ...tracker, views: [{ ...tracker.views[0], kind: 'epic' }] }],
     ['a field nobody reads', { ...tracker, icon: 'bug' }],
+    [
+      'a view with no description',
+      { ...tracker, views: [{ ...tracker.views[0], description: undefined }] },
+    ],
   ])('should refuse the declaration when it has %s', (_label, declaration) => {
     expect(connectorSchema.safeParse(declaration).success).toBe(false)
   })
