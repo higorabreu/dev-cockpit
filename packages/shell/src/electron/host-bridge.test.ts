@@ -3,6 +3,31 @@ import { FakePtyHost, MemoryClipboard } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
 import { type IpcMainApi, registerHostBridge } from './host-bridge.ts'
 
+interface DiskEntry {
+  readonly kind: 'file' | 'dir'
+  readonly mode: number
+  // Where a symbolic link points
+  readonly real?: string
+}
+
+const file = (mode = 0o644): DiskEntry => ({ kind: 'file', mode })
+const dir: DiskEntry = { kind: 'dir', mode: 0o755 }
+
+const disk = new Map<string, DiskEntry>([
+  ['/home/usuario', dir],
+  ['/home/usuario/notes.md', file()],
+  ['/srv/acme/backend', dir],
+  ['/srv/acme/backend/src', dir],
+  ['/srv/acme/backend/src/app.ts', file()],
+  ['/srv/acme/backend/build', file(0o755)],
+  ['/srv/acme/backend/only-group-runs', file(0o650)],
+  ['/srv/acme/backend/launcher.desktop', file()],
+  ['/srv/acme/backend/Tool.AppImage', file()],
+  ['/srv/acme/backend/deploy.sh', file()],
+  ['/srv/acme/backend/README.txt', { ...file(), real: '/srv/acme/backend/launcher.desktop' }],
+  ['/srv/acme/backend/Bundle.app', dir],
+])
+
 function setup() {
   const handlers = new Map<string, (...args: never[]) => unknown>()
   const ipcMain: IpcMainApi = {
@@ -20,6 +45,8 @@ function setup() {
   const viewRefreshes: { view: string; maxAgeMs: number | undefined }[] = []
   const opened: string[] = []
   const warnings: { message: string; context: LogContext | undefined }[] = []
+  const openedPaths: string[] = []
+  const shownPaths: string[] = []
   const bridge = registerHostBridge({
     ipcMain,
     ptyHost,
@@ -39,6 +66,23 @@ function setup() {
     agents: [{ id: 'acme', name: 'Acme Agent', processes: ['acme'] }],
     environment: {
       status: async (pid: number) => ({ kind: 'ok' as const, project: `p${pid}`, containers: [] }),
+    },
+    files: {
+      stat: async (path) => {
+        const entry = disk.get(path)
+        if (!entry) throw new Error('ENOENT')
+        return {
+          mode: entry.mode,
+          isFile: () => entry.kind === 'file',
+          isDirectory: () => entry.kind === 'dir',
+        }
+      },
+      realpath: async (path) => disk.get(path)?.real ?? path,
+      openPath: async (path) => {
+        openedPaths.push(path)
+        return ''
+      },
+      showItemInFolder: (path) => void shownPaths.push(path),
     },
     settings: {
       get: () => ({ settings: defaultSettings, locked: [], fresh: true }),
@@ -111,6 +155,8 @@ function setup() {
     viewRefreshes,
     opened,
     warnings,
+    openedPaths,
+    shownPaths,
     fullHeights: () => fullHeightToggles,
   }
 }
@@ -446,5 +492,152 @@ describe('registerHostBridge terminal links', () => {
     call(hostChannels.externalOpen, 'https://example.com/docs')
 
     expect(opened).toEqual([])
+  })
+})
+
+describe('registerHostBridge terminal paths', () => {
+  const resolve = (call: (channel: string, ...args: unknown[]) => unknown, request: unknown) =>
+    call(hostChannels.pathsResolve, request)
+
+  it('should resolve each path against the base and the home folder when the request is valid', async () => {
+    const { call } = setup()
+
+    const resolved = await resolve(call, {
+      base: '/srv/acme/backend',
+      paths: [
+        'src/app.ts',
+        './src',
+        '../backend/src/app.ts',
+        '/home/usuario/notes.md',
+        '~/notes.md',
+      ],
+    })
+
+    expect(resolved).toEqual([
+      { path: '/srv/acme/backend/src/app.ts', kind: 'file' },
+      { path: '/srv/acme/backend/src', kind: 'dir' },
+      { path: '/srv/acme/backend/src/app.ts', kind: 'file' },
+      { path: '/home/usuario/notes.md', kind: 'file' },
+      { path: '/home/usuario/notes.md', kind: 'file' },
+    ])
+  })
+
+  it('should report a path as missing when it is not on disk', async () => {
+    const { call } = setup()
+
+    const resolved = await resolve(call, { base: '/srv/acme/backend', paths: ['src/gone.ts'] })
+
+    expect(resolved).toEqual([{ path: '/srv/acme/backend/src/gone.ts', kind: 'missing' }])
+  })
+
+  it('should report a relative path as missing when the tab directory is unknown', async () => {
+    const { call } = setup()
+
+    const resolved = await resolve(call, { paths: ['src/app.ts', '/srv/acme/backend'] })
+
+    expect(resolved).toEqual([
+      { path: 'src/app.ts', kind: 'missing' },
+      { path: '/srv/acme/backend', kind: 'dir' },
+    ])
+  })
+
+  it.each([
+    ['too many paths', { base: '/srv/acme/backend', paths: Array(51).fill('src/app.ts') }],
+    ['a path that is too long', { base: '/srv/acme/backend', paths: [`a/${'b'.repeat(1024)}`] }],
+    ['a relative base', { base: 'acme/backend', paths: ['src/app.ts'] }],
+    ['a NUL in a path', { base: '/srv/acme/backend', paths: ['src/app.ts\0x'] }],
+    ['an empty path', { base: '/srv/acme/backend', paths: [''] }],
+    ['paths that are not text', { base: '/srv/acme/backend', paths: [42] }],
+    ['a payload that is not an object', 'src/app.ts'],
+  ])('should resolve nothing and log the kind when the request has %s', async (_label, request) => {
+    const { call, warnings } = setup()
+
+    const resolved = await resolve(call, request)
+
+    expect(resolved).toEqual([])
+    expect(warnings).toEqual([
+      { message: 'terminal path request refused', context: { kind: 'resolve' } },
+    ])
+  })
+
+  it('should open a plain file with the default app when the terminal asks to open it', async () => {
+    const { call, openedPaths, shownPaths } = setup()
+
+    await call(hostChannels.pathsOpenFile, '/srv/acme/backend/src/app.ts')
+
+    expect(openedPaths).toEqual(['/srv/acme/backend/src/app.ts'])
+    expect(shownPaths).toEqual([])
+  })
+
+  it.each([
+    ['it has the execute bit', '/srv/acme/backend/build'],
+    ['only its group may run it', '/srv/acme/backend/only-group-runs'],
+    ['it is a desktop launcher', '/srv/acme/backend/launcher.desktop'],
+    ['it is an AppImage', '/srv/acme/backend/Tool.AppImage'],
+    ['it is a shell script', '/srv/acme/backend/deploy.sh'],
+    ['its link points at a launcher', '/srv/acme/backend/README.txt'],
+  ])('should only show the file in its folder when %s', async (_label, path) => {
+    const { call, openedPaths, shownPaths } = setup()
+
+    await call(hostChannels.pathsOpenFile, path)
+
+    expect(openedPaths).toEqual([])
+    expect(shownPaths).toEqual([path])
+  })
+
+  it('should open the folder in the file manager when the terminal asks to', async () => {
+    const { call, openedPaths } = setup()
+
+    await call(hostChannels.pathsOpenFolder, '/srv/acme/backend/src')
+
+    expect(openedPaths).toEqual(['/srv/acme/backend/src'])
+  })
+
+  it('should only show an application bundle in its folder when it is a folder', async () => {
+    const { call, openedPaths, shownPaths } = setup()
+
+    await call(hostChannels.pathsOpenFolder, '/srv/acme/backend/Bundle.app')
+
+    expect(openedPaths).toEqual([])
+    expect(shownPaths).toEqual(['/srv/acme/backend/Bundle.app'])
+  })
+
+  it.each([
+    ['a folder as a file', hostChannels.pathsOpenFile, '/srv/acme/backend/src', 'file', 'dir'],
+    [
+      'a file as a folder',
+      hostChannels.pathsOpenFolder,
+      '/srv/acme/backend/src/app.ts',
+      'dir',
+      'file',
+    ],
+    ['a missing file', hostChannels.pathsOpenFile, '/srv/acme/backend/gone.ts', 'file', 'missing'],
+  ])(
+    'should refuse and log only the kinds when asked to open %s',
+    async (_label, channel, path, expected, kind) => {
+      const { call, openedPaths, shownPaths, warnings } = setup()
+
+      await call(channel, path)
+
+      expect([...openedPaths, ...shownPaths]).toEqual([])
+      expect(warnings).toEqual([{ message: 'terminal path refused', context: { expected, kind } }])
+    },
+  )
+
+  it.each([
+    ['a relative path', 'src/app.ts'],
+    ['a value that is not text', 42],
+    ['a path that is too long', `/srv/${'a'.repeat(4096)}`],
+  ])('should refuse to open %s without logging it', async (_label, path) => {
+    const { call, openedPaths, shownPaths, warnings } = setup()
+
+    await call(hostChannels.pathsOpenFile, path)
+    await call(hostChannels.pathsOpenFolder, path)
+
+    expect([...openedPaths, ...shownPaths]).toEqual([])
+    expect(warnings).toEqual([
+      { message: 'terminal path request refused', context: { kind: 'file' } },
+      { message: 'terminal path request refused', context: { kind: 'dir' } },
+    ])
   })
 })

@@ -102,6 +102,9 @@ export const en: Record<MessageKey, string> = {
 
   'terminal.exited': '[process exited]',
   'terminal.openLink': '{modifier}+click',
+  'terminal.openPath': '{modifier}+click to open',
+  'terminal.openInNewTab': 'Open in a new tab',
+  'terminal.openInFileManager': 'Open in the file manager',
 
   'projects.search': 'Search project',
   'projects.none': 'No project found',

@@ -48,6 +48,11 @@ const api: HostApi = {
     open: (url) => ipcRenderer.send(hostChannels.externalOpen, url),
     openLink: (url) => ipcRenderer.send(hostChannels.externalOpenLink, url),
   },
+  paths: {
+    resolve: (base, paths) => ipcRenderer.invoke(hostChannels.pathsResolve, { base, paths }),
+    openFile: (path) => ipcRenderer.send(hostChannels.pathsOpenFile, path),
+    openFolder: (path) => ipcRenderer.send(hostChannels.pathsOpenFolder, path),
+  },
   views: {
     snapshot: (view) => ipcRenderer.invoke(hostChannels.viewsSnapshot, view),
     refresh: (view, maxAgeMs) => ipcRenderer.invoke(hostChannels.viewsRefresh, { view, maxAgeMs }),
