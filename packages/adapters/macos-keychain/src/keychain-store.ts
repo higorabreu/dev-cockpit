@@ -3,6 +3,11 @@ import { errorBody, fail, ok, type SecretStore } from '@dck/core'
 
 const SERVICE = 'dev-cockpit'
 const TIMEOUT_MS = 5000
+// An absolute path, so the secret never reaches another `security` found earlier on PATH
+const SECURITY = '/usr/bin/security'
+// security -i keeps 4095 bytes of a line and runs the rest as the next command
+const MAX_LINE = 4094
+const KEY = /^[A-Za-z0-9._:-]{1,128}$/
 // errSecItemNotFound, the exit code of find and delete when the item does not exist
 const NOT_FOUND = 44
 
@@ -16,7 +21,7 @@ export type ToolRunner = (args: readonly string[], stdin?: string) => Promise<To
 
 const runSecurity: ToolRunner = (args, stdin) =>
   new Promise((resolve) => {
-    const child = spawn('security', [...args], {
+    const child = spawn(SECURITY, [...args], {
       stdio: ['pipe', 'pipe', 'ignore'],
       timeout: TIMEOUT_MS,
     })
@@ -38,14 +43,16 @@ const quote = (text: string) => `"${text.replace(/(["\\])/g, '\\$1')}"`
 // A line break has no escape and splits the command, and `-w` prints a non-ASCII value in hex
 const isPrintableAscii = (text: string) => /^[\x20-\x7e]*$/.test(text)
 
-const item = (key: string) => ['-s', SERVICE, '-a', key]
-
 const failure = (command: string, status: ToolRun['status']) =>
   status === 'missing'
     ? fail(errorBody('DCK-SEC-001'))
     : fail(errorBody('DCK-SEC-002', `${command} exited with ${status}`))
 
-export function createKeychainStore(run: ToolRunner = runSecurity): SecretStore {
+export function createKeychainStore(
+  options: { readonly run?: ToolRunner; readonly service?: string } = {},
+): SecretStore {
+  const { run = runSecurity, service = SERVICE } = options
+  const item = (key: string) => ['-s', service, '-a', key]
   return {
     async get(key) {
       const { status, stdout } = await run(['find-generic-password', ...item(key), '-w'])
@@ -54,8 +61,8 @@ export function createKeychainStore(run: ToolRunner = runSecurity): SecretStore 
       return failure('find-generic-password', status)
     },
     async set(key, value) {
-      if (!isPrintableAscii(key) || !isPrintableAscii(value))
-        return fail(errorBody('DCK-SEC-002', 'only printable ASCII can go through security -i'))
+      if (!KEY.test(key) || !isPrintableAscii(value))
+        return fail(errorBody('DCK-SEC-002', 'the key or the value cannot go through security -i'))
       // The secret goes through stdin: as an argument of add-generic-password it would show in `ps`
       const command = [
         'add-generic-password',
@@ -63,13 +70,16 @@ export function createKeychainStore(run: ToolRunner = runSecurity): SecretStore 
         '-l',
         quote(`Dev Cockpit: ${key}`),
         '-s',
-        quote(SERVICE),
+        quote(service),
         '-a',
         quote(key),
         '-w',
         quote(value),
       ]
-      const { status } = await run(['-i'], `${command.join(' ')}\n`)
+      const line = command.join(' ')
+      if (line.length > MAX_LINE)
+        return fail(errorBody('DCK-SEC-002', `security -i line over ${MAX_LINE} bytes`))
+      const { status } = await run(['-i'], `${line}\n`)
       return status === 0 ? ok(undefined) : failure('add-generic-password', status)
     },
     async delete(key) {
