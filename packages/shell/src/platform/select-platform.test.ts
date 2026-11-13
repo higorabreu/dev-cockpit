@@ -35,6 +35,12 @@ describe('selectPlatform', () => {
     },
     {
       expected: 'leave the key to Electron',
+      when: 'the packaged app runs on a desktop other than GNOME',
+      overrides: { env: { DCK_AUTOSTART_DIR: directory, XDG_CURRENT_DESKTOP: 'KDE' } },
+      bound: false,
+    },
+    {
+      expected: 'leave the key to Electron',
       when: 'the app runs from the repository',
       overrides: { packaged: false },
       bound: false,

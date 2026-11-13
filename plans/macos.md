@@ -78,8 +78,9 @@ The order is meant to bring the tester in as late as possible and once per batch
   composition root returns the set of adapters (processes, secret store, autostart, shortcut, paths);
   `main.ts` stops importing `linux-proc` and `secret-tool` directly. Drop `--no-sandbox` on the Mac. A test
   with `platform` injected, no `any`. (C11) Done: `shell/src/platform/select-platform.ts`; the Mac keeps the
-  Linux adapters until T3, T4 and T8, paths stay in `node-net` and the GTK work areas stay gated in `main.ts`, since creating them runs
-  `xprop`. T4 needs a scanner port in `core` instead of the inferred `linux-proc` type.
+  Linux adapters until T3, T4 and T8, and only Linux gets `--no-sandbox`. The scanner is a `ProcessScanner`
+  port in `core`, and the daemon receives its `SecretStore` from its entry point. Paths stay in `node-net`
+  and the GTK work areas stay gated in `main.ts`, since creating them runs `xprop`.
 - [ ] MAC-T3. Secret store: `adapters/macos-keychain` (`@dck/adapter-macos-keychain`). The same `SecretStore`
   contract and the same codes (`DCK-SEC-001` tool missing, `DCK-SEC-002` refused). The
   `security add-generic-password` command does not read the value from stdin, and `-w value` shows in

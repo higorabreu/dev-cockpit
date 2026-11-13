@@ -37,7 +37,7 @@ export function selectPlatform(context: PlatformContext): Platform {
   const onGnome =
     platform === 'linux' && (env.XDG_CURRENT_DESKTOP ?? '').split(':').includes('GNOME')
   // A Linux workaround for Chromium's sandbox helper; the Mac runs with the sandbox
-  const sandbox = platform === 'darwin' ? [] : ['--no-sandbox']
+  const sandbox = platform === 'linux' ? ['--no-sandbox'] : []
   const app = packaged ? [execPath] : [execPath, appPath]
 
   return {
