@@ -50,6 +50,7 @@ Three states per tab, nothing more:
 
 | Hook | State |
 | --- | --- |
+| `SessionStart` (`startup`, `resume`) | your-turn (no turn runs yet, so it only records the connection) |
 | `UserPromptSubmit`, `PostToolUse` | working |
 | `PermissionRequest`, `Notification` (`permission_prompt`, `elicitation_dialog`) | needs-you |
 | `Stop`, `Notification` (`idle_prompt`) | your-turn |

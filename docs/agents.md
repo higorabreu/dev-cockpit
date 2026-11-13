@@ -41,6 +41,7 @@ nothing and Claude Code shows nothing.
 
 | Claude Code hook | State |
 | --- | --- |
+| `SessionStart` (`startup`, `resume`) | your-turn, which only tells the cockpit the tab is connected |
 | `UserPromptSubmit`, `PostToolUse` | working |
 | `PermissionRequest`, `Notification` (`permission_prompt`, `elicitation_dialog`) | needs-you |
 | `Stop`, `Notification` (`idle_prompt`) | your-turn |

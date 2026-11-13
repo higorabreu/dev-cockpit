@@ -120,6 +120,18 @@ describe('createAttentionTracker with agent signals', () => {
     expect(tracker.signal('a', 'your-turn', false)).toBeUndefined()
   })
 
+  it('should mark nothing when the agent signals your turn as its session starts', () => {
+    const { tracker, advance } = setup()
+    tracker.update('a', agent, false)
+    advance(2000)
+
+    const event = tracker.signal('a', 'your-turn', false)
+
+    expect(event).toBeUndefined()
+    expect(tracker.unseenIds()).toEqual([])
+    expect(tracker.hasWorkingAgent()).toBe(false)
+  })
+
   it('should end the turn without a mark when a working agent left the terminal quiet for five seconds', () => {
     const { tracker, advance, now } = setup()
     tracker.signal('a', 'working', false)
