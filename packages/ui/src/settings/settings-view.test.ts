@@ -132,3 +132,24 @@ describe('settings view selects', () => {
     view.close()
   })
 })
+
+describe('settings view, agent connect hint', () => {
+  it('should turn the agent connect hint back on when its box is checked in the System page', () => {
+    const { body, patches, view } = open()
+    body.querySelector<HTMLElement>('#settings-tab-system')?.click()
+    const box = body.querySelector<HTMLInputElement>('[data-focus="set-system.agentConnectHint"]')
+    if (!box) throw new Error('invariant: the System page has the agent connect hint row')
+
+    box.checked = false
+    box.dispatchEvent(new Event('change'))
+    box.checked = true
+    box.dispatchEvent(new Event('change'))
+
+    expect(body.textContent).toContain('Suggest connecting the agent')
+    expect(patches).toEqual([
+      { system: { agentConnectHint: false } },
+      { system: { agentConnectHint: true } },
+    ])
+    view.close()
+  })
+})

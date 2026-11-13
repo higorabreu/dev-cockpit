@@ -489,3 +489,20 @@ closes only the list, Tab and a click outside close it without changing the valu
 and did not match the settings rows. A request from the maintainer on 2026-11-13.
 **How to revert:** give the settings view's `select` helper back its `<select>` and delete the kit module
 and `styles/select.css`.
+
+## D39. The agent profile says how to connect it, and the cockpit suggests it
+
+**Decision:** an agent's marks only appear once its integration is installed, so the cockpit now tells
+the user. `AgentProfile` gains an optional `connect` with two texts: one for a shell prompt and one for
+the agent's own prompt while it runs. The profiles are data in the shell (`inspectors/agent-profiles.ts`),
+passed to the session inspector and to the window; core and the interface know only that a profile may
+connect. A tab whose agent sent no signal in its first 10 s shows a hint in Sessions; Connect, there or in
+the hold menu, types the text without Enter, so the user reads it and confirms. "Not now" turns the hint
+off in `system.agentConnectHint`. The Claude Code plugin signals `your-turn` on `SessionStart` (startup and
+resume, not `compact`, which can happen in the middle of a turn) so a connected session never shows it.
+**Reverts part of D26:** with profiles passed again, `claude` in the foreground is shown as Claude Code
+running, not as an ordinary command.
+**Reason:** "it is not clear how a dck user will know how to use what we built", from the maintainer on
+2026-11-13.
+**How to revert:** drop `connect` from the profile and the hint from Sessions; the marks do not depend on
+them.

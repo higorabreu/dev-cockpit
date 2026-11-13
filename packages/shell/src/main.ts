@@ -48,6 +48,7 @@ import { createElectronShortcuts } from './electron/shortcuts.ts'
 import { createElectronStatusIcon } from './electron/status-icon.ts'
 import { createToggleKeyBinder } from './electron/toggle-key-binder.ts'
 import { buildTrayMenu } from './electron/tray-menu.ts'
+import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
@@ -222,7 +223,9 @@ app.whenReady().then(async () => {
     sessions: createSessionInspector({
       processes: createProcessInspector(),
       git: createGitInspector(),
+      agents: agentProfiles,
     }),
+    agents: agentProfiles,
 
     environment: createEnvironmentInspector({
       processes: createProcessInspector(),

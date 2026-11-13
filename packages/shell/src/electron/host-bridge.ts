@@ -1,4 +1,5 @@
 import {
+  type AgentProfile,
   type Autostart,
   type Clipboard,
   type ComposeStatus,
@@ -95,6 +96,7 @@ export interface BridgeOptions {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
   }
+  readonly agents: readonly AgentProfile[]
   readonly shell: string
   readonly home: string
   readonly logger: Logger
@@ -203,6 +205,7 @@ export function registerHostBridge(options: BridgeOptions) {
     const session = sessions.get(id)
     return session ? options.sessions.snapshot(session.pid) : undefined
   })
+  ipcMain.handle(hostChannels.agentProfiles, () => options.agents)
   ipcMain.handle(hostChannels.projectsList, () => options.projects.list())
   ipcMain.handle(hostChannels.projectsToggleFavorite, (_event, path: string) =>
     options.projects.toggleFavorite(path),

@@ -63,6 +63,7 @@ const api: HostApi = {
   },
   agent: {
     onSignal: (listener) => subscribe<[AgentSignal]>(hostChannels.agentSignal, listener),
+    profiles: () => ipcRenderer.invoke(hostChannels.agentProfiles),
   },
   projects: {
     list: () => ipcRenderer.invoke(hostChannels.projectsList),

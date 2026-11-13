@@ -81,6 +81,8 @@ export const settingsSchema = z.preprocess(
         30,
         true,
       ),
+      // "Not now" on the Sessions hint turns it off; the System page turns it back on
+      agentConnectHint: z.boolean().catch(true),
     }),
     extensions: section({
       // Managed by `dck ext enable` and `dck ext disable`, not by the settings screen

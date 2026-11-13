@@ -59,6 +59,7 @@ describe('Claude Code plugin', () => {
     )
 
     expect(mapping).toEqual([
+      { event: 'SessionStart', matcher: 'startup|resume', state: 'your-turn' },
       { event: 'UserPromptSubmit', matcher: '*', state: 'working' },
       { event: 'PostToolUse', matcher: '*', state: 'working' },
       { event: 'PermissionRequest', matcher: '*', state: 'needs-you' },

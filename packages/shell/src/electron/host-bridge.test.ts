@@ -36,6 +36,7 @@ function setup() {
         activity: 'idle' as const,
       }),
     },
+    agents: [{ id: 'acme', name: 'Acme Agent', processes: ['acme'] }],
     environment: {
       status: async (pid: number) => ({ kind: 'ok' as const, project: `p${pid}`, containers: [] }),
     },
@@ -222,6 +223,14 @@ describe('registerHostBridge clipboard and window', () => {
       process: 'zsh',
       activity: 'idle',
     })
+  })
+
+  it('should list the known agents when the interface asks for them', async () => {
+    const { call } = setup()
+
+    expect(await call(hostChannels.agentProfiles)).toEqual([
+      { id: 'acme', name: 'Acme Agent', processes: ['acme'] },
+    ])
   })
 
   it('should return nothing when the session does not exist', async () => {
