@@ -27,11 +27,16 @@ describe('createElectronScreen', () => {
 describe('createElectronDockWindow', () => {
   function fakeWindow() {
     const calls: string[] = []
+    let blur = () => {}
     return {
       calls,
+      blur: () => blur(),
       api: {
         isVisible: () => true,
         isFocused: () => false,
+        on: (_event: 'blur', listener: () => void) => {
+          blur = listener
+        },
         getBounds: () => ({ x: 1, y: 2, width: 3, height: 4 }),
         setBounds: () => calls.push('setBounds'),
         show: () => calls.push('show'),
@@ -58,6 +63,21 @@ describe('createElectronDockWindow', () => {
     expect(dock.isVisible()).toBe(true)
     expect(dock.isFocused()).toBe(false)
     expect(dock.bounds()).toEqual({ x: 1, y: 2, width: 3, height: 4 })
+  })
+
+  it('should still count as focused right after losing the focus when the desktop takes it for a shortcut', () => {
+    let now = 1000
+    const { api, blur } = fakeWindow()
+    const dock = createElectronDockWindow(api, { now: () => now })
+
+    blur()
+    now += 300
+    const during = dock.isFocused()
+    now += 200
+    const after = dock.isFocused()
+
+    expect(during).toBe(true)
+    expect(after).toBe(false)
   })
 })
 

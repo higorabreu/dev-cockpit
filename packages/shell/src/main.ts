@@ -169,6 +169,7 @@ app.whenReady().then(async () => {
       },
     },
     heightRatio: () => settingsStore.get().settings.window.heightRatio,
+    clock: { now: () => Date.now() },
   })
 
   // Opening the app again from the application menu shows the window of the one already running
