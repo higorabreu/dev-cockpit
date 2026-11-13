@@ -1,7 +1,13 @@
 import { FakeDockWindow } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
 import type { PlacedWindow } from '../platform-window.ts'
-import { activateOnFocus, buildAppMenu, createPanelWindow, type PanelApp } from './panel-window.ts'
+import {
+  activateOnFocus,
+  anchorPanel,
+  buildAppMenu,
+  createPanelWindow,
+  type PanelApp,
+} from './panel-window.ts'
 
 function recordingApp(calls: unknown[]): PanelApp {
   return {
@@ -67,7 +73,8 @@ describe('createPanelWindow', () => {
 })
 
 describe('activateOnFocus', () => {
-  it('should activate the app after focusing the window when the window is focused', () => {
+  it('should activate the app right after the window takes the focus when the dock asks for it', () => {
+    // Arrange
     const window = new FakeDockWindow()
     const dock = activateOnFocus(
       window,
@@ -75,16 +82,40 @@ describe('activateOnFocus', () => {
       () => undefined,
     )
 
+    // Act
     dock.focus()
 
+    // Assert
     expect(window.calls.slice(-2)).toEqual(['focus', 'activate'])
+  })
+})
+
+describe('anchorPanel', () => {
+  it('should raise the panel to the screen saver level over fullscreen apps when it is anchored', () => {
+    // Arrange
+    const calls: unknown[] = []
+
+    // Act
+    anchorPanel(recordingWindow(calls))
+
+    // Assert
+    expect(calls).toEqual([
+      ['setAlwaysOnTop', true, 'screen-saver'],
+      [
+        'setVisibleOnAllWorkspaces',
+        true,
+        { visibleOnFullScreen: true, skipTransformProcessType: true },
+      ],
+    ])
   })
 })
 
 describe('buildAppMenu', () => {
   it('should offer settings with Cmd+comma and quit with Cmd+Q when building the menu', () => {
+    // Arrange
     const ran: string[] = []
 
+    // Act
     const [app] = buildAppMenu({
       t: (key) => `[${key}]`,
       openSettings: () => ran.push('settings'),
@@ -93,6 +124,7 @@ describe('buildAppMenu', () => {
     const items = app?.submenu ?? []
     for (const item of items) item.click?.()
 
+    // Assert
     expect(items.map((item) => [item.label, item.accelerator])).toEqual([
       ['[tray.settings]', 'Command+,'],
       [undefined, undefined],
