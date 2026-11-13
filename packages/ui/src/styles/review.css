@@ -242,7 +242,8 @@
 }
 
 /* The diff: every file in one scroll, only the rows in view exist. It scrolls both ways and reserves the
-   strip on both sides, so the rows run 8px in from each edge */
+   strip on both sides, so the rows run 8px in from each edge. `--rv-view` is its visible width and
+   `--rv-x` how far it scrolled sideways, both set by the view */
 .rv-lines {
   position: relative;
   flex: 1;
@@ -288,8 +289,12 @@
   background: var(--diff-remove);
 }
 
-/* The two line numbers and the sign */
+/* The numbers and the sign stay put while a long line scrolls sideways; the code is cut where they
+   start, so nothing shows through them on the translucent window */
 .rv-gutter {
+  position: sticky;
+  left: 0;
+  z-index: 1;
   display: grid;
   grid-template-columns: var(--rv-num) var(--rv-num) 2ch;
   align-items: center;
@@ -325,6 +330,10 @@
   text-overflow: ellipsis;
 }
 
+.rv-row[data-kind] .rv-code {
+  clip-path: inset(0 0 0 var(--rv-x, 0px));
+}
+
 .rv-word {
   border-radius: 2px;
 }
@@ -337,7 +346,7 @@
   background: var(--diff-remove-word);
 }
 
-/* Hunk headers, hidden lines and file headers draw their content on a band */
+/* Hunk headers, hidden lines and file headers keep their text in view while the lines scroll sideways */
 .rv-hunk,
 .rv-expand,
 .rv-filerow {
@@ -345,7 +354,10 @@
 }
 
 .rv-band {
+  position: sticky;
+  left: 0;
   box-sizing: border-box;
+  width: var(--rv-view, 100%);
   height: 100%;
   display: grid;
   grid-template-columns: var(--rv-gutter) minmax(0, 1fr);

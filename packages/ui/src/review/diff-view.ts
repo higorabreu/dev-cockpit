@@ -67,6 +67,8 @@ export function createDiffView(deps: DiffViewDeps) {
   // Where this view last scrolled to by itself, to tell its own scrolls from the user's
   let expectedTop = 0
   let pinned: { file: number; row: ChangeRow } | undefined
+  let viewWidth = 0
+  let scrollX = 0
   // Removed and added lines that replace each other, per file and hunk, and their marks once computed
   let partners = new Map<string, Map<number, number>>()
   let marks = new Map<string, LineMarks>()
@@ -138,6 +140,7 @@ export function createDiffView(deps: DiffViewDeps) {
   const number = (value: number | undefined) =>
     h('span', { class: 'rv-num' }, value === undefined ? '' : String(value))
 
+  // The numbers and the sign stay in place while a long line scrolls sideways
   const gutter = (old: number | undefined, added: number | undefined, sign: string) =>
     h(
       'span',
@@ -305,6 +308,11 @@ export function createDiffView(deps: DiffViewDeps) {
     inner.replaceChildren(...groups)
     if (rows.length > 0) element.setAttribute('aria-activedescendant', rowId(cursor))
     else element.removeAttribute('aria-activedescendant')
+    const width = element.clientWidth
+    if (width !== viewWidth) {
+      viewWidth = width
+      inner.style.setProperty('--rv-view', `${width}px`)
+    }
     drawPin()
     const now = target ?? fileAtTop(element.scrollTop + 1)
     if (now !== current && files.length > 0) {
@@ -419,6 +427,10 @@ export function createDiffView(deps: DiffViewDeps) {
     'scroll',
     () => {
       if (Math.abs(element.scrollTop - expectedTop) > 1) target = undefined
+      if (element.scrollLeft !== scrollX) {
+        scrollX = element.scrollLeft
+        inner.style.setProperty('--rv-x', `${scrollX}px`)
+      }
       schedule()
     },
     { passive: true },
