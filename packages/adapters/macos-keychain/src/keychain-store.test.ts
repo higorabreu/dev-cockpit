@@ -118,6 +118,56 @@ describe('createKeychainStore', () => {
     },
   )
 
+  it('should use the injected service in the arguments and in the line when it is valid', async () => {
+    const { run, calls } = recorder({ status: 0, stdout: '' })
+    const store = createKeychainStore({ run, service: 'dev-cockpit-test' })
+
+    await store.get('k')
+    await store.set('k', 'v')
+
+    expect(calls[0]?.args).toEqual([
+      'find-generic-password',
+      '-s',
+      'dev-cockpit-test',
+      '-a',
+      'k',
+      '-w',
+    ])
+    expect(calls[1]?.stdin).toContain('-s "dev-cockpit-test" -a "k"')
+  })
+
+  it.each([
+    { kind: 'is empty', service: '' },
+    { kind: 'has a space', service: 'dev cockpit' },
+    { kind: 'has a quote', service: 'dev"cockpit' },
+    { kind: 'has a line break', service: 'dev\ncockpit' },
+    { kind: 'starts like an option', service: 'dev cockpit -w' },
+    { kind: 'is longer than 128 characters', service: 'd'.repeat(129) },
+    { kind: 'has a multi-byte character', service: 'dev-cockpit-ç' },
+  ])('should throw an invariant at creation when the service $kind', ({ service }) => {
+    const { run } = recorder({ status: 0, stdout: '' })
+
+    const create = () => createKeychainStore({ run, service })
+
+    expect(create).toThrow(/^invariant: /)
+  })
+
+  it('should keep the line within 4094 bytes when the longest service and key are used', async () => {
+    const { run, calls } = recorder({ status: 0, stdout: '' })
+    const name = 'n'.repeat(128)
+    const store = createKeychainStore({ run, service: name })
+    const empty = `add-generic-password -U -l "Dev Cockpit: ${name}" -s "${name}" -a "${name}" -w ""`
+    const value = 'x'.repeat(4094 - empty.length)
+
+    const fits = await store.set(name, value)
+    const over = await store.set(name, `${value}x`)
+
+    expect(fits.ok).toBe(true)
+    expect(Buffer.byteLength(calls[0]?.stdin ?? '')).toBe(4095)
+    expect(codeOf(over)).toBe('DCK-SEC-002')
+    expect(calls).toHaveLength(1)
+  })
+
   it('should keep the value out of the arguments and the error when storing fails', async () => {
     const { run, calls } = recorder({ status: 1, stdout: '' })
 

@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { spawn } from 'node:child_process'
 import { errorBody, fail, ok, type SecretStore } from '@dck/core'
 
@@ -7,7 +8,8 @@ const TIMEOUT_MS = 5000
 const SECURITY = '/usr/bin/security'
 // security -i keeps 4095 bytes of a line and runs the rest as the next command
 const MAX_LINE = 4094
-const KEY = /^[A-Za-z0-9._:-]{1,128}$/
+// Keys and the service name both go inside the security -i line and into arguments
+const NAME = /^[A-Za-z0-9._:-]{1,128}$/
 // errSecItemNotFound, the exit code of find and delete when the item does not exist
 const NOT_FOUND = 44
 
@@ -33,6 +35,7 @@ const runSecurity: ToolRunner = (args, stdin) =>
       resolve({ status: error.code === 'ENOENT' ? 'missing' : 1, stdout: '' }),
     )
     child.on('close', (status) => resolve({ status: status ?? 1, stdout }))
+    // EPIPE when security exits early or is missing; the close or error handler resolves instead
     child.stdin.on('error', () => undefined)
     child.stdin.end(stdin)
   })
@@ -52,6 +55,7 @@ export function createKeychainStore(
   options: { readonly run?: ToolRunner; readonly service?: string } = {},
 ): SecretStore {
   const { run = runSecurity, service = SERVICE } = options
+  if (!NAME.test(service)) throw new Error(`invariant: invalid keychain service ${service}`)
   const item = (key: string) => ['-s', service, '-a', key]
   return {
     async get(key) {
@@ -61,7 +65,7 @@ export function createKeychainStore(
       return failure('find-generic-password', status)
     },
     async set(key, value) {
-      if (!KEY.test(key) || !isPrintableAscii(value))
+      if (!NAME.test(key) || !isPrintableAscii(value))
         return fail(errorBody('DCK-SEC-002', 'the key or the value cannot go through security -i'))
       // The secret goes through stdin: as an argument of add-generic-password it would show in `ps`
       const command = [
@@ -77,7 +81,8 @@ export function createKeychainStore(
         quote(value),
       ]
       const line = command.join(' ')
-      if (line.length > MAX_LINE)
+      // Counted in bytes, the unit security -i cuts at, even if the ASCII checks ever loosen
+      if (Buffer.byteLength(line, 'utf8') > MAX_LINE)
         return fail(errorBody('DCK-SEC-002', `security -i line over ${MAX_LINE} bytes`))
       const { status } = await run(['-i'], `${line}\n`)
       return status === 0 ? ok(undefined) : failure('add-generic-password', status)
