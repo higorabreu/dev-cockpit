@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { type MergeRequestSummary, silentLogger, type ViewItem } from '@dck/core'
+import { type Logger, type MergeRequestSummary, silentLogger, type ViewItem } from '@dck/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createFileViewCache } from './file-view-cache.ts'
 
@@ -105,5 +105,19 @@ describe('createFileViewCache', () => {
 
     expect(JSON.parse(await readFile(file, 'utf8')).scope).toBe('s')
     await expect(readFile(`${file}.tmp`, 'utf8')).rejects.toThrow()
+  })
+
+  it('should keep the last data without an error when two saves run at the same time', async () => {
+    const file = join(dir, 'views-cache.json')
+    const errors: string[] = []
+    const logger: Logger = { ...silentLogger, error: (message) => errors.push(message) }
+    const cache = createFileViewCache(file, logger)
+    const first = { scope: 's', views: { review: { items: [item], updatedAt: 1 } } }
+    const second = { scope: 's', views: { mine: { items: [item], updatedAt: 2 } } }
+
+    await Promise.all([cache.save(first), cache.save(second)])
+
+    expect(errors).toEqual([])
+    expect(await cache.load()).toEqual(second)
   })
 })

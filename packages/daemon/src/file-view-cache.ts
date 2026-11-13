@@ -21,6 +21,19 @@ const dataSchema = z.object({
 
 // An unreadable or otherwise broken file becomes "no cache": the server is the source, the file only speeds things up
 export function createFileViewCache(file: string, logger: Logger): ViewCache {
+  const write = async (data: ViewCacheData) => {
+    try {
+      await mkdir(dirname(file), { recursive: true, mode: 0o700 })
+      const temporary = `${file}.tmp`
+      await writeFile(temporary, JSON.stringify(data), { mode: 0o600 })
+      await rename(temporary, file)
+    } catch (error) {
+      logger.error('could not save the views cache', { file, error: String(error) })
+    }
+  }
+  // Views refresh together and share one temporary file, so saves queue up and the last call wins
+  let pending: Promise<void> = Promise.resolve()
+
   return {
     async load() {
       const text = await readFile(file, 'utf8').catch((error: NodeJS.ErrnoException) => {
@@ -42,15 +55,9 @@ export function createFileViewCache(file: string, logger: Logger): ViewCache {
       return parsed.success ? parsed.data : undefined
     },
 
-    async save(data: ViewCacheData) {
-      try {
-        await mkdir(dirname(file), { recursive: true, mode: 0o700 })
-        const temporary = `${file}.tmp`
-        await writeFile(temporary, JSON.stringify(data), { mode: 0o600 })
-        await rename(temporary, file)
-      } catch (error) {
-        logger.error('could not save the views cache', { file, error: String(error) })
-      }
+    save(data: ViewCacheData) {
+      pending = pending.then(() => write(data))
+      return pending
     },
   }
 }
