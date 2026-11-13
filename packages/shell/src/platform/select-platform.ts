@@ -2,7 +2,6 @@ import { join } from 'node:path'
 import { createGnomeShortcut } from '@dck/adapter-gnome-shortcuts'
 import * as linuxProc from '@dck/adapter-linux-proc'
 import * as macosProc from '@dck/adapter-macos-proc'
-import { createSecretToolStore } from '@dck/adapter-secret-tool'
 import type {
   Autostart,
   DesktopShortcut,
@@ -12,6 +11,7 @@ import type {
   PtyOptions,
   SecretStore,
 } from '@dck/core'
+import { systemSecretStore } from '@dck/daemon/secret-store'
 import { readLoginPath } from './darwin/login-path.ts'
 import { createPanelWindow, type PanelApp } from './darwin/panel-window.ts'
 import { createRegularWindow } from './linux/regular-window.ts'
@@ -47,7 +47,7 @@ export interface Platform {
 export const processAdapters = (platform: NodeJS.Platform) =>
   platform === 'darwin' ? macosProc : linuxProc
 
-// macOS still gets the Linux secret store and autostart until MAC-T3 and T8 replace them
+// macOS still gets the Linux autostart until MAC-T8 replaces it
 export function selectPlatform(context: PlatformContext): Platform {
   const { platform, env, home, packaged, execPath, appPath, resourcesPath, logger } = context
   const onGnome =
@@ -64,7 +64,7 @@ export function selectPlatform(context: PlatformContext): Platform {
   return {
     processes: proc.createProcessInspector(),
     processScanner: proc.createProcessScanner(),
-    secrets: createSecretToolStore(),
+    secrets: systemSecretStore(platform),
     autostart: createXdgAutostart({
       directory: env.DCK_AUTOSTART_DIR ?? defaultAutostartDirectory(env, home),
       name: 'Dev Cockpit',

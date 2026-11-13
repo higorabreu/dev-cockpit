@@ -19,8 +19,8 @@
     "@dck/adapter-node-git": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
     "@dck/adapter-node-pty": "workspace:^",
-    "@dck/adapter-secret-tool": "workspace:^",
     "@dck/core": "workspace:^",
+    "@dck/daemon": "workspace:^",
     "node-pty": "^1.1.0",
     "zod": "^4.6.7"
   },

@@ -10,6 +10,7 @@ import { connectTo, defaultConfigDir, defaultEndpoint } from '@dck/adapter-node-
 import { createNodePtyHost } from '@dck/adapter-node-pty'
 import {
   type ConnectionFields,
+  checkProfile,
   connectorCatalog,
   createConnections,
   createDockController,
@@ -63,6 +64,7 @@ import { watchSettingsFile } from './settings/settings-watch.ts'
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
+const profile = checkProfile(process.env.DCK_PROFILE, logger)
 
 // Set before anything reads it (the single instance lock does): the CLI looks in this same folder
 app.setPath('userData', process.env.DCK_CONFIG_DIR ?? defaultConfigDir())
@@ -78,6 +80,11 @@ process.on('unhandledRejection', (reason) => {
 if (!app.requestSingleInstanceLock()) app.quit()
 
 app.whenReady().then(async () => {
+  // checkProfile already logged why; app.exit is reliable only once the app is ready
+  if (profile.kind === 'invalid') {
+    app.exit(1)
+    return
+  }
   Menu.setApplicationMenu(null)
 
   let activeKey = ''
@@ -178,7 +185,7 @@ app.whenReady().then(async () => {
   const implementations = createConnectorConnections({
     secrets: platform.secrets,
     http: createFetchHttpClient(),
-    profile: process.env.DCK_PROFILE,
+    profile: profile.profile,
     account: (id) => ({
       get: () => storedAccount(settingsStore.get().settings, id),
       // The settings model drops an empty e-mail, so erasing the account leaves no e-mail behind

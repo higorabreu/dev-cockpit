@@ -266,7 +266,7 @@ export const ptBR = {
   'connections.error.DCK-JRA-008': 'E-mail inválido. Use o e-mail da sua conta Atlassian.',
   'connections.error.DCK-NET-001': 'Sem resposta do servidor. Confira a rede e o endereço.',
   'connections.error.DCK-SEC-001':
-    'O cofre de segredos do sistema não está disponível (instale libsecret-tools).',
+    'O cofre de segredos do sistema não está disponível. No Linux, instale libsecret-tools.',
   'connections.error.DCK-SEC-002': 'O cofre de segredos recusou guardar o token.',
   'settings.group.system': 'Sistema',
   'settings.autostart': 'Iniciar com o sistema',
