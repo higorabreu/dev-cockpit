@@ -141,9 +141,13 @@ export function createTabView(host: HTMLElement, deps: TabViewDeps) {
     if (!layout || !orientation) return
     const next = setPaneRatio(layout, orientation, ratio)
     if (next === layout) return
+    const previous = layout
+    const before = firstSize
     layout = next
     arrange()
-    deps.onRatio?.(orientation, layout.ratios[orientation])
+    // Past a pane's minimum the divider does not move, and a share that changes nothing is not kept
+    if (firstSize === before) layout = previous
+    else deps.onRatio?.(orientation, layout.ratios[orientation])
   }
 
   // The kept shares, unless a drag is under way: its own share is newer than a save that comes back

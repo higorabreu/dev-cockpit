@@ -120,6 +120,17 @@ describe('createTabView', () => {
     expect(saved).toEqual([['stacked', 0.516]])
   })
 
+  it('should keep no share when the divider is held at a pane minimum', () => {
+    const { view, review, divider, widths, saved } = setup(1400, 721, 'stacked')
+    view.open(review)
+
+    key(divider(), 'ArrowDown')
+    key(divider(), 'ArrowDown')
+
+    expect(widths()).toEqual(['0 0 348px', '0 0 372px'])
+    expect(saved).toEqual([])
+  })
+
   it('should follow a new preference and the kept shares when asked to lay out again', () => {
     const { view, review, widths, preferences } = setup(1201, 1001)
     view.open(review)
