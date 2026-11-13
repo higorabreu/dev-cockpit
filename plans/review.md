@@ -61,6 +61,36 @@ the agent come in phase 2.
   Virtualized lines, so a 10 000-line diff scrolls at 60 fps.
 - **States.** Not a Git repository, no changes, a failed `git`, and loading, each with its own text.
 
+## Phase 1b: layout that fits the window, and one continuous diff
+
+Decided with the maintainer after using phase 1 (2026-11-13): beside the terminal, the review squeezed both
+sides at a usual window size (a 1400px window leaves about 680px each: the terminal wraps the agent's
+output and the diff cuts long lines), and reading one file at a time broke the flow of reviewing a whole
+change.
+
+- **Orientation by the tab's shape.** Side by side when each side keeps about 100 columns; stacked, the
+  terminal on top and the review below, when it does not and each side keeps at least 15 rows; the review
+  takes the whole tab, as today, when neither fits.
+- **The user's choice wins.** A control in the review header and a shortcut switch between side by side and
+  stacked; the choice and the divider's ratio are kept in settings (`review.layout`: auto, side, stacked)
+  with a row in Settings, and the divider drags in both orientations.
+- **One continuous diff.** Every file in one virtualized scroll, each with its header, the way GitHub shows a
+  change; the file list becomes an index that scrolls the diff to a file, collapsible, beside the diff
+  when the review is wide (always in the stacked layout); `n` and `p` cross files, `[` and `]` jump to the
+  previous and next file.
+
+| Id | Criterion | Verification |
+| --- | --- | --- |
+| R9 | At 1400x760 the review opens stacked with the terminal on top; at full height on a 1920px screen it opens side by side; below both, it takes the tab | Tests with sizes, screenshots |
+| R10 | The orientation control, its shortcut and the Settings row switch the layout at once and the choice survives a restart; the ratio is kept per orientation | Tests, a real-app run |
+| R11 | All files read as one scroll; the index scrolls to a file and follows the scroll; a 10 000-line change still opens under 300 ms and scrolls at 60 fps | Tests, measured |
+
+- [ ] RV-T7. `core`: the orientation rule from the tab's size and the setting; the pane model gains an
+  orientation and a ratio per orientation. (R9, R10)
+- [ ] RV-T8. Settings `review.layout` with its row, the header control and shortcut, the stacked layout and
+  the divider in both orientations. (R9, R10)
+- [ ] RV-T9. The continuous diff and the file index. (R11)
+
 ## Phase 2: comments back to the agent
 
 Select one or more lines, write a comment, and "Send to the agent" types a short review (file, line,
