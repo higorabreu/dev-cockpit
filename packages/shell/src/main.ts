@@ -50,6 +50,7 @@ import { createElectronShortcuts } from './electron/shortcuts.ts'
 import { createElectronStatusIcon } from './electron/status-icon.ts'
 import { createToggleKeyBinder } from './electron/toggle-key-binder.ts'
 import { buildTrayMenu } from './electron/tray-menu.ts'
+import { createWindowSender } from './electron/window-sender.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
@@ -145,13 +146,14 @@ app.whenReady().then(async () => {
   // Page content never opens an Electron window nor leaves the app; links go to the browser through the host
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
+  const send = createWindowSender(window)
 
   const electronScreen = createElectronScreen(
     screen,
     process.platform === 'linux' ? createGtkWorkareas() : undefined,
   )
   const dockWindow = createElectronDockWindow(window, {
-    onShown: () => window.webContents.send(hostChannels.windowShown),
+    onShown: () => send(hostChannels.windowShown),
   })
   const traceDock = process.env.DCK_LOG_DOCK === '1'
 
@@ -279,16 +281,16 @@ app.whenReady().then(async () => {
       },
       (tabId) => {
         dock.show()
-        window.webContents.send(hostChannels.notificationsClick, tabId)
+        send(hostChannels.notificationsClick, tabId)
       },
     ),
     shell: process.env.SHELL ?? '/bin/bash',
     home: homedir(),
     logger,
-    send: (channel, ...args) => window.webContents.send(channel, ...args),
+    send,
     toggleFullHeight: () => {
       dock.toggleFullHeight()
-      window.webContents.send(hostChannels.windowFullHeight, dock.isFullHeight())
+      send(hostChannels.windowFullHeight, dock.isFullHeight())
     },
   })
 
@@ -299,7 +301,7 @@ app.whenReady().then(async () => {
   })
 
   settingsStore.onChange((settings, changed) => {
-    window.webContents.send(hostChannels.settingsChanged, settings, changed)
+    send(hostChannels.settingsChanged, settings, changed)
     if (changed.includes('window.heightRatio')) dock.refresh()
     if (changed.includes('extensions.disabled')) {
       catalog = readCatalog()
@@ -348,10 +350,10 @@ app.whenReady().then(async () => {
 
   const link = startDaemonLink({
     onReady: configureViews,
-    onAgentSignal: (signal) => window.webContents.send(hostChannels.agentSignal, signal),
+    onAgentSignal: (signal) => send(hostChannels.agentSignal, signal),
     onViews: (data) => {
       const snapshot = views.parse(data)
-      if (snapshot) window.webContents.send(hostChannels.viewsChanged, snapshot)
+      if (snapshot) send(hostChannels.viewsChanged, snapshot)
     },
     connect: () => connectTo(endpoint, logger),
     scheduler: {
@@ -432,7 +434,7 @@ app.whenReady().then(async () => {
       toggleWindow: () => dock.toggle(),
       openSettings: () => {
         dock.show()
-        window.webContents.send(hostChannels.windowOpenSettings)
+        send(hostChannels.windowOpenSettings)
       },
       autostart: platform.autostart,
       // Read on every menu build: the language can change in settings while the app is open

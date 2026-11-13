@@ -15,6 +15,7 @@
     "@dck/adapter-jira": "workspace:^",
     "@dck/adapter-gnome-shortcuts": "workspace:^",
     "@dck/adapter-linux-proc": "workspace:^",
+    "@dck/adapter-macos-proc": "workspace:^",
     "@dck/adapter-node-fetch": "workspace:^",
     "@dck/adapter-node-git": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
