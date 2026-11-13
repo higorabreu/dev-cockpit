@@ -601,3 +601,40 @@ select and All tabs show ten whole rows before they scroll.
 once the project select scrolled, and the same strip in the other lists (2026-11-13).
 **How to revert:** drop the `data-overflow` rule and `scroll-edges` from `styles/terminal.css` and the
 padding changes that came with them.
+
+## D47. A tab splits into panes, and the review of what changed is the second one
+
+**Decision:** a tab holds one or two panes side by side (`core/src/panes/panes.ts`): its terminal first and,
+for now, the review as the second, with the share of the first pane and which pane has the keys. The
+divider is a 1px line with a 9px grip, a `role=separator` that resizes with the mouse and with ←→ (16px),
+Home and End, and announces the review's share. Each pane keeps a minimum width (terminal 360px, review
+440px); below both, the focused pane takes the whole tab and Esc or the header's terminal button goes back.
+A second terminal pane is a new kind in the same model, not a new layout. Ctrl+Shift+D (reserved in D13)
+opens the review on the active tab and focuses it, and closes it while it is on screen; in a narrow tab
+showing the terminal it brings the review back instead. The same action is in the tab's right click menu
+and in the hold menu's Tabs. Esc gives the keys back to the terminal without closing the review.
+The review follows the tab's folder (a fresh read of the session's directory) and finds the repository
+with `git rev-parse`. A select (D38) picks Uncommitted (the working tree against HEAD, untracked files
+that `.gitignore` does not hide as additions) or "Branch vs main" (the working tree against the merge base
+with `origin/HEAD`'s branch, else `main`, else `master`). The adapter runs git with fixed arguments, no
+shell, `--no-color --no-ext-diff -M`, a timeout and a 32 MB cap; untracked files go through
+`diff --no-index` one by one, so the index is never written. The bridge validates the folder with zod and
+checks it exists before it reaches git, and reads file text only from a root a diff returned. Errors are
+the new `GIT` domain. The unified diff is parsed in `core`; the view draws it the way GitHub and GitLab do,
+with no syntax colors: old and new numbers, + and − signs (state is not told by color alone), added and
+removed lines on the new `diffAdd` and `diffRemove` tints, the changed words on a stronger tint found with
+jsdiff's `diffWordsWithSpace` (only the paired lines of a hunk, skipped when a line shares less than 35%),
+hunk headers with Git's function context, and the unchanged stretches as "Show N lines" rows that open
+from the working tree file. Lines are virtualized (20px rows, 26px hunk headers), so a 10 000-line diff
+keeps about 50 rows in the page. Binary, non-UTF-8, renamed, copied, mode changes, submodules and CRLF files
+are labelled for what they are; generated files (lock files, `dist/`, minified, `linguist-generated`) and
+files over 2500 changed lines start collapsed with "Show anyway"; an untracked file over 1 MB shows its size
+only. Keys inside the review: ↑↓ and Enter in the file list, ↑↓ PgUp PgDn Home End and Enter in the diff,
+`[` and `]` for the previous and next file and `n` and `p` for the next and previous hunk (Gerrit's keys;
+they only act inside the review, which has no text field), Ctrl+R to read again. Ctrl+click on the file's
+path opens it (D40). The diff is read on open, on Ctrl+R, after a scope or whitespace change and when the
+tab's agent changes state (debounced 400 ms), and never while the review is closed.
+**Reason:** the agent says "your turn" (D37) and the developer reads what it changed beside the terminal,
+in the same tab; a request from the maintainer on 2026-11-13 (`plans/review.md`).
+**How to revert:** drop `createReviewTabs` and `createTabView` from `app.ts`, the `review` channels from
+the bridge and the preload, and the `review/` and `panes/` folders; the terminal goes back to filling the tab.

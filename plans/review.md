@@ -91,9 +91,13 @@ comment) into the tab's prompt without Enter, so any agent can take it. Detailed
   New error domain `GIT` (`DCK-GIT-001` to `005`).
 - [x] RV-T4. Shell and host API: the diff channel, validated with zod, for the tab's folder. (R2) Also a
   `review:file` channel for the lines a diff left out, answered only for a root a diff returned.
-- [ ] RV-T5. Interface: the split with its divider, the review pane (header with scope select and totals,
+- [x] RV-T5. Interface: the split with its divider, the review pane (header with scope select and totals,
   file list, virtualized diff), keyboard, refresh rules, both catalogs, screenshots. (R1, R3, R5, R6, R7, R8)
-- [ ] RV-T6. Docs: decision record, roadmap (milestone 3), shortcuts.
+  The file list and the diff stack in a pane of usual width and sit side by side from 820px. R6 measured
+  under Xvfb: Ctrl+Shift+D to the file list 113 ms, "Show anyway" to the painted 10 000-line diff 25 ms,
+  240 scrolled frames at a 16.7 ms median with none dropped and about 54 rows in the page.
+- [x] RV-T6. Docs: decision record, roadmap (milestone 3), shortcuts. D47 (D45 and D46 were taken),
+  the README's key table.
 
 ## Risks
 
