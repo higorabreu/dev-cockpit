@@ -89,6 +89,26 @@ describe('project conventions', () => {
 
     expect(wrong).toEqual([])
   })
+
+  // Every team names its branches its own way, so no code may treat one name as the base
+  it('should name no branch in the code when listing the sources outside tests and catalogs', () => {
+    // Not branch names: the page's `<main>` element and the `main` field of an extension's manifest
+    const notBranches: Record<string, string> = {
+      'ui/src/main.ts': "element('main')",
+      'core/src/extensions/manifest.ts': "'run', 'main',",
+    }
+    const code = sources
+      .filter((file) => /^(adapters\/[^/]+|[^/]+)\/src\//.test(file.path))
+      .filter((file) => !file.path.includes('/i18n/'))
+      .map((file) => ({
+        path: file.path,
+        text: file.text.replaceAll(notBranches[file.path] ?? '\0', ''),
+      }))
+
+    const found = offenders(code, /(['"`])(develop|main|master|trunk)\1/)
+
+    expect(found).toEqual([])
+  })
 })
 
 const repositoryRoot = join(packagesRoot, '..')
