@@ -152,6 +152,10 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
     return h('div', { class: 'group' }, head, open && wrap)
   }
 
+  // The remote is the one Git records for the branch; with none there is nothing to name, never `origin`
+  const upstreamTip = (key: 'git.pullTip' | 'git.pushTip', upstream: string | undefined) =>
+    upstream === undefined ? undefined : i18n.t(key, { upstream })
+
   function ticketChip(ticket: TicketLink) {
     const chip = h(
       'button',
@@ -244,7 +248,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
             limited('incoming', git.incoming, i18n.t('git.commits'), (c) =>
               commitRow(i18n, c, nowSeconds),
             ),
-          i18n.t('git.pullTip', { upstream: git.upstream ?? 'origin' }),
+          upstreamTip('git.pullTip', git.upstream),
         ),
       git.outgoing.length > 0 &&
         group(
@@ -255,7 +259,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
             limited('outgoing', git.outgoing, i18n.t('git.commits'), (c) =>
               commitRow(i18n, c, nowSeconds),
             ),
-          i18n.t('git.pushTip', { upstream: git.upstream ?? 'origin' }),
+          upstreamTip('git.pushTip', git.upstream),
         ),
       git.submodules.length > 0 &&
         group('submodules', i18n.t('git.submodules'), git.submodules.length, () => [

@@ -9,7 +9,7 @@ import {
 import { describe, expect, it } from 'vitest'
 import { createGitSection } from './git-section.ts'
 
-const git = (branch: string): GitStatus => ({
+const git = (branch: string, extra: Partial<GitStatus> = {}): GitStatus => ({
   root: '/home/ana/acme',
   branch,
   upstream: `origin/${branch}`,
@@ -22,16 +22,21 @@ const git = (branch: string): GitStatus => ({
   incoming: [],
   submodules: [],
   submodulesClean: 0,
+  ...extra,
 })
 
 // What the window holds: a Jira site when an account is connected and the projects of its loaded tasks
-function draw(branch: string, jira?: { site: string; projects: readonly string[] }) {
+function draw(
+  branch: string,
+  jira?: { site: string; projects: readonly string[] },
+  extra: Partial<GitStatus> = {},
+) {
   const opened: string[] = []
   const snapshot: SessionSnapshot = {
     cwd: '/home/ana/acme',
     process: 'zsh',
     activity: 'idle',
-    git: git(branch),
+    git: git(branch, extra),
   }
   const section = createGitSection(
     {
@@ -73,5 +78,19 @@ describe('git section ticket', () => {
     const { body } = draw('feature/NTF-400-api', jira)
 
     expect(body.querySelector('.ticket')).toBeNull()
+  })
+})
+
+describe('git section remote', () => {
+  it('should name the remote branch Git records when there are commits to push', () => {
+    const { body } = draw('feature/login', undefined, {
+      upstream: 'fork/feature/login',
+      ahead: 1,
+      outgoing: [{ hash: 'abc1234', subject: 'Add login', time: 1 }],
+    })
+
+    const head = body.querySelector<HTMLElement>('[data-focus="git-outgoing"]')
+
+    expect(head?.dataset.tip).toBe('Local commits not pushed to fork/feature/login yet')
   })
 })
