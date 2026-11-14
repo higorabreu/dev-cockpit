@@ -111,9 +111,8 @@ export const en: Record<MessageKey, string> = {
 
   'projects.search': 'Search project',
   'projects.none': 'No project found',
-  'projects.noRoot.title': 'No projects folder yet',
-  'projects.noRoot.text':
-    'Choose the folder where your repositories live and the search lists them.',
+  'projects.noRoot.title': 'Projects folder not set',
+  'projects.noRoot.text': 'Choose the repositories folder to list them in the search.',
   'projects.chooseRoot': 'Choose the projects folder',
 
   'a11y.tabs': 'Tabs',

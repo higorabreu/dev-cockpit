@@ -110,9 +110,8 @@ export const ptBR = {
 
   'projects.search': 'Buscar projeto',
   'projects.none': 'Nenhum projeto encontrado',
-  'projects.noRoot.title': 'Nenhuma pasta de projetos ainda',
-  'projects.noRoot.text':
-    'Escolha a pasta onde ficam seus repositórios e a busca lista todos eles.',
+  'projects.noRoot.title': 'Pasta de projetos não definida',
+  'projects.noRoot.text': 'Escolha a pasta dos repositórios para listá-los na busca.',
   'projects.chooseRoot': 'Escolher a pasta de projetos',
 
   'a11y.tabs': 'Abas',

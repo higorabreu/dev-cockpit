@@ -58,7 +58,7 @@ describe('createProjectSearch', () => {
     search.askForRoot()
 
     expect(overlay.classList.contains('open')).toBe(true)
-    expect(results.querySelector('.psetup strong')?.textContent).toBe('No projects folder yet')
+    expect(results.querySelector('.psetup strong')?.textContent).toBe('Projects folder not set')
     const buttons = results.querySelectorAll('button')
     expect([...buttons].map((button) => button.textContent)).toEqual(['Choose the projects folder'])
     expect(document.activeElement).toBe(buttons[0])
