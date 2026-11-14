@@ -1,8 +1,8 @@
 import type { BranchInfo } from './base.ts'
 
-// What the review compares: the uncommitted work against HEAD, or the branch against its base (on a base
-// branch itself, what is not pushed to its upstream)
-export type DiffScope = 'uncommitted' | 'branch'
+// What the review compares with the working tree: HEAD, the merge base with the branch's base, or the
+// merge base with HEAD's upstream (the commits not pushed yet)
+export type DiffScope = 'uncommitted' | 'branch' | 'unpushed'
 
 export type DiffLineKind = 'context' | 'add' | 'remove'
 

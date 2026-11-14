@@ -7,17 +7,15 @@ export interface ReviewBase {
   readonly source: BaseSource
 }
 
-// What the second scope of the review compares with in this repository
+// What the review's base and unpushed scopes compare with in this repository
 export interface BranchInfo {
-  // What it compares with: the user's choice, else what was found
+  // What the base scope compares with: the user's choice, else what was found
   readonly base: ReviewBase | undefined
   // What was found without the user's choice, so picking it again goes back to finding it
   readonly found: ReviewBase | undefined
-  // Other bases worth offering, the remote's default first
+  // Branches HEAD may have started from, the nearest first, to pick another base from
   readonly candidates: readonly string[]
-  // HEAD is on a base branch itself, so the second scope is what is not pushed to its upstream
-  readonly onBase: boolean
-  // HEAD's upstream, like `origin/main`, when it is on a base branch and has one
+  // HEAD's upstream, like `origin/feat/login`, which the unpushed commits are counted against
   readonly upstream: string | undefined
 }
 
@@ -25,17 +23,12 @@ export const noBranchInfo: BranchInfo = {
   base: undefined,
   found: undefined,
   candidates: [],
-  onBase: false,
   upstream: undefined,
 }
 
-export const MAX_BASE_CANDIDATES = 20
+// The most recently committed branches looked at for a base; older ones are rarely where HEAD started
+export const MAX_BASE_CANDIDATES = 30
 export const MAX_BASE_REF = 255
-
-// Branches a feature usually starts from, in git flow and in trunk-based work alike
-const BASE_NAME = /^(develop|main|master|release[/-].+)$/
-
-export const isBaseName = (name: string) => BASE_NAME.test(name)
 
 // A branch name safe to hand to git as a revision: no option, no range, no reflog or path syntax
 export function isBaseRef(name: string): boolean {
@@ -54,13 +47,8 @@ export function isBaseRef(name: string): boolean {
 
 const REMOTE = 'origin/'
 
-// `origin/develop` and `develop` are the same branch for the review
+// `origin/<name>` and `<name>` are the same branch for the review
 export const branchName = (ref: string) => (ref.startsWith(REMOTE) ? ref.slice(REMOTE.length) : ref)
-
-// HEAD on the remote's default branch or on a base-like branch: there is no base to compare with
-export function isOnBase(current: string, remoteDefault: string | undefined): boolean {
-  return current === remoteDefault || isBaseName(current)
-}
 
 const shortRef = (ref: string) => ref.replace(/^refs\/(heads|remotes)\//, '')
 
@@ -93,55 +81,41 @@ export function createdFrom(
   return undefined
 }
 
-// Base-like branches among the local and `origin/` ones (short names, as `for-each-ref` prints them),
-// each once, the local copy before the remote one; the remote's default first, the current branch out
+// The local and `origin/` branches that could be HEAD's base (short names, the most recently committed
+// first, as `for-each-ref --sort=-committerdate` prints them), each once with the local copy in place of
+// the remote one; never the current branch, its remote copy, HEAD's upstream or `origin/HEAD`
 export function baseCandidates(
   refs: readonly string[],
-  remoteDefault: string | undefined,
   current: string | undefined,
+  upstream: string | undefined,
 ): string[] {
   const best = new Map<string, string>()
   for (const ref of refs) {
-    if (ref === 'origin/HEAD' || ref === 'origin' || !isBaseRef(ref)) continue
+    if (ref === 'origin/HEAD' || ref === 'origin' || ref === upstream || !isBaseRef(ref)) continue
     const name = branchName(ref)
-    if (name === current || !(isBaseName(name) || name === remoteDefault)) continue
+    if (name === current) continue
     const known = best.get(name)
-    if (known === undefined || known.startsWith(REMOTE)) best.set(name, ref)
+    if (known === undefined || (known.startsWith(REMOTE) && !ref.startsWith(REMOTE)))
+      best.set(name, ref)
   }
-  const order = (name: string) =>
-    name === remoteDefault
-      ? 0
-      : name === 'develop'
-        ? 1
-        : name === 'main'
-          ? 2
-          : name === 'master'
-            ? 3
-            : 4
-  return [...best.keys()]
-    .sort((a, b) => order(a) - order(b) || (a < b ? 1 : a > b ? -1 : 0))
-    .slice(0, MAX_BASE_CANDIDATES)
-    .map((name) => best.get(name) ?? name)
+  return [...best.values()].slice(0, MAX_BASE_CANDIDATES)
 }
 
 export interface BaseMeasure {
   readonly name: string
+  // The candidate already has HEAD (it is HEAD or a descendant), so HEAD cannot have come from it
+  readonly containsHead: boolean
   // Commits on HEAD that the candidate does not have
   readonly ahead: number
   // When HEAD and the candidate last met, in seconds since 1970
   readonly mergeTime: number
 }
 
-// The candidate HEAD left most recently: the fewest commits ahead of it, then the latest merge base
-export function nearestBase(measures: readonly BaseMeasure[]): string | undefined {
-  let best: BaseMeasure | undefined
-  for (const measure of measures) {
-    if (
-      best === undefined ||
-      measure.ahead < best.ahead ||
-      (measure.ahead === best.ahead && measure.mergeTime > best.mergeTime)
-    )
-      best = measure
-  }
-  return best?.name
+// The candidates HEAD can have come from, the one it left most recently first: the fewest commits
+// ahead of it, then the latest merge base
+export function rankBases(measures: readonly BaseMeasure[]): string[] {
+  return measures
+    .filter((measure) => !measure.containsHead)
+    .sort((a, b) => a.ahead - b.ahead || b.mergeTime - a.mergeTime)
+    .map((measure) => measure.name)
 }

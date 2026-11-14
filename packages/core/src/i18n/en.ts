@@ -301,7 +301,7 @@ export const en: Record<MessageKey, string> = {
   'review.close': 'Close review',
   'review.scope': 'Changes to review',
   'review.scope.uncommitted': 'Uncommitted',
-  'review.scope.branch': 'Branch',
+  'review.scope.base': 'Base',
   'review.scope.since': 'Base: {base}',
   'review.scope.unpushed': 'Unpushed commits',
   'review.scope.unpushed.tip': 'Compared with {upstream}',
@@ -327,8 +327,7 @@ export const en: Record<MessageKey, string> = {
   'review.empty.branch': 'No changes on this branch compared with {base}',
   'review.empty.text': 'No changes in {path}.',
   'review.noBase': 'No base branch to compare with',
-  'review.noBase.text':
-    'No base found among develop, main, master and release. Choose one in the selector.',
+  'review.noBase.text': 'No base found. Choose one in the selector.',
   'review.error': 'Run git status in the terminal to see why.',
   'review.retry': 'Try again',
   'review.status.added': 'added',

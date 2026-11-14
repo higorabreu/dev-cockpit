@@ -15,7 +15,7 @@ export type DiffOutcome =
   | { readonly kind: 'not-repository' }
   // The Branch scope found no branch to compare with
   | { readonly kind: 'no-base'; readonly root: string }
-  // On a base branch, the second scope has no upstream to compare with
+  // The Unpushed scope found no upstream to compare with
   | { readonly kind: 'no-upstream'; readonly root: string }
   | { readonly kind: 'ok'; readonly diff: ReviewDiff }
 

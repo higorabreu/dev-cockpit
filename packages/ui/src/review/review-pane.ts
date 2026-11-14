@@ -103,7 +103,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   let state: PaneState = { kind: 'loading' }
   let busy = false
   let showLoading = false
-  // What the second scope compares with, from the last read of a repository, and that repository
+  // What the base and unpushed scopes compare with, from the last read of a repository, and that one
   let branch: BranchInfo | undefined
   let root: string | undefined
   let cwd: string | undefined
@@ -256,7 +256,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       await deps.chooseBase(root, name === branch?.found?.name ? undefined : name)
       scope = 'branch'
       select.setValue('branch')
-    } else scope = value === 'branch' ? 'branch' : 'uncommitted'
+    } else scope = value === 'branch' || value === 'unpushed' ? value : 'uncommitted'
     resetReading = true
     refresh.request()
   }
@@ -268,26 +268,37 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     return t('review.base.chosen')
   }
 
-  // Uncommitted, then the branch since its base with the other bases to pick from; on a base branch
-  // itself, what is not pushed to its upstream
-  function scopeOptions(): SelectOption[] {
-    const options: SelectOption[] = [{ value: 'uncommitted', label: t('review.scope.uncommitted') }]
-    const since = (name: string) => t('review.scope.since', { base: name })
-    if (branch?.onBase) {
-      const { upstream } = branch
-      options.push({
-        value: 'branch',
-        label: t('review.scope.unpushed'),
-        tip: upstream ? t('review.scope.unpushed.tip', { upstream }) : t('review.scope.noUpstream'),
-        disabled: upstream === undefined,
-      })
-      return options
-    }
+  // The base option, disabled with the reason once a read found none
+  function baseOption(): SelectOption {
     const base = branch?.base
-    if (!branch || !base) return [...options, { value: 'branch', label: t('review.scope.branch') }]
-    options.push({ value: 'branch', label: since(base.name), tip: baseTip(base) })
-    const listed = new Set([branchName(base.name)])
-    const { found } = branch
+    if (base) return { value: 'branch', label: since(base.name), tip: baseTip(base) }
+    const option = { value: 'branch', label: t('review.scope.base') }
+    if (!branch) return option
+    const tip = branch.candidates.length > 0 ? t('review.noBase.text') : t('review.noBase')
+    return { ...option, tip, disabled: true }
+  }
+
+  // The unpushed option, disabled with the reason once a read found no upstream
+  function unpushedOption(): SelectOption {
+    const option = { value: 'unpushed', label: t('review.scope.unpushed') }
+    const upstream = branch?.upstream
+    if (!branch) return option
+    if (upstream) return { ...option, tip: t('review.scope.unpushed.tip', { upstream }) }
+    return { ...option, tip: t('review.scope.noUpstream'), disabled: true }
+  }
+
+  const since = (name: string) => t('review.scope.since', { base: name })
+
+  // Uncommitted, since the base, unpushed, then the other bases to pick from
+  function scopeOptions(): SelectOption[] {
+    const options: SelectOption[] = [
+      { value: 'uncommitted', label: t('review.scope.uncommitted') },
+      baseOption(),
+      unpushedOption(),
+    ]
+    if (!branch) return options
+    const { base, found } = branch
+    const listed = new Set(base ? [branchName(base.name)] : [])
     for (const name of [...(found ? [found.name] : []), ...branch.candidates]) {
       if (listed.has(branchName(name))) continue
       listed.add(branchName(name))
@@ -442,13 +453,13 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     // The second option names its base once a read found it
     drawScope()
     if (state.diff.files.length === 0) {
-      const { base, onBase, upstream } = state.diff.branch
+      const { base, upstream } = state.diff.branch
       return showMessage(
-        scope !== 'branch'
-          ? t('review.empty.uncommitted')
-          : onBase
-            ? t('review.empty.unpushed', { upstream: upstream ?? '' })
-            : t('review.empty.branch', { base: base?.name ?? '' }),
+        scope === 'unpushed'
+          ? t('review.empty.unpushed', { upstream: upstream ?? '' })
+          : scope === 'branch'
+            ? t('review.empty.branch', { base: base?.name ?? '' })
+            : t('review.empty.uncommitted'),
         t('review.empty.text', { path: displayPath(state.diff.root) }),
       )
     }

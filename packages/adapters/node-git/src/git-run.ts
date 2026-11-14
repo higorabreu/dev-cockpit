@@ -61,3 +61,16 @@ export const runGit: GitRun = (cwd, args, options) =>
     child.stdin?.on('error', () => undefined)
     child.stdin?.end(options.input ?? '')
   })
+
+// Runs the task over the items at most `size` at a time, the results in the items' order
+export async function inBatches<T, R>(
+  items: readonly T[],
+  size: number,
+  task: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = []
+  for (let index = 0; index < items.length; index += size) {
+    results.push(...(await Promise.all(items.slice(index, index + size).map(task))))
+  }
+  return results
+}

@@ -102,7 +102,7 @@ const resolvePathsSchema = z.object({
 // The tab's folder goes into git's arguments, so it must be an absolute folder that exists
 const diffRequestSchema = z.object({
   cwd: absolutePathSchema,
-  scope: z.enum(['uncommitted', 'branch']),
+  scope: z.enum(['uncommitted', 'branch', 'unpushed']),
   ignoreWhitespace: z.boolean(),
   // Handed to git as a revision, so only a plain branch name passes
   base: z.string().refine(isBaseRef).optional(),

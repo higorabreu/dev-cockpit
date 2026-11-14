@@ -14,7 +14,7 @@ import {
   reviewDiff,
 } from '@dck/core'
 import { createBaseFinder } from './git-base.ts'
-import { type GitAnswer, type GitFailure, type GitRun, runGit } from './git-run.ts'
+import { type GitAnswer, type GitFailure, type GitRun, inBatches, runGit } from './git-run.ts'
 
 const QUICK = { timeoutMs: 5000, maxBytes: 1024 * 1024 }
 // The whole diff of a scope; past this the review says it is too large instead of freezing
@@ -53,15 +53,6 @@ function failed(failure: GitFailure, step: string): ErrorBody {
   return errorBody('DCK-GIT-001', `${step}: exit ${failure.code}`)
 }
 
-// Runs `count` tasks at most `PARALLEL` at a time, in order
-async function inBatches<T, R>(items: readonly T[], task: (item: T) => Promise<R>): Promise<R[]> {
-  const results: R[] = []
-  for (let index = 0; index < items.length; index += PARALLEL) {
-    results.push(...(await Promise.all(items.slice(index, index + PARALLEL).map(task))))
-  }
-  return results
-}
-
 const lineCount = (text: string) =>
   text === '' ? 0 : text.split('\n').length - (text.endsWith('\n') ? 1 : 0)
 
@@ -94,7 +85,7 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       .split('\0')
       .filter((path) => path !== '' && !path.endsWith('/'))
       .slice(0, UNTRACKED_LIMIT)
-    const found = await inBatches(paths, async (path): Promise<DiffFile[]> => {
+    const found = await inBatches(paths, PARALLEL, async (path): Promise<DiffFile[]> => {
       const size = await files.size(join(root, path))
       if (size !== undefined && size > UNTRACKED_MAX_BYTES) {
         return [omitted(path, size)]
@@ -181,12 +172,13 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       const current = await head(root)
       if (!current.ok) return current
       let from = current.value
-      // Found in both scopes, so the scope select can name what the second one compares with
+      // Found in every scope, so the scope select can name what the other two compare with
       const branch = await bases.find(root, current.value, request.base)
-      if (request.scope === 'branch') {
-        const against = branch.onBase ? branch.upstream : branch.base?.name
+      if (request.scope !== 'uncommitted') {
+        const unpushed = request.scope === 'unpushed'
+        const against = unpushed ? branch.upstream : branch.base?.name
         const merge = against && (await answer(root, ['merge-base', 'HEAD', against]))
-        if (!merge) return ok({ kind: branch.onBase ? 'no-upstream' : 'no-base', root })
+        if (!merge) return ok({ kind: unpushed ? 'no-upstream' : 'no-base', root })
         from = merge
       }
 
@@ -203,7 +195,7 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
         root,
         parsed.map((file) => file.path),
       )
-      const completed = await inBatches(parsed, (file) =>
+      const completed = await inBatches(parsed, PARALLEL, (file) =>
         complete(root, file, marked.has(file.path)),
       )
       return ok({ kind: 'ok', diff: reviewDiff(root, request.scope, branch, completed) })

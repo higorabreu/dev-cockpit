@@ -300,7 +300,7 @@ export const ptBR = {
   'review.close': 'Fechar revisão',
   'review.scope': 'Alterações a revisar',
   'review.scope.uncommitted': 'Não commitadas',
-  'review.scope.branch': 'Branch',
+  'review.scope.base': 'Base',
   'review.scope.since': 'Base: {base}',
   'review.scope.unpushed': 'Commits sem push',
   'review.scope.unpushed.tip': 'Comparado com {upstream}',
@@ -326,8 +326,7 @@ export const ptBR = {
   'review.empty.branch': 'Nenhuma alteração nesta branch em relação a {base}',
   'review.empty.text': 'Nenhuma alteração em {path}.',
   'review.noBase': 'Nenhuma branch base para comparar',
-  'review.noBase.text':
-    'Nenhuma base encontrada entre develop, main, master e release. Escolha a base no seletor.',
+  'review.noBase.text': 'Nenhuma base encontrada. Escolha a base no seletor.',
   'review.error': 'Execute git status no terminal para ver o motivo.',
   'review.retry': 'Tentar novamente',
   'review.status.added': 'adicionado',

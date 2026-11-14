@@ -1,18 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import {
-  baseCandidates,
-  createdFrom,
-  isBaseRef,
-  isOnBase,
-  MAX_BASE_CANDIDATES,
-  nearestBase,
-} from './base.ts'
+import { baseCandidates, createdFrom, isBaseRef, MAX_BASE_CANDIDATES, rankBases } from './base.ts'
 
 describe('createdFrom', () => {
   it('should read the start point from the oldest entry of the branch reflog', () => {
-    const log = ['commit: second', 'commit: first', 'branch: Created from develop']
+    const log = ['commit: second', 'commit: first', 'branch: Created from trunk']
 
-    expect(createdFrom('feat/x', log, [])).toBe('develop')
+    expect(createdFrom('feat/x', log, [])).toBe('trunk')
   })
 
   it('should keep a remote start point and drop the refs prefix', () => {
@@ -46,54 +39,59 @@ describe('createdFrom', () => {
 })
 
 describe('baseCandidates', () => {
-  it('should offer each base-like branch once with the local copy first and the default on top', () => {
-    const refs = [
-      'feat/x',
-      'main',
-      'origin/HEAD',
-      'origin/develop',
-      'origin/main',
-      'origin/release/2.1',
-      'origin/trunk',
-      'release-1.0',
-    ]
+  it('should keep any branch name in the order of its last commit with the local copy in place of the remote one', () => {
+    const refs = ['origin/staging', 'trunk', 'origin/trunk', 'origin/qa', 'dev', 'origin/dev']
 
-    expect(baseCandidates(refs, 'trunk', 'feat/x')).toEqual([
-      'origin/trunk',
-      'origin/develop',
-      'main',
-      'origin/release/2.1',
-      'release-1.0',
+    expect(baseCandidates(refs, 'feat/x', undefined)).toEqual([
+      'origin/staging',
+      'trunk',
+      'origin/qa',
+      'dev',
     ])
   })
 
-  it('should leave out the current branch and cap the list', () => {
-    const refs = Array.from({ length: 30 }, (_, index) => `release/${index}`)
+  it('should put the local copy where the newer remote copy was when the remote moved on', () => {
+    expect(baseCandidates(['origin/dev', 'feat/y', 'dev'], 'feat/x', undefined)).toEqual([
+      'dev',
+      'feat/y',
+    ])
+  })
 
-    expect(baseCandidates(['main', ...refs], 'main', 'main')).not.toContain('main')
-    expect(baseCandidates(refs, undefined, undefined)).toHaveLength(MAX_BASE_CANDIDATES)
+  it('should leave out the current branch, its remote copy, its upstream and origin/HEAD', () => {
+    const refs = ['feat/x', 'origin/HEAD', 'origin', 'origin/feat/x', 'origin/feat/x-review', 'dev']
+
+    expect(baseCandidates(refs, 'feat/x', 'origin/feat/x-review')).toEqual(['dev'])
+  })
+
+  it('should drop names git could misread and cap the list', () => {
+    const refs = Array.from({ length: 40 }, (_, index) => `release/${index}`)
+
+    expect(baseCandidates(['-x', 'a..b', ...refs], undefined, undefined)).toHaveLength(
+      MAX_BASE_CANDIDATES,
+    )
+    expect(baseCandidates(['-x', 'a..b', 'dev'], undefined, undefined)).toEqual(['dev'])
   })
 })
 
-describe('nearestBase', () => {
-  it('should pick the candidate with the fewest commits ahead and break a tie by the latest merge base', () => {
+describe('rankBases', () => {
+  it('should put first the fewest commits ahead and break a tie by the latest merge base', () => {
     const measures = [
-      { name: 'main', ahead: 5, mergeTime: 300 },
-      { name: 'develop', ahead: 2, mergeTime: 100 },
-      { name: 'release/2.1', ahead: 2, mergeTime: 200 },
+      { name: 'trunk', containsHead: false, ahead: 5, mergeTime: 300 },
+      { name: 'dev', containsHead: false, ahead: 2, mergeTime: 100 },
+      { name: 'staging', containsHead: false, ahead: 2, mergeTime: 200 },
     ]
 
-    expect(nearestBase(measures)).toBe('release/2.1')
-    expect(nearestBase([])).toBeUndefined()
+    expect(rankBases(measures)).toEqual(['staging', 'dev', 'trunk'])
+    expect(rankBases([])).toEqual([])
   })
-})
 
-describe('isOnBase', () => {
-  it('should tell a base branch or the remote default from a feature branch', () => {
-    expect(isOnBase('main', undefined)).toBe(true)
-    expect(isOnBase('trunk', 'trunk')).toBe(true)
-    expect(isOnBase('release/2.1', 'main')).toBe(true)
-    expect(isOnBase('feat/x', 'main')).toBe(false)
+  it('should never offer a candidate that already contains HEAD even when it is the closest', () => {
+    const measures = [
+      { name: 'feat/x-next', containsHead: true, ahead: 0, mergeTime: 0 },
+      { name: 'dev', containsHead: false, ahead: 3, mergeTime: 100 },
+    ]
+
+    expect(rankBases(measures)).toEqual(['dev'])
   })
 })
 

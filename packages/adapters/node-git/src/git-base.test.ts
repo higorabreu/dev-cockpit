@@ -45,6 +45,29 @@ async function flow() {
   return clone
 }
 
+// A bare remote whose default branch is trunk, with dev one commit ahead, its seed and a clone
+async function trunkBased() {
+  const remote = join(directory, 'trunk.git')
+  const seed = join(directory, 'trunk-seed')
+  git(directory, 'init', '-q', '--bare', '-b', 'trunk', remote)
+  git(directory, 'init', '-q', '-b', 'trunk', seed)
+  await commit(seed, 'readme.md')
+  git(seed, 'checkout', '-q', '-b', 'dev')
+  await commit(seed, 'dev.ts')
+  git(seed, 'remote', 'add', 'origin', remote)
+  git(seed, 'push', '-q', 'origin', 'trunk', 'dev')
+  const clone = join(directory, 'trunk-clone')
+  git(directory, 'clone', '-q', remote, clone)
+  return { remote, seed, clone }
+}
+
+// A fresh clone checked out on one branch: its reflog says nothing about where the branch started
+function freshClone(remote: string, branch: string) {
+  const path = join(directory, `fresh-${branch.replaceAll('/', '-')}`)
+  git(directory, 'clone', '-q', '-b', branch, remote, path)
+  return path
+}
+
 const request = (cwd: string, extra: Partial<DiffRequest> = {}): DiffRequest => ({
   cwd,
   scope: 'branch',
@@ -88,7 +111,7 @@ describe('the base of the branch scope', () => {
     const diff = okDiff(await createGitDiffSource().diff(request(path)))
 
     expect(diff.branch.base).toEqual({ name: 'develop', source: 'created' })
-    expect(diff.branch.candidates).toEqual(['main', 'develop'])
+    expect(diff.branch.candidates).toEqual(['develop', 'main'])
   })
 
   it('should follow the merge base VS Code wrote when the branch has one', async () => {
@@ -127,18 +150,78 @@ describe('the base of the branch scope', () => {
     expect(diff.files.map((file) => file.path)).toEqual(['feature-a.ts'])
   })
 
-  it('should compare with the upstream when HEAD is on a base branch with commits not pushed', async () => {
+  it('should compare with trunk when the branch was created from it and has no upstream yet', async () => {
+    const { clone } = await trunkBased()
+    git(clone, 'checkout', '-q', '-b', 'feat/x', 'trunk')
+    await commit(clone, 'x.ts')
+
+    const result = await createGitDiffSource().diff(request(clone))
+
+    expect(okDiff(result).branch).toMatchObject({
+      base: { name: 'trunk', source: 'created' },
+      upstream: undefined,
+    })
+    expect(files(result)).toEqual(['x.ts'])
+  })
+
+  it('should find dev as the nearest base when a fresh clone has no reflog for the branch', async () => {
+    const { remote, seed } = await trunkBased()
+    git(seed, 'checkout', '-q', '-b', 'feat/y', 'dev')
+    await commit(seed, 'y.ts')
+    git(seed, 'push', '-q', 'origin', 'feat/y')
+    const path = freshClone(remote, 'feat/y')
+
+    const diff = okDiff(await createGitDiffSource().diff(request(path)))
+
+    expect(diff.branch.base).toEqual({ name: 'origin/dev', source: 'nearest' })
+    expect(diff.branch.candidates).toEqual(['origin/dev', 'origin/trunk'])
+    expect(diff.files.map((file) => file.path)).toEqual(['y.ts'])
+  })
+
+  it('should never take a branch that already contains HEAD when it is the closest one', async () => {
+    const { remote, seed } = await trunkBased()
+    git(seed, 'checkout', '-q', '-b', 'feat/a', 'dev')
+    await commit(seed, 'a.ts')
+    git(seed, 'checkout', '-q', '-b', 'feat/b')
+    await commit(seed, 'b.ts')
+    git(seed, 'push', '-q', 'origin', 'feat/a', 'feat/b')
+    const path = freshClone(remote, 'feat/a')
+
+    const diff = okDiff(await createGitDiffSource().diff(request(path)))
+
+    expect(diff.branch.base).toEqual({ name: 'origin/dev', source: 'nearest' })
+    expect(diff.branch.candidates).not.toContain('origin/feat/b')
+  })
+
+  it('should find no base on the remote default branch and compare the unpushed commits with its upstream', async () => {
     const path = await flow()
     await commit(path, 'hotfix.ts')
     await writeFile(join(path, 'notes.txt'), 'draft\n')
 
-    const diff = okDiff(await createGitDiffSource().diff(request(path)))
+    const base = await createGitDiffSource().diff(request(path))
+    const unpushed = okDiff(await createGitDiffSource().diff(request(path, { scope: 'unpushed' })))
 
-    expect(diff.branch).toMatchObject({ onBase: true, upstream: 'origin/main', base: undefined })
-    expect(diff.files.map((file) => file.path)).toEqual(['hotfix.ts', 'notes.txt'])
+    expect(base).toEqual({ ok: true, value: { kind: 'no-base', root: path } })
+    expect(unpushed.branch).toMatchObject({
+      base: undefined,
+      found: undefined,
+      upstream: 'origin/main',
+      candidates: ['origin/develop'],
+    })
+    expect(unpushed.files.map((file) => file.path)).toEqual(['hotfix.ts', 'notes.txt'])
   })
 
-  it('should say there is no upstream when HEAD is on a base branch that was never pushed', async () => {
+  it('should compare with the base the user picks on the remote default branch', async () => {
+    const path = await flow()
+    await commit(path, 'hotfix.ts')
+
+    const diff = okDiff(await createGitDiffSource().diff(request(path, { base: 'origin/develop' })))
+
+    expect(diff.branch.base).toEqual({ name: 'origin/develop', source: 'chosen' })
+    expect(diff.files.map((file) => file.path)).toEqual(['hotfix.ts'])
+  })
+
+  it('should say there is no upstream when the branch was never pushed', async () => {
     const path = join(directory, 'local')
     git(directory, 'init', '-q', '-b', 'main', path)
     await commit(path, 'a.txt')
@@ -146,9 +229,9 @@ describe('the base of the branch scope', () => {
     const uncommitted = okDiff(
       await createGitDiffSource().diff(request(path, { scope: 'uncommitted' })),
     )
-    const branch = await createGitDiffSource().diff(request(path))
+    const unpushed = await createGitDiffSource().diff(request(path, { scope: 'unpushed' }))
 
-    expect(uncommitted.branch).toMatchObject({ onBase: true, upstream: undefined })
-    expect(branch).toEqual({ ok: true, value: { kind: 'no-upstream', root: path } })
+    expect(uncommitted.branch).toMatchObject({ base: undefined, upstream: undefined })
+    expect(unpushed).toEqual({ ok: true, value: { kind: 'no-upstream', root: path } })
   })
 })

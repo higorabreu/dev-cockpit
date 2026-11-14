@@ -43,8 +43,7 @@ const lockText = [
 const feature: BranchInfo = {
   base: { name: 'origin/develop', source: 'created' },
   found: { name: 'origin/develop', source: 'created' },
-  candidates: ['main', 'origin/develop'],
-  onBase: false,
+  candidates: ['origin/develop', 'main'],
   upstream: undefined,
 }
 
@@ -449,6 +448,7 @@ describe('createReviewPane', () => {
     expect(listed).toEqual([
       ['Uncommitted', null],
       ['Base: origin/develop', 'Created from origin/develop'],
+      ['Unpushed commits', 'Branch has no upstream. Use git push -u to set one.'],
       ['Base: main', null],
     ])
   })
@@ -460,7 +460,7 @@ describe('createReviewPane', () => {
     const select = pane.element.querySelector('.rv-head .select') as HTMLButtonElement
 
     select.click()
-    ;(pane.element.querySelectorAll('.rv-head .select-option')[2] as HTMLElement).click()
+    ;(pane.element.querySelectorAll('.rv-head .select-option')[3] as HTMLElement).click()
     await flush()
     await flush()
 
@@ -468,28 +468,71 @@ describe('createReviewPane', () => {
     expect(requests.at(-1)).toMatchObject({ scope: 'branch', base: 'main' })
   })
 
-  it('should offer what is not pushed on a base branch and disable it without an upstream', async () => {
-    const onBase = { ...feature, base: undefined, found: undefined, onBase: true }
-    const pushed = setup(repository(undefined, { ...onBase, upstream: 'origin/main' }))
-    pushed.pane.open()
+  it('should always offer the three scopes and disable the base and unpushed ones when git found neither', async () => {
+    const found = setup(repository(undefined, { ...feature, upstream: 'origin/feat/login' }))
+    found.pane.open()
     await flush()
     document.body.replaceChildren()
-    const local = setup(repository(undefined, onBase))
-    local.pane.open()
+    const none = { ...feature, base: undefined, found: undefined, candidates: [] }
+    const missing = setup(repository(undefined, none))
+    missing.pane.open()
     await flush()
 
-    const option = (pane: typeof pushed.pane) => {
+    const scopes = (pane: typeof found.pane) => {
       ;(pane.element.querySelector('.rv-head .select') as HTMLButtonElement).click()
-      const found = pane.element.querySelectorAll('.rv-head .select-option')[1] as HTMLElement
-      return [found.textContent, found.dataset.tip, found.getAttribute('aria-disabled')]
+      return [...pane.element.querySelectorAll<HTMLElement>('.rv-head .select-option')]
+        .slice(0, 3)
+        .map((option) => [
+          option.textContent,
+          option.dataset.tip,
+          option.getAttribute('aria-disabled'),
+        ])
     }
 
-    expect(option(pushed.pane)).toEqual(['Unpushed commits', 'Compared with origin/main', null])
-    expect(option(local.pane)).toEqual([
-      'Unpushed commits',
-      'Branch has no upstream. Use git push -u to set one.',
-      'true',
+    expect(scopes(found.pane)).toEqual([
+      ['Uncommitted', undefined, null],
+      ['Base: origin/develop', 'Created from origin/develop', null],
+      ['Unpushed commits', 'Compared with origin/feat/login', null],
     ])
+    expect(scopes(missing.pane)).toEqual([
+      ['Uncommitted', undefined, null],
+      ['Base', 'No base branch to compare with', 'true'],
+      ['Unpushed commits', 'Branch has no upstream. Use git push -u to set one.', 'true'],
+    ])
+  })
+
+  it('should point to the other bases when none was found but some can be picked', async () => {
+    const branch = { ...feature, base: undefined, found: undefined, upstream: 'origin/main' }
+    const { pane } = setup(repository(undefined, branch))
+    pane.open()
+    await flush()
+
+    ;(pane.element.querySelector('.rv-head .select') as HTMLButtonElement).click()
+    const listed = [...pane.element.querySelectorAll<HTMLElement>('.rv-head .select-option')].map(
+      (option) => [option.textContent, option.dataset.tip, option.getAttribute('aria-disabled')],
+    )
+
+    expect(listed).toEqual([
+      ['Uncommitted', undefined, null],
+      ['Base', 'No base found. Choose one in the selector.', 'true'],
+      ['Unpushed commits', 'Compared with origin/main', null],
+      ['Base: origin/develop', undefined, null],
+      ['Base: main', undefined, null],
+    ])
+  })
+
+  it('should read the unpushed commits when that scope is picked', async () => {
+    const branch = { ...feature, upstream: 'origin/feat/login' }
+    const { pane, requests } = setup(repository(undefined, branch))
+    pane.open()
+    await flush()
+
+    ;(pane.element.querySelector('.rv-head .select') as HTMLButtonElement).click()
+    ;(pane.element.querySelectorAll('.rv-head .select-option')[2] as HTMLElement).click()
+    await flush()
+    await flush()
+
+    expect(requests.at(-1)).toMatchObject({ scope: 'unpushed' })
   })
 
   it('should ask for whitespace to be ignored when the toggle is pressed', async () => {
@@ -517,10 +560,10 @@ describe('createReviewPane', () => {
       'without a base branch',
       ok({ kind: 'no-base' as const, root: '/home/ana/acme' }),
       'No base branch to compare with',
-      'No base found among develop, main, master and release. Choose one in the selector.',
+      'No base found. Choose one in the selector.',
     ],
     [
-      'on a base branch without an upstream',
+      'without an upstream',
       ok({ kind: 'no-upstream' as const, root: '/home/ana/acme' }),
       'No upstream',
       'Use git push -u to compare with the remote.',
