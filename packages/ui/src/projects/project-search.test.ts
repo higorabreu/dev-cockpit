@@ -64,7 +64,7 @@ describe('createProjectSearch', () => {
     expect(document.activeElement).toBe(buttons[0])
     expect(input.disabled).toBe(true)
     expect(results.getAttribute('role')).toBeNull()
-    expect(hint.textContent).toBe('')
+    expect(hint.hidden).toBe(true)
   })
 
   it('should show the action in Portuguese when the interface is in Portuguese', () => {
@@ -106,6 +106,7 @@ describe('createProjectSearch', () => {
     expect(results.querySelector('.psetup')).toBeNull()
     expect(input.disabled).toBe(false)
     expect(results.getAttribute('role')).toBe('listbox')
+    expect(hint.hidden).toBe(false)
     expect(hint.textContent).toContain('Ctrl+D')
     expect(picked).toEqual(['/home/ana/work/alpha'])
   })

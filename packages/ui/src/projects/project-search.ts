@@ -39,7 +39,9 @@ export function createProjectSearch(elements: SearchElements, deps: SearchDeps) 
   const { onPick, onClose, onToggleFavorite, t } = deps
   // No projects folder chosen yet: the search asks for one instead of guessing it
   let needsRoot = false
+  // Pinning has nothing to act on before there are projects, so the bar goes away
   const drawHint = () => {
+    hint.hidden = needsRoot
     hint.replaceChildren(...(needsRoot ? [] : [keyHint('Ctrl+D', t('projects.hint'))]))
   }
   drawHint()
