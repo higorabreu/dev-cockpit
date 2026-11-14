@@ -40,7 +40,7 @@ const disk = new Map<string, DiskEntry>([
   ['/srv/acme/backend/Bundle.app', dir],
 ])
 
-function setup() {
+function setup(picked: string | undefined = undefined) {
   const handlers = new Map<string, (...args: never[]) => unknown>()
   const ipcMain: IpcMainApi = {
     handle: (channel, listener) => void handlers.set(channel, listener),
@@ -163,6 +163,7 @@ function setup() {
       touch: async (path: string) => void touched.push(path),
       toggleFavorite: async (path: string) => !path.endsWith('/pinned'),
     },
+    pickFolder: async () => picked,
     shell: { file: '/bin/zsh', args: [] },
     home: '/home/usuario',
     logger: {
@@ -287,6 +288,37 @@ describe('registerHostBridge clipboard and window', () => {
     const projects = await call(hostChannels.projectsList)
 
     expect(projects).toEqual([{ name: 'alpha', path: '/p/alpha' }])
+  })
+
+  it('should answer the folder the user picked when the interface asks for the projects folder', async () => {
+    const { call } = setup('/srv/acme/backend')
+
+    const root = await call(hostChannels.projectsChooseRoot)
+
+    expect(root).toBe('/srv/acme/backend')
+  })
+
+  it('should answer nothing when the user cancels the folder picker', async () => {
+    const { call, warnings } = setup(undefined)
+
+    const root = await call(hostChannels.projectsChooseRoot)
+
+    expect(root).toBeUndefined()
+    expect(warnings).toEqual([])
+  })
+
+  it.each([
+    ['a relative path', 'acme'],
+    ['a folder that does not exist', '/srv/missing'],
+    ['a file', '/home/usuario/notes.md'],
+    ['a path longer than the setting allows', `/srv/${'a'.repeat(1100)}`],
+  ])('should refuse %s when the folder picker answers it', async (_case, path) => {
+    const { call, warnings } = setup(path)
+
+    const root = await call(hostChannels.projectsChooseRoot)
+
+    expect(root).toBeUndefined()
+    expect(warnings.map((warning) => warning.message)).toEqual(['chosen projects folder refused'])
   })
 
   it('should record the project as recently used when the interface touches it', () => {

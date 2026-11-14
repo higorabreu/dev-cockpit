@@ -146,14 +146,35 @@ describe('parseSubmoduleList', () => {
 })
 
 describe('ticketFromBranch', () => {
-  it('should find the ticket key when the branch has one', () => {
-    expect(ticketFromBranch('feature/NTF-400-api-publica')).toBe('NTF-400')
-    expect(ticketFromBranch('NTF-12-fix')).toBe('NTF-12')
+  const acme = new Set(['ACME', 'OPS_2'])
+
+  it('should find the key when its project is one of the user projects', () => {
+    expect(ticketFromBranch('feature/ACME-400-public-api', acme)).toBe('ACME-400')
+    expect(ticketFromBranch('ACME-12-fix', acme)).toBe('ACME-12')
+    expect(ticketFromBranch('ana/OPS_2-7', acme)).toBe('OPS_2-7')
   })
 
-  it('should find nothing when the branch has no ticket key', () => {
-    expect(ticketFromBranch('main')).toBeUndefined()
-    expect(ticketFromBranch(undefined)).toBeUndefined()
+  it('should skip a key of an unknown project and take the next known one when the branch has both', () => {
+    expect(ticketFromBranch('UTF-8-then-ACME-3', acme)).toBe('ACME-3')
+  })
+
+  it('should find nothing when the key belongs to a project the user does not have', () => {
+    expect(ticketFromBranch('feature/NTF-400-api', acme)).toBeUndefined()
+    expect(ticketFromBranch('release/ISO-8601', acme)).toBeUndefined()
+  })
+
+  it('should find nothing when no project is known, whatever the branch looks like', () => {
+    expect(ticketFromBranch('feature/ACME-400', new Set())).toBeUndefined()
+  })
+
+  it('should find nothing when the key is only part of a longer word or is lowercase', () => {
+    expect(ticketFromBranch('XACME-12', acme)).toBeUndefined()
+    expect(ticketFromBranch('acme-12', acme)).toBeUndefined()
+  })
+
+  it('should find nothing when there is no branch or no key', () => {
+    expect(ticketFromBranch('main', acme)).toBeUndefined()
+    expect(ticketFromBranch(undefined, acme)).toBeUndefined()
   })
 })
 

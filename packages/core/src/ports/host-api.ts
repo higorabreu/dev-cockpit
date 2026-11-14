@@ -110,6 +110,8 @@ export interface HostApi {
     list(): Promise<readonly Project[]>
     touch(path: string): void
     toggleFavorite(path: string): Promise<boolean>
+    // The system folder picker; undefined when the user cancels
+    chooseRoot(): Promise<string | undefined>
   }
   readonly window: {
     toggleFullHeight(): void
@@ -159,6 +161,7 @@ export const hostChannels = {
   projectsList: 'projects:list',
   projectsTouch: 'projects:touch',
   projectsToggleFavorite: 'projects:toggle-favorite',
+  projectsChooseRoot: 'projects:choose-root',
   windowToggleFullHeight: 'window:toggle-full-height',
   windowShown: 'window:shown',
   windowOpenSettings: 'window:open-settings',

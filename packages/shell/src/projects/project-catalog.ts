@@ -4,7 +4,8 @@ import { scanProjects } from './project-scan.ts'
 import type { RecencyStore } from './recency-store.ts'
 
 export interface ProjectScanConfig {
-  readonly root: string
+  // Null until the user chooses a folder; nothing is scanned and no folder name is assumed
+  readonly root: string | null
   readonly depth: number
 }
 
@@ -18,6 +19,7 @@ export function createProjectCatalog(
   return {
     async list() {
       const { root, depth } = current()
+      if (root === null) return []
       const [projects, recent, pinned] = await Promise.all([
         scanProjects(root, depth),
         recency.list(),

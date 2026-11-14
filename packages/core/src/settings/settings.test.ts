@@ -61,6 +61,14 @@ describe('parseSettings', () => {
     expect(settings.shortcuts).toEqual(defaultSettings.shortcuts)
   })
 
+  it('should leave the projects root unset instead of assuming a folder when the file names none', () => {
+    expect(parseSettings({ projects: { depth: 3 } }).projects.root).toBeNull()
+    expect(
+      parseSettings({ projects: { root: `/${'a'.repeat(LIMITS.projectsRoot.max)}` } }).projects
+        .root,
+    ).toBeNull()
+  })
+
   it('should keep a chosen projects root and drop an empty one when reading', () => {
     expect(parseSettings({ projects: { root: '/work' } }).projects.root).toBe('/work')
     expect(parseSettings({ projects: { root: '   ' } }).projects.root).toBeNull()

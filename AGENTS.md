@@ -22,6 +22,8 @@ ones that match the files you change.
 3. **Good UX/UI:** calm, dense, keyboard first, no AI look.
 4. **Portable:** Linux first; macOS and Windows arrive as new adapters without touching the core.
 5. **Simple:** readable code before any optimization or abstraction.
+6. **The user's conventions:** never guess or require a naming pattern (branches, folders, tickets); infer
+   from what the user's tools record and let the user correct it.
 
 Budgets, kept as tests or checks when measurable: key to echo within 16 ms; hotkey to visible window
 under 100 ms; idle memory (shell plus daemon) under 300 MB; cold start under 2 s; a 1000-item list at

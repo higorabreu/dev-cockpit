@@ -112,7 +112,7 @@ describe('project conventions', () => {
 })
 
 const repositoryRoot = join(packagesRoot, '..')
-const commentedExtensions = ['.ts', '.tsx', '.mjs', '.css', '.sh']
+const commentedExtensions = ['.ts', '.tsx', '.mjs', '.cjs', '.js', '.css', '.sh', '.html', '.yml']
 
 function commentedFilesUnder(directory: string): string[] {
   return readdirSync(directory).flatMap((name) => {
@@ -123,30 +123,62 @@ function commentedFilesUnder(directory: string): string[] {
   })
 }
 
+// String literals go first, so test data may carry Portuguese; only what a comment says is checked
+const withoutStrings = (line: string) => line.replace(/(['"`])(?:\\.|(?!\1).)*\1/g, "''")
 const commentText = (line: string): string | undefined =>
-  line.match(/(?:^|\s)(?:\/\/+|\/\*+|\*|#)\s(.*)$/)?.[1]
+  withoutStrings(line).match(/(?:^|\s)(?:\/\/+|\/\*+|\*|#|<!--)\s*(.*)$/)?.[1]
 
-// Comments are English; Portuguese lives only in the pt-BR catalog
-const portuguese =
-  /[ãõçáéíóúâêôà]|\b(não|para|que|uma|com|dos|das|isso|quando|porque|também|segredos)\b/i
+// Letters English never uses, or common words only Portuguese has, since many sentences carry no accent
+const portuguese = new RegExp(
+  '[ãõçáéíóúâêôà]|(?<![\\p{L}\\p{N}_./-])(' +
+    [
+      'não|também|para|que|uma|com|dos|das|isso|isto|quando|porque|segredos|de|da|em|um|ou',
+      'ao|aos|pelo|pela|por|entre|desde|como|cada|ainda|sempre|nunca|depois|antes|aqui|esse',
+      'essa|este|esta|seu|sua|deve|pode|tem|sem|mas|nome|novo|nova|estado|chave|pasta',
+      'projeto|projetos|arquivo|lista|caminho|formato|esperado',
+    ].join('|') +
+    ')(?![\\p{L}\\p{N}_-])',
+  'iu',
+)
+const isPortugueseComment = (line: string) => {
+  const text = commentText(line)
+  return text !== undefined && portuguese.test(text)
+}
+// The interface translation is the one place Portuguese belongs
+const isCatalog = (path: string) => path.endsWith(join('core', 'src', 'i18n', 'pt-BR.ts'))
 
 describe('project language', () => {
+  it.each([
+    ['// Busca de projetos: digitar filtra, setas escolhem', true],
+    ['  readonly time: number // Segundos desde 1970', true],
+    ['/* Pasta não encontrada */', true],
+    ['# guarda a lista por caminho', true],
+    ['<!-- Painel de projetos -->', true],
+    ['// Keep the folder the user chose, as their own tools record it', false],
+    ["expect(label).toBe('Escolher a pasta de projetos')", false],
+    ["const cwd = '/Users/ana/ação com espaço' // a path with accents", false],
+  ])(
+    'should tell a Portuguese comment from Portuguese test data when reading %s',
+    (line, flagged) => {
+      expect(isPortugueseComment(line)).toBe(flagged)
+    },
+  )
+
   it('should keep every comment in English when listing the source and script files', () => {
     const files = [
       ...commentedFilesUnder(packagesRoot),
       ...commentedFilesUnder(join(repositoryRoot, 'scripts')),
+      ...commentedFilesUnder(join(repositoryRoot, 'integrations')),
+      ...commentedFilesUnder(join(repositoryRoot, '.github')),
       join(repositoryRoot, '.gitignore'),
-    ]
+    ].filter((path) => !isCatalog(path))
 
     const found = files.flatMap((path) =>
       readFileSync(path, 'utf8')
         .split('\n')
-        .flatMap((line, index) => {
-          const text = commentText(line)
-          return text !== undefined && portuguese.test(text)
-            ? [`${relative(repositoryRoot, path)}:${index + 1}`]
-            : []
-        }),
+        .flatMap((line, index) =>
+          isPortugueseComment(line) ? [`${relative(repositoryRoot, path)}:${index + 1}`] : [],
+        ),
     )
 
     expect(found).toEqual([])
@@ -186,7 +218,10 @@ describe('project structure', () => {
       .map((path) => path.split(/[\\/]/).pop() ?? path)
       // pt-BR is a locale tag, so its catalog keeps the standard casing
       .filter((file) => file !== 'pt-BR.ts')
-      .filter((file) => !/^[a-z0-9]+(-[a-z0-9]+)*(\.[a-z0-9]+)*\.(ts|tsx|css|mjs|sh)$/.test(file))
+      .filter(
+        (file) =>
+          !/^[a-z0-9]+(-[a-z0-9]+)*(\.[a-z0-9]+)*\.(ts|tsx|css|mjs|cjs|js|sh|html|yml)$/.test(file),
+      )
 
     expect([...new Set(misnamed)]).toEqual([])
   })
