@@ -14,6 +14,8 @@ import {
   emptyTabs,
   formatDuration,
   type HostApi,
+  JIRA_CONNECTOR,
+  jiraTicketLink,
   type MenuCategory,
   openTab,
   PANE_RATIO,
@@ -25,6 +27,7 @@ import {
   stepFontSize,
   stepOpacity,
   stepTab,
+  storedAccount,
   type TabsState,
 } from '@dck/core'
 import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
@@ -179,6 +182,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     onClose: () => focusActive(),
     openSettings: () => settingsView.open('connections'),
     onBadge: showBadge,
+    // The ticket link in the Git section follows the Jira tasks as they arrive
+    onItems: () => panel.render(),
   })
 
   let badge: { count: number; label: PluralKey | undefined } = { count: 0, label: undefined }
@@ -361,7 +366,17 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         i18n,
       ),
       createGitSection(
-        { snapshot: () => activeSnapshot, requestRender: () => panel.render() },
+        {
+          snapshot: () => activeSnapshot,
+          requestRender: () => panel.render(),
+          ticket: (branch) =>
+            jiraTicketLink(
+              branch,
+              storedAccount(settings.current(), JIRA_CONNECTOR.id)?.url,
+              viewsView.issueProjects(JIRA_CONNECTOR.id),
+            ),
+          openTicket: (url) => api.external.open(url),
+        },
         i18n,
       ),
       createEnvironmentSection({ status: () => environment }, i18n),

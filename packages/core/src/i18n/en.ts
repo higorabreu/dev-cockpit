@@ -41,7 +41,7 @@ export const en: Record<MessageKey, string> = {
   'git.showLess': 'Show less',
   'git.pullTip': 'Commits on {upstream} not pulled yet',
   'git.pushTip': 'Local commits not pushed to {upstream} yet',
-  'git.ticketTip': 'Ticket taken from the branch name',
+  'git.ticketTip': 'Open {key} in Jira',
 
   'env.label': 'Environment',
   'env.summary.one': '{count} container',

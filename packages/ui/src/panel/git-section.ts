@@ -1,11 +1,11 @@
-import {
-  type GitCommit,
-  type GitFile,
-  type GitStatus,
-  type GitSubmodule,
-  type SessionSnapshot,
-  type Translator,
-  ticketFromBranch,
+import type {
+  GitCommit,
+  GitFile,
+  GitStatus,
+  GitSubmodule,
+  SessionSnapshot,
+  TicketLink,
+  Translator,
 } from '@dck/core'
 import { collapseThen } from './collapse.ts'
 import { h, icon } from './dom.ts'
@@ -15,6 +15,10 @@ import type { PanelSection } from './panel.ts'
 export interface GitSource {
   snapshot(): SessionSnapshot | undefined
   requestRender(): void
+  // The branch's issue in a connected tracker, only when the tracker knows its project
+  ticket(branch: string | undefined): TicketLink | undefined
+  // In the browser, through the host's check of the connected accounts' addresses
+  openTicket(url: string): void
 }
 
 const BRANCH_ICON =
@@ -148,9 +152,25 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
     return h('div', { class: 'group' }, head, open && wrap)
   }
 
+  function ticketChip(ticket: TicketLink) {
+    const chip = h(
+      'button',
+      {
+        type: 'button',
+        class: 'ticket',
+        'data-focus': 'git-ticket',
+        'data-tip': i18n.t('git.ticketTip', { key: ticket.key }),
+        'aria-label': i18n.t('git.ticketTip', { key: ticket.key }),
+      },
+      ticket.key,
+    )
+    chip.addEventListener('click', () => source.openTicket(ticket.url))
+    return chip
+  }
+
   function body(git: GitStatus): HTMLElement {
     const nowSeconds = Date.now() / 1000
-    const ticket = ticketFromBranch(git.branch)
+    const ticket = source.ticket(git.branch)
     // Long lists show the first rows and a button to see the rest
     const limited = <T>(
       id: GroupId,
@@ -202,7 +222,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
           h(
             'div',
             { class: 'lrow' },
-            ticket && h('span', { class: 'chip', 'data-tip': i18n.t('git.ticketTip') }, ticket),
+            ticket && ticketChip(ticket),
             git.upstream && h('span', { class: 'upstream' }, git.upstream),
           ),
       ),

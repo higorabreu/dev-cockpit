@@ -107,11 +107,17 @@ export function parseSubmoduleList(output: string): readonly SubmoduleListing[] 
     })
 }
 
-const TICKET = /[A-Z][A-Z0-9]+-\d+/
+// Jira's own key format, which is also how Jira links a branch to an issue: uppercase project, number
+const ISSUE_KEY = /(?<![A-Za-z0-9_])([A-Z][A-Z0-9_]+)-(\d+)(?!\d)/g
 
-// Chave de ticket no nome da branch, como NTF-400 em feature/NTF-400-api-publica
-export function ticketFromBranch(branch: string | undefined): string | undefined {
-  return branch ? TICKET.exec(branch)?.[0] : undefined
+// No naming pattern is assumed: a key counts only when its project is one of the user's own projects
+export function ticketFromBranch(
+  branch: string | undefined,
+  projects: ReadonlySet<string>,
+): string | undefined {
+  if (!branch || projects.size === 0) return undefined
+  for (const match of branch.matchAll(ISSUE_KEY)) if (projects.has(match[1] ?? '')) return match[0]
+  return undefined
 }
 
 export type AgoUnit = 'now' | 'min' | 'h' | 'd'

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { parseServerUrl } from '../connections/url.ts'
+import { ticketFromBranch } from '../git/status.ts'
 import { LIMITS } from '../settings/settings.ts'
 import type { Connector } from './connector.ts'
 
@@ -41,4 +42,20 @@ const emailSchema = z.string().trim().max(LIMITS.email.max).pipe(z.email())
 export function parseAccountEmail(input: string): string | undefined {
   const parsed = emailSchema.safeParse(input)
   return parsed.success ? parsed.data : undefined
+}
+
+export interface TicketLink {
+  readonly key: string
+  readonly url: string
+}
+
+// The branch's issue on the user's own site, only for a project of the tasks Jira already gave the user
+export function jiraTicketLink(
+  branch: string | undefined,
+  site: string | undefined,
+  projects: ReadonlySet<string>,
+): TicketLink | undefined {
+  const root = site && parseJiraSiteUrl(site)
+  const key = root ? ticketFromBranch(branch, projects) : undefined
+  return root && key ? { key, url: `${root}/browse/${key}` } : undefined
 }

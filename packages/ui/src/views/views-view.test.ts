@@ -67,13 +67,18 @@ function setup(options: {
   const opened: string[] = []
   const badges: { count: number; label: PluralKey | undefined }[] = []
   const clipboard: string[] = []
+  const refreshed: string[] = []
+  let itemChanges = 0
   let settingsOpened = 0
   let connectors = options.connectors
   const api = {
     connections: { list: async () => connectors },
     views: {
       snapshot: async (view: string) => stored.get(view),
-      refresh: async (view: string) => stored.get(view),
+      refresh: async (view: string) => {
+        refreshed.push(view)
+        return stored.get(view)
+      },
       onChange: () => () => undefined,
     },
     external: { open: (url: string) => void opened.push(url) },
@@ -90,6 +95,9 @@ function setup(options: {
       settingsOpened += 1
     },
     onBadge: (count, label) => void badges.push({ count, label }),
+    onItems: () => {
+      itemChanges += 1
+    },
   })
   const tabs = () => [...overlay.querySelectorAll('.vtab')].map((tab) => tab.textContent)
   const notice = () => {
@@ -104,6 +112,8 @@ function setup(options: {
     opened,
     badges,
     clipboard,
+    refreshed,
+    itemChanges: () => itemChanges,
     settingsOpened: () => settingsOpened,
     disableAll: () => {
       connectors = []
@@ -244,6 +254,42 @@ describe('views view badge', () => {
     await view.warm()
 
     expect(badges.at(-1)).toEqual({ count: 0, label: 'views.waiting' })
+  })
+})
+
+describe('views view issue projects', () => {
+  const jiraTasks = [snapshot('tasks', 'idle', [task('ACME-1'), task('OPS-2', { project: 'OPS' })])]
+
+  it('should give the projects of the stored Jira tasks without fetching them when warming', async () => {
+    const { view, refreshed, itemChanges } = setup({
+      connectors: [GITLAB_CONNECTOR, JIRA_CONNECTOR],
+      snapshots: [...connected, ...jiraTasks],
+    })
+
+    await view.warm()
+
+    expect([...view.issueProjects('jira')]).toEqual(['ACME', 'OPS'])
+    expect(refreshed).toEqual(['review'])
+    expect(itemChanges()).toBeGreaterThan(0)
+  })
+
+  it('should give no project when the Jira account is not connected', async () => {
+    const { view } = setup({
+      connectors: [JIRA_CONNECTOR],
+      snapshots: [snapshot('tasks', 'unconfigured', [task('ACME-1')])],
+    })
+
+    await view.warm()
+
+    expect(view.issueProjects('jira').size).toBe(0)
+  })
+
+  it('should give no project of another connector when asked for one connector', async () => {
+    const { view } = setup({ connectors: [JIRA_CONNECTOR], snapshots: jiraTasks })
+
+    await view.warm()
+
+    expect(view.issueProjects('gitlab').size).toBe(0)
   })
 })
 

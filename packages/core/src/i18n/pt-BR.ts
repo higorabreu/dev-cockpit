@@ -40,7 +40,7 @@ export const ptBR = {
   'git.showLess': 'Mostrar menos',
   'git.pullTip': 'Commits de {upstream} que ainda faltam trazer',
   'git.pushTip': 'Commits locais que ainda faltam enviar para {upstream}',
-  'git.ticketTip': 'Ticket extraído do nome da branch',
+  'git.ticketTip': 'Abrir {key} no Jira',
 
   'env.label': 'Ambiente',
   'env.summary.one': '{count} container',

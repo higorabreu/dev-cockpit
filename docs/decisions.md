@@ -681,9 +681,10 @@ user picks a folder, and the project search then shows a calm empty state with o
 projects folder", which opens the system folder picker (`projects:choose-root`, an absolute path validated
 by the host), saves the choice through the settings model and goes straight into the search; cancelling
 leaves it unset, and the Settings row still changes it. The Git section's ticket chip shows only with Jira
-connected and only for a key whose project is the project of one of the user's Jira tasks the window has
-already loaded for the Tasks view (no extra request); the chip is a link to `<site>/browse/<KEY>`, opened
-in the browser through the same check as the other connector links.
+connected and only for a key in Jira's own format whose project is the project of one of the user's Jira
+tasks the window already holds for the Tasks view (read from the daemon's store when the window shows,
+never fetched for this); the chip is a link to `<site>/browse/<KEY>`, opened in the browser through the
+same check as the other connector links.
 **Reason:** the maintainer found the cockpit assuming a `~/projetos` folder, a Portuguese name that is not
 everyone's, and reading any `ABC-123` in a branch name as a ticket, a pattern many teams do not follow
 (2026-11-14). A wrong guess is worse than no guess: it shows something false with the cockpit's authority.
