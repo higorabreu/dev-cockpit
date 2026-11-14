@@ -24,17 +24,23 @@ export interface SearchElements {
   readonly hint: HTMLElement
 }
 
-// Busca de projetos: digitar filtra, setas escolhem, Enter abre, Esc fecha
-export function createProjectSearch(
-  elements: SearchElements,
-  onPick: (path: string) => void,
-  onClose: () => void,
-  onToggleFavorite: (path: string) => void,
-  t: Translate,
-) {
+export interface SearchDeps {
+  onPick(path: string): void
+  onClose(): void
+  onToggleFavorite(path: string): void
+  // Opens the system folder picker; the search is opened again with the outcome
+  onChooseRoot(): void
+  readonly t: Translate
+}
+
+// Project search: typing filters, the arrows choose, Enter opens, Esc closes
+export function createProjectSearch(elements: SearchElements, deps: SearchDeps) {
   const { overlay, input, results, hint } = elements
+  const { onPick, onClose, onToggleFavorite, t } = deps
+  // No projects folder chosen yet: the search asks for one instead of guessing it
+  let needsRoot = false
   const drawHint = () => {
-    hint.replaceChildren(keyHint('Ctrl+D', t('projects.hint')))
+    hint.replaceChildren(...(needsRoot ? [] : [keyHint('Ctrl+D', t('projects.hint'))]))
   }
   drawHint()
   watchOverflow(results)
@@ -50,7 +56,30 @@ export function createProjectSearch(
 
   const isOpen = () => overlay.classList.contains('open')
 
+  function drawRootSetup() {
+    const choose = h(
+      'button',
+      { type: 'button', class: 'pchoose', 'data-focus': 'projects-choose-root' },
+      t('projects.chooseRoot'),
+    )
+    choose.addEventListener('click', () => deps.onChooseRoot())
+    results.replaceChildren(
+      h(
+        'div',
+        { class: 'psetup' },
+        h('strong', {}, t('projects.noRoot.title')),
+        h('span', {}, t('projects.noRoot.text')),
+        choose,
+      ),
+    )
+    return choose
+  }
+
   function draw() {
+    if (needsRoot) {
+      drawRootSetup().focus()
+      return
+    }
     if (matches.length === 0) {
       results.innerHTML = `<div class="empty">${escapeHtml(t('projects.none'))}</div>`
       return
@@ -75,6 +104,8 @@ export function createProjectSearch(
 
   function close() {
     overlay.classList.remove('open')
+    needsRoot = false
+    input.disabled = false
     input.value = ''
     onClose()
   }
@@ -113,14 +144,36 @@ export function createProjectSearch(
   overlay.addEventListener('mousedown', (event) => {
     if (event.target === overlay) close()
   })
+  // The field handles its own keys; from the folder button Esc still closes
+  overlay.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || event.target === input || !isOpen()) return
+    event.preventDefault()
+    event.stopPropagation()
+    close()
+  })
 
   return {
     isOpen,
     open(items: readonly SearchEntry[]) {
+      needsRoot = false
+      input.disabled = false
+      results.setAttribute('role', 'listbox')
+      drawHint()
       entries = items
       overlay.classList.add('open')
       filter()
       input.focus()
+    },
+    // Opens on the empty state whose one action chooses the projects folder
+    askForRoot() {
+      needsRoot = true
+      input.value = ''
+      input.disabled = true
+      // A notice with a button, not options to choose from
+      results.removeAttribute('role')
+      drawHint()
+      overlay.classList.add('open')
+      drawRootSetup().focus()
     },
     retranslate() {
       drawHint()
@@ -128,6 +181,7 @@ export function createProjectSearch(
     },
     // Updates the list keeping the typed text and the highlighted item, after pinning or unpinning
     update(items: readonly SearchEntry[]) {
+      if (needsRoot) return
       const current = matches[selected]?.path
       entries = items
       matches = searchItems(entries, input.value, (entry) => entry.label)

@@ -111,6 +111,10 @@ export const en: Record<MessageKey, string> = {
 
   'projects.search': 'Search project',
   'projects.none': 'No project found',
+  'projects.noRoot.title': 'No projects folder yet',
+  'projects.noRoot.text':
+    'Choose the folder where your repositories live and the search lists them.',
+  'projects.chooseRoot': 'Choose the projects folder',
 
   'a11y.tabs': 'Tabs',
   'a11y.panelWidth': 'Panel width',
@@ -225,7 +229,8 @@ export const en: Record<MessageKey, string> = {
   'settings.holdTrigger.AltLeft': 'Left Alt',
   'settings.group.projects': 'Projects',
   'settings.projectsRoot': 'Projects folder',
-  'settings.projectsRoot.placeholder': '~/projetos (default)',
+  'settings.projectsRoot.placeholder': 'Not chosen yet',
+  'settings.projectsRoot.choose': 'Choose…',
   'settings.depth': 'Search depth',
   'settings.depth.hint': 'How many folders below the root to look for repositories.',
   'settings.group.connections': 'Connections',

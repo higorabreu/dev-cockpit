@@ -110,6 +110,10 @@ export const ptBR = {
 
   'projects.search': 'Buscar projeto',
   'projects.none': 'Nenhum projeto encontrado',
+  'projects.noRoot.title': 'Nenhuma pasta de projetos ainda',
+  'projects.noRoot.text':
+    'Escolha a pasta onde ficam seus repositórios e a busca lista todos eles.',
+  'projects.chooseRoot': 'Escolher a pasta de projetos',
 
   'a11y.tabs': 'Abas',
   'a11y.panelWidth': 'Largura do painel',
@@ -225,7 +229,8 @@ export const ptBR = {
   'settings.holdTrigger.AltLeft': 'Alt esquerdo',
   'settings.group.projects': 'Projetos',
   'settings.projectsRoot': 'Pasta dos projetos',
-  'settings.projectsRoot.placeholder': '~/projetos (padrão)',
+  'settings.projectsRoot.placeholder': 'Ainda não escolhida',
+  'settings.projectsRoot.choose': 'Escolher…',
   'settings.depth': 'Profundidade da busca',
   'settings.depth.hint': 'Quantas pastas abaixo da raiz procurar repositórios.',
   'settings.group.connections': 'Conexões',

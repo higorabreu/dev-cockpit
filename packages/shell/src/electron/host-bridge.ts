@@ -11,6 +11,7 @@ import {
   errorBody,
   fail,
   hostChannels,
+  LIMITS,
   type Logger,
   type Notifier,
   type ProjectCatalog,
@@ -109,6 +110,9 @@ const fileLinesSchema = z.object({
   path: pathText(MAX_ABSOLUTE_LENGTH).refine((text) => !isAbsolute(text)),
 })
 
+// The picker's answer becomes `projects.root`, so it must fit the setting and be an absolute folder
+const chosenRootSchema = pathText(LIMITS.projectsRoot.max).refine((text) => isAbsolute(text))
+
 export interface IpcMainApi {
   handle(channel: string, listener: (event: unknown, ...args: never[]) => unknown): void
   on(channel: string, listener: (event: unknown, ...args: never[]) => void): void
@@ -119,6 +123,8 @@ export interface BridgeOptions {
   readonly ptyHost: PtyHost
   readonly clipboard: Clipboard
   readonly projects: ProjectCatalog
+  // The system folder picker over the window; undefined when the user cancels
+  pickFolder(): Promise<string | undefined>
   readonly notifier: Notifier
   readonly settings: {
     get(): SettingsView
@@ -306,6 +312,14 @@ export function registerHostBridge(options: BridgeOptions) {
   ipcMain.handle(hostChannels.projectsToggleFavorite, (_event, path: string) =>
     options.projects.toggleFavorite(path),
   )
+  ipcMain.handle(hostChannels.projectsChooseRoot, async () => {
+    const chosen = await options.pickFolder()
+    if (chosen === undefined) return undefined
+    const parsed = chosenRootSchema.safeParse(chosen)
+    if (parsed.success && (await isFolder(parsed.data))) return parsed.data
+    logger.warn('chosen projects folder refused')
+    return undefined
+  })
   ipcMain.on(hostChannels.projectsTouch, (_event, path: string) => {
     void options.projects.touch(path)
   })

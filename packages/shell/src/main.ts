@@ -28,6 +28,7 @@ import {
   app,
   BrowserWindow,
   clipboard,
+  dialog,
   shell as electronShell,
   globalShortcut,
   ipcMain,
@@ -250,11 +251,20 @@ app.whenReady().then(async () => {
     projects: createProjectCatalog(
       () => {
         const { projects } = settingsStore.get().settings
-        return { root: projects.root ?? join(homedir(), 'projetos'), depth: projects.depth }
+        return { root: projects.root, depth: projects.depth }
       },
       createRecencyStore(join(app.getPath('userData'), 'recent-projects.json'), logger),
       createFavoritesStore(join(app.getPath('userData'), 'favorite-projects.json'), logger),
     ),
+    // Modal to the window: it stays on top of everything, so a free dialog would open behind it
+    async pickFolder() {
+      const { canceled, filePaths } = await dialog.showOpenDialog(window, {
+        title: t('projects.chooseRoot'),
+        properties: ['openDirectory', 'createDirectory'],
+        defaultPath: homedir(),
+      })
+      return canceled ? undefined : filePaths[0]
+    },
     review: createGitDiffSource(),
     sessions: createSessionInspector({
       processes: platform.processes,

@@ -275,7 +275,21 @@ export function createSettingsView(
       const text = input.value.trim()
       void commit(patchFor(key, text === '' ? null : text)).then(render)
     })
-    return input
+    const choose = h(
+      'button',
+      {
+        type: 'button',
+        class: 'srecord',
+        'data-focus': 'set-choose-root',
+        disabled: disabled(key),
+      },
+      t('settings.projectsRoot.choose'),
+    )
+    choose.addEventListener('click', async () => {
+      const root = await api.projects.chooseRoot()
+      if (root !== undefined) void commit(patchFor(key, root)).then(render)
+    })
+    return h('span', { class: 'sfolder' }, input, choose)
   }
 
   function shortcutControl(): HTMLElement {
