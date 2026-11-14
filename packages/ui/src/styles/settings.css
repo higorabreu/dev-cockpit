@@ -237,7 +237,8 @@
 
 .srange,
 .snumber,
-.sshortcut {
+.sshortcut,
+.sfolder {
   display: flex;
   align-items: center;
   gap: 8px;

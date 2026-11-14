@@ -670,3 +670,23 @@ tab's agent changes state (debounced 400 ms), and never while the review is clos
 in the same tab; a request from the maintainer on 2026-11-13 (`plans/review.md`).
 **How to revert:** drop `createReviewTabs` and `createTabView` from `app.ts`, the `review` channels from
 the bridge and the preload, and the `review/` and `panes/` folders; the terminal goes back to filling the tab.
+
+## D49. The cockpit never guesses or imposes a convention that may not be the user's
+
+**Decision:** when the cockpit must infer something it reads what the user's own tools already record
+(Git config and reflog, VS Code, the remote, the connected services), always lets the user correct it, and
+never requires a naming pattern for branches, folders or tickets. It is premise 6 in `AGENTS.md`. Two
+changes come with it. The projects folder has no default: `projects.root` stays unset (`null`) until the
+user picks a folder, and the project search then shows a calm empty state with one action, "Choose the
+projects folder", which opens the system folder picker (`projects:choose-root`, an absolute path validated
+by the host), saves the choice through the settings model and goes straight into the search; cancelling
+leaves it unset, and the Settings row still changes it. The Git section's ticket chip shows only with Jira
+connected and only for a key in Jira's own format whose project is the project of one of the user's Jira
+tasks the window already holds for the Tasks view (read from the daemon's store when the window shows,
+never fetched for this); the chip is a link to `<site>/browse/<KEY>`, opened in the browser through the
+same check as the other connector links.
+**Reason:** the maintainer found the cockpit assuming a `~/projetos` folder, a Portuguese name that is not
+everyone's, and reading any `ABC-123` in a branch name as a ticket, a pattern many teams do not follow
+(2026-11-14). A wrong guess is worse than no guess: it shows something false with the cockpit's authority.
+**How to revert:** give `projects.root` a fallback folder again in `shell/src/main.ts`, drop the
+`projects:choose-root` channel and the empty state, and call `ticketFromBranch` without the known projects.

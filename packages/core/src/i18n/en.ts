@@ -41,7 +41,7 @@ export const en: Record<MessageKey, string> = {
   'git.showLess': 'Show less',
   'git.pullTip': 'Commits on {upstream} not pulled yet',
   'git.pushTip': 'Local commits not pushed to {upstream} yet',
-  'git.ticketTip': 'Ticket taken from the branch name',
+  'git.ticketTip': 'Open {key} in Jira',
 
   'env.label': 'Environment',
   'env.summary.one': '{count} container',
@@ -111,6 +111,9 @@ export const en: Record<MessageKey, string> = {
 
   'projects.search': 'Search project',
   'projects.none': 'No project found',
+  'projects.noRoot.title': 'Projects folder not set',
+  'projects.noRoot.text': 'Choose the repositories folder to list them in the search.',
+  'projects.chooseRoot': 'Choose the projects folder',
 
   'a11y.tabs': 'Tabs',
   'a11y.panelWidth': 'Panel width',
@@ -225,7 +228,8 @@ export const en: Record<MessageKey, string> = {
   'settings.holdTrigger.AltLeft': 'Left Alt',
   'settings.group.projects': 'Projects',
   'settings.projectsRoot': 'Projects folder',
-  'settings.projectsRoot.placeholder': '~/projetos (default)',
+  'settings.projectsRoot.placeholder': 'Not chosen yet',
+  'settings.projectsRoot.choose': 'Choose…',
   'settings.depth': 'Search depth',
   'settings.depth.hint': 'How many folders below the root to look for repositories.',
   'settings.group.connections': 'Connections',

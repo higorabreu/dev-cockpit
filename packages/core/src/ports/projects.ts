@@ -11,6 +11,6 @@ export interface ProjectCatalog {
   // Already sorted: pinned, then recently opened, then most active
   list(): Promise<readonly Project[]>
   touch(path: string): Promise<void>
-  // Fixa ou solta o projeto e devolve o novo estado
+  // Pins or unpins the project and returns its new state
   toggleFavorite(path: string): Promise<boolean>
 }

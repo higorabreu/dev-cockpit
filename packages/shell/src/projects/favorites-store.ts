@@ -3,7 +3,7 @@ import { createPathListFile } from './path-list-file.ts'
 
 export interface FavoritesStore {
   list(): Promise<readonly string[]>
-  // Fixa ou solta e devolve o novo estado
+  // Pins or unpins and returns the new state
   toggle(path: string): Promise<boolean>
 }
 

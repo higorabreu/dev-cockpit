@@ -14,6 +14,8 @@ import {
   emptyTabs,
   formatDuration,
   type HostApi,
+  JIRA_CONNECTOR,
+  jiraTicketLink,
   type MenuCategory,
   openTab,
   PANE_RATIO,
@@ -25,6 +27,7 @@ import {
   stepFontSize,
   stepOpacity,
   stepTab,
+  storedAccount,
   type TabsState,
 } from '@dck/core'
 import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
@@ -42,6 +45,7 @@ import { localeFor } from './platform/locale.ts'
 import { bindShortcuts } from './platform/shortcuts.ts'
 import { applyTheme, themeFor, watchSystemTheme } from './platform/theme.ts'
 import { createProjectSearch } from './projects/project-search.ts'
+import { createRootChooser } from './projects/root-chooser.ts'
 import { createReviewTabs } from './review/review-tabs.ts'
 import { applyOpacity } from './settings/preferences.ts'
 import type { SettingsClient } from './settings/settings-client.ts'
@@ -119,6 +123,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       projects = found
     })
 
+  const rootChooser = createRootChooser({ pick: () => api.projects.chooseRoot(), settings })
   const search = createProjectSearch(
     {
       overlay: elements.search,
@@ -126,10 +131,13 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       results: elements.searchResults,
       hint: elements.searchHint,
     },
-    (path) => openProject(path),
-    () => focusActive(),
-    (path) => void toggleFavorite(path),
-    i18n.t,
+    {
+      onPick: (path) => openProject(path),
+      onClose: () => focusActive(),
+      onToggleFavorite: (path) => void toggleFavorite(path),
+      onChooseRoot: () => void chooseProjectsRoot(),
+      t: i18n.t,
+    },
   )
 
   const searchEntries = () =>
@@ -141,7 +149,14 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     }))
 
   function searchProjects() {
-    void refreshProjects().then(() => search.open(searchEntries()))
+    if (rootChooser.needed()) search.askForRoot()
+    else void refreshProjects().then(() => search.open(searchEntries()))
+  }
+
+  // Saved, the search goes on with the new folder; cancelled, it keeps asking
+  async function chooseProjectsRoot() {
+    if (await rootChooser.choose()) searchProjects()
+    else search.askForRoot()
   }
 
   async function toggleFavorite(path: string) {
@@ -167,6 +182,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     onClose: () => focusActive(),
     openSettings: () => settingsView.open('connections'),
     onBadge: showBadge,
+    // The ticket link in the Git section follows the Jira tasks as they arrive
+    onItems: () => panel.render(),
   })
 
   let badge: { count: number; label: PluralKey | undefined } = { count: 0, label: undefined }
@@ -349,7 +366,17 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         i18n,
       ),
       createGitSection(
-        { snapshot: () => activeSnapshot, requestRender: () => panel.render() },
+        {
+          snapshot: () => activeSnapshot,
+          requestRender: () => panel.render(),
+          ticket: (branch) =>
+            jiraTicketLink(
+              branch,
+              storedAccount(settings.current(), JIRA_CONNECTOR.id)?.url,
+              viewsView.issueProjects(JIRA_CONNECTOR.id),
+            ),
+          openTicket: (url) => api.external.open(url),
+        },
         i18n,
       ),
       createEnvironmentSection({ status: () => environment }, i18n),

@@ -36,6 +36,18 @@ function memoryRecency(initial: string[] = []) {
 }
 
 describe('createProjectCatalog', () => {
+  it('should list nothing and scan no folder when no projects folder was chosen', async () => {
+    const catalog = createProjectCatalog(
+      { root: null, depth: 2 },
+      memoryRecency([join(root, 'beta')]),
+      memoryFavorites([join(root, 'alpha')]),
+    )
+
+    const projects = await catalog.list()
+
+    expect(projects).toEqual([])
+  })
+
   it('should list the recently opened project first when listing', async () => {
     const catalog = createProjectCatalog(
       { root, depth: 2 },

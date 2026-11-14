@@ -13,6 +13,7 @@ export const LIMITS = {
   fontSize: { min: 10, max: 32 },
   heightRatio: { min: 0.3, max: 1 },
   depth: { min: 1, max: 4 },
+  projectsRoot: { max: 1024 },
   notifyAfterSeconds: { min: 5, max: 600 },
   disabledExtensions: { max: 200 },
   connections: { max: 20 },
@@ -87,8 +88,8 @@ export const settingsSchema = z.preprocess(
       holdTrigger: z.enum(HOLD_TRIGGERS).catch('ControlRight'),
     }),
     projects: section({
-      // Undefined: uses the `projetos` folder in the home directory
-      root: z.string().trim().min(1).max(1024).nullable().catch(null),
+      // Null until the user chooses a folder: no folder name is assumed, and nothing is scanned
+      root: z.string().trim().min(1).max(LIMITS.projectsRoot.max).nullable().catch(null),
       depth: bounded(LIMITS.depth.min, LIMITS.depth.max, 2, true),
     }),
     connections: connectionsSchema,

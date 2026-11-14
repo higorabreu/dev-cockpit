@@ -50,6 +50,8 @@ export interface ViewsViewDeps {
   openSettings(): void
   // The item count of the view a connector marked for the rail badge, with the text that says what they are
   onBadge(count: number, label: PluralKey | undefined): void
+  // Some view's items changed, for what else in the window reads them (the Git section's ticket link)
+  onItems?(): void
 }
 
 const unavailable: Omit<ViewSnapshot, 'view'> = {
@@ -68,6 +70,8 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   let views: readonly ConnectorView[] = []
   // The name of the service each view comes from, which heads its group of tabs
   let serviceOf: ReadonlyMap<string, string> = new Map()
+  // The id of the connector each view comes from
+  let connectorOf: ReadonlyMap<string, string> = new Map()
   let current: string | undefined
   let query = ''
   let onlyPending = false
@@ -91,6 +95,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     const snapshot = badge && snapshotOf(badge.id)
     const count = snapshot && snapshot.state !== 'unconfigured' ? snapshot.items.length : 0
     deps.onBadge(count, badge?.badge)
+    deps.onItems?.()
   }
 
   const input = h('input', {
@@ -572,6 +577,9 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     serviceOf = new Map(
       connectors.flatMap((connector) => connector.views.map((view) => [view.id, connector.name])),
     )
+    connectorOf = new Map(
+      connectors.flatMap((connector) => connector.views.map((view) => [view.id, connector.id])),
+    )
     for (const view of snapshots.keys())
       if (!views.some((known) => known.id === view)) snapshots.delete(view)
   }
@@ -693,12 +701,27 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       const badge = views.find((view) => view.badge !== undefined)
       const snapshot = badge && (await api.views.refresh(badge.id, WARM_STALE_MS))
       if (badge && snapshot) snapshots.set(badge.id, snapshot)
+      // The tasks the daemon already stored, never fetched for this: the Git section matches its ticket to them
+      for (const view of views.filter((known) => known.kind === 'issue' && known !== badge)) {
+        const stored = await api.views.snapshot(view.id)
+        if (stored) snapshots.set(view.id, stored)
+      }
       announceCount()
       if (isOpen()) refilter(matches[selected]?.id)
     },
     retranslate() {
       drawStatic()
       if (isOpen()) redraw()
+    },
+    // The projects of the issues one connector has given the user, from what the window already holds
+    issueProjects(connector: string): ReadonlySet<string> {
+      const found = new Set<string>()
+      for (const view of connectedViews()) {
+        if (connectorOf.get(view.id) !== connector) continue
+        for (const item of snapshotOf(view.id).items)
+          if (item.kind === 'issue') found.add(item.project)
+      }
+      return found
     },
   }
 }

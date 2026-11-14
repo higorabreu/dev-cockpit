@@ -176,6 +176,48 @@ describe('settings view, agent connect hint', () => {
   })
 })
 
+describe('settings view, projects folder', () => {
+  const withPicker = (answer: string | undefined) =>
+    ({ ...api, projects: { chooseRoot: async () => answer } }) as unknown as HostApi
+  const openProjects = (host: HostApi) => {
+    const opened = open([], host)
+    opened.body.querySelector<HTMLElement>('#settings-tab-projects')?.click()
+    const choose = opened.body.querySelector<HTMLButtonElement>('[data-focus="set-choose-root"]')
+    if (!choose) throw new Error('invariant: the Projects page has the choose button')
+    return { ...opened, choose }
+  }
+
+  it('should show no folder name as a default when the projects folder is unset', () => {
+    const { body, view } = openProjects(withPicker(undefined))
+
+    const input = body.querySelector<HTMLInputElement>('[data-focus="set-projects.root"]')
+
+    expect(input?.value).toBe('')
+    expect(input?.placeholder).toBe('Not chosen yet')
+    view.close()
+  })
+
+  it('should save the folder picked in the system picker when Choose is clicked', async () => {
+    const { choose, patches, view } = openProjects(withPicker('/home/ana/work'))
+
+    choose.click()
+    await settle()
+
+    expect(patches).toEqual([{ projects: { root: '/home/ana/work' } }])
+    view.close()
+  })
+
+  it('should save nothing when the system picker is cancelled', async () => {
+    const { choose, patches, view } = openProjects(withPicker(undefined))
+
+    choose.click()
+    await settle()
+
+    expect(patches).toEqual([])
+    view.close()
+  })
+})
+
 const tracker: Connector = {
   id: 'tracker',
   name: 'Acme Tracker',
