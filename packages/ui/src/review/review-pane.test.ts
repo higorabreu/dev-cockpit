@@ -169,7 +169,7 @@ describe('createReviewPane', () => {
     pane.element.querySelector<HTMLButtonElement>('.rv-filerow .rv-show')?.click()
 
     expect(headers).toEqual([
-      'pnpm-lock.yaml, modified, 1 added, 0 removed. Generated files start collapsed. Enter shows it anyway.',
+      'pnpm-lock.yaml, modified, 1 added, 0 removed. Generated file, collapsed. Enter loads the diff.',
       'src/billing/invoice.ts, modified, 1 added, 1 removed',
     ])
     expect(pane.element.querySelector('.rv-show')).toBeNull()
@@ -221,12 +221,12 @@ describe('createReviewPane', () => {
     pane.open()
     await flush()
 
-    expect(labels('.rv-expand')).toEqual(['Show 9 lines', 'Show 8 lines'])
+    expect(labels('.rv-expand')).toEqual(['Expand 9 lines', 'Expand 8 lines'])
     pane.element.querySelector<HTMLElement>('.rv-expand')?.click()
     await flush()
 
     expect(reads).toEqual(['/home/ana/acme|src/billing/invoice.ts'])
-    expect(labels('.rv-expand')).toEqual(['Show 8 lines'])
+    expect(labels('.rv-expand')).toEqual(['Expand 8 lines'])
     expect(labels('.rv-row[data-kind="context"]')[0]).toBe('Line 1: text 1')
   })
 
@@ -448,8 +448,8 @@ describe('createReviewPane', () => {
     expect(options).toEqual([])
     expect(listed).toEqual([
       ['Uncommitted', null],
-      ['Since origin/develop', 'Created from origin/develop'],
-      ['Since main', null],
+      ['Base: origin/develop', 'Created from origin/develop'],
+      ['Base: main', null],
     ])
   })
 
@@ -484,10 +484,10 @@ describe('createReviewPane', () => {
       return [found.textContent, found.dataset.tip, found.getAttribute('aria-disabled')]
     }
 
-    expect(option(pushed.pane)).toEqual(['Not pushed', 'Compared with origin/main', null])
+    expect(option(pushed.pane)).toEqual(['Unpushed commits', 'Compared with origin/main', null])
     expect(option(local.pane)).toEqual([
-      'Not pushed',
-      'No upstream branch: push with -u to set one',
+      'Unpushed commits',
+      'Branch has no upstream. Use git push -u to set one.',
       'true',
     ])
   })
@@ -510,31 +510,26 @@ describe('createReviewPane', () => {
       'outside a repository',
       ok({ kind: 'not-repository' as const }),
       'Not a Git repository',
-      'The review follows the folder of this tab: ~/acme',
+      'Tab folder: ~/acme',
     ],
-    [
-      'with no change',
-      repository(''),
-      'No uncommitted changes',
-      'What the agent or you change in ~/acme shows up here.',
-    ],
+    ['with no change', repository(''), 'No uncommitted changes', 'No changes in ~/acme.'],
     [
       'without a base branch',
       ok({ kind: 'no-base' as const, root: '/home/ana/acme' }),
       'No base branch to compare with',
-      'Looked for where this branch was created and for develop, main, master and release branches.',
+      'No base found among develop, main, master and release. Choose one in the selector.',
     ],
     [
       'on a base branch without an upstream',
       ok({ kind: 'no-upstream' as const, root: '/home/ana/acme' }),
-      'No upstream branch',
-      'Push the branch with -u, then what is not pushed shows up here.',
+      'No upstream',
+      'Use git push -u to compare with the remote.',
     ],
     [
       'when git fails',
       fail(errorBody('DCK-GIT-002', 'diff')),
       'Git took too long to answer',
-      'Run git status in the terminal to see why, then try again.',
+      'Run git status in the terminal to see why.',
     ],
   ])('should say so %s', async (_label, answer, title, detail) => {
     const { pane, text } = setup(answer)
