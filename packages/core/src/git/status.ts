@@ -79,7 +79,7 @@ export const countDistinctFiles = (staged: readonly GitFile[], changes: readonly
 const FIELD = '\u001f'
 const RECORD = '\u001e'
 
-// Formato esperado: `--format=%h%x1f%s%x1f%ct%x1e`
+// Expected format: `--format=%h%x1f%s%x1f%ct%x1e`
 export function parseGitLog(output: string): readonly GitCommit[] {
   return output
     .split(RECORD)

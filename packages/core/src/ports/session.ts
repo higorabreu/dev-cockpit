@@ -12,7 +12,7 @@ export interface GitFile {
 export interface GitCommit {
   readonly hash: string
   readonly subject: string
-  // Segundos desde 1970, como o git entrega
+  // Seconds since 1970, as Git gives them
   readonly time: number
 }
 

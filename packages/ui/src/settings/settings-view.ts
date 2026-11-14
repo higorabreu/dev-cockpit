@@ -107,7 +107,7 @@ export function createSettingsView(
     drafts.set(id, found)
     return found
   }
-  // Mensagem de erro por chave, mostrada junto ao controle
+  // Error message per key, shown beside its control
   const errors = new Map<string, string>()
   // Changes made here need not redraw everything: the control already has the right value
   let local = 0

@@ -80,7 +80,7 @@ export function toGnomeBinding(accelerator: string): string | undefined {
   return named ? `${modifiers}${named}` : undefined
 }
 
-// Vira um GVariant string entre aspas simples
+// Becomes a GVariant string in single quotes
 const quote = (text: string) => `'${text.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
 
 const shellQuote = (argument: string) => `'${argument.replace(/'/g, `'\\''`)}'`

@@ -33,7 +33,7 @@ export interface MergeRequestSummary {
   readonly pipeline: PipelineState
 }
 
-// `review`: esperando a minha review. `mine`: abertas por mim.
+// `review`: waiting for my review. `mine`: opened by me
 export type MergeRequestView = 'review' | 'mine'
 
 export interface CodeReviewSource {
