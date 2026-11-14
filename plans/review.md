@@ -43,7 +43,7 @@ the agent come in phase 2.
 - **Diff source.** A port in `core` (`DiffSource`) with the git adapter in `node-git`: `git diff` with
   fixed arguments (no shell), `--no-color --no-ext-diff -M` and the scope's range, untracked files as
   additions; the unified diff is parsed in `core` (pure, tested) into files, hunks and lines. The base of a
-  branch is the merge base with the remote's default branch (`origin/HEAD`), else `main` or `master`.
+  branch was first the merge base with the remote's default branch; phase 1b replaced it (below).
 - **Word changes.** Pairs of removed and added lines inside a hunk are compared word by word, so only the
   changed part is marked; language independent. The comparison uses `diff` (jsdiff, no dependencies, the
   library diff2html itself builds on), in `ui` because `core` imports no package; only the word function
@@ -83,12 +83,18 @@ change.
   was created from, not the remote's default. In order: `branch.<name>.vscode-merge-base` when it resolves;
   the branch's own reflog ("branch: Created from <ref>", and for "Created from HEAD" the HEAD reflog's first
   "checkout: moving from <ref> to <name>"), skipping commits, the branch's own remote copy and refs that no
-  longer resolve, the local branch before `origin/`; else the nearest of at most 20 base-like branches
-  (the remote default, `develop`, `main`, `master`, `release/*`, `release-*`, local or `origin/`) by the
-  fewest commits ahead, then the latest merge base. The user can pick another from the scope select, kept
-  per repository folder in settings (`review.bases`). The option reads "Since develop" with how it was found
-  in its tooltip. On a base branch itself the second scope is "Not pushed" (the upstream's merge base to
-  the working tree), disabled with the reason when there is no upstream.
+  longer resolve, the local branch before `origin/`; else the nearest branch. No branch name is special
+  (the maintainer, 2026-11-14: every team has its own, trunk, dev, staging, release/*): the candidates are
+  the 30 most recently committed local and `origin/` branches (`for-each-ref --sort=-committerdate`), each
+  name once with the local copy first, without the current branch, its remote copy, its upstream,
+  `origin/HEAD` and any branch that already contains HEAD (its merge base with HEAD is HEAD); the nearest
+  has the fewest commits ahead, then the latest merge base. They are measured 4 at a time and kept per
+  HEAD and refs. On the remote's default branch (`origin/HEAD`) the nearest is only the latest fork, so
+  nothing is found there unless the user picks a base. The user can pick another from the scope select,
+  kept per repository folder in settings (`review.bases`). The select always offers three scopes:
+  "Uncommitted"; "Base: <name>" with how it was found in its tooltip and the other candidates, nearest
+  first, after the three, disabled with the reason when no base is found; "Unpushed commits" (the merge
+  base with HEAD's upstream to the working tree), disabled with the reason when there is no upstream.
 
 | Id | Criterion | Verification |
 | --- | --- | --- |

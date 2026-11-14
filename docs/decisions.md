@@ -693,13 +693,15 @@ list is an index beside the diff from 720px of review width (above it when narro
 session, following the file at the top. The gutter, the hunk and gap rows and the headers stay in view on a
 sideways scroll. The hint bar shows the review's keys only while it has the focus, else Ctrl+Shift+D.
 The Branch scope compares with where the branch started, like VS Code: `branch.<name>.vscode-merge-base`,
-else the branch's creation in its reflog (and the HEAD reflog for "Created from HEAD"), else the base-like
-branch (`develop`, `main`, `master`, `release/*`, `release-*`, the remote default; local before `origin/`,
-at most 20) HEAD is fewest commits ahead of, the latest merge base breaking a tie. The scope select reads
-"Since develop" with how the base was found in its tooltip, lists the other bases, and keeps the user's
-pick per repository folder in settings (`review.bases`); the bridge passes only a plain branch name. On a
-base branch the second scope is "Not pushed", against the upstream's merge base, disabled with its reason
-when there is none.
+else the branch's creation in its reflog (and the HEAD reflog for "Created from HEAD"), else the branch HEAD
+is fewest commits ahead of, the latest merge base breaking a tie, among the 30 most recently committed
+local and `origin/` branches (local before `origin/`), never the current branch, its remote copy, its
+upstream or one that already contains HEAD. No branch name is special, since every team names its own
+(a conventions test keeps names out of the code); on the remote's default branch the nearest is not used.
+The scope select always offers "Uncommitted", "Base: <name>" with how the base was found in its tooltip
+and the other candidates to pick, and "Unpushed commits" against the upstream's merge base, the last two
+disabled with their reason when there is no base or no upstream. The user's pick is kept per repository
+folder in settings (`review.bases`); the bridge passes only a plain branch name.
 **Reason:** at a usual window size side by side squeezed both panes, one file at a time broke the reading of
 a change, and git flow branches start from develop, not from the remote default; the maintainer's
 decisions and a usability test on 2026-11-13 (`plans/review.md`, phase 1b).
