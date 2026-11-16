@@ -32,14 +32,14 @@
   display: grid;
 }
 
+/* Only the other labels are hidden: the current one inherits, so it hides with an inactive tab */
 .select-value > span {
   grid-area: 1 / 1;
-  visibility: hidden;
   white-space: nowrap;
 }
 
-.select-value > [data-current] {
-  visibility: visible;
+.select-value > span:not([data-current]) {
+  visibility: hidden;
 }
 
 .select-chevron {

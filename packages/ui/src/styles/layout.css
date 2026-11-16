@@ -10,7 +10,9 @@ body {
   font: 13px / 1.5 var(--font-sans);
 }
 
+/* The window never scrolls: each area scrolls its own content, so a stray pixel never shows a native bar */
 body {
+  overflow: hidden;
   background: rgba(var(--bg-rgb), var(--surface-alpha, 0.92));
 }
 
