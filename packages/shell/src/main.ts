@@ -173,12 +173,17 @@ app.whenReady().then(async () => {
     ? createWaylandFit(systemScreen, {
         pageScreen: () =>
           window.webContents
-            .executeJavaScript('({ width: screen.width, height: screen.height })')
+            .executeJavaScript(
+              '({ width: screen.width, height: screen.height, scale: devicePixelRatio })',
+            )
             .catch(() => undefined),
         displays: () =>
-          screen
-            .getAllDisplays()
-            .map(({ id, bounds, workArea }) => ({ id: String(id), bounds, workArea })),
+          screen.getAllDisplays().map(({ id, bounds, workArea, scaleFactor }) => ({
+            id: String(id),
+            bounds,
+            workArea,
+            scaleFactor,
+          })),
         showAt: (point) => dock.show(point),
         ...(traceDock ? { logger } : {}),
       })
