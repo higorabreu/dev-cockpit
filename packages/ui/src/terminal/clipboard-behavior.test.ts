@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
 import type { Terminal } from '@xterm/xterm'
 import { describe, expect, it } from 'vitest'
+import { createKeymap, type Keyboard } from '../platform/keymap.ts'
 import { attachClipboard } from './clipboard-behavior.ts'
 
-function setup(nativeMiddlePaste: boolean, selection = '') {
+function setup(nativeMiddlePaste: boolean, selection = '', keyboard: Keyboard = 'pc') {
   const pasted: string[] = []
   const terminal = {
     hasSelection: () => selection !== '',
@@ -18,7 +19,10 @@ function setup(nativeMiddlePaste: boolean, selection = '') {
     readText: async () => 'from clipboard',
     writeText: async (text: string) => void copied.push(text),
   }
-  const behavior = attachClipboard(terminal, element, clipboard, () => {}, { nativeMiddlePaste })
+  const behavior = attachClipboard(terminal, element, clipboard, () => {}, {
+    nativeMiddlePaste,
+    keymap: createKeymap(keyboard),
+  })
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
   return { behavior, element, pasted, copied, settle }
 }
@@ -54,6 +58,17 @@ describe('attachClipboard', () => {
 
     expect(behavior.onKey(key({ key: 'C' }))).toBe(true)
     expect(behavior.onKey(key({ key: 'v', shiftKey: false }))).toBe(true)
+  })
+
+  it('should leave Ctrl+Shift+C and V to the shell when the keyboard is a Mac one', () => {
+    // Arrange
+    const { behavior } = setup(true, 'ls -la', 'mac')
+
+    // Act
+    const passes = [behavior.onKey(key({ key: 'C' })), behavior.onKey(key({ key: 'V' }))]
+
+    // Assert
+    expect(passes).toEqual([true, true])
   })
 
   it('should leave the middle click to the browser when it already pastes the primary selection', async () => {

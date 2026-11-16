@@ -1,20 +1,21 @@
 // Runs the cockpit from the repository without clashing with the installed one: own profile, socket and key,
 // no tray icon. Usage: `pnpm dev` (builds and opens) or `pnpm dev:dck toggle` (the dev CLI).
 import { spawn } from 'node:child_process'
-import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { defaultConfigDir } from '../packages/adapters/node-net/src/endpoint.ts'
 
 const repository = join(dirname(fileURLToPath(import.meta.url)), '..')
 const runtime = process.env.XDG_RUNTIME_DIR ?? '/tmp'
-const configDir =
-  process.env.DCK_CONFIG_DIR ??
-  join(process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config'), 'dev-cockpit-dev')
+const configDir = process.env.DCK_CONFIG_DIR ?? `${defaultConfigDir()}-dev`
+const endpoint = process.env.DCK_ENDPOINT ?? join(runtime, 'dck-dev', 'daemon.sock')
 const environment = {
   ...process.env,
   // The dev window and the dev CLI share this folder, apart from the installed app's
   DCK_CONFIG_DIR: configDir,
-  DCK_ENDPOINT: process.env.DCK_ENDPOINT ?? join(runtime, 'dck-dev', 'daemon.sock'),
+  DCK_ENDPOINT: endpoint,
+  // Beside the dev socket, so the installed daemon's log stays apart
+  DCK_LOG_DIR: process.env.DCK_LOG_DIR ?? dirname(endpoint),
   DCK_KEY: process.env.DCK_KEY ?? 'F9',
   DCK_NO_TRAY: '1',
   // The system keyring is shared: dev uses its own keys and never touches the installed app's token

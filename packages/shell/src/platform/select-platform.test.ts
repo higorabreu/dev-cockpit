@@ -83,12 +83,6 @@ describe('selectPlatform', () => {
       exec: 'Exec=env DCK_START_HIDDEN=1 "/opt/dck/electron" "--no-sandbox"',
     },
     {
-      expected: 'keep the sandbox',
-      when: 'autostart runs the app on macOS',
-      overrides: { platform: 'darwin' as const },
-      exec: 'Exec=env DCK_START_HIDDEN=1 "/opt/dck/electron"',
-    },
-    {
       expected: 'start the repository app',
       when: 'autostart runs a development build',
       overrides: { packaged: false },
@@ -104,6 +98,20 @@ describe('selectPlatform', () => {
     // Assert
     const entry = await readFile(join(directory, 'dev-cockpit.desktop'), 'utf8')
     expect(entry.split('\n')).toContain(exec)
+  })
+
+  it('should start the app hidden through a LaunchAgent with the sandbox when the platform is macOS', async () => {
+    // Arrange
+    const { autostart } = selectPlatform(context({ platform: 'darwin' }))
+
+    // Act
+    await autostart.setEnabled(true)
+
+    // Assert
+    const job = await readFile(join(directory, 'io.github.devcockpit.plist'), 'utf8')
+    expect(job).toContain('<array>\n    <string>/opt/dck/electron</string>\n  </array>')
+    expect(job).toContain('<key>DCK_START_HIDDEN</key>')
+    expect(job).not.toContain('--no-sandbox')
   })
 
   it.each([

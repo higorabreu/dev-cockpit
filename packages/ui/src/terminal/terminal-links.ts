@@ -24,11 +24,6 @@ export interface LinkOptions {
   tip(owner: HTMLElement, region: TipRegion | undefined): void
 }
 
-// macOS terminals open links with Cmd; Ctrl+click there is the secondary click
-export function linkModifierFor(platform: string): LinkModifier {
-  return /^mac/i.test(platform) ? 'meta' : 'ctrl'
-}
-
 // A plain click keeps selecting text as before; only the modifier opens the link
 export function opensLink(event: Pick<MouseEvent, 'ctrlKey' | 'metaKey'>, modifier: LinkModifier) {
   return modifier === 'meta' ? event.metaKey : event.ctrlKey

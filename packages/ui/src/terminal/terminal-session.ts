@@ -2,6 +2,7 @@ import type { HostApi, PaneGrid } from '@dck/core'
 import { type ThemeName, tokens } from '@dck/design'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
+import type { Keymap } from '../platform/keymap.ts'
 import { terminalTheme } from '../platform/theme.ts'
 import { attachClipboard } from './clipboard-behavior.ts'
 import { attachLinks, type LinkOptions } from './terminal-links.ts'
@@ -34,6 +35,7 @@ export interface SessionOptions {
   // How a link printed in the terminal opens and shows its tooltip
   readonly links: Omit<LinkOptions, 'open'>
   readonly nativeMiddlePaste: boolean
+  readonly keymap: Keymap
   onCopied(text: string): void
   onExit(): void
   // A key the user typed, not the replies xterm sends by itself (focus and cursor reports)
@@ -51,6 +53,8 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     fontSize: options.fontSize,
     cursorBlink: true,
     allowTransparency: true,
+    // Option+B and Option+F move by word as in the shell; xterm reads it only on a Mac
+    macOptionIsMeta: true,
     theme: terminalTheme(options.theme),
   })
   const fit = new FitAddon()
@@ -65,6 +69,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   attachLinks(terminal, { ...options.links, open: (url) => api.external.openLink(url) })
   const clipboard = attachClipboard(terminal, element, api.clipboard, options.onCopied, {
     nativeMiddlePaste: options.nativeMiddlePaste,
+    keymap: options.keymap,
   })
   terminal.attachCustomKeyEventHandler(clipboard.onKey)
 

@@ -1,5 +1,6 @@
 export interface KeyInput {
   readonly key: string
+  readonly code: string
   readonly ctrlKey: boolean
   readonly shiftKey: boolean
   readonly altKey: boolean
@@ -27,6 +28,18 @@ const NAMED: Record<string, string> = {
 
 const isFunctionKey = (key: string) => /^F([1-9]|1\d|2[0-4])$/.test(key)
 
+// Option changes the character on the Mac (Option+1 types ¡), so with Alt the physical key names it:
+// A for KeyA, 1 for Digit1, Space for Space
+export function physicalKey(event: KeyInput): string | undefined {
+  const physical = event.altKey ? /^(?:Key([A-Z])|Digit(\d)|(Space))$/.exec(event.code) : null
+  return physical ? (physical[1] ?? physical[2] ?? 'Space') : undefined
+}
+
+const keyName = (event: KeyInput) =>
+  physicalKey(event) ??
+  NAMED[event.key] ??
+  (event.key.length === 1 ? event.key.toUpperCase() : event.key)
+
 export type AcceleratorResult =
   | { readonly type: 'accelerator'; readonly value: string }
   // Still only modifiers: keep waiting
@@ -40,7 +53,7 @@ export type AcceleratorResult =
 export function acceleratorFromEvent(event: KeyInput): AcceleratorResult {
   if (MODIFIER_KEYS.has(event.key)) return { type: 'pending' }
   if (event.key === 'Escape') return { type: 'cancel' }
-  const name = NAMED[event.key] ?? (event.key.length === 1 ? event.key.toUpperCase() : event.key)
+  const name = keyName(event)
   const supported = isFunctionKey(name) || name in invert(NAMED) || /^[A-Z0-9]$/.test(name)
   if (!supported) return { type: 'invalid', reason: 'unsupported' }
 

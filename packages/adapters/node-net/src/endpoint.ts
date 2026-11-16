@@ -1,25 +1,34 @@
 import { homedir, tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
 export interface EndpointEnvironment {
   readonly platform: NodeJS.Platform
   readonly runtimeDir: string | undefined
+  readonly tmpDir: string
   readonly uid: number | undefined
 }
+
+// sun_path holds 104 bytes on macOS and 108 elsewhere, the closing NUL included
+const socketPathMax = (platform: NodeJS.Platform) => (platform === 'darwin' ? 103 : 107)
 
 // Unix uses a socket file; Windows uses a named pipe, which the net module accepts the same way
 export function defaultEndpoint(
   environment: EndpointEnvironment = {
     platform: process.platform,
     runtimeDir: process.env.XDG_RUNTIME_DIR,
+    tmpDir: tmpdir(),
     uid: process.getuid?.(),
   },
 ): string {
   if (environment.platform === 'win32') return '\\\\.\\pipe\\dck-daemon'
+  const user = `dck-${environment.uid ?? 'user'}`
   const directory = environment.runtimeDir
     ? join(environment.runtimeDir, 'dck')
-    : join(tmpdir(), `dck-${environment.uid ?? 'user'}`)
-  return join(directory, 'daemon.sock')
+    : join(environment.tmpDir, user)
+  const socket = join(directory, 'daemon.sock')
+  // A long TMPDIR would make the socket fail to bind; /tmp is short and the folder is created 0700
+  if (Buffer.byteLength(socket) <= socketPathMax(environment.platform)) return socket
+  return join('/tmp', user, 'daemon.sock')
 }
 
 export interface StateDirEnvironment {
@@ -40,7 +49,23 @@ export function defaultStateDir(
 ): string {
   if (environment.platform === 'win32')
     return join(environment.localAppData ?? join(environment.home, 'AppData', 'Local'), 'dck')
+  if (environment.platform === 'darwin')
+    return join(environment.home, 'Library', 'Application Support', 'dck')
   return join(environment.stateHome || join(environment.home, '.local', 'state'), 'dck')
+}
+
+export interface LogDirEnvironment {
+  readonly platform: NodeJS.Platform
+  readonly home: string
+}
+
+// Where the daemon's log goes: the Mac's Console.app reads ~/Library/Logs; elsewhere beside the socket
+export function defaultLogDir(
+  endpoint: string,
+  environment: LogDirEnvironment = { platform: process.platform, home: homedir() },
+): string {
+  if (environment.platform === 'darwin') return join(environment.home, 'Library', 'Logs', 'dck')
+  return dirname(endpoint)
 }
 
 export interface ConfigDirEnvironment {

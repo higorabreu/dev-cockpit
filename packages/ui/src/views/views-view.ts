@@ -15,6 +15,7 @@ import {
 import { actionHint, closeButton, hintBar, keyHint } from '../kit/panel-frame.ts'
 import { h, icon } from '../panel/dom.ts'
 import { agoText } from '../panel/format.ts'
+import type { Keymap } from '../platform/keymap.ts'
 import { type LaidSection, layOutList, ROW_HEIGHT, rowSpan } from './list-layout.ts'
 import { createProjectSelect } from './project-select.ts'
 
@@ -52,6 +53,7 @@ export interface ViewsViewDeps {
   onBadge(count: number, label: PluralKey | undefined): void
   // Some view's items changed, for what else in the window reads them (the Git section's ticket link)
   onItems?(): void
+  readonly keymap: Keymap
 }
 
 const unavailable: Omit<ViewSnapshot, 'view'> = {
@@ -151,7 +153,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   overlay.replaceChildren(box)
 
   const refreshButton = () => {
-    const button = actionHint('Ctrl+R', t('views.refresh'))
+    const button = actionHint(deps.keymap.commandLabel('r'), t('views.refresh'))
     button.addEventListener('click', refresh)
     return button
   }
@@ -161,7 +163,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     heading.textContent = t('views.title')
     pendingButton.textContent = t('views.pending')
     pendingButton.dataset.tip = t('views.pending')
-    pendingButton.dataset.tipKey = 'Ctrl+P'
+    pendingButton.dataset.tipKey = deps.keymap.commandLabel('p')
     drawKindTexts(true)
   }
 
@@ -181,7 +183,9 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       ...[
         keyHint('↑↓', t('views.hint.navigate')),
         keyHint('Enter', t('views.hint.open')),
-        kind === 'issue' ? keyHint('Ctrl+C', t('views.hint.copyKey')) : undefined,
+        kind === 'issue'
+          ? keyHint(deps.keymap.commandLabel('c'), t('views.hint.copyKey'))
+          : undefined,
         switchable ? keyHint('←→', t('views.hint.switch')) : undefined,
         refreshButton(),
       ].filter((element) => element !== undefined),
@@ -278,7 +282,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       {
         class: 'vref vcopy',
         'data-tip': t('views.copyKey'),
-        'data-tip-key': 'Ctrl+C',
+        'data-tip-key': deps.keymap.commandLabel('c'),
       },
       item.key,
     )
@@ -621,16 +625,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       const index = current === undefined ? -1 : ids.indexOf(current)
       const next = ids[(index + step + ids.length) % ids.length]
       if (next !== undefined) switchView(next)
-    } else if (event.ctrlKey && key.toLowerCase() === 'r') refresh()
-    else if (event.ctrlKey && !event.shiftKey && key.toLowerCase() === 'p') {
+    } else if (deps.keymap.command(event, 'r')) refresh()
+    else if (deps.keymap.command(event, 'p')) {
       if (currentKind() === 'mergeRequest') {
         onlyPending = !onlyPending
         refilter()
       }
     } else if (
-      event.ctrlKey &&
-      !event.shiftKey &&
-      key.toLowerCase() === 'c' &&
+      deps.keymap.command(event, 'c') &&
       currentKind() === 'issue' &&
       input.selectionStart === input.selectionEnd
     ) {

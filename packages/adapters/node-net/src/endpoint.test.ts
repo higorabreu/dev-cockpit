@@ -1,23 +1,83 @@
 import { describe, expect, it } from 'vitest'
-import { defaultConfigDir, defaultEndpoint, defaultStateDir } from './endpoint.ts'
+import { defaultConfigDir, defaultEndpoint, defaultLogDir, defaultStateDir } from './endpoint.ts'
 
 describe('defaultEndpoint', () => {
+  const macTmp = '/var/folders/ab/cdefgh0123456789/T'
+
   it('should use the runtime directory when the platform provides one', () => {
-    const result = defaultEndpoint({ platform: 'linux', runtimeDir: '/run/user/1000', uid: 1000 })
+    const result = defaultEndpoint({
+      platform: 'linux',
+      runtimeDir: '/run/user/1000',
+      tmpDir: '/tmp',
+      uid: 1000,
+    })
 
     expect(result).toBe('/run/user/1000/dck/daemon.sock')
   })
 
   it('should fall back to the temporary directory with the user id when there is no runtime directory', () => {
-    const result = defaultEndpoint({ platform: 'darwin', runtimeDir: undefined, uid: 501 })
+    const result = defaultEndpoint({
+      platform: 'darwin',
+      runtimeDir: undefined,
+      tmpDir: macTmp,
+      uid: 501,
+    })
 
-    expect(result).toMatch(/dck-501\/daemon\.sock$/)
+    expect(result).toBe(`${macTmp}/dck-501/daemon.sock`)
+  })
+
+  it('should use a short folder in /tmp when the temporary directory makes the socket path too long', () => {
+    const longTmp = `/Users/ana/${'x'.repeat(90)}/T`
+
+    const result = defaultEndpoint({
+      platform: 'darwin',
+      runtimeDir: undefined,
+      tmpDir: longTmp,
+      uid: 501,
+    })
+
+    expect(result).toBe('/tmp/dck-501/daemon.sock')
+  })
+
+  it('should keep a socket path of 104 to 107 bytes when the platform is Linux', () => {
+    const runtimeDir = `/run/${'x'.repeat(107 - '/run//dck/daemon.sock'.length)}`
+
+    const linux = defaultEndpoint({ platform: 'linux', runtimeDir, tmpDir: '/tmp', uid: 1000 })
+    const mac = defaultEndpoint({ platform: 'darwin', runtimeDir, tmpDir: '/tmp', uid: 501 })
+
+    expect(Buffer.byteLength(linux)).toBe(107)
+    expect(mac).toBe('/tmp/dck-501/daemon.sock')
   })
 
   it('should use a named pipe when the platform is Windows', () => {
-    const result = defaultEndpoint({ platform: 'win32', runtimeDir: undefined, uid: undefined })
+    const result = defaultEndpoint({
+      platform: 'win32',
+      runtimeDir: undefined,
+      tmpDir: 'C:\\Temp',
+      uid: undefined,
+    })
 
     expect(result).toBe('\\\\.\\pipe\\dck-daemon')
+  })
+})
+
+describe('defaultLogDir', () => {
+  it('should use the Logs folder in the Library when the platform is macOS', () => {
+    const result = defaultLogDir('/tmp/dck-501/daemon.sock', {
+      platform: 'darwin',
+      home: '/Users/ana',
+    })
+
+    expect(result).toBe('/Users/ana/Library/Logs/dck')
+  })
+
+  it('should use the socket folder when the platform is Linux', () => {
+    const result = defaultLogDir('/run/user/1000/dck/daemon.sock', {
+      platform: 'linux',
+      home: '/home/ana',
+    })
+
+    expect(result).toBe('/run/user/1000/dck')
   })
 })
 
@@ -35,6 +95,17 @@ describe('defaultStateDir', () => {
 
   it('should fall back to the local state folder in the home when XDG is not set', () => {
     expect(defaultStateDir(base)).toBe('/home/u/.local/state/dck')
+  })
+
+  it('should use the application support folder when the platform is macOS', () => {
+    const result = defaultStateDir({
+      ...base,
+      platform: 'darwin',
+      home: '/Users/ana',
+      stateHome: '/x',
+    })
+
+    expect(result).toBe('/Users/ana/Library/Application Support/dck')
   })
 
   it('should use the local app data when the platform is Windows', () => {

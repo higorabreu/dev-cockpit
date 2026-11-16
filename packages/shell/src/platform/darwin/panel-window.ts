@@ -62,7 +62,7 @@ export function anchorPanel(window: PlacedWindow) {
   })
 }
 
-// Without an application menu the Mac has no Cmd+Q
+// Without an application menu the Mac has no Cmd+Q, and without its Edit menu no Cmd+C, V, X, A or Z
 export function buildAppMenu(deps: AppMenuDeps): AppMenuItem[] {
   return [
     {
@@ -73,5 +73,6 @@ export function buildAppMenu(deps: AppMenuDeps): AppMenuItem[] {
         { label: deps.t('tray.quit'), accelerator: 'Command+Q', click: deps.quit },
       ],
     },
+    { role: 'editMenu' },
   ]
 }

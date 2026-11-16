@@ -18,7 +18,7 @@ make Linux worse.
 | --- | --- | --- |
 | Q1 | Where does CI on macOS run? | **Resolved:** the repository is on GitHub, so macOS CI runs on GitHub Actions |
 | Q2 | Default key on the Mac. F12 is volume or a system function on a Mac and only arrives as F12 with `fn` or with "use F1, F2 as standard function keys" on | **Resolved (D42):** `F12` on every platform, `fn+F12` on a Mac keyboard; no per-platform default |
-| Q3 | Tab and copy shortcuts: Cmd or Ctrl? | Cmd where Terminal.app and VS Code use it (`Cmd+T`, `Cmd+W`, `Cmd+C/V`, `Cmd+1..9`, `Cmd+,`); Ctrl stays free for the shell. Full table in MAC-T7, to confirm with the tester |
+| Q3 | Tab and copy shortcuts: Cmd or Ctrl? | **Resolved (D50):** Cmd where Terminal.app and VS Code use it (`⌘T`, `⌘W`, `⌘C/V`, `⌘1..9`, `⌘,`), `⇧⌘` for the cockpit's own keys, `⌃⌘F` for the full height; Ctrl stays free for the shell, and the hold menu key defaults to the right Option |
 | Q4 | Distribution: only the tester (ad hoc signing) or other people (Developer ID and notarization, US$ 99 a year)? | Only the tester for now. Notarization is MAC-T14, optional |
 
 Q2 and Q3 affect visible behavior, so they are settled before MAC-T4 and MAC-T7. The other tasks do not
@@ -138,25 +138,48 @@ The order is meant to bring the tester in as late as possible and once per batch
   carries only the exit code, signal and timeout. Not verified on a Mac yet. The git and docker inspectors
   of the panel may run before the login PATH arrives and miss a tool the minimal PATH lacks; the next
   refresh corrects it.
-- [ ] MAC-T7. Keyboard and tooltip. In `ui/src/platform/shortcuts.ts`, replace `ctrlKey` and `event.key` with a
+- [x] MAC-T7. Keyboard and tooltip. In `ui/src/platform/shortcuts.ts`, replace `ctrlKey` and `event.key` with a
   `matches(event, shortcut)` function that uses `event.code`, and a primary modifier per platform
   (`metaKey` on the Mac, `ctrlKey` elsewhere), with the table of Q3. In `xterm.js`, `macOptionIsMeta: true`.
   The `data-tip-key` formatter shows `⌘ ⇧ ⌥ ⌃` on the Mac. A new shortcut is born with its mouse path, as
   `AGENTS.md` already says. Tests with fake events; one of them pins that `Option+1` does not become
   another character. (C7) The macOS app menu from T5 has no Edit menu yet, so Cmd+C/V/X/A/Z do not work in
-  inputs or the terminal; add the Edit roles together with the Q3 table.
-- [ ] MAC-T8. Autostart: `shell/src/platform/darwin/launchd-autostart.ts` with the same shape as
+  inputs or the terminal; add the Edit roles together with the Q3 table. Done: `ui/src/platform/keymap.ts`
+  holds the PC and Mac tables (D50) and writes every label: the hold menu, the Settings reference, the
+  tooltips and the panel hints. Matching reads `event.key`, and the physical key (`event.code`) only with
+  Alt, so a non-QWERTY layout on Linux keeps its letters; the global key recorder does the same, so `⌥Space`
+  records as `Alt+Space`. The app menu has `{ role: 'editMenu' }`, and `Ctrl+Shift+C` and `V` copy and paste
+  in the terminal only on a PC. `shortcuts.holdTrigger` is null until the user picks a key, and the keymap
+  gives the right Option on a Mac and the right Ctrl elsewhere; a key already saved is unchanged.
+  Checked on a Mac with the packaged app and keys sent through the DevTools protocol: `⌘T` opens a tab,
+  `Ctrl+Shift+T` does nothing, `⌘W` closes, `⌘,` opens Settings and its reference shows the Mac symbols.
+  Not verified on a Mac yet: `⌘C`, `⌘V` and the other Edit keys and `⌥B`, `⌥F` typed on a real keyboard,
+  since the protocol does not go through the system menu.
+- [x] MAC-T8. Autostart: `shell/src/platform/darwin/launchd-autostart.ts` with the same shape as
   `createXdgAutostart`: writes `~/Library/LaunchAgents/<label>.plist` (`RunAtLoad`, `ProgramArguments`,
   `EnvironmentVariables` with `DCK_START_HIDDEN`) atomically; turning on and off creates and deletes the
   file. It is chosen because it is testable on Linux; Electron's `app.setLoginItemSettings` changed
   behavior in macOS 13 and stays as an alternative. The settings screen already has the item; on the Mac the
-  system shows a background item notice the first time. (C8)
-- [ ] MAC-T9. Paths and data. Endpoint: on the Mac `tmpdir()` is `/var/folders/...` and the Unix socket path
+  system shows a background item notice the first time. (C8) Done: the label is the bundle identifier
+  (`io.github.devcockpit`), the job only loads in the graphical session (`LimitLoadToSessionType` Aqua) and
+  runs as `Interactive`, so the hotkey is not throttled. Checked on a Mac: `plutil -lint` accepts the file
+  and `launchctl bootstrap` of a copy under another label started the packaged app as a launchd job with
+  `DCK_START_HIDDEN=1` and no Dock icon. Not verified on a Mac yet: a real logout and login, and the
+  background item notice.
+- [x] MAC-T9. Paths and data. Endpoint: on the Mac `tmpdir()` is `/var/folders/...` and the Unix socket path
   has a limit of 104 bytes (108 on Linux), so test that `.../dck-<uid>/daemon.sock` fits and use a short
   directory (`/tmp/dck-<uid>`, mode 0700) if it does not. The Mac's state directory at
   `~/Library/Application Support/dck`, logs at `~/Library/Logs/dck`. Sweep the code for fixed `~/.config`,
   `/usr`, `/opt` and `XDG_*` and move them into the same paths function. Update the `endpoint.ts` tests.
-  (C1, C4)
+  (C1, C4) Done: `defaultEndpoint` takes the temporary
+  folder as an input and falls back to `/tmp` past 103 bytes on the Mac and 107 elsewhere; `defaultStateDir`
+  and the new `defaultLogDir` give the Mac folders, Linux keeps its log beside the socket, and `DCK_LOG_DIR`
+  overrides it (`pnpm dev` keeps its log beside the dev socket). The sweep found one fixed `~/.config`, in
+  `scripts/dev.mjs`, which now takes `defaultConfigDir()` with a `-dev` suffix; the other `XDG_*` reads are
+  already in `endpoint.ts` or are Linux only. Checked on a Mac with a 138 byte socket path in `TMPDIR`: the
+  daemon listened on `/tmp/dck-501/daemon.sock` (folder 0700), `dck ping` answered and the log went to
+  `~/Library/Logs/dck`. Open: `/tmp/dck-<uid>` is not checked for its owner before use, the same as on Linux
+  without `XDG_RUNTIME_DIR`.
 - [x] MAC-T10. Packaging: `shell/scripts/package-mac.mjs`, sibling of `package-deb.mjs`, with no heavy packaging
   tool. Copies the `Electron.app` the project already uses, renames the executable and the bundle, writes
   `Info.plist` (identifier, version, `LSUIElement`, `NSHighResolutionCapable`), generates the `.icns` with

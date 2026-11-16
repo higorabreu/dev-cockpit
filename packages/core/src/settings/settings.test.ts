@@ -27,7 +27,7 @@ describe('parseSettings', () => {
       opacity: 0.92,
       fontSize: 16,
       window: { heightRatio: 0.5, panelOnFullHeight: true },
-      shortcuts: { toggleWindow: 'F12', holdTrigger: 'ControlRight' },
+      shortcuts: { toggleWindow: 'F12', holdTrigger: null },
       projects: { root: null, depth: 2 },
       connections: {},
       system: { notifyAfterSeconds: 30, agentConnectHint: true },
@@ -97,13 +97,11 @@ describe('parseSettings', () => {
     expect(parseSettings({ surprise: true })).toEqual(defaultSettings)
   })
 
-  it('should accept only the known hold triggers when reading', () => {
+  it('should accept only the known hold triggers and leave the choice open otherwise when reading', () => {
     expect(parseSettings({ shortcuts: { holdTrigger: 'AltRight' } }).shortcuts.holdTrigger).toBe(
       'AltRight',
     )
-    expect(parseSettings({ shortcuts: { holdTrigger: 'KeyQ' } }).shortcuts.holdTrigger).toBe(
-      'ControlRight',
-    )
+    expect(parseSettings({ shortcuts: { holdTrigger: 'KeyQ' } }).shortcuts.holdTrigger).toBeNull()
   })
 })
 
@@ -268,10 +266,13 @@ describe('changedKeys', () => {
 
 const press = (
   key: string,
-  modifiers: Partial<Record<'ctrlKey' | 'shiftKey' | 'altKey' | 'metaKey', boolean>> = {},
+  modifiers: Partial<Record<'ctrlKey' | 'shiftKey' | 'altKey' | 'metaKey', boolean>> & {
+    code?: string
+  } = {},
 ) =>
   acceleratorFromEvent({
     key,
+    code: '',
     ctrlKey: false,
     shiftKey: false,
     altKey: false,
@@ -311,6 +312,20 @@ describe('acceleratorFromEvent', () => {
 
   it('should refuse keys that cannot be a global shortcut', () => {
     expect(press('Dead', { ctrlKey: true })).toEqual({ type: 'invalid', reason: 'unsupported' })
+  })
+
+  it('should name the physical key when Option on a Mac turns 1 into another character', () => {
+    expect(press('¡', { altKey: true, code: 'Digit1' })).toEqual({
+      type: 'accelerator',
+      value: 'Alt+1',
+    })
+  })
+
+  it('should name the space when Option on a Mac turns it into a non-breaking space', () => {
+    expect(press('\u00a0', { altKey: true, code: 'Space' })).toEqual({
+      type: 'accelerator',
+      value: 'Alt+Space',
+    })
   })
 
   it('should call the windows key Super when it is held', () => {

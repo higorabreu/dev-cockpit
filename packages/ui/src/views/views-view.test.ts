@@ -10,6 +10,7 @@ import {
   type ViewSnapshot,
 } from '@dck/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createKeymap } from '../platform/keymap.ts'
 import { HEADER_HEIGHT, ROW_HEIGHT } from './list-layout.ts'
 import { createViewsView } from './views-view.ts'
 
@@ -91,6 +92,7 @@ function setup(options: {
   const view = createViewsView(overlay, {
     api,
     i18n: createTranslator(options.language ?? 'en'),
+    keymap: createKeymap('pc'),
     onClose: () => undefined,
     openSettings: () => {
       settingsOpened += 1

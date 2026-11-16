@@ -1,12 +1,12 @@
 import type { AgentState, HostApi, Orientation, Translator } from '@dck/core'
 import type { TabView } from '../panes/tab-view.ts'
+import type { Keymap } from '../platform/keymap.ts'
 import { createReviewPane, type ReviewMemory, type ReviewPane } from './review-pane.ts'
 
 export interface ReviewTabsDeps {
   readonly api: HostApi
   readonly i18n: Translator
-  readonly modifier: string
-  isModified(event: MouseEvent): boolean
+  readonly keymap: Keymap
   view(tabId: string): TabView | undefined
   // The tab's folder right now
   cwd(tabId: string): Promise<string | undefined>
@@ -34,8 +34,7 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
       api: deps.api,
       i18n: deps.i18n,
       memory,
-      modifier: deps.modifier,
-      isModified: deps.isModified,
+      keymap: deps.keymap,
       cwd: () => deps.cwd(tabId),
       baseFor: deps.baseFor,
       chooseBase: deps.chooseBase,

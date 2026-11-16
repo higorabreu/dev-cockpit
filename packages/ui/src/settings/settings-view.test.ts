@@ -11,6 +11,7 @@ import {
   type SettingsPatch,
 } from '@dck/core'
 import { describe, expect, it } from 'vitest'
+import { createKeymap, type Keyboard } from '../platform/keymap.ts'
 import type { SettingsClient } from './settings-client.ts'
 import { createSettingsView } from './settings-view.ts'
 
@@ -47,7 +48,12 @@ const api = {
   autostart: { isEnabled: async () => false },
 } as unknown as HostApi
 
-function open(locked: readonly string[] = [], host: HostApi = api, initial?: Settings) {
+function open(
+  locked: readonly string[] = [],
+  host: HostApi = api,
+  initial?: Settings,
+  keyboard: Keyboard = 'pc',
+) {
   document.body.replaceChildren()
   const overlay = document.createElement('div')
   const body = document.createElement('div')
@@ -65,6 +71,7 @@ function open(locked: readonly string[] = [], host: HostApi = api, initial?: Set
         closed = true
       },
       previewOpacity: () => undefined,
+      keymap: createKeymap(keyboard),
     },
   )
   view.open()
@@ -100,6 +107,38 @@ describe('settings view selects', () => {
     expect(body.querySelector('select')).toBeNull()
     expect(general).toEqual(['set-language', 'set-theme', 'set-review.layout'])
     expect(combobox('shortcuts.holdTrigger').getAttribute('role')).toBe('combobox')
+    view.close()
+  })
+
+  it('should list the Mac keys in the reference when the keyboard is a Mac one', () => {
+    // Arrange
+    const { body, view } = open([], api, undefined, 'mac')
+
+    // Act
+    body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
+
+    // Assert
+    const keys = [...body.querySelectorAll('.sref .skbd')].map((element) => element.textContent)
+    expect(keys).toContain('⌘T')
+    expect(keys).toContain('⌃⌘F')
+    expect(keys).toContain('⌘ + − 0')
+    view.close()
+  })
+
+  it('should hold the right Option by default with no reset when the keyboard is a Mac one', () => {
+    // Arrange
+    const { body, combobox, view } = open([], api, undefined, 'mac')
+
+    // Act
+    body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
+
+    // Assert
+    expect(
+      combobox('shortcuts.holdTrigger').querySelector('[data-current="true"]')?.textContent,
+    ).toBe('Right Option')
+    expect(
+      body.querySelector<HTMLElement>('.sreset[data-key="shortcuts.holdTrigger"]')?.hidden,
+    ).toBe(true)
     view.close()
   })
 

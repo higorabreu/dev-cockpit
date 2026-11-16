@@ -20,15 +20,13 @@ import { actionHint, hintBar, keyHint } from '../kit/panel-frame.ts'
 import { createSelect, type SelectOption } from '../kit/select.ts'
 import { h, icon } from '../panel/dom.ts'
 import { displayPath } from '../panel/format.ts'
-import { REVIEW_KEY } from '../tabs/attention-mark.ts'
+import type { Keymap } from '../platform/keymap.ts'
 import { createDiffView, LINE_HEIGHT } from './diff-view.ts'
 import { counts, createFileList } from './file-list.ts'
 import { createReviewRefresh } from './review-refresh.ts'
 
 // Loads this fast never show "Reading the changes", so the pane does not flash
 const LOADING_TEXT_MS = 200
-
-export const LAYOUT_KEY = 'Ctrl+Shift+E'
 
 const ICONS = {
   whitespace:
@@ -66,9 +64,7 @@ export interface ReviewPaneDeps {
   readonly api: HostApi
   readonly i18n: Translator
   readonly memory: ReviewMemory
-  // The modifier that opens a path with a click, by name (Ctrl, or Cmd on macOS)
-  readonly modifier: string
-  isModified(event: MouseEvent): boolean
+  readonly keymap: Keymap
   // The tab's folder right now, or undefined when it is not known
   cwd(): Promise<string | undefined>
   // The base the user picked for the repository that holds this folder
@@ -133,9 +129,11 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     h('button', { type: 'button', class: 'rv-icon', ...extra }, icon(svg, size))
   const indexToggle = iconButton(ICONS.index, 16, { 'aria-controls': `${deps.id}-files` })
   const whitespace = iconButton(ICONS.whitespace, 16, { 'aria-pressed': 'false' })
-  const layout = iconButton(ICONS.stacked, 16, { 'data-tip-key': LAYOUT_KEY })
+  const layout = iconButton(ICONS.stacked, 16, {
+    'data-tip-key': deps.keymap.label('reviewLayout'),
+  })
   const back = iconButton(ICONS.terminal, 16, { 'data-tip-key': 'Esc' })
-  const close = iconButton(ICONS.close, 14, { 'data-tip-key': REVIEW_KEY })
+  const close = iconButton(ICONS.close, 14, { 'data-tip-key': deps.keymap.label('review') })
   back.hidden = true
   layout.hidden = true
   const head = h(
@@ -163,8 +161,8 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const diff = createDiffView({
     id: deps.id,
     i18n,
-    modifier: deps.modifier,
-    isModified: deps.isModified,
+    modifier: deps.keymap.click.label,
+    isModified: deps.keymap.click.isHeld,
     open: (path) => state.kind === 'ok' && api.paths.openFile(`${state.diff.root}/${path}`),
     expand: (file, gap) => void expand(file, gap),
     showAnyway(file) {
@@ -361,12 +359,12 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     if (hintsFor === key) return
     hintsFor = key
     if (!focusInside) {
-      const come = actionHint(REVIEW_KEY, t('review.hint.review'))
+      const come = actionHint(deps.keymap.label('review'), t('review.hint.review'))
       come.addEventListener('click', () => pane.focus())
       hints.replaceChildren(come)
       return
     }
-    const refreshAction = actionHint('Ctrl+R', t('review.refresh'))
+    const refreshAction = actionHint(deps.keymap.commandLabel('r'), t('review.refresh'))
     refreshAction.addEventListener('click', () => refresh.request())
     hints.replaceChildren(
       ...(withFiles
@@ -495,8 +493,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     const { key } = event
     const where = keyTarget(event.target)
     if (key === 'Escape') deps.onEscape()
-    else if (event.ctrlKey && !event.shiftKey && !event.altKey && key.toLowerCase() === 'r')
-      refresh.request()
+    else if (deps.keymap.command(event, 'r')) refresh.request()
     else if (event.ctrlKey || event.altKey || event.metaKey || where === undefined) return
     else if (key === ']' || key === '[') {
       const step = key === ']' ? 1 : -1

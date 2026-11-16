@@ -16,6 +16,8 @@ export interface AppMenuItem {
   readonly label?: string
   readonly accelerator?: string
   readonly type?: 'separator'
+  // Electron builds the menu and its keys itself, in the system's language
+  readonly role?: 'editMenu'
   readonly click?: () => void
   readonly submenu?: AppMenuItem[]
 }

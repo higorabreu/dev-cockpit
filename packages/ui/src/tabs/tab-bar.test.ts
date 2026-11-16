@@ -16,6 +16,7 @@ function setup(language: 'en' | 'pt-BR' = 'en') {
       hiddenAttention: (kind) => void hidden.push(kind),
     },
     createTranslator(language).t,
+    'Ctrl+Shift+D',
   )
   const state = openTab(openTab(emptyTabs, { id: 'tab-1', label: 'acme' }), {
     id: 'tab-2',

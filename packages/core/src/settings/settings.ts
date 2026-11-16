@@ -9,6 +9,7 @@ import type { ConnectionFields } from '../ports/connections.ts'
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
 export const THEMES = ['dark', 'light', 'system'] as const
 export const HOLD_TRIGGERS = ['ControlRight', 'ControlLeft', 'AltRight', 'AltLeft'] as const
+export type HoldTrigger = (typeof HOLD_TRIGGERS)[number]
 
 export const LIMITS = {
   opacity: { min: 0.3, max: 1 },
@@ -107,7 +108,8 @@ export const settingsSchema = z.preprocess(
     }),
     shortcuts: section({
       toggleWindow: z.string().trim().min(1).max(64).catch('F12'),
-      holdTrigger: z.enum(HOLD_TRIGGERS).catch('ControlRight'),
+      // Null until the user chooses one: the window holds its keyboard's own key (D50)
+      holdTrigger: z.enum(HOLD_TRIGGERS).nullable().catch(null),
     }),
     projects: section({
       // Null until the user chooses a folder: no folder name is assumed, and nothing is scanned

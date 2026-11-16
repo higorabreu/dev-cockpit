@@ -12,6 +12,7 @@ import type {
   SecretStore,
 } from '@dck/core'
 import { systemSecretStore } from '@dck/daemon/secret-store'
+import { createLaunchdAutostart } from './darwin/launchd-autostart.ts'
 import { readLoginPath } from './darwin/login-path.ts'
 import { createPanelWindow, type PanelApp } from './darwin/panel-window.ts'
 import { createRegularWindow } from './linux/regular-window.ts'
@@ -47,7 +48,6 @@ export interface Platform {
 export const processAdapters = (platform: NodeJS.Platform) =>
   platform === 'darwin' ? macosProc : linuxProc
 
-// macOS still gets the Linux autostart until MAC-T8 replaces it
 export function selectPlatform(context: PlatformContext): Platform {
   const { platform, env, home, packaged, execPath, appPath, resourcesPath, logger } = context
   const onGnome =
@@ -65,12 +65,21 @@ export function selectPlatform(context: PlatformContext): Platform {
     processes: proc.createProcessInspector(),
     processScanner: proc.createProcessScanner(),
     secrets: systemSecretStore(platform),
-    autostart: createXdgAutostart({
-      directory: env.DCK_AUTOSTART_DIR ?? defaultAutostartDirectory(env, home),
-      name: 'Dev Cockpit',
-      command: [...app, ...sandbox],
-      env: { DCK_START_HIDDEN: '1' },
-    }),
+    autostart:
+      platform === 'darwin'
+        ? createLaunchdAutostart({
+            directory: env.DCK_AUTOSTART_DIR ?? join(home, 'Library', 'LaunchAgents'),
+            // The bundle identifier package-mac.mjs gives the app
+            label: 'io.github.devcockpit',
+            command: app,
+            env: { DCK_START_HIDDEN: '1' },
+          })
+        : createXdgAutostart({
+            directory: env.DCK_AUTOSTART_DIR ?? defaultAutostartDirectory(env, home),
+            name: 'Dev Cockpit',
+            command: [...app, ...sandbox],
+            env: { DCK_START_HIDDEN: '1' },
+          }),
     // The system shortcut calls the packaged CLI; in dev mode Electron registers the key
     desktopShortcut:
       packaged && onGnome
