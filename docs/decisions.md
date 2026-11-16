@@ -728,7 +728,20 @@ everyone's, and reading any `ABC-123` in a branch name as a ticket, a pattern ma
 **How to revert:** give `projects.root` a fallback folder again in `shell/src/main.ts`, drop the
 `projects:choose-root` channel and the empty state, and call `ticketFromBranch` without the known projects.
 
-## D50. On the Mac the cockpit's keys use Cmd where the Mac does, and Ctrl stays with the shell
+## D50. On Linux the window renders without the GPU
+
+**Decision:** on Linux the shell calls `app.disableHardwareAcceleration()` before the app is ready
+(`usesGpu` in `shell/src/platform/select-platform.ts`), so Chromium composites the window in software and
+its GPU process shrinks. The Mac keeps hardware acceleration until it is measured there.
+**Reason:** the idle budget is 300 MB for the shell and the daemon, and a fresh cockpit measured 276 to 293
+MB on the maintainer's Ubuntu machine (2026-11-16), with the GPU process at about 49 MB. With
+`--disable-gpu` it measured 263 MB, the GPU process at 22 MB, and the transparency, the review's scrolling
+and the toggle key behaved the same. The interface is text on the DOM, the terminal included (xterm's DOM
+renderer, D14), with little to gain from the GPU. `--in-process-gpu` was measured too and saved
+nothing: the main process grew by what the GPU process lost.
+**How to revert:** make `usesGpu` return true for Linux.
+
+## D51. On the Mac the cockpit's keys use Cmd where the Mac does, and Ctrl stays with the shell
 
 **Decision:** Q3 of [plans/macos.md](../plans/macos.md). One keymap per keyboard (`ui/src/platform/keymap.ts`,
 chosen by `keyboardFor(navigator.platform)`) both matches the keys and writes every label, so a tooltip,

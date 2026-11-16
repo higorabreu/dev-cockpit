@@ -108,7 +108,7 @@ export const settingsSchema = z.preprocess(
     }),
     shortcuts: section({
       toggleWindow: z.string().trim().min(1).max(64).catch('F12'),
-      // Null until the user chooses one: the window holds its keyboard's own key (D50)
+      // Null until the user chooses one: the window holds its keyboard's own key (D51)
       holdTrigger: z.enum(HOLD_TRIGGERS).nullable().catch(null),
     }),
     projects: section({

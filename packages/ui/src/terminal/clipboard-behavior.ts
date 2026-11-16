@@ -28,16 +28,22 @@ export function attachClipboard(
 
   let pressed = false
   let timer: ReturnType<typeof setTimeout> | undefined
+  // The window outlives the tab: its listener must go with the terminal, or it keeps the closed tab alive
+  const detach = new AbortController()
 
   element.addEventListener('mousedown', (event) => {
     if (event.button === 0) pressed = true
   })
   // mouseup is listened for on the window: releasing the button outside the terminal does not reach the element
-  window.addEventListener('mouseup', () => {
-    if (!pressed) return
-    pressed = false
-    copySelection()
-  })
+  window.addEventListener(
+    'mouseup',
+    () => {
+      if (!pressed) return
+      pressed = false
+      copySelection()
+    },
+    { signal: detach.signal },
+  )
   terminal.onSelectionChange(() => {
     if (pressed) return
     clearTimeout(timer)
@@ -70,5 +76,10 @@ export function attachClipboard(
     return true
   }
 
-  return { copySelection, paste, onKey }
+  function dispose() {
+    detach.abort()
+    clearTimeout(timer)
+  }
+
+  return { copySelection, paste, onKey, dispose }
 }

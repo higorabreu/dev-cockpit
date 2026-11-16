@@ -145,6 +145,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
       stopData()
       stopExit()
       observer.disconnect()
+      clipboard.dispose()
       api.pty.kill(id)
       terminal.dispose()
       element.remove()

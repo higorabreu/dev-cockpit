@@ -7,7 +7,12 @@ import { silentLogger } from '@dck/core'
 import { FakeDockWindow } from '@dck/core/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { PlacedWindow } from './platform-window.ts'
-import { type PlatformContext, processAdapters, selectPlatform } from './select-platform.ts'
+import {
+  type PlatformContext,
+  processAdapters,
+  selectPlatform,
+  usesGpu,
+} from './select-platform.ts'
 
 let directory = ''
 
@@ -112,6 +117,17 @@ describe('selectPlatform', () => {
     expect(job).toContain('<array>\n    <string>/opt/dck/electron</string>\n  </array>')
     expect(job).toContain('<key>DCK_START_HIDDEN</key>')
     expect(job).not.toContain('--no-sandbox')
+  })
+
+  it.each([
+    { platform: 'linux' as const, expected: false },
+    { platform: 'darwin' as const, expected: true },
+  ])('should use the GPU $expected when the platform is $platform', ({ platform, expected }) => {
+    // Act
+    const gpu = usesGpu(platform)
+
+    // Assert
+    expect(gpu).toBe(expected)
   })
 
   it.each([

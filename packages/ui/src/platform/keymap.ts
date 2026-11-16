@@ -41,7 +41,7 @@ const CS = { ctrl: true, shift: true } as const
 const M = { meta: true } as const
 const MS = { meta: true, shift: true } as const
 
-// The first chord of each action is the one its label shows (D50)
+// The first chord of each action is the one its label shows (D51)
 type Chords = readonly [Chord, ...Chord[]]
 
 const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {

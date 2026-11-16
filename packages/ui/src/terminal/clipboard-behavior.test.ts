@@ -99,4 +99,25 @@ describe('attachClipboard', () => {
     expect(event.defaultPrevented).toBe(true)
     expect(pasted).toEqual(['from clipboard'])
   })
+
+  it('should copy the selection when the button is released outside the terminal', async () => {
+    const { element, copied, settle } = setup(true, 'git status')
+
+    element.dispatchEvent(new MouseEvent('mousedown', { button: 0 }))
+    window.dispatchEvent(new MouseEvent('mouseup', { button: 0 }))
+    await settle()
+
+    expect(copied).toEqual(['git status'])
+  })
+
+  it('should stop listening on the window when the terminal is disposed', async () => {
+    const { behavior, element, copied, settle } = setup(true, 'git status')
+
+    behavior.dispose()
+    element.dispatchEvent(new MouseEvent('mousedown', { button: 0 }))
+    window.dispatchEvent(new MouseEvent('mouseup', { button: 0 }))
+    await settle()
+
+    expect(copied).toEqual([])
+  })
 })
