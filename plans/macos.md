@@ -178,8 +178,9 @@ The order is meant to bring the tester in as late as possible and once per batch
   `scripts/dev.mjs`, which now takes `defaultConfigDir()` with a `-dev` suffix; the other `XDG_*` reads are
   already in `endpoint.ts` or are Linux only. Checked on a Mac with a 138 byte socket path in `TMPDIR`: the
   daemon listened on `/tmp/dck-501/daemon.sock` (folder 0700), `dck ping` answered and the log went to
-  `~/Library/Logs/dck`. Open: `/tmp/dck-<uid>` is not checked for its owner before use, the same as on Linux
-  without `XDG_RUNTIME_DIR`.
+  `~/Library/Logs/dck`. The daemon and its clients refuse a socket folder that is a link, has another owner or is
+  open to the group or others, so another user cannot create `/tmp/dck-<uid>` first and stand in for the
+  daemon; this also covers Linux without `XDG_RUNTIME_DIR`.
 - [x] MAC-T10. Packaging: `shell/scripts/package-mac.mjs`, sibling of `package-deb.mjs`, with no heavy packaging
   tool. Copies the `Electron.app` the project already uses, renames the executable and the bundle, writes
   `Info.plist` (identifier, version, `LSUIElement`, `NSHighResolutionCapable`), generates the `.icns` with
