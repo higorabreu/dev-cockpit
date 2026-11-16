@@ -56,7 +56,7 @@ import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
-import { selectPlatform } from './platform/select-platform.ts'
+import { selectPlatform, usesGpu } from './platform/select-platform.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
@@ -77,6 +77,9 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason) => {
   logger.error('unhandled rejection in main', { error: String(reason) })
 })
+
+// Before the app is ready, or Chromium has already started the GPU process
+if (!usesGpu(process.platform)) app.disableHardwareAcceleration()
 
 if (!app.requestSingleInstanceLock()) app.quit()
 
