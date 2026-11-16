@@ -3,6 +3,25 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.6.0](https://github.com/higorabreu/dev-cockpit/compare/v0.5.0...v0.6.0) (2026-11-16)
+
+
+### Features
+
+* use the Mac's keys, start at login through launchd and keep data in Mac folders ([8a0d697](https://github.com/higorabreu/dev-cockpit/commit/8a0d69752e29f9f42dbb48e5a7d2cc82f0de2045))
+
+
+### Bug Fixes
+
+* free a closed tab's terminal and its scrollback ([2f33007](https://github.com/higorabreu/dev-cockpit/commit/2f33007f86e374f6be44ac9769c0d32f913b66e1))
+* refuse a daemon socket folder that is not private to the user ([8a0d697](https://github.com/higorabreu/dev-cockpit/commit/8a0d69752e29f9f42dbb48e5a7d2cc82f0de2045))
+* stop the spell check dictionary download at startup ([#49](https://github.com/higorabreu/dev-cockpit/issues/49)) ([bfdd023](https://github.com/higorabreu/dev-cockpit/commit/bfdd023012a632c16dcdd837bf48a0259303604e))
+
+
+### Performance Improvements
+
+* render the window without the GPU on Linux ([c1774b1](https://github.com/higorabreu/dev-cockpit/commit/c1774b108e618f39a8229b442025f0efd9a7a0db))
+
 ## [0.5.0](https://github.com/higorabreu/dev-cockpit/compare/v0.4.0...v0.5.0) (2026-11-16)
 
 
