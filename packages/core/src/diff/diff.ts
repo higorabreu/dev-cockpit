@@ -1,5 +1,8 @@
-// What the review compares: the uncommitted work against HEAD, or the branch against its base
-export type DiffScope = 'uncommitted' | 'branch'
+import type { BranchInfo } from './base.ts'
+
+// What the review compares with the working tree: HEAD, the merge base with the branch's base, or the
+// merge base with HEAD's upstream (the commits not pushed yet)
+export type DiffScope = 'uncommitted' | 'branch' | 'unpushed'
 
 export type DiffLineKind = 'context' | 'add' | 'remove'
 
@@ -60,8 +63,8 @@ export interface ReviewDiff {
   // The repository's top folder
   readonly root: string
   readonly scope: DiffScope
-  // The branch the Branch scope compares with, like `main`, named in either scope
-  readonly base: string | undefined
+  // What the second scope compares with, found in either scope so the select can name it
+  readonly branch: BranchInfo
   readonly files: readonly DiffFile[]
   readonly additions: number
   readonly deletions: number
@@ -70,7 +73,7 @@ export interface ReviewDiff {
 export function reviewDiff(
   root: string,
   scope: DiffScope,
-  base: string | undefined,
+  branch: BranchInfo,
   files: readonly DiffFile[],
 ): ReviewDiff {
   let additions = 0
@@ -79,7 +82,7 @@ export function reviewDiff(
     additions += file.additions
     deletions += file.deletions
   }
-  return { root, scope, base, files, additions, deletions }
+  return { root, scope, branch, files, additions, deletions }
 }
 
 const LOCK_FILES = new Set([

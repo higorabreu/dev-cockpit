@@ -1,27 +1,34 @@
 import {
   type AgentState,
-  collapseReason,
+  type BranchInfo,
+  branchName,
+  changeRows,
   type DiffFile,
   type DiffGap,
   type DiffOutcome,
   type DiffScope,
-  diffRows,
   type ErrorBody,
   errorCodeOf,
   type HostApi,
+  type Orientation,
+  type PaneGrid,
+  type ReviewBase,
   type Translator,
 } from '@dck/core'
+import { tokens } from '@dck/design'
 import { actionHint, hintBar, keyHint } from '../kit/panel-frame.ts'
-import { createSelect } from '../kit/select.ts'
+import { createSelect, type SelectOption } from '../kit/select.ts'
 import { h, icon } from '../panel/dom.ts'
 import { displayPath } from '../panel/format.ts'
-import { createDiffView } from './diff-view.ts'
-import { fileHead, fileNotice } from './file-head.ts'
+import { REVIEW_KEY } from '../tabs/attention-mark.ts'
+import { createDiffView, LINE_HEIGHT } from './diff-view.ts'
 import { counts, createFileList } from './file-list.ts'
 import { createReviewRefresh } from './review-refresh.ts'
 
 // Loads this fast never show "Reading the changes", so the pane does not flash
 const LOADING_TEXT_MS = 200
+
+export const LAYOUT_KEY = 'Ctrl+Shift+E'
 
 const ICONS = {
   whitespace:
@@ -29,7 +36,18 @@ const ICONS = {
   terminal:
     '<rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7 9.5l3 2.5-3 2.5M12.5 15H17"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
+  index:
+    '<rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M9.5 4.5v15M5.5 8.5h1.5M5.5 11.5h1.5M5.5 14.5h1.5"/>',
+  side: '<rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M12 4.5v15"/>',
+  stacked: '<rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M3 12h18"/>',
 } as const
+
+// The review's diff font, for the orientation rule: 12px of the mono font on 20px rows, with the two line
+// numbers, the sign, the code's end padding and the scrollbar strips on both sides around the text
+const DIFF_FONT = `12px ${tokens.font.mono}`
+const GUTTER_COLUMNS = 8
+const GUTTER_PIXELS = 64
+const USUAL_CHROME = 72
 
 type PaneState =
   | { readonly kind: 'loading' }
@@ -37,22 +55,46 @@ type PaneState =
   | { readonly kind: 'error'; readonly error: ErrorBody }
   | DiffOutcome
 
+// What a window session remembers across the reviews of its tabs
+export interface ReviewMemory {
+  indexHidden: boolean
+}
+
 export interface ReviewPaneDeps {
   // A prefix for the ids inside, unique in the window
   readonly id: string
   readonly api: HostApi
   readonly i18n: Translator
+  readonly memory: ReviewMemory
   // The modifier that opens a path with a click, by name (Ctrl, or Cmd on macOS)
   readonly modifier: string
   isModified(event: MouseEvent): boolean
   // The tab's folder right now, or undefined when it is not known
   cwd(): Promise<string | undefined>
+  // The base the user picked for the repository that holds this folder
+  baseFor(cwd: string): string | undefined
+  // Keeps the user's base for a repository; undefined goes back to the one found
+  chooseBase(root: string, name: string | undefined): Promise<void>
   // Esc: the keys go back to the terminal, the review stays
   onEscape(): void
   onClose(): void
+  // The header's layout button: the other orientation, as the user's choice
+  onToggleLayout(): void
 }
 
-// The review of one tab: scope and totals on top, the changed files, the selected file's diff and the keys
+let measured: number | undefined
+function diffCellWidth(): number {
+  if (measured !== undefined) return measured
+  const context = document.createElement('canvas').getContext('2d')
+  if (!context) return 7.2
+  context.font = DIFF_FONT
+  const width = context.measureText('0'.repeat(100)).width / 100
+  if (width > 0) measured = width
+  return width > 0 ? width : 7.2
+}
+
+// The review of one tab: scope and totals on top, the index of the changed files, every file's diff in
+// one scroll, and the keys
 export function createReviewPane(deps: ReviewPaneDeps) {
   const { api, i18n } = deps
   const t = i18n.t
@@ -61,16 +103,21 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   let state: PaneState = { kind: 'loading' }
   let busy = false
   let showLoading = false
-  let base: string | undefined
+  // What the base and unpushed scopes compare with, from the last read of a repository, and that one
+  let branch: BranchInfo | undefined
+  let root: string | undefined
   let cwd: string | undefined
-  let selectedPath: string | undefined
+  let orientation: Orientation | undefined
+  let focusInside = false
+  // The next drawing starts the diff at the top: a new scope or whitespace setting is a new reading
+  let resetReading = true
   // Per file path: the gaps the user opened, the text that fills them and the collapse they lifted
   const expanded = new Map<string, Set<number>>()
   const texts = new Map<string, readonly string[]>()
   const shownAnyway = new Set<string>()
   // A file whose hunks moved since the last read loses its open gaps, which named the old hunks
   const shapes = new Map<string, string>()
-  let drawnBase: string | undefined
+  let drawnOptions = ''
 
   const scopeLabel = h('span', { id: `${deps.id}-scope-label`, hidden: true })
   const select = createSelect({
@@ -78,28 +125,19 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     options: [],
     value: scope,
     labelledBy: scopeLabel.id,
-    onChange: (value) => {
-      scope = value === 'branch' ? 'branch' : 'uncommitted'
-      refresh.request()
-    },
+    onChange: (value) => void pickScope(value),
   })
   const totals = h('span', { class: 'rv-totals' })
   const status = h('span', { class: 'rv-status', role: 'status' })
-  const whitespace = h(
-    'button',
-    { type: 'button', class: 'rv-icon', 'aria-pressed': 'false' },
-    icon(ICONS.whitespace, 16),
-  )
-  const back = h(
-    'button',
-    { type: 'button', class: 'rv-icon', 'data-tip-key': 'Esc', hidden: true },
-    icon(ICONS.terminal, 16),
-  )
-  const close = h(
-    'button',
-    { type: 'button', class: 'rv-icon', 'data-tip-key': 'Ctrl+Shift+D' },
-    icon(ICONS.close, 14),
-  )
+  const iconButton = (svg: string, size: number, extra: Record<string, string> = {}) =>
+    h('button', { type: 'button', class: 'rv-icon', ...extra }, icon(svg, size))
+  const indexToggle = iconButton(ICONS.index, 16, { 'aria-controls': `${deps.id}-files` })
+  const whitespace = iconButton(ICONS.whitespace, 16, { 'aria-pressed': 'false' })
+  const layout = iconButton(ICONS.stacked, 16, { 'data-tip-key': LAYOUT_KEY })
+  const back = iconButton(ICONS.terminal, 16, { 'data-tip-key': 'Esc' })
+  const close = iconButton(ICONS.close, 14, { 'data-tip-key': REVIEW_KEY })
+  back.hidden = true
+  layout.hidden = true
   const head = h(
     'div',
     { class: 'rv-head' },
@@ -108,7 +146,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     totals,
     status,
     h('span', { class: 'rv-spacer' }),
+    indexToggle,
     whitespace,
+    layout,
     back,
     close,
   )
@@ -116,16 +156,24 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const list = createFileList({
     id: deps.id,
     i18n,
-    onSelect: (index) => {
-      selectedPath = files()[index]?.path
-      drawFile()
-    },
+    onSelect: (index) => diff.revealFile(index),
     onOpen: () => diff.focus(),
   })
-  const diff = createDiffView({ id: deps.id, i18n, expand: (gap) => void expand(gap) })
-  const fileTop = h('div', { class: 'rv-file-top' })
-  const fileArea = h('div', { class: 'rv-file-area' }, fileTop, diff.element)
-  const body = h('div', { class: 'rv-body' }, list.element, fileArea)
+  list.element.id = `${deps.id}-files`
+  const diff = createDiffView({
+    id: deps.id,
+    i18n,
+    modifier: deps.modifier,
+    isModified: deps.isModified,
+    open: (path) => state.kind === 'ok' && api.paths.openFile(`${state.diff.root}/${path}`),
+    expand: (file, gap) => void expand(file, gap),
+    showAnyway(file) {
+      shownAnyway.add(file.path)
+      drawDiff()
+    },
+    onCurrentFile: (index) => list.highlight(index),
+  })
+  const body = h('div', { class: 'rv-body' }, list.element, diff.element)
   const message = h('div', { class: 'rv-state' })
   const hints = hintBar()
   const element = h(
@@ -138,7 +186,6 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   )
 
   const files = (): readonly DiffFile[] => (state.kind === 'ok' ? state.diff.files : [])
-  const selectedFile = () => files().find((file) => file.path === selectedPath)
 
   const refresh = createReviewRefresh({
     load,
@@ -156,8 +203,14 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     }, LOADING_TEXT_MS)
     drawStatus()
     cwd = await deps.cwd()
+    const chosen = cwd ? deps.baseFor(cwd) : undefined
     const result = cwd
-      ? await api.review.diff({ cwd, scope, ignoreWhitespace })
+      ? await api.review.diff({
+          cwd,
+          scope,
+          ignoreWhitespace,
+          ...(chosen === undefined ? {} : { base: chosen }),
+        })
       : { ok: true as const, value: undefined }
     clearTimeout(loadingTimer)
     busy = false
@@ -165,30 +218,23 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     if (!result.ok) state = { kind: 'error', error: result.error }
     else if (result.value === undefined) state = { kind: 'no-folder' }
     else state = result.value
+    if (state.kind === 'no-base' || state.kind === 'no-upstream') root = state.root
     if (state.kind === 'ok') {
-      base = state.diff.base ?? base
+      root = state.diff.root
+      branch = state.diff.branch
       texts.clear()
       for (const file of state.diff.files) {
         const shape = file.hunks.map((hunk) => `${hunk.newStart},${hunk.newCount}`).join(' ')
         if (shapes.get(file.path) !== shape) expanded.delete(file.path)
         shapes.set(file.path, shape)
       }
-      // The files keep their place across reads; at first, or when the file is gone, the first one with
-      // lines to read is shown, not a binary or a lock file
-      if (selectedFile() === undefined) {
-        const readable = files().find(
-          (file) => file.hunks.length > 0 && !file.binary && collapseReason(file) === undefined,
-        )
-        selectedPath = (readable ?? files()[0])?.path
-      }
     }
     draw()
   }
 
   // The unchanged text comes from the working tree once, then every gap of that file opens from it
-  async function expand(gap: DiffGap) {
-    const file = selectedFile()
-    if (!file || state.kind !== 'ok') return
+  async function expand(file: DiffFile, gap: DiffGap) {
+    if (state.kind !== 'ok') return
     const opened = expanded.get(file.path) ?? new Set<number>()
     opened.add(gap.id)
     expanded.set(file.path, opened)
@@ -200,11 +246,79 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       }
       texts.set(file.path, lines.value)
     }
-    if (selectedFile() === file) drawFile()
+    drawDiff()
+  }
+
+  // Another base is a choice kept for the repository; the one found again goes back to finding it
+  async function pickScope(value: string) {
+    if (value.startsWith('base:') && root !== undefined) {
+      const name = value.slice('base:'.length)
+      await deps.chooseBase(root, name === branch?.found?.name ? undefined : name)
+      scope = 'branch'
+      select.setValue('branch')
+    } else scope = value === 'branch' || value === 'unpushed' ? value : 'uncommitted'
+    resetReading = true
+    refresh.request()
+  }
+
+  function baseTip(base: ReviewBase): string {
+    if (base.source === 'created') return t('review.base.created', { base: base.name })
+    if (base.source === 'vscode') return t('review.base.vscode')
+    if (base.source === 'nearest') return t('review.base.nearest')
+    return t('review.base.chosen')
+  }
+
+  // The base option, disabled with the reason once a read found none
+  function baseOption(): SelectOption {
+    const base = branch?.base
+    if (base) return { value: 'branch', label: since(base.name), tip: baseTip(base) }
+    const option = { value: 'branch', label: t('review.scope.base') }
+    if (!branch) return option
+    const tip = branch.candidates.length > 0 ? t('review.noBase.text') : t('review.noBase')
+    return { ...option, tip, disabled: true }
+  }
+
+  // The unpushed option, disabled with the reason once a read found no upstream
+  function unpushedOption(): SelectOption {
+    const option = { value: 'unpushed', label: t('review.scope.unpushed') }
+    const upstream = branch?.upstream
+    if (!branch) return option
+    if (upstream) return { ...option, tip: t('review.scope.unpushed.tip', { upstream }) }
+    return { ...option, tip: t('review.scope.noUpstream'), disabled: true }
+  }
+
+  const since = (name: string) => t('review.scope.since', { base: name })
+
+  // Uncommitted, since the base, unpushed, then the other bases to pick from
+  function scopeOptions(): SelectOption[] {
+    const options: SelectOption[] = [
+      { value: 'uncommitted', label: t('review.scope.uncommitted') },
+      baseOption(),
+      unpushedOption(),
+    ]
+    if (!branch) return options
+    const { base, found } = branch
+    const listed = new Set(base ? [branchName(base.name)] : [])
+    for (const name of [...(found ? [found.name] : []), ...branch.candidates]) {
+      if (listed.has(branchName(name))) continue
+      listed.add(branchName(name))
+      const tip = name === found?.name ? baseTip(found) : undefined
+      options.push({ value: `base:${name}`, label: since(name), ...(tip ? { tip } : {}) })
+    }
+    return options
+  }
+
+  function drawScope() {
+    const options = scopeOptions()
+    const key = JSON.stringify(options)
+    if (key === drawnOptions) return
+    drawnOptions = key
+    select.setOptions(options)
+    select.setValue(scope)
   }
 
   function drawStatic() {
-    drawnBase = base
+    drawnOptions = ''
     scopeLabel.textContent = t('review.scope')
     element.setAttribute('aria-label', t('review.title'))
     whitespace.dataset.tip = t('review.whitespace')
@@ -213,29 +327,51 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     back.setAttribute('aria-label', t('review.terminal'))
     close.dataset.tip = t('review.close')
     close.setAttribute('aria-label', t('review.close'))
-    select.setOptions([
-      { value: 'uncommitted', label: t('review.scope.uncommitted') },
-      {
-        value: 'branch',
-        label: base ? t('review.scope.branchBase', { base }) : t('review.scope.branch'),
-      },
-    ])
-    select.setValue(scope)
+    drawScope()
+    drawIndexToggle()
+    drawLayoutToggle()
     hintsFor = undefined
   }
 
-  // The file and hunk keys only while there are files; Esc and Ctrl+R always
-  let hintsFor: boolean | undefined
-  function drawHints(withFiles: boolean) {
-    if (hintsFor === withFiles) return
-    hintsFor = withFiles
+  function drawIndexToggle() {
+    const hidden = deps.memory.indexHidden
+    const name = t(hidden ? 'review.index.show' : 'review.index.hide')
+    indexToggle.dataset.tip = name
+    indexToggle.setAttribute('aria-label', name)
+    indexToggle.setAttribute('aria-expanded', String(!hidden))
+    list.element.hidden = hidden
+    body.toggleAttribute('data-index-hidden', hidden)
+  }
+
+  // The button shows and names the other orientation, the one it switches to
+  function drawLayoutToggle() {
+    layout.hidden = orientation === undefined
+    const next = orientation === 'side' ? 'stacked' : 'side'
+    const name = t(next === 'stacked' ? 'review.layout.stacked' : 'review.layout.side')
+    layout.dataset.tip = name
+    layout.setAttribute('aria-label', name)
+    layout.replaceChildren(icon(ICONS[next], 16))
+  }
+
+  // The keys of the review while it has the focus; from the terminal, only the key that comes back here
+  let hintsFor: string | undefined
+  function drawHints() {
+    const withFiles = state.kind === 'ok' && state.diff.files.length > 0
+    const key = `${withFiles} ${focusInside}`
+    if (hintsFor === key) return
+    hintsFor = key
+    if (!focusInside) {
+      const come = actionHint(REVIEW_KEY, t('review.hint.review'))
+      come.addEventListener('click', () => pane.focus())
+      hints.replaceChildren(come)
+      return
+    }
     const refreshAction = actionHint('Ctrl+R', t('review.refresh'))
     refreshAction.addEventListener('click', () => refresh.request())
     hints.replaceChildren(
       ...(withFiles
         ? [
             keyHint('↑↓', t('review.hint.navigate')),
-            keyHint('Enter', t('review.hint.diff')),
             keyHint('[ ]', t('review.hint.file')),
             keyHint('n p', t('review.hint.hunk')),
           ]
@@ -279,40 +415,18 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     return button
   }
 
-  function drawFile() {
-    const file = selectedFile()
-    if (!file) {
-      fileTop.replaceChildren()
-      diff.clear()
-      return
-    }
-    const notice = fileNotice(file, shownAnyway.has(file.path), i18n, () => {
-      shownAnyway.add(file.path)
-      drawFile()
-    })
-    fileTop.replaceChildren(
-      fileHead(file, {
-        i18n,
-        modifier: deps.modifier,
-        isModified: deps.isModified,
-        open: (path) => state.kind === 'ok' && api.paths.openFile(`${state.diff.root}/${path}`),
-      }),
-      notice ?? '',
-    )
-    diff.element.hidden = notice !== undefined
-    if (notice) return diff.clear()
-    const rows = diffRows(file, expanded.get(file.path) ?? new Set(), texts.get(file.path))
-    diff.show(file, rows, t('review.a11y.diff', { path: file.path }))
+  function drawDiff() {
+    const found = files()
+    const rows = changeRows(found, (file) => ({
+      expanded: expanded.get(file.path) ?? new Set(),
+      text: texts.get(file.path),
+      shownAnyway: shownAnyway.has(file.path),
+    }))
+    diff.show(found, rows, resetReading)
+    resetReading = false
   }
 
-  function draw() {
-    drawStatus()
-    drawTotals()
-    // Outside a repository there is no scope to pick or whitespace to hide
-    const repository = state.kind !== 'not-repository' && state.kind !== 'no-folder'
-    select.element.hidden = !repository
-    whitespace.hidden = !repository || state.kind === 'no-base'
-    drawHints(state.kind === 'ok' && state.diff.files.length > 0)
+  function drawState() {
     const folder = cwd ? displayPath(cwd) : ''
     if (state.kind === 'loading') {
       body.hidden = true
@@ -328,91 +442,156 @@ export function createReviewPane(deps: ReviewPaneDeps) {
         t('review.notRepository.text', { path: folder }),
       )
     if (state.kind === 'no-base') return showMessage(t('review.noBase'), t('review.noBase.text'))
+    if (state.kind === 'no-upstream')
+      return showMessage(t('review.noUpstream'), t('review.noUpstream.text'))
     if (state.kind === 'error') {
       const retry = retryButton()
       showMessage(t(`error.${errorCodeOf(state.error)}`), t('review.error'), retry)
-      if (document.activeElement === element) retry.focus()
+      if (focusInside) retry.focus()
       return
     }
-    // The Branch option names its base once a read found it
-    if (base !== drawnBase) drawStatic()
+    // The second option names its base once a read found it
+    drawScope()
     if (state.diff.files.length === 0) {
+      const { base, upstream } = state.diff.branch
       return showMessage(
-        scope === 'branch'
-          ? t('review.empty.branch', { base: state.diff.base ?? '' })
-          : t('review.empty.uncommitted'),
+        scope === 'unpushed'
+          ? t('review.empty.unpushed', { upstream: upstream ?? '' })
+          : scope === 'branch'
+            ? t('review.empty.branch', { base: base?.name ?? '' })
+            : t('review.empty.uncommitted'),
         t('review.empty.text', { path: displayPath(state.diff.root) }),
       )
     }
     body.hidden = false
     message.hidden = true
-    const index = Math.max(
-      0,
-      files().findIndex((file) => file.path === selectedPath),
-    )
-    list.show(files(), index)
-    drawFile()
-    // Opened before the first read, the pane held the focus; the list takes it once there is one
-    if (document.activeElement === element) list.focus()
+    list.show(files(), Math.max(0, list.selected()))
+    drawDiff()
   }
 
-  function stepFile(step: 1 | -1) {
-    const next = list.selected() + step
-    if (next < 0 || next >= files().length) return false
-    list.select(next)
-    diff.revealFirstHunk()
-    return true
+  function draw() {
+    drawStatus()
+    drawTotals()
+    // Outside a repository there is no scope to pick or whitespace to hide
+    const repository = state.kind !== 'not-repository' && state.kind !== 'no-folder'
+    select.element.hidden = !repository
+    whitespace.hidden = !repository || state.kind === 'no-base' || state.kind === 'no-upstream'
+    const withFiles = state.kind === 'ok' && state.diff.files.length > 0
+    indexToggle.hidden = !withFiles
+    drawState()
+    drawHints()
+    // A focused list or diff that a new state hid would leave the keys on the page's body
+    if (focusInside && !element.contains(document.activeElement)) pane.focus()
   }
 
-  // Keys of the whole pane; the list and the diff handle their own arrows first
+  function keyTarget(target: EventTarget | null) {
+    if (target === list.element) return 'index'
+    if (target === diff.element) return 'diff'
+    return undefined
+  }
+
+  // Keys of the whole pane; the index and the diff handle their own arrows first
   element.addEventListener('keydown', (event) => {
     const { key } = event
-    const inContent = event.target === list.element || event.target === diff.element
+    const where = keyTarget(event.target)
     if (key === 'Escape') deps.onEscape()
     else if (event.ctrlKey && !event.shiftKey && !event.altKey && key.toLowerCase() === 'r')
       refresh.request()
-    else if (event.ctrlKey || event.altKey || event.metaKey || !inContent) return
-    else if (key === ']') stepFile(1)
-    else if (key === '[') stepFile(-1)
-    else if (key === 'n') {
-      // Past the last hunk of a file, the next file's first one
-      if (!diff.nextHunk(1) && stepFile(1)) diff.focus()
-    } else if (key === 'p') diff.nextHunk(-1)
-    else return
+    else if (event.ctrlKey || event.altKey || event.metaKey || where === undefined) return
+    else if (key === ']' || key === '[') {
+      const step = key === ']' ? 1 : -1
+      if (where === 'index') list.select(list.selected() + step)
+      else diff.nextFile(step)
+    } else if (key === 'n' || key === 'p') {
+      diff.nextHunk(key === 'n' ? 1 : -1)
+      if (where === 'index') diff.focus()
+    } else return
     event.preventDefault()
     event.stopPropagation()
+  })
+  // Where the keys are decides the hints: the review's own, or the way back to it
+  element.addEventListener('focusin', () => {
+    focusInside = true
+    drawHints()
+  })
+  element.addEventListener('focusout', (event) => {
+    const next = event.relatedTarget
+    if (next instanceof Node && element.contains(next)) return
+    if (next === null) return
+    focusInside = false
+    drawHints()
   })
   whitespace.addEventListener('click', () => {
     ignoreWhitespace = !ignoreWhitespace
     whitespace.setAttribute('aria-pressed', String(ignoreWhitespace))
     expanded.clear()
+    resetReading = true
     refresh.request()
   })
+  indexToggle.addEventListener('click', () => {
+    deps.memory.indexHidden = !deps.memory.indexHidden
+    drawIndexToggle()
+    diff.redraw()
+  })
+  layout.addEventListener('click', () => deps.onToggleLayout())
   back.addEventListener('click', () => deps.onEscape())
   close.addEventListener('click', () => deps.onClose())
 
-  drawStatic()
-  draw()
-
-  return {
+  const pane = {
     element,
-    open: () => refresh.open(),
-    close: () => refresh.close(),
-    // The list when there are files, else the pane itself so Esc and Ctrl+R still work
+    open() {
+      refresh.open()
+      diff.unpark()
+    },
+    // The reading stays: reopened in the same tab, the review is where it was left
+    close() {
+      diff.park()
+      refresh.close()
+    },
+    // The diff or the index, whichever had the keys last, else the pane so Esc and Ctrl+R still work
     focus() {
       if (!body.hidden && files().length > 0) {
-        if (document.activeElement !== diff.element) list.focus()
+        if (lastFocus === 'index' && !list.element.hidden) list.focus()
+        else diff.focus()
       } else element.focus()
     },
+    hasFocus: () => element.contains(document.activeElement),
     agentState: (agent: AgentState | undefined) => refresh.agentState(agent),
-    setNarrow(narrow: boolean) {
+    // How the tab shows the review: beside or below the terminal, or alone in a narrow tab
+    setArrangement(next: Orientation | undefined, narrow: boolean) {
+      orientation = next
       back.hidden = !narrow
+      drawLayoutToggle()
+      element.dataset.orientation = orientation ?? 'alone'
+    },
+    // The grid of the diff, for the orientation rule
+    grid(): PaneGrid {
+      const cellWidth = diffCellWidth()
+      const chrome = head.offsetHeight + hints.offsetHeight
+      return {
+        cellWidth,
+        cellHeight: LINE_HEIGHT,
+        frameWidth: GUTTER_COLUMNS * cellWidth + GUTTER_PIXELS,
+        frameHeight: chrome > 0 ? chrome : USUAL_CHROME,
+      }
     },
     retranslate() {
       drawStatic()
       draw()
     },
   }
+  let lastFocus: 'index' | 'diff' = 'diff'
+  list.element.addEventListener('focus', () => {
+    lastFocus = 'index'
+  })
+  diff.element.addEventListener('focus', () => {
+    lastFocus = 'diff'
+  })
+
+  drawStatic()
+  draw()
+
+  return pane
 }
 
 export type ReviewPane = ReturnType<typeof createReviewPane>

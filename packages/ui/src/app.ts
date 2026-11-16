@@ -18,11 +18,12 @@ import {
   jiraTicketLink,
   type MenuCategory,
   openTab,
-  PANE_RATIO,
   type PluralKey,
   type Project,
   recentTabs,
   reorderTabs,
+  reviewBaseFor,
+  reviewBasePatch,
   type SessionSnapshot,
   stepFontSize,
   stepOpacity,
@@ -40,12 +41,14 @@ import { displayPath } from './panel/format.ts'
 import { createGitSection } from './panel/git-section.ts'
 import { createPanel } from './panel/panel.ts'
 import { createSessionsSection } from './panel/sessions-section.ts'
+import { createSplitPreferences } from './panes/split-preferences.ts'
 import { createTabView, type TabView } from './panes/tab-view.ts'
 import { localeFor } from './platform/locale.ts'
 import { bindShortcuts } from './platform/shortcuts.ts'
 import { applyTheme, themeFor, watchSystemTheme } from './platform/theme.ts'
 import { createProjectSearch } from './projects/project-search.ts'
 import { createRootChooser } from './projects/root-chooser.ts'
+import { LAYOUT_KEY } from './review/review-pane.ts'
 import { createReviewTabs } from './review/review-tabs.ts'
 import { applyOpacity } from './settings/preferences.ts'
 import type { SettingsClient } from './settings/settings-client.ts'
@@ -100,9 +103,16 @@ const PROJECT_PREFIX = 'open-project:'
 export async function startApp(elements: AppElements, api: HostApi, settings: SettingsClient) {
   const { bar, host } = elements
   const sessions = new Map<string, TerminalSession>()
-  // Each tab's panes: its terminal and, when open, the review beside it
+  // Each tab's panes: its terminal and, when open, the review beside or below it
   const tabViews = new Map<string, TabView>()
-  const ratioMemory = { ratio: PANE_RATIO.initial }
+  const split = createSplitPreferences({
+    current: () => settings.current(),
+    update: (patch) => void settings.update(patch),
+    after(milliseconds, task) {
+      const timer = setTimeout(task, milliseconds)
+      return () => clearTimeout(timer)
+    },
+  })
   const projectTabs = new Map<string, string>()
   const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
@@ -215,6 +225,9 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       return fresh?.cwd ?? watcher.get(tabId)?.cwd
     },
     agent: (tabId) => attention.agent(tabId),
+    chooseLayout: (orientation) => split.setPreference(orientation),
+    baseFor: (cwd) => reviewBaseFor(settings.current(), cwd),
+    chooseBase: (root, name) => settings.update(reviewBasePatch(root, name)).then(() => undefined),
   })
 
   let activeSnapshot: SessionSnapshot | undefined
@@ -448,8 +461,9 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     const id = `tab-${counter}`
     const view = createTabView(host, {
       t: i18n.t,
-      memory: ratioMemory,
-      onNarrow: (narrow) => reviews.narrow(id, narrow),
+      preferences: () => split.current(),
+      onRatio: (orientation, ratio) => split.saveRatio(orientation, ratio),
+      onArrange: (orientation, narrow) => reviews.arranged(id, orientation, narrow),
       onShownChange: () => renderTabs(),
     })
     tabViews.set(id, view)
@@ -486,6 +500,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       kind: 'terminal',
       element: session.element,
       focus: () => session.focus(),
+      grid: () => session.grid(),
     })
     if (options.project) projectTabs.set(options.project, id)
     update(openTab(state, { id, label: options.label ?? i18n.t('tabs.default', { n: counter }) }))
@@ -580,6 +595,10 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     if (changed.includes('fontSize')) {
       for (const session of sessions.values()) session.setFontSize(next.fontSize)
     }
+    // The layout or a kept share changed, here or in another window; a new font changes the columns
+    if (changed.includes('fontSize') || changed.some((key) => key.startsWith('review.'))) {
+      for (const view of tabViews.values()) view.relayout()
+    }
   })
   // In "system" mode the desktop may switch themes while the cockpit is open
   watchSystemTheme(() => {
@@ -613,7 +632,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
             {
               label: i18n.t(reviews.isOpen(id) ? 'review.close' : 'review.toggle'),
               enabled: true,
-              run: () => toggleReview(id),
+              run: () => (reviews.isOpen(id) ? reviews.close(id) : toggleReview(id)),
             },
           ],
           x,
@@ -650,6 +669,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const actions = {
     newTab: () => void open(),
     toggleReview: () => state.activeId && toggleReview(state.activeId),
+    toggleReviewLayout: () => state.activeId && reviews.toggleLayout(state.activeId),
     closeTab: () => state.activeId && close(state.activeId),
     nextTab: () => update(stepTab(state, 1)),
     previousTab: () => update(stepTab(state, -1)),
@@ -684,6 +704,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     'tab:previous': actions.previousTab,
     'tab:finished': actions.nextFinished,
     'tab:review': actions.toggleReview,
+    'tab:review-layout': actions.toggleReviewLayout,
     'agent:claude': () => activeSession()?.write('claude\r'),
     'agent:resume': () => activeSession()?.write('claude --resume\r'),
     [CONNECT_ITEM]: () => state.activeId && connectTab(state.activeId),
@@ -716,6 +737,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
           { id: 'tab:previous', label: i18n.t('tabs.previous'), shortcut: 'Ctrl+Shift+Tab' },
           { id: 'tab:finished', label: i18n.t('tabs.nextFinished') },
           { id: 'tab:review', label: i18n.t('review.toggle'), shortcut: 'Ctrl+Shift+D' },
+          { id: 'tab:review-layout', label: i18n.t('review.layout.toggle'), shortcut: LAYOUT_KEY },
         ],
       },
       {

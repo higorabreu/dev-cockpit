@@ -3,8 +3,9 @@ import {
   type AgentState,
   createTranslator,
   type HostApi,
+  noBranchInfo,
+  type Orientation,
   ok,
-  PANE_RATIO,
   reviewDiff,
 } from '@dck/core'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -15,7 +16,8 @@ import { createReviewTabs } from './review-tabs.ts'
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 const settle = () => new Promise((resolve) => setTimeout(resolve, AGENT_SETTLE_MS + 20))
 
-function setup(width = 1201) {
+function setup(width = 1201, height = 700) {
+  const layouts: Orientation[] = []
   let reads = 0
   let agent: AgentState | undefined
   const api = {
@@ -24,7 +26,7 @@ function setup(width = 1201) {
         reads += 1
         return ok({
           kind: 'ok' as const,
-          diff: reviewDiff('/home/ana/acme', 'uncommitted', 'main', []),
+          diff: reviewDiff('/home/ana/acme', 'uncommitted', noBranchInfo, []),
         })
       },
       fileLines: async () => ok([]),
@@ -34,9 +36,11 @@ function setup(width = 1201) {
   document.body.append(host)
   const view = createTabView(host, {
     t: createTranslator('en').t,
-    memory: { ratio: PANE_RATIO.initial },
+    preferences: () => ({ preference: 'side', ratios: { side: 0.5, stacked: 0.5 } }),
+    onArrange: (orientation, narrow) => reviews.arranged('tab-1', orientation, narrow),
   })
   Object.defineProperty(view.element, 'clientWidth', { value: width, configurable: true })
+  Object.defineProperty(view.element, 'clientHeight', { value: height, configurable: true })
   const terminal = document.createElement('div')
   terminal.tabIndex = 0
   view.element.append(terminal)
@@ -54,12 +58,16 @@ function setup(width = 1201) {
     view: () => view,
     cwd: async () => '/home/ana/acme',
     agent: () => agent,
+    chooseLayout: (orientation) => layouts.push(orientation),
+    baseFor: () => undefined,
+    chooseBase: async () => undefined,
   })
   return {
     reviews,
     view,
     terminal,
     reads: () => reads,
+    layouts,
     setAgent: (state: AgentState | undefined) => {
       agent = state
     },
@@ -127,5 +135,47 @@ describe('createReviewTabs', () => {
 
     expect(document.activeElement).toBe(terminal)
     expect(reviews.isOpen('tab-1')).toBe(true)
+  })
+
+  it('should give the review the keys from the terminal and close it only from the review', async () => {
+    const { reviews, terminal } = setup()
+    reviews.toggle('tab-1')
+    await flush()
+    terminal.focus()
+
+    reviews.toggle('tab-1')
+    const focusedReview = document.activeElement?.closest('.review') !== null
+    reviews.toggle('tab-1')
+
+    expect(focusedReview).toBe(true)
+    expect(reviews.isOpen('tab-1')).toBe(false)
+  })
+
+  it('should reopen the same review in the tab so its reading is kept', async () => {
+    const { reviews, view } = setup()
+    reviews.toggle('tab-1')
+    await flush()
+    const first = view.element.querySelector('.review')
+    reviews.close('tab-1')
+
+    reviews.toggle('tab-1')
+
+    expect(view.element.querySelector('.review')).toBe(first)
+  })
+
+  it('should choose the other orientation from the header button and ignore it in a narrow tab', async () => {
+    const wide = setup()
+    wide.reviews.toggle('tab-1')
+    await flush()
+    wide.view.element.querySelector<HTMLButtonElement>('[data-tip-key="Ctrl+Shift+E"]')?.click()
+    document.body.replaceChildren()
+    const narrow = setup(700)
+    narrow.reviews.toggle('tab-1')
+    await flush()
+
+    narrow.reviews.toggleLayout('tab-1')
+
+    expect(wide.layouts).toEqual(['stacked'])
+    expect(narrow.layouts).toEqual([])
   })
 })

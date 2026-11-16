@@ -98,7 +98,7 @@ describe('settings view selects', () => {
     body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
 
     expect(body.querySelector('select')).toBeNull()
-    expect(general).toEqual(['set-language', 'set-theme'])
+    expect(general).toEqual(['set-language', 'set-theme', 'set-review.layout'])
     expect(combobox('shortcuts.holdTrigger').getAttribute('role')).toBe('combobox')
     view.close()
   })
@@ -126,6 +126,25 @@ describe('settings view selects', () => {
     expect(patches).toEqual([{ theme: 'light' }])
     expect(combobox('theme').querySelector('[data-current]')?.textContent).toBe('Light')
     expect(document.activeElement).toBe(combobox('theme'))
+    view.close()
+  })
+
+  it('should save the review layout from its row and bring back Automatic from the same select', async () => {
+    const initial = { ...defaultSettings, review: { ...defaultSettings.review, layout: 'side' } }
+    const { body, combobox, patches, view } = open([], api, initial as Settings)
+    const layout = combobox('review.layout')
+    const labelId = layout.getAttribute('aria-labelledby') ?? ''
+    const shown = layout.querySelector('[data-current]')?.textContent
+    layout.focus()
+
+    press(layout, 'Enter')
+    press(layout, 'Home')
+    press(layout, 'Enter')
+    await settle()
+
+    expect(body.querySelector(`#${labelId}`)?.textContent).toBe('Review layout')
+    expect(shown).toBe('Side by side')
+    expect(patches).toEqual([{ review: { layout: 'auto' } }])
     view.close()
   })
 

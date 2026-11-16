@@ -43,7 +43,7 @@ the agent come in phase 2.
 - **Diff source.** A port in `core` (`DiffSource`) with the git adapter in `node-git`: `git diff` with
   fixed arguments (no shell), `--no-color --no-ext-diff -M` and the scope's range, untracked files as
   additions; the unified diff is parsed in `core` (pure, tested) into files, hunks and lines. The base of a
-  branch is the merge base with the remote's default branch (`origin/HEAD`), else `main` or `master`.
+  branch was first the merge base with the remote's default branch; phase 1b replaced it (below).
 - **Word changes.** Pairs of removed and added lines inside a hunk are compared word by word, so only the
   changed part is marked; language independent. The comparison uses `diff` (jsdiff, no dependencies, the
   library diff2html itself builds on), in `ui` because `core` imports no package; only the word function
@@ -60,6 +60,78 @@ the agent come in phase 2.
   hunk keys, Ctrl+R to refresh, Esc back to the terminal; Ctrl+click on a file path opens it (D40).
   Virtualized lines, so a 10 000-line diff scrolls at 60 fps.
 - **States.** Not a Git repository, no changes, a failed `git`, and loading, each with its own text.
+
+## Phase 1b: layout that fits the window, and one continuous diff
+
+Decided with the maintainer after using phase 1 (2026-11-13): beside the terminal, the review squeezed both
+sides at a usual window size (a 1400px window leaves about 680px each: the terminal wraps the agent's
+output and the diff cuts long lines), and reading one file at a time broke the flow of reviewing a whole
+change.
+
+- **Orientation by the tab's shape.** Side by side when each side keeps about 100 columns; stacked, the
+  terminal on top and the review below, when it does not and each side keeps at least 15 rows; the review
+  takes the whole tab, as today, when neither fits.
+- **The user's choice wins.** A control in the review header and a shortcut switch between side by side and
+  stacked; the choice and the divider's ratio are kept in settings (`review.layout`: auto, side, stacked)
+  with a row in Settings, and the divider drags in both orientations.
+- **One continuous diff.** Every file in one virtualized scroll, each with its header, the way GitHub shows a
+  change; the file list becomes an index that scrolls the diff to a file, collapsible, beside the diff
+  when the review is wide (always in the stacked layout); `n` and `p` cross files, `[` and `]` jump to the
+  previous and next file.
+
+- **The base of the Branch scope** (decided with the maintainer, like VS Code): the branch the current one
+  was created from, not the remote's default. In order: `branch.<name>.vscode-merge-base` when it resolves;
+  the branch's own reflog ("branch: Created from <ref>", and for "Created from HEAD" the HEAD reflog's first
+  "checkout: moving from <ref> to <name>"), skipping commits, the branch's own remote copy and refs that no
+  longer resolve, the local branch before `origin/`; else the nearest branch. No branch name is special
+  (the maintainer, 2026-11-14: every team has its own, trunk, dev, staging, release/*): the candidates are
+  the 30 most recently committed local and `origin/` branches (`for-each-ref --sort=-committerdate`), each
+  name once with the local copy first, without the current branch, its remote copy, its upstream,
+  `origin/HEAD` and any branch that already contains HEAD (its merge base with HEAD is HEAD); the nearest
+  has the fewest commits ahead, then the latest merge base. They are measured 4 at a time and kept per
+  HEAD and refs. On the remote's default branch (`origin/HEAD`) the nearest is only the latest fork, so
+  nothing is found there unless the user picks a base. The user can pick another from the scope select,
+  kept per repository folder in settings (`review.bases`). The select always offers three scopes:
+  "Uncommitted"; "Base: <name>" with how it was found in its tooltip and the other candidates, nearest
+  first, after the three, disabled with the reason when no base is found; "Unpushed commits" (the merge
+  base with HEAD's upstream to the working tree), disabled with the reason when there is no upstream.
+
+| Id | Criterion | Verification |
+| --- | --- | --- |
+| R9 | At 1400x760 the review opens stacked with the terminal on top; at full height on a 1920px screen it opens side by side; below both, it takes the tab | Tests with sizes, screenshots |
+| R10 | The orientation control, its shortcut and the Settings row switch the layout at once and the choice survives a restart; the ratio is kept per orientation | Tests, a real-app run |
+| R11 | All files read as one scroll; the index scrolls to a file and follows the scroll; a 10 000-line change still opens under 300 ms and scrolls at 60 fps | Tests, measured |
+
+- [x] RV-T7. `core`: the orientation rule from the tab's size and the setting; the pane model gains an
+  orientation and a ratio per orientation. (R9, R10) The rule takes each pane's grid (the terminal's real
+  cell size and padding, the diff's 12px cell and gutters): side by side when each keeps 100 columns, else
+  stacked when each keeps 15 rows (and the review its 440px width), else the focused pane alone.
+- [x] RV-T8. Settings `review.layout` with its row, the header control and shortcut, the stacked layout and
+  the divider in both orientations. (R9, R10) The shortcut is Ctrl+Shift+E (free in D13 and in Claude Code,
+  Terminator's and Guake's split key); the button names the orientation it switches to. Shares are saved
+  400 ms after the divider rests.
+- [x] RV-T9. The continuous diff and the file index. (R11) Each file's rows sit in a `group` named after the
+  file inside the diff's listbox, its header row first (an option the cursor lands on with `]` and `[`); the
+  header of the file being read is pinned on top. A collapsed or binary file is its header alone, with
+  "Show anyway" (Enter on the header). The index sits beside the diff from 720px of review width.
+
+From a usability test of phase 1 (2026-11-13), done in 1b, each with a test:
+
+- [x] The keys fell to the page when `]`, `[` or `n` landed on a collapsed or binary file; in one scroll the
+  cursor lands on the file's header, focus stays on the diff and a redraw that hides the focused part gives
+  the keys back to the review.
+- [x] Ctrl+Shift+D from the terminal gives the keys to an open review, and closes it only from the review; a
+  reopened review keeps its file and line.
+- [x] The divider's share survives a restart (settings, checked with a real restart).
+- [x] The hint bar follows the focus: the review's keys while it has them, else Ctrl+Shift+D.
+- [x] `p` crosses files like `n`.
+- [x] The line numbers, the sign, hunk headers and gap rows stay in view on a sideways scroll.
+- [x] The file header that repeated the selected row, and opening on a two-line deleted file, are gone with
+  the continuous diff.
+
+Measured under Xvfb at 1400x760 and 1920x1040: Ctrl+Shift+D to the index 130-210 ms; "Show anyway" on a
+10 000-line file to the painted rows 24-26 ms; 239 scrolled frames at a 16.7 ms median, none dropped, with
+41 rows in the page (73 at full height).
 
 ## Phase 2: comments back to the agent
 

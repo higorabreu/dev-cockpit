@@ -3,6 +3,7 @@ export interface ShortcutActions {
   newTab(): void
   closeTab(): void
   toggleReview(): void
+  toggleReviewLayout(): void
   nextTab(): void
   previousTab(): void
   goToTab(index: number): void
@@ -46,6 +47,7 @@ export function bindShortcuts(actions: ShortcutActions): () => void {
       if (key === 't') return run(actions.newTab)
       if (key === 'w') return run(actions.closeTab)
       if (key === 'd') return run(actions.toggleReview)
+      if (key === 'e') return run(actions.toggleReviewLayout)
       if (key === 'l') return run(actions.toggleTheme)
       if (key === 'p') return run(actions.searchProjects)
       if (key === 'm') return run(actions.openViews)

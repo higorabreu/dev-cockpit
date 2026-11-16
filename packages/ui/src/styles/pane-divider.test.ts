@@ -19,6 +19,13 @@ describe('pane divider focus line', () => {
     expect(bodyOf('.pane-divider::after')).toMatch(/width:\s*2px/)
   })
 
+  it('should draw a 2px horizontal line when the divider splits stacked panes', () => {
+    const body = bodyOf('.pane-divider[aria-orientation="horizontal"]::after')
+
+    expect(body).toMatch(/height:\s*2px/)
+    expect(body).toMatch(/width:\s*auto/)
+  })
+
   it('should draw the foreground only on keyboard focus when listing the rules', () => {
     const foreground = rules.filter((rule) => rule.body.includes('var(--fg)'))
 
