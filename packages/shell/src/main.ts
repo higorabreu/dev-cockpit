@@ -56,7 +56,12 @@ import { createWindowSender } from './electron/window-sender.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
-import { createWaylandFit } from './platform/linux/wayland-fit.ts'
+import {
+  boundedScreen,
+  readWaylandBounds,
+  type Size,
+  waylandSocket,
+} from './platform/linux/wayland-bounds.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
 import { nativeWayland, selectPlatform, usesGpu } from './platform/select-platform.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
@@ -65,14 +70,8 @@ import { createRecencyStore } from './projects/recency-store.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
 import { watchSettingsFile } from './settings/settings-watch.ts'
 
-// Resolves with the page's scale if it moves away from the expected one within the time, else null
-const scaleChangeScript = (expected: number, withinMs: number) => `new Promise((resolve) => {
-  const query = matchMedia('(resolution: ${expected}dppx)')
-  const done = (value) => { query.removeEventListener('change', changed); clearTimeout(timer); resolve(value) }
-  const changed = () => done(devicePixelRatio)
-  query.addEventListener('change', changed)
-  const timer = setTimeout(() => done(Math.abs(devicePixelRatio - ${expected}) < 0.01 ? null : devicePixelRatio), ${withinMs})
-})`
+// The compositor answers in a few milliseconds; past this the window opens with the last size it knew
+const WAYLAND_BOUNDS_MS = 150
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
@@ -105,7 +104,22 @@ app.whenReady().then(async () => {
   session.defaultSession.setSpellCheckerLanguages([])
 
   let activeKey = ''
-  const toggleWindow = () => dock.toggle()
+  // Native Wayland hides the pointer: the compositor tells, before each show, the size the window may take
+  const waylandPath = nativeWayland(process.platform, process.env, app.commandLine)
+    ? waylandSocket(process.env)
+    : undefined
+  let waylandArea: Size | undefined
+  const beforeShow = async () => {
+    if (!waylandPath) return
+    const started = Date.now()
+    const area = await readWaylandBounds(waylandPath, WAYLAND_BOUNDS_MS)
+    if (area) waylandArea = area
+    if (process.env.DCK_LOG_DOCK === '1') {
+      logger.info('wayland bounds', { ...area, ms: Date.now() - started })
+    }
+  }
+  const toggleWindow = () => void beforeShow().then(() => dock.toggle())
+  const showWindow = () => void beforeShow().then(() => dock.show())
 
   const platform = selectPlatform({
     platform: process.platform,
@@ -171,43 +185,16 @@ app.whenReady().then(async () => {
   window.webContents.on('will-navigate', (event) => event.preventDefault())
   const send = createWindowSender(window)
 
-  const traceDock = process.env.DCK_LOG_DOCK === '1'
   const systemScreen = createElectronScreen(
     screen,
     process.platform === 'linux' ? createGtkWorkareas() : undefined,
   )
-  const page = (script: string) => window.webContents.executeJavaScript(script).catch(() => null)
-  const waylandFit = nativeWayland(process.platform, process.env, app.commandLine)
-    ? createWaylandFit(systemScreen, {
-        frameScale: async () =>
-          (await page('new Promise((r) => requestAnimationFrame(() => r(devicePixelRatio)))')) ??
-          undefined,
-        scaleChange: async (expected, withinMs) =>
-          (await page(scaleChangeScript(expected, withinMs))) ?? undefined,
-        conceal: () => void page("document.documentElement.style.opacity = '0'"),
-        reveal: () => void page("document.documentElement.style.opacity = ''"),
-        displays: () =>
-          screen.getAllDisplays().map(({ id, bounds, workArea, scaleFactor }) => ({
-            id: String(id),
-            bounds,
-            workArea,
-            scaleFactor,
-          })),
-        showAt: (point) => dock.show(point),
-        ...(traceDock ? { logger } : {}),
-      })
-    : undefined
-  // The first show starts hidden too, so a wrong first guess is never seen
-  if (waylandFit) window.webContents.once('did-finish-load', () => waylandFit.onHidden())
-  const electronScreen = waylandFit?.screen ?? systemScreen
+  const electronScreen = waylandPath ? boundedScreen(systemScreen, () => waylandArea) : systemScreen
   const dockWindow = createElectronDockWindow(window, {
-    onShown: () => {
-      send(hostChannels.windowShown)
-      void waylandFit?.onShown()
-    },
-    onHidden: () => waylandFit?.onHidden(),
+    onShown: () => send(hostChannels.windowShown),
   })
   const focusedDockWindow = platform.window.dock(dockWindow, window.webContents)
+  const traceDock = process.env.DCK_LOG_DOCK === '1'
 
   const dock = createDockController({
     screen: traceDock ? logScreen(electronScreen, logger) : electronScreen,
@@ -223,7 +210,7 @@ app.whenReady().then(async () => {
   })
 
   // Opening the app again from the application menu shows the window of the one already running
-  app.on('second-instance', () => dock.show())
+  app.on('second-instance', showWindow)
 
   logger.info('notifications available', { supported: Notification.isSupported() })
 
@@ -453,7 +440,7 @@ app.whenReady().then(async () => {
     },
     onToggle: () => {
       logger.info('toggle requested by the daemon')
-      dock.toggle()
+      toggleWindow()
     },
   })
 
@@ -520,7 +507,7 @@ app.whenReady().then(async () => {
       join(__dirname, 'assets', 'icon.png'),
     )
     const menuDeps = {
-      toggleWindow: () => dock.toggle(),
+      toggleWindow,
       openSettings,
       autostart: platform.autostart,
       t,

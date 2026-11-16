@@ -13,7 +13,6 @@ export interface WindowApi {
 
 export interface DockWindowHooks {
   readonly onShown?: () => void
-  readonly onHidden?: () => void
   readonly now?: () => number
 }
 
@@ -38,10 +37,7 @@ export function createElectronDockWindow(
       window.show()
       hooks.onShown?.()
     },
-    hide() {
-      window.hide()
-      hooks.onHidden?.()
-    },
+    hide: () => window.hide(),
     focus: () => window.focus(),
   }
 }
