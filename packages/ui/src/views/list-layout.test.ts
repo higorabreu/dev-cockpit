@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type { ViewItem } from '@dck/core'
 import { describe, expect, it } from 'vitest'
 import { HEADER_HEIGHT, layOutList, ROW_HEIGHT, rowSpan } from './list-layout.ts'
@@ -58,5 +60,15 @@ describe('rowSpan', () => {
       top: 2 * HEADER_HEIGHT + 2 * ROW_HEIGHT,
       bottom: 2 * HEADER_HEIGHT + 3 * ROW_HEIGHT,
     })
+  })
+})
+
+describe('section heading box', () => {
+  const css = readFileSync(join(import.meta.dirname, '..', 'styles', 'views.css'), 'utf8')
+  const head = /\.vsection-head \{([^}]*)\}/.exec(css)?.[1] ?? ''
+
+  it('should keep its padding inside the layout height when reading the heading rule', () => {
+    expect(head).toMatch(/box-sizing:\s*border-box/)
+    expect(head).toMatch(new RegExp(`height:\\s*${HEADER_HEIGHT}px`))
   })
 })
