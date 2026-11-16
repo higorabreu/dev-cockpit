@@ -35,6 +35,7 @@ import {
   Menu,
   Notification,
   screen,
+  session,
   Tray,
 } from 'electron'
 import { createConnectorConnections } from './connections/connector-connections.ts'
@@ -87,6 +88,8 @@ app.whenReady().then(async () => {
     return
   }
   Menu.setApplicationMenu(null)
+  // No input spell checks, yet Chromium would fetch a dictionary from Google at boot for nothing
+  session.defaultSession.setSpellCheckerLanguages([])
 
   let activeKey = ''
   const toggleWindow = () => dock.toggle()
