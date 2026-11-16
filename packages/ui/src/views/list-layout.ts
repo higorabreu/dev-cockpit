@@ -1,7 +1,7 @@
 import type { IssueStatusCategory, ViewItem } from '@dck/core'
 
 export const ROW_HEIGHT = 46
-export const HEADER_HEIGHT = 32
+export const HEADER_HEIGHT = 40
 
 // Items under an optional heading; a list of merge requests is one group without one
 export interface ListGroup {

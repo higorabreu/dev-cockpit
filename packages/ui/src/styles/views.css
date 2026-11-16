@@ -242,17 +242,19 @@
   right: 0;
 }
 
-/* A quiet caption like the panel's section heads, sitting on the rows it names */
+/* A quiet caption like the panel's section heads, sitting on the rows it names. Border box, so its
+   padding stays inside HEADER_HEIGHT and the caption keeps its gap above the first row */
 .vsection-head {
+  box-sizing: border-box;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 32px;
+  height: 40px;
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  padding: 0 12px 7px;
+  padding: 0 12px 8px;
   color: var(--muted);
   font: 500 10.5px var(--font-sans);
   letter-spacing: 0.07em;
