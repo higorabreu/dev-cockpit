@@ -1,0 +1,57 @@
+/* A shortcut as keycaps, one per key as in VS Code: + joins the keys of a chord, a gap separates chords
+   and alternatives. The cap takes the color of the text around it; its lower edge is a shade deeper, so
+   it reads as a key */
+.keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.kchord {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.key {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  background: var(--hover);
+  box-shadow: inset 0 -1px 0 var(--line);
+  color: inherit;
+  font: 11px / 1 var(--font-mono);
+}
+
+.kplus {
+  color: var(--muted);
+  font: 11px / 1 var(--font-sans);
+}
+
+.keys.compact {
+  gap: 5px;
+}
+
+.keys.compact .kchord {
+  gap: 2px;
+}
+
+.keys.compact .key {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10.5px;
+}
+
+.keys.compact .kplus {
+  font-size: 10.5px;
+}

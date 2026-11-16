@@ -103,9 +103,12 @@
   text-anchor: middle;
 }
 
+/* As wide as its longest row, so a label keeps its words beside the shortcut's caps */
 #menu-card .list {
   position: absolute;
-  width: 206px;
+  width: max-content;
+  min-width: 206px;
+  max-width: 340px;
   padding: 6px;
   display: flex;
   flex-direction: column;
@@ -139,7 +142,7 @@
 }
 
 .it .k {
-  font: 10.5px var(--font-mono);
+  flex: none;
 }
 
 .it.on {
@@ -162,14 +165,6 @@
   color: var(--muted);
   font-size: 11px;
   white-space: nowrap;
-}
-
-#menu kbd {
-  padding: 0 4px;
-  margin-right: 2px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  font: 10.5px var(--font-mono);
 }
 
 .strip {
