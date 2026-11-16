@@ -8,6 +8,7 @@ import { FakeDockWindow } from '@dck/core/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { PlacedWindow } from './platform-window.ts'
 import {
+  nativeWayland,
   type PlatformContext,
   processAdapters,
   selectPlatform,
@@ -118,6 +119,30 @@ describe('selectPlatform', () => {
     expect(job).toContain('<key>DCK_START_HIDDEN</key>')
     expect(job).not.toContain('--no-sandbox')
   })
+
+  it.each([
+    { when: 'a Wayland session', session: 'wayland', ozone: '', expected: true },
+    { when: 'an X11 session', session: 'x11', ozone: '', expected: false },
+    {
+      when: 'a Wayland session forced to XWayland',
+      session: 'wayland',
+      ozone: 'x11',
+      expected: false,
+    },
+  ])(
+    'should run as a Wayland client $expected when it is $when',
+    ({ session, ozone, expected }) => {
+      // Act
+      const native = nativeWayland(
+        'linux',
+        { XDG_SESSION_TYPE: session },
+        { getSwitchValue: () => ozone },
+      )
+
+      // Assert
+      expect(native).toBe(expected)
+    },
+  )
 
   it.each([
     { platform: 'linux' as const, expected: false },

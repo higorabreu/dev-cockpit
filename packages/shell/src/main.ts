@@ -56,13 +56,16 @@ import { createWindowSender } from './electron/window-sender.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
+import { createWaylandFit } from './platform/linux/wayland-fit.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
-import { selectPlatform, usesGpu } from './platform/select-platform.ts'
+import { nativeWayland, selectPlatform, usesGpu } from './platform/select-platform.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
 import { watchSettingsFile } from './settings/settings-watch.ts'
+
+const WAYLAND_PLACE_MS = 120
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
@@ -161,15 +164,34 @@ app.whenReady().then(async () => {
   window.webContents.on('will-navigate', (event) => event.preventDefault())
   const send = createWindowSender(window)
 
-  const electronScreen = createElectronScreen(
+  const traceDock = process.env.DCK_LOG_DOCK === '1'
+  const systemScreen = createElectronScreen(
     screen,
     process.platform === 'linux' ? createGtkWorkareas() : undefined,
   )
+  const waylandFit = nativeWayland(process.platform, process.env, app.commandLine)
+    ? createWaylandFit(systemScreen, {
+        pageScreen: () =>
+          window.webContents
+            .executeJavaScript('({ width: screen.width, height: screen.height })')
+            .catch(() => undefined),
+        displays: () =>
+          screen
+            .getAllDisplays()
+            .map(({ id, bounds, workArea }) => ({ id: String(id), bounds, workArea })),
+        showAt: (point) => dock.show(point),
+        ...(traceDock ? { logger } : {}),
+      })
+    : undefined
+  const electronScreen = waylandFit?.screen ?? systemScreen
   const dockWindow = createElectronDockWindow(window, {
-    onShown: () => send(hostChannels.windowShown),
+    onShown: () => {
+      send(hostChannels.windowShown)
+      // The compositor places the window a moment after it shows
+      if (waylandFit) setTimeout(() => void waylandFit.onShown(), WAYLAND_PLACE_MS)
+    },
   })
   const focusedDockWindow = platform.window.dock(dockWindow, window.webContents)
-  const traceDock = process.env.DCK_LOG_DOCK === '1'
 
   const dock = createDockController({
     screen: traceDock ? logScreen(electronScreen, logger) : electronScreen,
