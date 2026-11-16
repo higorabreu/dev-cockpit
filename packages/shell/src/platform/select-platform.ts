@@ -47,6 +47,10 @@ export interface Platform {
 export const processAdapters = (platform: NodeJS.Platform) =>
   platform === 'darwin' ? macosProc : linuxProc
 
+// The UI is text on the DOM, which Chromium composites in software on Linux; the GPU process cost
+// about 25 MB idle (D50). The Mac keeps it until it is measured there
+export const usesGpu = (platform: NodeJS.Platform) => platform !== 'linux'
+
 // macOS still gets the Linux autostart until MAC-T8 replaces it
 export function selectPlatform(context: PlatformContext): Platform {
   const { platform, env, home, packaged, execPath, appPath, resourcesPath, logger } = context
