@@ -14,16 +14,21 @@ import {
   emptyTabs,
   formatDuration,
   type HostApi,
+  JIRA_CONNECTOR,
+  jiraTicketLink,
   type MenuCategory,
   openTab,
   type PluralKey,
   type Project,
   recentTabs,
   reorderTabs,
+  reviewBaseFor,
+  reviewBasePatch,
   type SessionSnapshot,
   stepFontSize,
   stepOpacity,
   stepTab,
+  storedAccount,
   type TabsState,
 } from '@dck/core'
 import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
@@ -36,10 +41,15 @@ import { displayPath } from './panel/format.ts'
 import { createGitSection } from './panel/git-section.ts'
 import { createPanel } from './panel/panel.ts'
 import { createSessionsSection } from './panel/sessions-section.ts'
+import { createSplitPreferences } from './panes/split-preferences.ts'
+import { createTabView, type TabView } from './panes/tab-view.ts'
 import { localeFor } from './platform/locale.ts'
 import { bindShortcuts } from './platform/shortcuts.ts'
 import { applyTheme, themeFor, watchSystemTheme } from './platform/theme.ts'
 import { createProjectSearch } from './projects/project-search.ts'
+import { createRootChooser } from './projects/root-chooser.ts'
+import { LAYOUT_KEY } from './review/review-pane.ts'
+import { createReviewTabs } from './review/review-tabs.ts'
 import { applyOpacity } from './settings/preferences.ts'
 import type { SettingsClient } from './settings/settings-client.ts'
 import { createSettingsView } from './settings/settings-view.ts'
@@ -93,6 +103,16 @@ const PROJECT_PREFIX = 'open-project:'
 export async function startApp(elements: AppElements, api: HostApi, settings: SettingsClient) {
   const { bar, host } = elements
   const sessions = new Map<string, TerminalSession>()
+  // Each tab's panes: its terminal and, when open, the review beside or below it
+  const tabViews = new Map<string, TabView>()
+  const split = createSplitPreferences({
+    current: () => settings.current(),
+    update: (patch) => void settings.update(patch),
+    after(milliseconds, task) {
+      const timer = setTimeout(task, milliseconds)
+      return () => clearTimeout(timer)
+    },
+  })
   const projectTabs = new Map<string, string>()
   const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
@@ -113,6 +133,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       projects = found
     })
 
+  const rootChooser = createRootChooser({ pick: () => api.projects.chooseRoot(), settings })
   const search = createProjectSearch(
     {
       overlay: elements.search,
@@ -120,10 +141,13 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       results: elements.searchResults,
       hint: elements.searchHint,
     },
-    (path) => openProject(path),
-    () => activeSession()?.focus(),
-    (path) => void toggleFavorite(path),
-    i18n.t,
+    {
+      onPick: (path) => openProject(path),
+      onClose: () => focusActive(),
+      onToggleFavorite: (path) => void toggleFavorite(path),
+      onChooseRoot: () => void chooseProjectsRoot(),
+      t: i18n.t,
+    },
   )
 
   const searchEntries = () =>
@@ -135,7 +159,14 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     }))
 
   function searchProjects() {
-    void refreshProjects().then(() => search.open(searchEntries()))
+    if (rootChooser.needed()) search.askForRoot()
+    else void refreshProjects().then(() => search.open(searchEntries()))
+  }
+
+  // Saved, the search goes on with the new folder; cancelled, it keeps asking
+  async function chooseProjectsRoot() {
+    if (await rootChooser.choose()) searchProjects()
+    else search.askForRoot()
   }
 
   async function toggleFavorite(path: string) {
@@ -150,7 +181,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       settings,
       api,
       i18n,
-      onClose: () => activeSession()?.focus(),
+      onClose: () => focusActive(),
       previewOpacity: applyOpacity,
     },
   )
@@ -158,9 +189,11 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const viewsView = createViewsView(elements.views, {
     api,
     i18n,
-    onClose: () => activeSession()?.focus(),
+    onClose: () => focusActive(),
     openSettings: () => settingsView.open('connections'),
     onBadge: showBadge,
+    // The ticket link in the Git section follows the Jira tasks as they arrive
+    onItems: () => panel.render(),
   })
 
   let badge: { count: number; label: PluralKey | undefined } = { count: 0, label: undefined }
@@ -175,6 +208,27 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   }
 
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
+  // The pane of the active tab that last had the keys: its terminal or its review
+  const focusActive = () =>
+    state.activeId ? tabViews.get(state.activeId)?.focusCurrent() : undefined
+
+  const reviews = createReviewTabs({
+    api,
+    i18n,
+    modifier: modifierName,
+    isModified: (event) => (linkModifier === 'meta' ? event.metaKey : event.ctrlKey),
+    view: (tabId) => tabViews.get(tabId),
+    // Fresh read: the watcher lags up to one cycle and the user may have just run cd
+    async cwd(tabId) {
+      const ptyId = sessions.get(tabId)?.ptyId
+      const fresh = ptyId === undefined ? undefined : await api.session.activity(ptyId)
+      return fresh?.cwd ?? watcher.get(tabId)?.cwd
+    },
+    agent: (tabId) => attention.agent(tabId),
+    chooseLayout: (orientation) => split.setPreference(orientation),
+    baseFor: (cwd) => reviewBaseFor(settings.current(), cwd),
+    chooseBase: (root, name) => settings.update(reviewBasePatch(root, name)).then(() => undefined),
+  })
 
   let activeSnapshot: SessionSnapshot | undefined
   let environment: ComposeStatus | undefined
@@ -204,7 +258,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     if (!agentConnect.connect(tabId)) return
     connectHint.handled(tabId)
     update(activateTab(state, tabId))
-    sessions.get(tabId)?.focus()
+    tabViews.get(tabId)?.focus(tabId)
     panel.render()
   }
 
@@ -227,8 +281,21 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     })
   }
 
+  // A tab whose review is open but hidden behind its terminal (narrow) says so in the bar
+  function hiddenReviews(): ReadonlySet<string> {
+    const hidden = new Set<string>()
+    for (const [id, view] of tabViews) {
+      if (reviews.isOpen(id) && !view.isShown(`${id}:review`)) hidden.add(id)
+    }
+    return hidden
+  }
+
+  function renderTabs() {
+    tabBar.render(state, attention.marks(), hiddenReviews())
+  }
+
   function showAttention() {
-    tabBar.render(state, attention.marks())
+    renderTabs()
     panel.render()
   }
 
@@ -238,6 +305,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     if (quietTimer || !attention.hasWorkingAgent()) return
     quietTimer = setInterval(() => {
       attention.settle((id) => sessions.get(id)?.lastOutputAt())
+      reviews.syncAgents()
       if (attention.hasWorkingAgent()) return
       clearInterval(quietTimer)
       quietTimer = undefined
@@ -255,6 +323,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     connectHint.signal(tabId)
     const event = attention.signal(tabId, signal.state, isSeen(tabId))
     if (event) announce(event)
+    reviews.syncAgents()
     watchQuiet()
     showAttention()
   })
@@ -277,6 +346,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         const finished = attention.update(tab.id, info, isSeen(tab.id))
         if (finished) announce({ kind: 'finished', ...finished })
       }
+      reviews.syncAgents()
       showAttention()
     },
   })
@@ -303,18 +373,28 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
           connect: connectTab,
           dismissConnect() {
             void settings.update({ system: { agentConnectHint: false } })
-            activeSession()?.focus()
+            focusActive()
           },
         },
         i18n,
       ),
       createGitSection(
-        { snapshot: () => activeSnapshot, requestRender: () => panel.render() },
+        {
+          snapshot: () => activeSnapshot,
+          requestRender: () => panel.render(),
+          ticket: (branch) =>
+            jiraTicketLink(
+              branch,
+              storedAccount(settings.current(), JIRA_CONNECTOR.id)?.url,
+              viewsView.issueProjects(JIRA_CONNECTOR.id),
+            ),
+          openTicket: (url) => api.external.open(url),
+        },
         i18n,
       ),
       createEnvironmentSection({ status: () => environment }, i18n),
     ],
-    afterPointer: () => activeSession()?.focus(),
+    afterPointer: () => focusActive(),
     t: i18n.t,
     title: () => {
       const cwd = state.activeId ? watcher.get(state.activeId)?.cwd : undefined
@@ -339,13 +419,10 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   }
 
   function render() {
-    tabBar.render(state, attention.marks())
-    for (const [id, session] of sessions) {
-      session.element.classList.toggle('active', id === state.activeId)
-    }
-    const active = activeSession()
-    active?.fit()
-    active?.focus()
+    renderTabs()
+    for (const [id, view] of tabViews) view.setActive(id === state.activeId)
+    activeSession()?.fit()
+    focusActive()
     markActiveSeen()
     panel.refresh()
   }
@@ -357,8 +434,11 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   }
 
   function discard(id: string) {
+    reviews.forget(id)
     sessions.get(id)?.dispose()
     sessions.delete(id)
+    tabViews.get(id)?.dispose()
+    tabViews.delete(id)
     attention.forget(id)
     connectHint.forget(id)
     for (const [path, tabId] of projectTabs) if (tabId === id) projectTabs.delete(path)
@@ -379,8 +459,16 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   async function open(options: OpenOptions = {}) {
     counter += 1
     const id = `tab-${counter}`
+    const view = createTabView(host, {
+      t: i18n.t,
+      preferences: () => split.current(),
+      onRatio: (orientation, ratio) => split.saveRatio(orientation, ratio),
+      onArrange: (orientation, narrow) => reviews.arranged(id, orientation, narrow),
+      onShownChange: () => renderTabs(),
+    })
+    tabViews.set(id, view)
     const session = await createTerminalSession({
-      host,
+      host: view.element,
       api,
       theme,
       fontSize: settings.current().fontSize,
@@ -407,6 +495,13 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       },
     })
     sessions.set(id, session)
+    view.setTerminal({
+      id,
+      kind: 'terminal',
+      element: session.element,
+      focus: () => session.focus(),
+      grid: () => session.grid(),
+    })
     if (options.project) projectTabs.set(options.project, id)
     update(openTab(state, { id, label: options.label ?? i18n.t('tabs.default', { n: counter }) }))
   }
@@ -485,9 +580,11 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       panel.retranslate()
       search.retranslate()
       viewsView.retranslate()
+      reviews.retranslate()
+      for (const view of tabViews.values()) view.retranslate()
       showBadge(badge.count, badge.label)
       settingsView.rerender()
-      tabBar.render(state, attention.marks())
+      renderTabs()
     }
     // The folder and depth are only read when listing: reload for the menu and the search
     if (changed.some((key) => key.startsWith('projects.'))) void refreshProjects()
@@ -497,6 +594,10 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     if (changed.includes('extensions.disabled')) void viewsView.warm()
     if (changed.includes('fontSize')) {
       for (const session of sessions.values()) session.setFontSize(next.fontSize)
+    }
+    // The layout or a kept share changed, here or in another window; a new font changes the columns
+    if (changed.includes('fontSize') || changed.some((key) => key.startsWith('review.'))) {
+      for (const view of tabViews.values()) view.relayout()
     }
   })
   // In "system" mode the desktop may switch themes while the cockpit is open
@@ -528,6 +629,11 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
             { label: i18n.t('tabs.close'), enabled: several, run: () => close(id) },
             { label: i18n.t('tabs.closeOthers'), enabled: several, run: () => closeOthers(id) },
             { label: i18n.t('tabs.duplicate'), enabled: true, run: () => void duplicate(id) },
+            {
+              label: i18n.t(reviews.isOpen(id) ? 'review.close' : 'review.toggle'),
+              enabled: true,
+              run: () => (reviews.isOpen(id) ? reviews.close(id) : toggleReview(id)),
+            },
           ],
           x,
           y,
@@ -549,13 +655,21 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         current: tab.id === state.activeId,
       })),
     onPick: (id) => update(activateTab(state, id)),
-    onClose: () => activeSession()?.focus(),
+    onClose: () => focusActive(),
     barOnTop: () => document.body.classList.contains('full'),
     t: i18n.t,
   })
 
+  // The review belongs to a tab: it opens on that tab, which comes to the front
+  function toggleReview(id: string) {
+    update(activateTab(state, id))
+    reviews.toggle(id)
+  }
+
   const actions = {
     newTab: () => void open(),
+    toggleReview: () => state.activeId && toggleReview(state.activeId),
+    toggleReviewLayout: () => state.activeId && reviews.toggleLayout(state.activeId),
     closeTab: () => state.activeId && close(state.activeId),
     nextTab: () => update(stepTab(state, 1)),
     previousTab: () => update(stepTab(state, -1)),
@@ -589,6 +703,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     'tab:next': actions.nextTab,
     'tab:previous': actions.previousTab,
     'tab:finished': actions.nextFinished,
+    'tab:review': actions.toggleReview,
+    'tab:review-layout': actions.toggleReviewLayout,
     'agent:claude': () => activeSession()?.write('claude\r'),
     'agent:resume': () => activeSession()?.write('claude --resume\r'),
     [CONNECT_ITEM]: () => state.activeId && connectTab(state.activeId),
@@ -620,6 +736,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
           { id: 'tab:next', label: i18n.t('tabs.next'), shortcut: 'Ctrl+Tab' },
           { id: 'tab:previous', label: i18n.t('tabs.previous'), shortcut: 'Ctrl+Shift+Tab' },
           { id: 'tab:finished', label: i18n.t('tabs.nextFinished') },
+          { id: 'tab:review', label: i18n.t('review.toggle'), shortcut: 'Ctrl+Shift+D' },
+          { id: 'tab:review-layout', label: i18n.t('review.layout.toggle'), shortcut: LAYOUT_KEY },
         ],
       },
       {

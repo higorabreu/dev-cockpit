@@ -7,12 +7,18 @@ import {
   type ConnectionStatus,
   type Connections,
   connectorOfView,
+  type DiffSource,
+  errorBody,
+  fail,
   hostChannels,
+  isBaseRef,
+  LIMITS,
   type Logger,
   type Notifier,
   type ProjectCatalog,
   type PtyCreateOptions,
   type PtyHost,
+  type PtyOptions,
   type PtySession,
   type SessionActivityInfo,
   type SessionSnapshot,
@@ -94,6 +100,22 @@ const resolvePathsSchema = z.object({
   paths: z.array(pathText(MAX_CANDIDATE_LENGTH)).max(MAX_PATHS_PER_CALL),
 })
 
+// The tab's folder goes into git's arguments, so it must be an absolute folder that exists
+const diffRequestSchema = z.object({
+  cwd: absolutePathSchema,
+  scope: z.enum(['uncommitted', 'branch', 'unpushed']),
+  ignoreWhitespace: z.boolean(),
+  // Handed to git as a revision, so only a plain branch name passes
+  base: z.string().refine(isBaseRef).optional(),
+})
+const fileLinesSchema = z.object({
+  root: absolutePathSchema,
+  path: pathText(MAX_ABSOLUTE_LENGTH).refine((text) => !isAbsolute(text)),
+})
+
+// The picker's answer becomes `projects.root`, so it must fit the setting and be an absolute folder
+const chosenRootSchema = pathText(LIMITS.projectsRoot.max).refine((text) => isAbsolute(text))
+
 export interface IpcMainApi {
   handle(channel: string, listener: (event: unknown, ...args: never[]) => unknown): void
   on(channel: string, listener: (event: unknown, ...args: never[]) => void): void
@@ -104,6 +126,8 @@ export interface BridgeOptions {
   readonly ptyHost: PtyHost
   readonly clipboard: Clipboard
   readonly projects: ProjectCatalog
+  // The system folder picker over the window; undefined when the user cancels
+  pickFolder(): Promise<string | undefined>
   readonly notifier: Notifier
   readonly settings: {
     get(): SettingsView
@@ -116,12 +140,13 @@ export interface BridgeOptions {
   readonly external: { open(url: string): void; allowedOrigins(): readonly string[] }
   readonly environment: { status(pid: number): Promise<ComposeStatus> }
   readonly files: TerminalFiles
+  readonly review: DiffSource
   readonly sessions: {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
   }
   readonly agents: readonly AgentProfile[]
-  readonly shell: string
+  readonly shell: Pick<PtyOptions, 'file' | 'args'>
   readonly home: string
   readonly logger: Logger
   send(channel: string, ...args: unknown[]): void
@@ -138,8 +163,8 @@ export function registerHostBridge(options: BridgeOptions) {
   ipcMain.handle(hostChannels.ptyCreate, (_event, create: PtyCreateOptions) => {
     const id = nextId++
     const session = ptyHost.spawn({
-      file: options.shell,
-      args: [],
+      file: options.shell.file,
+      args: options.shell.args,
       cwd: create.cwd ?? options.home,
       // Anything running in this terminal, like an agent's hooks, knows which tab it belongs to
       env: { DCK_PTY_ID: String(id) },
@@ -238,6 +263,32 @@ export function registerHostBridge(options: BridgeOptions) {
       ? options.views.refresh(parsed.data.view, parsed.data.maxAgeMs)
       : undefined
   })
+  // A file is only read from a repository a diff found, never from any folder the window names
+  const reviewRoots = new Set<string>()
+  const isFolder = (path: string) =>
+    options.files.stat(path).then(
+      (stats) => stats.isDirectory(),
+      () => false,
+    )
+  ipcMain.handle(hostChannels.reviewDiff, async (_event, payload: unknown) => {
+    const parsed = diffRequestSchema.safeParse(payload)
+    if (!parsed.success || !(await isFolder(parsed.data.cwd))) {
+      logger.warn('review request refused', { kind: 'diff' })
+      return fail(errorBody('DCK-IPC-003', 'review diff'))
+    }
+    const result = await options.review.diff(parsed.data)
+    if (result.ok && result.value.kind === 'ok') reviewRoots.add(result.value.diff.root)
+    if (!result.ok) logger.warn('review diff failed', { error: result.error.message })
+    return result
+  })
+  ipcMain.handle(hostChannels.reviewFile, (_event, payload: unknown) => {
+    const parsed = fileLinesSchema.safeParse(payload)
+    if (!parsed.success || !reviewRoots.has(parsed.data.root)) {
+      logger.warn('review request refused', { kind: 'file' })
+      return fail(errorBody('DCK-IPC-003', 'review file'))
+    }
+    return options.review.fileLines(parsed.data.root, parsed.data.path)
+  })
   ipcMain.handle(hostChannels.autostartGet, () => options.autostart.isEnabled())
   ipcMain.handle(hostChannels.autostartSet, async (_event, enabled: unknown) => {
     await options.autostart.setEnabled(enabled === true)
@@ -264,6 +315,14 @@ export function registerHostBridge(options: BridgeOptions) {
   ipcMain.handle(hostChannels.projectsToggleFavorite, (_event, path: string) =>
     options.projects.toggleFavorite(path),
   )
+  ipcMain.handle(hostChannels.projectsChooseRoot, async () => {
+    const chosen = await options.pickFolder()
+    if (chosen === undefined) return undefined
+    const parsed = chosenRootSchema.safeParse(chosen)
+    if (parsed.success && (await isFolder(parsed.data))) return parsed.data
+    logger.warn('chosen projects folder refused')
+    return undefined
+  })
   ipcMain.on(hostChannels.projectsTouch, (_event, path: string) => {
     void options.projects.touch(path)
   })

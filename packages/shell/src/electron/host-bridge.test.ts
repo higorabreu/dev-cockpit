@@ -1,10 +1,14 @@
 import {
   type ConnectionFields,
   type Connector,
+  type DiffRequest,
   defaultSettings,
   GITLAB_CONNECTOR,
   hostChannels,
   type LogContext,
+  noBranchInfo,
+  ok,
+  reviewDiff,
   type TabNotification,
 } from '@dck/core'
 import { FakePtyHost, MemoryClipboard } from '@dck/core/testing'
@@ -36,7 +40,7 @@ const disk = new Map<string, DiskEntry>([
   ['/srv/acme/backend/Bundle.app', dir],
 ])
 
-function setup() {
+function setup(picked: string | undefined = undefined) {
   const handlers = new Map<string, (...args: never[]) => unknown>()
   const ipcMain: IpcMainApi = {
     handle: (channel, listener) => void handlers.set(channel, listener),
@@ -56,6 +60,8 @@ function setup() {
   const warnings: { message: string; context: LogContext | undefined }[] = []
   const openedPaths: string[] = []
   const shownPaths: string[] = []
+  const diffRequests: DiffRequest[] = []
+  const fileReads: string[] = []
   const bridge = registerHostBridge({
     ipcMain,
     ptyHost,
@@ -92,6 +98,19 @@ function setup() {
         return ''
       },
       showItemInFolder: (path) => void shownPaths.push(path),
+    },
+    review: {
+      diff: async (request) => {
+        diffRequests.push(request)
+        return ok({
+          kind: 'ok' as const,
+          diff: reviewDiff('/srv/acme/backend', request.scope, noBranchInfo, []),
+        })
+      },
+      fileLines: async (root, path) => {
+        fileReads.push(`${root}|${path}`)
+        return ok(['one'])
+      },
     },
     settings: {
       get: () => ({ settings: defaultSettings, locked: [], fresh: true }),
@@ -144,7 +163,8 @@ function setup() {
       touch: async (path: string) => void touched.push(path),
       toggleFavorite: async (path: string) => !path.endsWith('/pinned'),
     },
-    shell: '/bin/zsh',
+    pickFolder: async () => picked,
+    shell: { file: '/bin/zsh', args: [] },
     home: '/home/usuario',
     logger: {
       info() {},
@@ -175,6 +195,8 @@ function setup() {
     warnings,
     openedPaths,
     shownPaths,
+    diffRequests,
+    fileReads,
     fullHeights: () => fullHeightToggles,
   }
 }
@@ -266,6 +288,37 @@ describe('registerHostBridge clipboard and window', () => {
     const projects = await call(hostChannels.projectsList)
 
     expect(projects).toEqual([{ name: 'alpha', path: '/p/alpha' }])
+  })
+
+  it('should answer the folder the user picked when the interface asks for the projects folder', async () => {
+    const { call } = setup('/srv/acme/backend')
+
+    const root = await call(hostChannels.projectsChooseRoot)
+
+    expect(root).toBe('/srv/acme/backend')
+  })
+
+  it('should answer nothing when the user cancels the folder picker', async () => {
+    const { call, warnings } = setup(undefined)
+
+    const root = await call(hostChannels.projectsChooseRoot)
+
+    expect(root).toBeUndefined()
+    expect(warnings).toEqual([])
+  })
+
+  it.each([
+    ['a relative path', 'acme'],
+    ['a folder that does not exist', '/srv/missing'],
+    ['a file', '/home/usuario/notes.md'],
+    ['a path longer than the setting allows', `/srv/${'a'.repeat(1100)}`],
+  ])('should refuse %s when the folder picker answers it', async (_case, path) => {
+    const { call, warnings } = setup(path)
+
+    const root = await call(hostChannels.projectsChooseRoot)
+
+    expect(root).toBeUndefined()
+    expect(warnings.map((warning) => warning.message)).toEqual(['chosen projects folder refused'])
   })
 
   it('should record the project as recently used when the interface touches it', () => {
@@ -695,5 +748,71 @@ describe('registerHostBridge terminal paths', () => {
       { message: 'terminal path request refused', context: { kind: 'file' } },
       { message: 'terminal path request refused', context: { kind: 'dir' } },
     ])
+  })
+})
+
+describe('registerHostBridge review', () => {
+  const request = (cwd: unknown, extra: Record<string, unknown> = {}) => ({
+    cwd,
+    scope: 'uncommitted',
+    ignoreWhitespace: false,
+    ...extra,
+  })
+
+  it('should read the diff of the folder when it is an absolute folder that exists', async () => {
+    const { call, diffRequests } = setup()
+
+    const result = await call(hostChannels.reviewDiff, request('/srv/acme/backend/src'))
+    await call(hostChannels.reviewDiff, request('/srv/acme/backend', { base: 'origin/develop' }))
+
+    expect(result).toMatchObject({ ok: true, value: { kind: 'ok' } })
+    expect(diffRequests).toEqual([
+      request('/srv/acme/backend/src'),
+      request('/srv/acme/backend', { base: 'origin/develop' }),
+    ])
+  })
+
+  it.each([
+    ['a relative folder', request('acme/backend')],
+    ['a folder that does not exist', request('/srv/acme/gone')],
+    ['a file instead of a folder', request('/srv/acme/backend/src/app.ts')],
+    ['a NUL in the folder', request('/srv/acme/backend\0')],
+    ['an unknown scope', request('/srv/acme/backend', { scope: 'stash' })],
+    ['a base that reads as an option', request('/srv/acme/backend', { base: '--output=/tmp/x' })],
+    ['a base that is a range', request('/srv/acme/backend', { base: 'main..HEAD' })],
+    ['a payload that is not an object', '/srv/acme/backend'],
+  ])('should refuse the request without running git when it has %s', async (_label, payload) => {
+    const { call, diffRequests, warnings } = setup()
+
+    const result = await call(hostChannels.reviewDiff, payload)
+
+    expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-IPC-003' } } })
+    expect(diffRequests).toEqual([])
+    expect(warnings).toEqual([{ message: 'review request refused', context: { kind: 'diff' } }])
+  })
+
+  it('should read a file only from a root a diff answered with', async () => {
+    const { call, fileReads } = setup()
+
+    const before = await call(hostChannels.reviewFile, { root: '/srv/acme/backend', path: 'a.ts' })
+    await call(hostChannels.reviewDiff, request('/srv/acme/backend'))
+    const after = await call(hostChannels.reviewFile, { root: '/srv/acme/backend', path: 'a.ts' })
+
+    expect(before).toMatchObject({ ok: false })
+    expect(after).toEqual({ ok: true, value: ['one'] })
+    expect(fileReads).toEqual(['/srv/acme/backend|a.ts'])
+  })
+
+  it('should refuse an absolute file path even inside a known root', async () => {
+    const { call, fileReads } = setup()
+    await call(hostChannels.reviewDiff, request('/srv/acme/backend'))
+
+    const result = await call(hostChannels.reviewFile, {
+      root: '/srv/acme/backend',
+      path: '/etc/passwd',
+    })
+
+    expect(result).toMatchObject({ ok: false })
+    expect(fileReads).toEqual([])
   })
 })

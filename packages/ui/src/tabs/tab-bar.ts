@@ -1,5 +1,6 @@
 import type { AttentionKind, TabsState, Translate } from '@dck/core'
-import { attentionMark, strongestMark } from './attention-mark.ts'
+import { h, icon } from '../panel/dom.ts'
+import { attentionMark, REVIEW_KEY, reviewMark, strongestMark } from './attention-mark.ts'
 
 export interface TabBarCallbacks {
   activate(id: string): void
@@ -10,6 +11,7 @@ export interface TabBarCallbacks {
 }
 
 const FADE_PX = 24
+const SPLIT_GLYPH = '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M12 5v14"/>'
 
 export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks, t: Translate) {
   let dragging: HTMLElement | undefined
@@ -21,10 +23,13 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
 
   function hiddenMark(): AttentionKind | undefined {
     const view = container.getBoundingClientRect()
-    const hidden = [...container.querySelectorAll<HTMLElement>('.pip')].filter((pip) => {
-      const box = pip.getBoundingClientRect()
-      return box.right > view.right + 1 || box.left < view.left - 1
-    })
+    // Only attention marks count; an open review asks nothing of the user
+    const hidden = [...container.querySelectorAll<HTMLElement>('.pip:not(.review)')].filter(
+      (pip) => {
+        const box = pip.getBoundingClientRect()
+        return box.right > view.right + 1 || box.left < view.left - 1
+      },
+    )
     return strongestMark(hidden.map((pip) => pip.dataset.kind as AttentionKind))
   }
 
@@ -57,7 +62,12 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
   )
 
   return {
-    render(state: TabsState, marks: ReadonlyMap<string, AttentionKind> = new Map()) {
+    // `reviews` are the tabs whose review is open but hidden behind their terminal
+    render(
+      state: TabsState,
+      marks: ReadonlyMap<string, AttentionKind> = new Map(),
+      reviews: ReadonlySet<string> = new Set(),
+    ) {
       // Replacing the children resets the scroll; without saving, the watcher's redraw undoes the user's scroll
       const scrolled = container.scrollLeft
       container.replaceChildren(
@@ -83,6 +93,22 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
             pip.setAttribute('role', 'img')
             pip.setAttribute('aria-label', mark.label)
             button.append(pip)
+          }
+          if (reviews.has(tab.id)) {
+            const mark = reviewMark(t)
+            button.append(
+              h(
+                'span',
+                {
+                  class: mark.className,
+                  role: 'img',
+                  'aria-label': mark.label,
+                  'data-tip': mark.label,
+                  'data-tip-key': REVIEW_KEY,
+                },
+                icon(SPLIT_GLYPH, 12),
+              ),
+            )
           }
           button.addEventListener('click', () => callbacks.activate(tab.id))
           button.addEventListener('contextmenu', (event) => {

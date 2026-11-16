@@ -4,6 +4,7 @@
 @import "./connect-hint.css";
 @import "./tab-notice-and-menu.css";
 @import "./terminal.css";
+@import "./panes.css";
 @import "./hold-menu.css";
 @import "./project-search.css";
 @import "./git-section.css";
@@ -16,3 +17,4 @@
 @import "./panel-frame.css";
 @import "./marks.css";
 @import "./tab-list.css";
+@import "./review.css";

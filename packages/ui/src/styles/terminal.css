@@ -41,6 +41,11 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   background: transparent;
 }
 
+/* Where a list that scrolls both ways has its two strips meet */
+.scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .scroll::-webkit-scrollbar-thumb {
   border: var(--scrollbar-gap) solid transparent;
   border-radius: var(--radius-medium);

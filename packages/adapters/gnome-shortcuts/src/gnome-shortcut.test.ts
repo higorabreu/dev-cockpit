@@ -5,7 +5,7 @@ import { createGnomeShortcut, type GsettingsRunner, toGnomeBinding } from './gno
 const OWN = '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/dev-cockpit/'
 const OTHER = '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/'
 
-// Imita o gsettings: guarda a lista e os campos por caminho
+// Mimics gsettings: keeps the list and the fields of each path
 function fakeGsettings(initial: { list?: string[]; bindings?: Record<string, string> } = {}) {
   const state = { list: initial.list ?? [], fields: {} as Record<string, string> }
   for (const [path, binding] of Object.entries(initial.bindings ?? {}))

@@ -1,8 +1,11 @@
 import type { AgentSignal } from '../attention/agent-signal.ts'
 import type { Connector } from '../connectors/connector.ts'
+import type { ErrorBody } from '../ipc/protocol.ts'
+import type { Result } from '../result.ts'
 import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
 import type { AgentProfile } from './agent.ts'
 import type { ConnectionFields, ConnectionStatus, DisabledConnector } from './connections.ts'
+import type { DiffOutcome, DiffRequest } from './diff-source.ts'
 import type { ComposeStatus } from './environment.ts'
 import type { TabNotification } from './notifier.ts'
 import type { Project } from './projects.ts'
@@ -82,6 +85,12 @@ export interface HostApi {
     // In the system's file manager
     openFolder(path: string): void
   }
+  // What changed in the repository of a tab's folder, read only
+  readonly review: {
+    diff(request: DiffRequest): Promise<Result<DiffOutcome, ErrorBody>>
+    // Only for a root a diff answered with, and a path inside it
+    fileLines(root: string, path: string): Promise<Result<readonly string[], ErrorBody>>
+  }
   readonly autostart: {
     isEnabled(): Promise<boolean>
     set(enabled: boolean): Promise<boolean>
@@ -101,6 +110,8 @@ export interface HostApi {
     list(): Promise<readonly Project[]>
     touch(path: string): void
     toggleFavorite(path: string): Promise<boolean>
+    // The system folder picker; undefined when the user cancels
+    chooseRoot(): Promise<string | undefined>
   }
   readonly window: {
     toggleFullHeight(): void
@@ -139,6 +150,8 @@ export const hostChannels = {
   viewsSnapshot: 'views:snapshot',
   viewsRefresh: 'views:refresh',
   viewsChanged: 'views:changed',
+  reviewDiff: 'review:diff',
+  reviewFile: 'review:file',
   autostartGet: 'autostart:get',
   autostartSet: 'autostart:set',
   sessionActivity: 'session:activity',
@@ -148,6 +161,7 @@ export const hostChannels = {
   projectsList: 'projects:list',
   projectsTouch: 'projects:touch',
   projectsToggleFavorite: 'projects:toggle-favorite',
+  projectsChooseRoot: 'projects:choose-root',
   windowToggleFullHeight: 'window:toggle-full-height',
   windowShown: 'window:shown',
   windowOpenSettings: 'window:open-settings',

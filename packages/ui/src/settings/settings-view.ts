@@ -107,7 +107,7 @@ export function createSettingsView(
     drafts.set(id, found)
     return found
   }
-  // Mensagem de erro por chave, mostrada junto ao controle
+  // Error message per key, shown beside its control
   const errors = new Map<string, string>()
   // Changes made here need not redraw everything: the control already has the right value
   let local = 0
@@ -275,7 +275,21 @@ export function createSettingsView(
       const text = input.value.trim()
       void commit(patchFor(key, text === '' ? null : text)).then(render)
     })
-    return input
+    const choose = h(
+      'button',
+      {
+        type: 'button',
+        class: 'srecord',
+        'data-focus': 'set-choose-root',
+        disabled: disabled(key),
+      },
+      t('settings.projectsRoot.choose'),
+    )
+    choose.addEventListener('click', async () => {
+      const root = await api.projects.chooseRoot()
+      if (root !== undefined) void commit(patchFor(key, root)).then(render)
+    })
+    return h('span', { class: 'sfolder' }, input, choose)
   }
 
   function shortcutControl(): HTMLElement {
@@ -684,6 +698,19 @@ export function createSettingsView(
             'window.panelOnFullHeight',
             t('settings.panelOnFullHeight'),
             checkbox('window.panelOnFullHeight'),
+          ),
+        ),
+        group(
+          t('settings.group.review'),
+          row(
+            'review.layout',
+            t('settings.reviewLayout'),
+            select('review.layout', [
+              ['auto', t('settings.reviewLayout.auto')],
+              ['side', t('settings.reviewLayout.side')],
+              ['stacked', t('settings.reviewLayout.stacked')],
+            ]),
+            t('settings.reviewLayout.hint'),
           ),
         ),
       ],

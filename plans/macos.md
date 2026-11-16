@@ -17,7 +17,7 @@ make Linux worse.
 | Id | Question | Proposal |
 | --- | --- | --- |
 | Q1 | Where does CI on macOS run? | **Resolved:** the repository is on GitHub, so macOS CI runs on GitHub Actions |
-| Q2 | Default key on the Mac. F12 is volume or a system function on a Mac and only arrives as F12 with `fn` or with "use F1, F2 as standard function keys" on | A per-platform default passed in by the host (`core` does not read `process.platform`). Candidate: `Ctrl+Backtick`. F12 stays configurable. Decide in the spike (MAC-T1), with the key really working |
+| Q2 | Default key on the Mac. F12 is volume or a system function on a Mac and only arrives as F12 with `fn` or with "use F1, F2 as standard function keys" on | **Resolved (D42):** `F12` on every platform, `fn+F12` on a Mac keyboard; no per-platform default |
 | Q3 | Tab and copy shortcuts: Cmd or Ctrl? | Cmd where Terminal.app and VS Code use it (`Cmd+T`, `Cmd+W`, `Cmd+C/V`, `Cmd+1..9`, `Cmd+,`); Ctrl stays free for the shell. Full table in MAC-T7, to confirm with the tester |
 | Q4 | Distribution: only the tester (ad hoc signing) or other people (Developer ID and notarization, US$ 99 a year)? | Only the tester for now. Notarization is MAC-T14, optional |
 
@@ -67,52 +67,84 @@ The order is meant to bring the tester in as late as possible and once per batch
 
 - [ ] MAC-T0. CI. Create the macOS job on GitHub Actions (install, lint, typecheck, test), now that Q1 is
   resolved. Without it the tasks below have no safety net. (C1)
-- [ ] MAC-T1. **Spike on the tester's Mac, half an hour.** A script they run and paste back: `pnpm install`,
+- [x] MAC-T1. **Spike on the tester's Mac, half an hour.** A script they run and paste back: `pnpm install`,
   `pnpm dev`, and four questions: (a) does a `type: 'panel'` window at a high level open over a fullscreen
   app and receive the keyboard? (b) do F12, `Ctrl+Backtick` and `Option+Space` reach `globalShortcut`
   without asking for Accessibility? (c) does `node-pty` open `zsh`? (d) does `security -i` write an item
-  with a quoted value and does `find-generic-password -w` read it back? The result becomes decision D36
+  with a quoted value and does `find-generic-password -w` read it back? The result becomes decision D42
   in `docs/decisions.md` and closes Q2. If (a) fails, MAC-T5 changes design before any code is written.
-  (C5, C6)
-- [ ] MAC-T2. Platform choice at boot. A `selectPlatform(process.platform)` function in the shell's
+  (C5, C6) Done on 2026-11-13 (macOS 26.5.1, arm64): all four pass, see D42.
+- [x] MAC-T2. Platform choice at boot. A `selectPlatform(process.platform)` function in the shell's
   composition root returns the set of adapters (processes, secret store, autostart, shortcut, paths);
   `main.ts` stops importing `linux-proc` and `secret-tool` directly. Drop `--no-sandbox` on the Mac. A test
-  with `platform` injected, no `any`. (C11)
-- [ ] MAC-T3. Secret store: `adapters/macos-keychain` (`@dck/adapter-macos-keychain`). The same `SecretStore`
+  with `platform` injected, no `any`. (C11) Done: `shell/src/platform/select-platform.ts`; the Mac keeps the
+  Linux adapters until T3, T4 and T8, and only Linux gets `--no-sandbox`. The scanner is a `ProcessScanner`
+  port in `core`, and the daemon receives its `SecretStore` from its entry point. Paths stay in `node-net`
+  and the GTK work areas stay gated in `main.ts`, since creating them runs `xprop`.
+- [x] MAC-T3. Secret store: `adapters/macos-keychain` (`@dck/adapter-macos-keychain`). The same `SecretStore`
   contract and the same codes (`DCK-SEC-001` tool missing, `DCK-SEC-002` refused). The
   `security add-generic-password` command does not read the value from stdin, and `-w value` shows in
   `ps`; the design is to use `security -i` and send the command line, with the value in escaped quotes,
   through stdin (which is how RubyGems and go-keyring do it). `find-generic-password -w` reads,
-  `delete-generic-password` deletes. A missing item exits with code 44 (to confirm in MAC-T1). A test
-  with a fake runner, including a value with quotes, a space, `$` and a line break, and an integration
-  test that only runs on macOS CI. (C3)
-- [ ] MAC-T4. Processes: `adapters/macos-proc` (`@dck/adapter-macos-proc`) behind the same
+  `delete-generic-password` deletes. A missing item exits with code 44 (confirmed in MAC-T1). `security -i`
+  has no escape for a line break, and one splits the command and stores the value cut short, so a value
+  with a line break is refused before it is sent. A test with a fake runner, including a value with quotes,
+  a space and `$`, a refused line break, and an integration test that only runs with `DCK_KEYCHAIN_TEST=1`,
+  which CI sets against a temporary keychain and then restores the runner's keychains. (C3) Done: `security`
+  by its absolute path, keys and the service from an allowlist and a line of at most 4094 bytes, since
+  `security -i` runs the rest of a longer line as another command. The window, the daemon and `dck daemon`
+  refuse an invalid `DCK_PROFILE` at boot, and D46 records why the store is chosen in `@dck/daemon`. Still
+  to run on the tester's Mac with the app.
+- [x] MAC-T4. Processes: `adapters/macos-proc` (`@dck/adapter-macos-proc`) behind the same
   `ProcessInspector` and scanner ports. The foreground group through `ps -o tpgid= -p <pid>`, the name through
   `ps -o comm=`, the start through `ps -o lstart=`, the directory through `lsof -a -d cwd -Fn -p <pid>`. The
   scan through `ps -axo pid=,command=` and the process's `DCK_ENDPOINT` through `ps eww -p` (only valid
   for the user's own processes). An injected executor like `docker-cli`'s. The real outputs recorded by
   the tester in MAC-T1 become the test files. Measure the cost of `lsof` and, if it goes past a few tens of
-  ms, cache by pid or try `pty.process` from `node-pty` for the name. (C4)
-- [ ] MAC-T5. The anchored window on the Mac, in `shell/src/electron/dock-window.ts` and `main.ts`, only
+  ms, cache by pid or try `pty.process` from `node-pty` for the name. (C4) Done: the name comes from
+  `ucomm` (the bare name, as on Linux; `comm` may be a full path) and there is no start time, which nothing
+  reads. One inspect took about 40 ms and 3 processes, so inspects within 10 ms share one `lsof` with every
+  pid and one `ps -axo pid=,tpgid=,ucomm=`: 2 processes per poll of all tabs. The paths `lsof -b -w`
+  prints are decoded from its `\xNN` escapes, and a batch that fails or outlives 5 s resolves with nothing.
+  The scan reads `ps -xww` (own processes, full width) and the last `DCK_ENDPOINT` after the command in
+  `ps -E -ww`. Open: a native Claude Code install shows its version (`2.1.323`) as `ucomm`, since the binary
+  is named after it, so it is not recognized as an agent (an npm install, likely `node`, is not checked);
+  the Energy Impact of polling while hidden is not measured yet.
+- [x] MAC-T5. The anchored window on the Mac, in `shell/src/electron/dock-window.ts` and `main.ts`, only
   when `platform === 'darwin'`: `type: 'panel'`, `setAlwaysOnTop(true, 'screen-saver')`,
   `setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true })`,
   no Dock (`LSUIElement` in `Info.plist`, `app.dock?.hide()` in dev mode) and keyboard focus on show (a panel
   does not activate the app by itself; `window.focus()` and `app.focus({ steal: true })`, to validate).
   A minimal menu with `Cmd+Q` and `Cmd+,`. Keep the rest of `createDockController` the same: the height
   and monitor math already belongs to `core`. This is the riskiest task; expect 2 or 3 rounds with the
-  tester. (C6)
-- [ ] MAC-T6. Terminal environment and PATH. Find the login shell (`$SHELL`, otherwise `/bin/zsh`) and open
+  tester. (C6) Done, not verified on a Mac: `shell/src/platform/darwin/panel-window.ts`, which
+  `selectPlatform` returns as the `window` part (Linux gets `platform/linux/regular-window.ts`, with the same
+  calls as before), so `main.ts` has no macOS branch. The panel hides the Dock icon before
+  `setVisibleOnAllWorkspaces`, activates the app on focus and calls `app.hide()` after hiding, so the
+  keyboard goes back to the previous app. `app.dock?.hide()` runs in every mode; `LSUIElement` in
+  `Info.plist` belongs to the packaging, MAC-T10.
+- [x] MAC-T6. Terminal environment and PATH. Find the login shell (`$SHELL`, otherwise `/bin/zsh`) and open
   it as a login shell on the Mac, like Terminal.app. Read the login shell's PATH once at boot
   (`$SHELL -ilc 'printf %s "$PATH"'`, with a 2 s timeout and path validation) and hand the same PATH to
   the daemon, to the adapters that call `git`, `docker` and `claude` and to the PTY, so it does not
   depend on the app having been opened from a terminal. A failure falls back to the inherited PATH and logs
-  `warn`. (C9)
+  `warn`. (C9) Done: `shell/src/platform/darwin/login-path.ts` reads it between marks, so startup files
+  that print do not spoil it. `selectPlatform` gives it as `loginPath()` and the terminal (`$SHELL -l` on the
+  Mac, unchanged on Linux). `main.ts` sets `process.env.PATH` when it arrives, off the boot path: the tabs are
+  login shells and need nothing, the daemon waits for it, and `git` or `docker` get it from then on. Checked on a Mac with the packaged app started with a minimal PATH and no `SHELL`:
+  `brew`, `docker`, `claude` and `git` are found in the tab and the daemon has the full PATH. Since then the
+  shell runs in its own process group with no stdin and is killed with the whole group after 2 s, so a
+  `read` or a slow `.zshrc` cannot hold the daemon back; invalid entries are dropped one by one; the log
+  carries only the exit code, signal and timeout. Not verified on a Mac yet. The git and docker inspectors
+  of the panel may run before the login PATH arrives and miss a tool the minimal PATH lacks; the next
+  refresh corrects it.
 - [ ] MAC-T7. Keyboard and tooltip. In `ui/src/platform/shortcuts.ts`, replace `ctrlKey` and `event.key` with a
   `matches(event, shortcut)` function that uses `event.code`, and a primary modifier per platform
   (`metaKey` on the Mac, `ctrlKey` elsewhere), with the table of Q3. In `xterm.js`, `macOptionIsMeta: true`.
   The `data-tip-key` formatter shows `⌘ ⇧ ⌥ ⌃` on the Mac. A new shortcut is born with its mouse path, as
   `AGENTS.md` already says. Tests with fake events; one of them pins that `Option+1` does not become
-  another character. (C7)
+  another character. (C7) The macOS app menu from T5 has no Edit menu yet, so Cmd+C/V/X/A/Z do not work in
+  inputs or the terminal; add the Edit roles together with the Q3 table.
 - [ ] MAC-T8. Autostart: `shell/src/platform/darwin/launchd-autostart.ts` with the same shape as
   `createXdgAutostart`: writes `~/Library/LaunchAgents/<label>.plist` (`RunAtLoad`, `ProgramArguments`,
   `EnvironmentVariables` with `DCK_START_HIDDEN`) atomically; turning on and off creates and deletes the
@@ -125,7 +157,7 @@ The order is meant to bring the tester in as late as possible and once per batch
   `~/Library/Application Support/dck`, logs at `~/Library/Logs/dck`. Sweep the code for fixed `~/.config`,
   `/usr`, `/opt` and `XDG_*` and move them into the same paths function. Update the `endpoint.ts` tests.
   (C1, C4)
-- [ ] MAC-T10. Packaging: `shell/scripts/package-mac.mjs`, sibling of `package-deb.mjs`, with no heavy packaging
+- [x] MAC-T10. Packaging: `shell/scripts/package-mac.mjs`, sibling of `package-deb.mjs`, with no heavy packaging
   tool. Copies the `Electron.app` the project already uses, renames the executable and the bundle, writes
   `Info.plist` (identifier, version, `LSUIElement`, `NSHighResolutionCapable`), generates the `.icns` with
   `iconutil` from the PNGs in `assets/`, puts the app in `Contents/Resources/app` and the `dck.mjs` CLI
@@ -136,7 +168,17 @@ The order is meant to bring the tester in as late as possible and once per batch
   `lipo -archs` that `pty.node` and `spawn-helper` have the right architecture. Ad hoc signing
   (`codesign --force --deep -s -`) with the entitlements `allow-jit`, `allow-unsigned-executable-memory` and
   `disable-library-validation`; a `.dmg` with `hdiutil`. The tester opens it with right click, Open, or
-  `xattr -dr com.apple.quarantine`. (C2)
+  `xattr -dr com.apple.quarantine`. (C2) Done: `pnpm package:mac` writes `release/mac/Dev Cockpit.app` and
+  `release/dev-cockpit_<version>_<arch>.dmg`. The helpers are renamed with the executable, since Electron finds
+  them by its name, and the `dck` CLI is `Contents/Resources/bin/dck`, to link into the PATH. No entitlements:
+  they only take effect with the hardened runtime, which is MAC-T14. `node-pty` comes from `dist`, already
+  rebuilt for Electron on the builder's architecture, without its sources and prebuilds. What the `.deb` and
+  the `.dmg` share is in `shell/scripts/package-common.mjs`. Checked on macOS arm64: the app opens with no Dock
+  icon, runs the daemon and a terminal, and `dck ping` answers. Not in CI yet (MAC-T11). Since then, not
+  verified on a Mac: the bundle is signed from the inside out (node-pty, helpers, frameworks, the app)
+  instead of with `--deep`; `bin/dck` follows its links with `readlink`, since macOS 12 has no `realpath`;
+  a prerelease gives the bundle only its x.y.z; and node-pty ships from an allowlist (`lib`, `package.json`,
+  `LICENSE`, `pty.node`, `spawn-helper`), in the `.deb` too.
 - [ ] MAC-T11. Smoke mode and diagnostics. A `DCK_SMOKE=1` variable makes the app start, create the window, open
   a PTY, run `echo ok`, talk to the daemon, print a JSON (platform, architecture, versions, paths, socket
   length, resolved PATH, Keychain ok, shortcut registered) and exit with 0 or 1. CI runs this mode on the
@@ -148,9 +190,9 @@ The order is meant to bring the tester in as late as possible and once per batch
   monitor, restart and check autostart, close and `dck toggle`. Measurements with `DCK_LOG_DOCK=1`,
   `ps -o rss` of the app and the daemon and the cold start time. Problems come back grouped by round.
   (C5, C6, C9, C10)
-- [ ] MAC-T13. Close: decision D36 in `docs/decisions.md` (the port, window, secret store and PATH choices), the
-  "macOS packaging" item leaves the backlog of `docs/roadmap.md`, a Mac section in the `README` and check
-  the full gate. (C11)
+- [ ] MAC-T13. Close: a new decision in `docs/decisions.md`, with the next free number when it is written (D42
+  is the spike's), for the port, window, secret store and PATH choices; the "macOS packaging" item leaves
+  the backlog of `docs/roadmap.md`, a Mac section in the `README` and check the full gate. (C11)
 - [ ] MAC-T14. Optional, only if Q4 asks for distribution: a Developer ID certificate, signing with the hardened
   runtime on every nested executable (`pty.node`, `spawn-helper`, Electron's helpers), notarization
   (`@electron/notarize`), secrets in CI, manual update by download.

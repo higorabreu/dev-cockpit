@@ -116,7 +116,7 @@ Four groups, all outside the keys Claude Code uses (Ctrl+C, D, G, L, O, R, V, B,
 P, T, O, M, Esc, Shift+Tab, Ctrl+Enter, PgUp, PgDn, Ctrl+Home and End, and Ctrl+Shift+C when there is a
 selection): window (F9 or F12, F11, Ctrl+Shift+Up and Down, Ctrl+Shift+L, Ctrl plus and minus), tabs
 (Alt+1 to 9, Ctrl+Shift+T, Ctrl+Shift+W, Ctrl+Tab), panel and navigation (Ctrl+Shift+P palette,
-Ctrl+Shift+B panel, Ctrl+Shift+O projects) and agent flow (Ctrl+Shift+D diff, Ctrl+Shift+J next waiting
+Ctrl+Shift+B panel, Ctrl+Shift+O projects) and agent flow (Ctrl+Shift+D diff, Ctrl+Shift+E its layout (D48), Ctrl+Shift+J next waiting
 session, Ctrl+Shift+Y and N to approve and deny). The first prototype's Ctrl+K and Ctrl+B were dropped
 because they collide with Claude.
 
@@ -553,6 +553,22 @@ address error.
 **How to revert:** revert the commits of phase A; the settings file and the keyring key did not change, so
 an existing setup keeps working on either side.
 
+## D42. macOS: a panel window, F12 on every platform and the Keychain through `security -i`
+
+**Decision:** the MAC-T1 spike settles the macOS design of [plans/macos.md](../plans/macos.md). The window is
+an Electron `type: 'panel'` at the `screen-saver` level, visible on all workspaces and over fullscreen, with
+no Dock icon, focused on show with `focus()` and `app.focus({ steal: true })`. The default key stays `F12` on
+every platform, so there is no per-platform default; on a Mac keyboard it is `fn+F12`. The Keychain is
+reached through `security -i` with the command on stdin, and a value with a line break is refused, since
+`security` has no escape for it. Process inspection uses `ps` (`tpgid`, `ucomm`) and `lsof -a -d cwd -Fn`.
+Tested on macOS 26.5.1 arm64 with Electron 45.3.0: the panel showed over a fullscreen app and on another
+desktop and received the keyboard without a click; F12, `Ctrl+Backtick` and `Option+Space` fired with no
+Accessibility permission; `node-pty` opened `zsh -il`; `lsof` took about 20 ms.
+**Reason:** the spike on a tester's Mac on 2026-11-13; F12 keeps one key across platforms and was the
+tester's choice.
+**How to revert:** the plan B of the plan's risks (a regular high-level window with the Dock hidden), or a
+per-platform default key passed in by the host.
+
 ## D43. Work tabs are named by the action they ask for and grouped by service
 
 **Decision:** the GitLab tabs become "To review" (`review`) and "Follow up" (`mine`); Jira keeps "Tasks". The
@@ -601,3 +617,113 @@ select and All tabs show ten whole rows before they scroll.
 once the project select scrolled, and the same strip in the other lists (2026-11-13).
 **How to revert:** drop the `data-overflow` rule and `scroll-edges` from `styles/terminal.css` and the
 padding changes that came with them.
+
+## D46. The secret store is chosen in `@dck/daemon`, for the window and the daemon alike
+
+**Decision:** `systemSecretStore(platform)` in `@dck/daemon/secret-store` picks the Keychain on macOS and
+`secret-tool` elsewhere. The daemon's entry point and `dck daemon` build it once and pass it to every
+connector's views; the shell's `selectPlatform` calls the same function instead of choosing on its own.
+**Reason:** the window writes the token and the daemon reads it, so both processes must pick the same store;
+one chooser that both import cannot drift, while two copies of the choice could. It does not live in
+`core` because the choice has to import the Keychain and `secret-tool` adapters, and `core` imports no
+adapter.
+**Accepted cost:** the shell now depends on `@dck/daemon`, and only through its `secret-store` subpath, so
+the window does not load the daemon's server or views.
+**How to revert:** move the choice back into `selectPlatform` and into each daemon entry point.
+
+## D47. A tab splits into panes, and the review of what changed is the second one
+
+**Decision:** a tab holds one or two panes side by side (`core/src/panes/panes.ts`): its terminal first and,
+for now, the review as the second, with the share of the first pane and which pane has the keys. The
+divider is a 1px line with a 9px grip, a `role=separator` that resizes with the mouse and with ←→ (16px),
+Home and End, and announces the review's share. Each pane keeps a minimum width (terminal 360px, review
+440px); below both, the focused pane takes the whole tab and Esc or the header's terminal button goes back.
+While the terminal shows, the tab carries a quiet split glyph in the bar ("Review open", with Ctrl+Shift+D in
+its tooltip and in the tab's accessible name), a mark that never counts as attention. The divider shows a
+2px muted line under the mouse and while dragging, and the foreground only on keyboard focus.
+A second terminal pane is a new kind in the same model, not a new layout. Ctrl+Shift+D (reserved in D13)
+opens the review on the active tab and focuses it, and closes it while it is on screen; in a narrow tab
+showing the terminal it brings the review back instead. The same action is in the tab's right click menu
+and in the hold menu's Tabs. Esc gives the keys back to the terminal without closing the review.
+The review follows the tab's folder (a fresh read of the session's directory) and finds the repository
+with `git rev-parse`. A select (D38) picks Uncommitted (the working tree against HEAD, untracked files
+that `.gitignore` does not hide as additions) or "Branch vs main" (the working tree against the merge base
+with `origin/HEAD`'s branch, else `main`, else `master`). The adapter runs git with fixed arguments, no
+shell, `--no-color --no-ext-diff -M`, a timeout and a 32 MB cap; untracked files go through
+`diff --no-index` one by one, so the index is never written. The bridge validates the folder with zod and
+checks it exists before it reaches git, and reads file text only from a root a diff returned. Errors are
+the new `GIT` domain. The unified diff is parsed in `core`; the view draws it the way GitHub and GitLab do,
+with no syntax colors: old and new numbers, + and − signs (state is not told by color alone), added and
+removed lines on the new `diffAdd` and `diffRemove` tints, the changed words on a stronger tint found with
+jsdiff's `diffWordsWithSpace` (only the paired lines of a hunk, skipped when a line shares less than 35%),
+hunk headers with Git's function context, and the unchanged stretches as "Show N lines" rows that open
+from the working tree file. Lines are virtualized (20px rows, 26px hunk headers), so a 10 000-line diff
+keeps about 50 rows in the page. Binary, non-UTF-8, renamed, copied, mode changes, submodules and CRLF files
+are labelled for what they are; generated files (lock files, `dist/`, minified, `linguist-generated`) and
+files over 2500 changed lines start collapsed with "Show anyway"; an untracked file over 1 MB shows its size
+only. Keys inside the review: ↑↓ and Enter in the file list, ↑↓ PgUp PgDn Home End and Enter in the diff,
+`[` and `]` for the previous and next file and `n` and `p` for the next and previous hunk (Gerrit's keys;
+they only act inside the review, which has no text field), Ctrl+R to read again. Ctrl+click on the file's
+path opens it (D40). The diff is read on open, on Ctrl+R, after a scope or whitespace change and when the
+tab's agent changes state (debounced 400 ms), and never while the review is closed.
+**Reason:** the agent says "your turn" (D37) and the developer reads what it changed beside the terminal,
+in the same tab; a request from the maintainer on 2026-11-13 (`plans/review.md`).
+**How to revert:** drop `createReviewTabs` and `createTabView` from `app.ts`, the `review` channels from
+the bridge and the preload, and the `review/` and `panes/` folders; the terminal goes back to filling the tab.
+
+## D48. The review fits the tab's shape, reads as one scroll and compares with where the branch started
+
+**Decision:** the split chooses its orientation from the tab's size and each pane's real text grid
+(`chooseOrientation` in `core/src/panes/panes.ts`): side by side when the terminal and the review each keep
+about 100 columns (the terminal's measured cell, the diff's 12px cell and gutters), stacked with the
+terminal on top when each keeps 15 rows, else the focused pane alone as in D47. The setting `review.layout`
+(Automatic, Side by side, Stacked) has a row in Settings; a chosen orientation holds while it fits its
+minimums. Each orientation keeps its own divider share in settings (`review.sideRatio`,
+`review.stackedRatio`, clamped), saved 400 ms after the divider rests and only when the panes really moved.
+The stacked divider is a horizontal `separator` that resizes with ↑↓. A header button names the orientation
+it switches to and Ctrl+Shift+E does the same: free in D13 and in Claude Code, and the split key of
+Terminator and Guake. Ctrl+Shift+D now gives the keys to an open review from the terminal and closes it
+only from the review; a closed review keeps its place in the diff until its tab closes.
+Every file reads in one virtualized scroll (`changeRows` in `core/src/diff/change-rows.ts`): a 40px header
+row per file (8px of air and a 32px band with state, path, labels and counts), the header of the file being
+read pinned on top, a generated, large or binary file as its header alone with "Show anyway". Each file's
+rows sit in a `group` named after the file inside the diff's `listbox`, the header row being an option the
+cursor lands on, so `]` and `[` never leave the keys on the page. `n` and `p` cross files both ways. The file
+list is an index beside the diff from 720px of review width (above it when narrower), collapsible for the
+session, following the file at the top. The gutter, the hunk and gap rows and the headers stay in view on a
+sideways scroll. The hint bar shows the review's keys only while it has the focus, else Ctrl+Shift+D.
+The Branch scope compares with where the branch started, like VS Code: `branch.<name>.vscode-merge-base`,
+else the branch's creation in its reflog (and the HEAD reflog for "Created from HEAD"), else the branch HEAD
+is fewest commits ahead of, the latest merge base breaking a tie, among the 30 most recently committed
+local and `origin/` branches (local before `origin/`), never the current branch, its remote copy, its
+upstream or one that already contains HEAD. No branch name is special, since every team names its own
+(a conventions test keeps names out of the code); on the remote's default branch the nearest is not used.
+The scope select always offers "Uncommitted", "Base: <name>" with how the base was found in its tooltip
+and the other candidates to pick, and "Unpushed commits" against the upstream's merge base, the last two
+disabled with their reason when there is no base or no upstream. The user's pick is kept per repository
+folder in settings (`review.bases`); the bridge passes only a plain branch name.
+**Reason:** at a usual window size side by side squeezed both panes, one file at a time broke the reading of
+a change, and git flow branches start from develop, not from the remote default; the maintainer's
+decisions and a usability test on 2026-11-13 (`plans/review.md`, phase 1b).
+**How to revert:** set `review.layout` to `side` and drop `chooseOrientation` for `PANE_MIN_WIDTH`; draw one
+file with `diffRows` again; drop `createBaseFinder` for the remote default.
+
+## D49. The cockpit never guesses or imposes a convention that may not be the user's
+
+**Decision:** when the cockpit must infer something it reads what the user's own tools already record
+(Git config and reflog, VS Code, the remote, the connected services), always lets the user correct it, and
+never requires a naming pattern for branches, folders or tickets. It is premise 6 in `AGENTS.md`. Two
+changes come with it. The projects folder has no default: `projects.root` stays unset (`null`) until the
+user picks a folder, and the project search then shows a calm empty state with one action, "Choose the
+projects folder", which opens the system folder picker (`projects:choose-root`, an absolute path validated
+by the host), saves the choice through the settings model and goes straight into the search; cancelling
+leaves it unset, and the Settings row still changes it. The Git section's ticket chip shows only with Jira
+connected and only for a key in Jira's own format whose project is the project of one of the user's Jira
+tasks the window already holds for the Tasks view (read from the daemon's store when the window shows,
+never fetched for this); the chip is a link to `<site>/browse/<KEY>`, opened in the browser through the
+same check as the other connector links.
+**Reason:** the maintainer found the cockpit assuming a `~/projetos` folder, a Portuguese name that is not
+everyone's, and reading any `ABC-123` in a branch name as a ticket, a pattern many teams do not follow
+(2026-11-14). A wrong guess is worse than no guess: it shows something false with the cockpit's authority.
+**How to revert:** give `projects.root` a fallback folder again in `shell/src/main.ts`, drop the
+`projects:choose-root` channel and the empty state, and call `ticketFromBranch` without the known projects.

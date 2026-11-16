@@ -98,7 +98,7 @@ describe('settings view selects', () => {
     body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
 
     expect(body.querySelector('select')).toBeNull()
-    expect(general).toEqual(['set-language', 'set-theme'])
+    expect(general).toEqual(['set-language', 'set-theme', 'set-review.layout'])
     expect(combobox('shortcuts.holdTrigger').getAttribute('role')).toBe('combobox')
     view.close()
   })
@@ -126,6 +126,25 @@ describe('settings view selects', () => {
     expect(patches).toEqual([{ theme: 'light' }])
     expect(combobox('theme').querySelector('[data-current]')?.textContent).toBe('Light')
     expect(document.activeElement).toBe(combobox('theme'))
+    view.close()
+  })
+
+  it('should save the review layout from its row and bring back Automatic from the same select', async () => {
+    const initial = { ...defaultSettings, review: { ...defaultSettings.review, layout: 'side' } }
+    const { body, combobox, patches, view } = open([], api, initial as Settings)
+    const layout = combobox('review.layout')
+    const labelId = layout.getAttribute('aria-labelledby') ?? ''
+    const shown = layout.querySelector('[data-current]')?.textContent
+    layout.focus()
+
+    press(layout, 'Enter')
+    press(layout, 'Home')
+    press(layout, 'Enter')
+    await settle()
+
+    expect(body.querySelector(`#${labelId}`)?.textContent).toBe('Review layout')
+    expect(shown).toBe('Side by side')
+    expect(patches).toEqual([{ review: { layout: 'auto' } }])
     view.close()
   })
 
@@ -172,6 +191,48 @@ describe('settings view, agent connect hint', () => {
       { system: { agentConnectHint: false } },
       { system: { agentConnectHint: true } },
     ])
+    view.close()
+  })
+})
+
+describe('settings view, projects folder', () => {
+  const withPicker = (answer: string | undefined) =>
+    ({ ...api, projects: { chooseRoot: async () => answer } }) as unknown as HostApi
+  const openProjects = (host: HostApi) => {
+    const opened = open([], host)
+    opened.body.querySelector<HTMLElement>('#settings-tab-projects')?.click()
+    const choose = opened.body.querySelector<HTMLButtonElement>('[data-focus="set-choose-root"]')
+    if (!choose) throw new Error('invariant: the Projects page has the choose button')
+    return { ...opened, choose }
+  }
+
+  it('should show no folder name as a default when the projects folder is unset', () => {
+    const { body, view } = openProjects(withPicker(undefined))
+
+    const input = body.querySelector<HTMLInputElement>('[data-focus="set-projects.root"]')
+
+    expect(input?.value).toBe('')
+    expect(input?.placeholder).toBe('Not chosen yet')
+    view.close()
+  })
+
+  it('should save the folder picked in the system picker when Choose is clicked', async () => {
+    const { choose, patches, view } = openProjects(withPicker('/home/ana/work'))
+
+    choose.click()
+    await settle()
+
+    expect(patches).toEqual([{ projects: { root: '/home/ana/work' } }])
+    view.close()
+  })
+
+  it('should save nothing when the system picker is cancelled', async () => {
+    const { choose, patches, view } = openProjects(withPicker(undefined))
+
+    choose.click()
+    await settle()
+
+    expect(patches).toEqual([])
     view.close()
   })
 })

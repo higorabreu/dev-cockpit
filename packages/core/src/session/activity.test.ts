@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AgentProfile } from '../ports/agent.ts'
+import { UNKNOWN_FOREGROUND } from '../ports/session.ts'
 import { classifyActivity } from './activity.ts'
 
 const claude: AgentProfile = { id: 'claude', name: 'Claude', processes: ['claude'] }
@@ -23,6 +24,12 @@ describe('classifyActivity', () => {
 
   it('should be busy when the process is not a shell nor a known agent', () => {
     expect(classifyActivity('pnpm', [claude, codex])).toEqual({ activity: 'busy' })
+  })
+
+  it('should be busy when the foreground process name is unknown', () => {
+    const unnamed: AgentProfile = { id: 'unnamed', name: 'Unnamed', processes: [''] }
+
+    expect(classifyActivity(UNKNOWN_FOREGROUND, [unnamed])).toEqual({ activity: 'busy' })
   })
 
   it('should treat an agent as a plain command when no agent profile is given', () => {

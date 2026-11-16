@@ -58,6 +58,10 @@ const api: HostApi = {
     refresh: (view, maxAgeMs) => ipcRenderer.invoke(hostChannels.viewsRefresh, { view, maxAgeMs }),
     onChange: (listener) => subscribe<[ViewSnapshot]>(hostChannels.viewsChanged, listener),
   },
+  review: {
+    diff: (request) => ipcRenderer.invoke(hostChannels.reviewDiff, request),
+    fileLines: (root, path) => ipcRenderer.invoke(hostChannels.reviewFile, { root, path }),
+  },
   autostart: {
     isEnabled: () => ipcRenderer.invoke(hostChannels.autostartGet),
     set: (enabled) => ipcRenderer.invoke(hostChannels.autostartSet, enabled),
@@ -74,6 +78,7 @@ const api: HostApi = {
     list: () => ipcRenderer.invoke(hostChannels.projectsList),
     touch: (path) => ipcRenderer.send(hostChannels.projectsTouch, path),
     toggleFavorite: (path) => ipcRenderer.invoke(hostChannels.projectsToggleFavorite, path),
+    chooseRoot: () => ipcRenderer.invoke(hostChannels.projectsChooseRoot),
   },
   window: {
     toggleFullHeight: () => ipcRenderer.send(hostChannels.windowToggleFullHeight),

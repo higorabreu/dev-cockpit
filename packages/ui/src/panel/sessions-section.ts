@@ -4,6 +4,7 @@ import {
   formatDuration,
   type SessionActivityInfo,
   type Translator,
+  UNKNOWN_FOREGROUND,
 } from '@dck/core'
 import { h } from './dom.ts'
 import { activityGlyph } from './glyphs.ts'
@@ -31,11 +32,22 @@ const folder = (path: string) => path.split('/').filter(Boolean).at(-1) ?? path
 
 function describe(i18n: Translator, info: SessionActivityInfo | undefined) {
   if (!info) return i18n.t('sessions.noInfo')
-  if (info.activity === 'busy') return i18n.t('sessions.busy', { process: info.process })
+  if (info.activity === 'busy') {
+    return info.process === UNKNOWN_FOREGROUND
+      ? i18n.t('sessions.busyUnknown')
+      : i18n.t('sessions.busy', { process: info.process })
+  }
   if (info.activity === 'agent') {
     return i18n.t('sessions.agent', { agent: info.agent?.name ?? info.process })
   }
   return i18n.t('sessions.idle')
+}
+
+function describeFinished(i18n: Translator, done: FinishedCommand) {
+  const duration = formatDuration(done.durationMs)
+  return done.process === UNKNOWN_FOREGROUND
+    ? i18n.t('sessions.finishedUnknown', { duration })
+    : i18n.t('sessions.finished', { process: done.process, duration })
 }
 
 export function createSessionsSection(source: SessionsSource, i18n: Translator): PanelSection {
@@ -119,10 +131,7 @@ export function createSessionsSection(source: SessionsSource, i18n: Translator):
                 asks
                   ? i18n.t('sessions.needsYou')
                   : done
-                    ? i18n.t('sessions.finished', {
-                        process: done.process,
-                        duration: formatDuration(done.durationMs),
-                      })
+                    ? describeFinished(i18n, done)
                     : describe(i18n, info),
               ),
             ),

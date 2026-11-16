@@ -12,6 +12,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { rebuild } from '@electron/rebuild'
 import { build } from 'esbuild'
+import { ensureSpawnHelperExecutable } from '../../adapters/node-pty/src/spawn-helper.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const dist = join(root, 'dist')
@@ -64,4 +65,5 @@ const electronVersion = JSON.parse(
   readFileSync(require.resolve('electron/package.json'), 'utf8'),
 ).version
 await rebuild({ buildPath: dist, electronVersion, onlyModules: ['node-pty'], force: true })
+await ensureSpawnHelperExecutable(join(dist, 'node_modules', 'node-pty'))
 console.log(`shell built in ${dist} for Electron ${electronVersion}`)

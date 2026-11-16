@@ -138,5 +138,30 @@
     "category": "invalid_argument",
     "retryable": false,
     "rpc": -32024
+  },
+  "DCK-GIT-001": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32025
+  },
+  "DCK-GIT-002": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32026
+  },
+  "DCK-GIT-003": {
+    "category": "unavailable",
+    "retryable": false,
+    "rpc": -32027
+  },
+  "DCK-GIT-004": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32028
+  },
+  "DCK-GIT-005": {
+    "category": "not_found",
+    "retryable": false,
+    "rpc": -32029
   }
 }

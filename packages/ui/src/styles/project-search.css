@@ -65,6 +65,47 @@
   overflow-y: auto;
 }
 
+/* No projects folder yet: one calm notice with the action that chooses it */
+.psetup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 16px 16px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.psetup strong {
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.psetup span {
+  max-width: 340px;
+}
+
+.pchoose {
+  margin-top: 4px;
+  padding: 5px 10px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+}
+
+.pchoose:hover {
+  background: var(--hover);
+}
+
+.pchoose:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
 .new {
   padding: 0 5px;
   border: 1px solid var(--muted);

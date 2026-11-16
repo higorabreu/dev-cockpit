@@ -110,12 +110,24 @@
   gap: 8px;
 }
 
-.chip {
+/* Its own class: the hold menu's .chip is a different, larger thing */
+.ticket {
   flex: none;
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
+  background: none;
+  color: var(--fg);
   font: 500 11px / 18px var(--font-mono);
+}
+
+.ticket:hover {
+  background: var(--hover);
+}
+
+.ticket:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
 }
 
 .upstream {

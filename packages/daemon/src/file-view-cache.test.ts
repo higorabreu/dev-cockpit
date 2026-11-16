@@ -1,7 +1,7 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { type MergeRequestSummary, silentLogger, type ViewItem } from '@dck/core'
+import { type Logger, type MergeRequestSummary, silentLogger, type ViewItem } from '@dck/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createFileViewCache } from './file-view-cache.ts'
 
@@ -104,6 +104,34 @@ describe('createFileViewCache', () => {
     await createFileViewCache(file, silentLogger).save({ scope: 's', views: {} })
 
     expect(JSON.parse(await readFile(file, 'utf8')).scope).toBe('s')
-    await expect(readFile(`${file}.tmp`, 'utf8')).rejects.toThrow()
+    expect(await readdir(dir)).toEqual(['views.json'])
+  })
+
+  it('should save both views and leave no temporary file when two saves run at once', async () => {
+    const errors: string[] = []
+    const logger: Logger = { ...silentLogger, error: (message) => void errors.push(message) }
+    const file = join(dir, 'views.json')
+    const cache = createFileViewCache(file, logger)
+    const first = { scope: 's', views: { review: { items: [item], updatedAt: 1 } } }
+    const second = { scope: 's', views: { mine: { items: [item], updatedAt: 2 } } }
+
+    await Promise.all([cache.save(first), cache.save(second)])
+
+    expect(errors).toEqual([])
+    expect([first, second]).toContainEqual(JSON.parse(await readFile(file, 'utf8')))
+    expect(await readdir(dir)).toEqual(['views.json'])
+  })
+
+  it('should remove its temporary file when the save fails', async () => {
+    const errors: string[] = []
+    const logger: Logger = { ...silentLogger, error: (message) => void errors.push(message) }
+    const file = join(dir, 'views.json')
+    // A folder in the file's place makes the final rename fail after the temporary was written
+    await mkdir(join(file, 'blocker'), { recursive: true })
+
+    await createFileViewCache(file, logger).save({ scope: 's', views: {} })
+
+    expect(errors).toEqual(['could not save the views cache'])
+    expect(await readdir(dir)).toEqual(['views.json'])
   })
 })

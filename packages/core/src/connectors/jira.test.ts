@@ -1,6 +1,24 @@
 import { describe, expect, it } from 'vitest'
 import { connectorSchema } from './connector.ts'
-import { JIRA_CONNECTOR, parseAccountEmail, parseJiraSiteUrl } from './jira.ts'
+import { JIRA_CONNECTOR, jiraTicketLink, parseAccountEmail, parseJiraSiteUrl } from './jira.ts'
+
+describe('jiraTicketLink', () => {
+  const projects = new Set(['ACME'])
+
+  it('should link the key to its page on the site when its project is one of the user tasks', () => {
+    const link = jiraTicketLink('feature/ACME-42-login', 'https://acme.atlassian.net', projects)
+
+    expect(link).toEqual({ key: 'ACME-42', url: 'https://acme.atlassian.net/browse/ACME-42' })
+  })
+
+  it('should give no link when Jira has no site', () => {
+    expect(jiraTicketLink('feature/ACME-42', undefined, projects)).toBeUndefined()
+  })
+
+  it('should give no link when the key is from a project the user has no task in', () => {
+    expect(jiraTicketLink('feature/NTF-42', 'https://acme.atlassian.net', projects)).toBeUndefined()
+  })
+})
 
 describe('JIRA_CONNECTOR', () => {
   it('should be a valid declaration with the e-mail field and one issue view when read', () => {

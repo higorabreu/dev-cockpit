@@ -295,6 +295,37 @@ describe('createSelect', () => {
     expect(activeLabel(button)).toBe('System')
   })
 
+  it('should explain an option in its tooltip and show the chosen one on the closed button', () => {
+    const { control, button, list } = setup()
+    control.setOptions([
+      { value: 'dark', label: 'Dark', tip: 'Follows the terminal' },
+      { value: 'light', label: 'Light' },
+    ])
+    button.click()
+
+    expect(option(list, 'Dark').dataset.tip).toBe('Follows the terminal')
+    expect(button.dataset.tip).toBe('Follows the terminal')
+    option(list, 'Light').click()
+    expect(button.dataset.tip).toBeUndefined()
+  })
+
+  it('should list a disabled option without letting it be picked', () => {
+    const { control, button, list, changes } = setup()
+    control.setOptions([
+      { value: 'dark', label: 'Dark' },
+      { value: 'light', label: 'Light', disabled: true, tip: 'Not available' },
+    ])
+    button.click()
+
+    option(list, 'Light').click()
+    press(button, 'ArrowDown')
+    press(button, 'Enter')
+
+    expect(option(list, 'Light').getAttribute('aria-disabled')).toBe('true')
+    expect(changes).toEqual([])
+    expect(list.hidden).toBe(false)
+  })
+
   it('should close when the button is clicked again', () => {
     const { button } = setup()
     button.click()

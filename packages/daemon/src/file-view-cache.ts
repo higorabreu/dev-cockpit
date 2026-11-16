@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { type Logger, type ViewCache, type ViewCacheData, viewItemSchema } from '@dck/core'
 import { z } from 'zod'
@@ -21,6 +21,8 @@ const dataSchema = z.object({
 
 // An unreadable or otherwise broken file becomes "no cache": the server is the source, the file only speeds things up
 export function createFileViewCache(file: string, logger: Logger): ViewCache {
+  // Each write gets its own temporary file: views saving at the same time would rename each other's away
+  let writes = 0
   return {
     async load() {
       const text = await readFile(file, 'utf8').catch((error: NodeJS.ErrnoException) => {
@@ -43,13 +45,20 @@ export function createFileViewCache(file: string, logger: Logger): ViewCache {
     },
 
     async save(data: ViewCacheData) {
+      writes += 1
+      const temporary = `${file}.${process.pid}.${writes}.tmp`
       try {
         await mkdir(dirname(file), { recursive: true, mode: 0o700 })
-        const temporary = `${file}.tmp`
         await writeFile(temporary, JSON.stringify(data), { mode: 0o600 })
         await rename(temporary, file)
       } catch (error) {
         logger.error('could not save the views cache', { file, error: String(error) })
+        await rm(temporary, { force: true }).catch((cleanup: unknown) =>
+          logger.warn('could not remove the temporary views cache', {
+            file: temporary,
+            error: String(cleanup),
+          }),
+        )
       }
     },
   }

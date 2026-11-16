@@ -1,6 +1,6 @@
 import { readFile, readlink } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { ProcessInfo, ProcessInspector } from '@dck/core'
+import { type ProcessInfo, type ProcessInspector, UNKNOWN_FOREGROUND } from '@dck/core'
 
 // In /proc/<pid>/stat the process name comes in parentheses and may contain spaces and ")";
 // the useful fields start after the last ")": state, ppid, pgrp, session, tty and tpgid
@@ -38,7 +38,7 @@ export function createProcessInspector(procRoot = '/proc'): ProcessInspector {
       const start = groupStat === undefined ? undefined : parseStartTime(groupStat)
       return {
         cwd,
-        foreground: name?.trim() || 'desconhecido',
+        foreground: name?.trim() || UNKNOWN_FOREGROUND,
         ...(group !== undefined ? { foregroundPid: group } : {}),
         ...(start !== undefined ? { foregroundStart: start } : {}),
       }
