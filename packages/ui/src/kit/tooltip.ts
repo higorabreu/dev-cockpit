@@ -1,4 +1,5 @@
 import { placeTooltip } from '@dck/core'
+import { keys } from './keys.ts'
 
 const SHOW_DELAY_MS = 400
 // Moving to a neighboring element right away, the tooltip shows without waiting
@@ -96,9 +97,7 @@ export function installTooltips() {
   function show({ anchor, text, key, box: region }: Candidate) {
     // The element may have been replaced during the delay: there is nothing to anchor the tooltip to
     if (!anchor.isConnected) return
-    const shortcut = document.createElement('kbd')
-    shortcut.textContent = key ?? ''
-    tip.replaceChildren(text, ...(key ? [shortcut] : []))
+    tip.replaceChildren(text, ...(key ? [keys(key, 'compact')] : []))
     // A stale position squeezes the tooltip against the edge and wraps the text, and the measurement comes out wrong
     tip.style.left = '0'
     tip.style.top = '0'

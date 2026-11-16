@@ -261,13 +261,6 @@
   font-size: 12px;
 }
 
-.skbd {
-  padding: 1px 6px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  font: 11px var(--font-mono);
-}
-
 .srecord {
   padding: 5px 10px;
   border: 1px solid var(--control-line);

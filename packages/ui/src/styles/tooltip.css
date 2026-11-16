@@ -15,12 +15,10 @@
   transition: opacity var(--motion-fast) ease;
 }
 
-#tooltip kbd {
+/* A long path wraps; the shortcut beside it stays one piece (.keys does not wrap) */
+#tooltip > .keys {
   margin-left: 8px;
   color: var(--muted);
-  font: 11px var(--font-mono);
-  /* A long path wraps; the shortcut beside it stays one piece */
-  white-space: nowrap;
 }
 
 #tooltip[data-open="true"] {

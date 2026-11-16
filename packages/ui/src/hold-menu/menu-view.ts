@@ -6,6 +6,7 @@ import {
   selectedIndex,
   type Translate,
 } from '@dck/core'
+import { keysMarkup } from '../kit/keys.ts'
 
 const PATHS: Record<string, string> = {
   window: 'M4 6h16v12H4zM4 10h16',
@@ -76,7 +77,7 @@ function visibleWindow(total: number, selected: number, rows: number): readonly 
   return Array.from({ length: size }, (_, offset) => start + offset)
 }
 
-const kbd = (keys: readonly string[]) => keys.map((key) => `<kbd>${key}</kbd>`).join('')
+const kbd = (keys: readonly string[]) => keysMarkup(keys.join(' '), 'compact')
 
 export interface MenuMarkup {
   readonly mode: 'wheel-mode' | 'switch-mode'
@@ -102,7 +103,7 @@ export function wheelMarkup(state: HoldMenuState, t: Translate): MenuMarkup {
         .map((index) => {
           const item = category.items[index]
           if (!item) return ''
-          return `<button type="button" class="it${index === selectedIndex(state) ? ' on' : ''}" data-item="${index}"><span class="l">${escapeHtml(item.label)}</span><span class="k">${escapeHtml(item.shortcut ?? '')}</span></button>`
+          return `<button type="button" class="it${index === selectedIndex(state) ? ' on' : ''}" data-item="${index}"><span class="l">${escapeHtml(item.label)}</span><span class="k">${item.shortcut ? keysMarkup(item.shortcut, 'compact') : ''}</span></button>`
         })
         .join('')
     : `<div class="empty">${escapeHtml(t('menu.empty'))}</div>`

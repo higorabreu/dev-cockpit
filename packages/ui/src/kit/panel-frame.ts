@@ -1,5 +1,6 @@
 import type { Translate } from '@dck/core'
 import { h, icon } from '../panel/dom.ts'
+import { keys as keyCaps } from './keys.ts'
 
 export function closeButton(
   t: Translate,
@@ -23,11 +24,11 @@ export function closeButton(
 }
 
 export const keyHint = (keys: string, label: string): HTMLElement =>
-  h('span', { class: 'pkey' }, h('kbd', { class: 'pk' }, keys), ` ${label}`)
+  h('span', { class: 'pkey' }, keyCaps(keys, 'compact'), ` ${label}`)
 
 export const hintBar = (...hints: HTMLElement[]): HTMLElement =>
   h('div', { class: 'phint' }, ...hints)
 
 // Clickable action in the shortcut bar, pushed to the right
 export const actionHint = (keys: string, label: string): HTMLButtonElement =>
-  h('button', { type: 'button', class: 'pact' }, h('kbd', { class: 'pk' }, keys), ` ${label}`)
+  h('button', { type: 'button', class: 'pact' }, keyCaps(keys, 'compact'), ` ${label}`)

@@ -13,6 +13,7 @@ import {
   type Translator,
 } from '@dck/core'
 import { trapFocus } from '../kit/focus-trap.ts'
+import { keys as keyCaps } from '../kit/keys.ts'
 import { closeButton } from '../kit/panel-frame.ts'
 import { createSelect } from '../kit/select.ts'
 import { h } from '../panel/dom.ts'
@@ -59,7 +60,11 @@ const reference = (keymap: Keymap): ReadonlyArray<readonly [string, string]> => 
   ['menu.system.theme', keymap.label('theme')],
   ['menu.system.fullHeight', keymap.label('fullHeight')],
   ['settings.ref.opacity', `${keymap.label('opacityUp')} ↓`],
-  ['settings.ref.font', `${keymap.modifiers('fontBigger')} + − 0`],
+  // The modifier with the three keys after it, which the caps show as one chord and two alternatives
+  [
+    'settings.ref.font',
+    `${keymap.modifiers('fontBigger')}${keymap.keyboard === 'mac' ? '' : '+'}= − 0`,
+  ],
   ['settings.ref.settings', keymap.label('settings')],
 ]
 
@@ -310,7 +315,7 @@ export function createSettingsView(
       recording ? t('settings.recording') : t('settings.record'),
     )
     button.addEventListener('click', () => (recording ? stopRecording() : startRecording()))
-    return h('span', { class: 'sshortcut' }, h('kbd', { class: 'skbd' }, current), button)
+    return h('span', { class: 'sshortcut' }, keyCaps(current), button)
   }
 
   function startRecording() {
@@ -747,12 +752,7 @@ export function createSettingsView(
           { class: 'sgroup' },
           h('h2', {}, t('settings.group.reference')),
           ...reference(deps.keymap).map(([label, keys]) =>
-            h(
-              'div',
-              { class: 'sref' },
-              h('span', {}, t(label as never)),
-              h('kbd', { class: 'skbd' }, keys),
-            ),
+            h('div', { class: 'sref' }, h('span', {}, t(label as never)), keyCaps(keys)),
           ),
         ),
       ],
