@@ -3,6 +3,13 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.7.0](https://github.com/higorabreu/dev-cockpit/compare/v0.6.1...v0.7.0) (2026-11-16)
+
+
+### Features
+
+* show shortcuts as one keycap per key, as VS Code does ([df56c1b](https://github.com/higorabreu/dev-cockpit/commit/df56c1b76cd9f6f5b1731f95c0a9a803319d7084))
+
 ## [0.6.1](https://github.com/higorabreu/dev-cockpit/compare/v0.6.0...v0.6.1) (2026-11-16)
 
 
