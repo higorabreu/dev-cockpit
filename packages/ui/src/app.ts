@@ -43,12 +43,12 @@ import { createPanel } from './panel/panel.ts'
 import { createSessionsSection } from './panel/sessions-section.ts'
 import { createSplitPreferences } from './panes/split-preferences.ts'
 import { createTabView, type TabView } from './panes/tab-view.ts'
+import { createKeymap, keyboardFor } from './platform/keymap.ts'
 import { localeFor } from './platform/locale.ts'
 import { bindShortcuts } from './platform/shortcuts.ts'
 import { applyTheme, themeFor, watchSystemTheme } from './platform/theme.ts'
 import { createProjectSearch } from './projects/project-search.ts'
 import { createRootChooser } from './projects/root-chooser.ts'
-import { LAYOUT_KEY } from './review/review-pane.ts'
 import { createReviewTabs } from './review/review-tabs.ts'
 import { applyOpacity } from './settings/preferences.ts'
 import type { SettingsClient } from './settings/settings-client.ts'
@@ -59,7 +59,6 @@ import { createSessionWatcher } from './tabs/sessions-watcher.ts'
 import { createTabBar } from './tabs/tab-bar.ts'
 import { createTabList } from './tabs/tab-list.ts'
 import { createTabMenu } from './tabs/tab-menu.ts'
-import { linkModifierFor } from './terminal/terminal-links.ts'
 import { createTerminalSession, type TerminalSession } from './terminal/terminal-session.ts'
 import { createViewsView } from './views/views-view.ts'
 
@@ -116,11 +115,10 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const projectTabs = new Map<string, string>()
   const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
-  const linkModifier = linkModifierFor(navigator.platform)
+  const keymap = createKeymap(keyboardFor(navigator.platform))
   const nativeMiddlePaste = navigator.platform.startsWith('Linux')
   const notice = createNotice(elements.notice, i18n)
   const menu = createTabMenu(elements.menu)
-  const modifierName = linkModifier === 'meta' ? 'Cmd' : 'Ctrl'
   let state: TabsState = emptyTabs
   let theme = themeFor(settings.current().theme)
   let counter = 0
@@ -147,6 +145,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       onToggleFavorite: (path) => void toggleFavorite(path),
       onChooseRoot: () => void chooseProjectsRoot(),
       t: i18n.t,
+      keymap,
     },
   )
 
@@ -183,6 +182,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       i18n,
       onClose: () => focusActive(),
       previewOpacity: applyOpacity,
+      keymap,
     },
   )
 
@@ -194,6 +194,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     onBadge: showBadge,
     // The ticket link in the Git section follows the Jira tasks as they arrive
     onItems: () => panel.render(),
+    keymap,
   })
 
   let badge: { count: number; label: PluralKey | undefined } = { count: 0, label: undefined }
@@ -215,8 +216,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const reviews = createReviewTabs({
     api,
     i18n,
-    modifier: modifierName,
-    isModified: (event) => (linkModifier === 'meta' ? event.metaKey : event.ctrlKey),
+    keymap,
     view: (tabId) => tabViews.get(tabId),
     // Fresh read: the watcher lags up to one cycle and the user may have just run cd
     async cwd(tabId) {
@@ -475,14 +475,15 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       ...(options.cwd ? { cwd: options.cwd } : {}),
       exitedText: i18n.t('terminal.exited'),
       nativeMiddlePaste,
+      keymap,
       links: {
-        modifier: linkModifier,
-        keyLabel: () => i18n.t('terminal.openLink', { modifier: modifierName }),
+        modifier: keymap.click.modifier,
+        keyLabel: () => i18n.t('terminal.openLink', { modifier: keymap.click.label }),
         tip: setTipRegion,
       },
       paths: {
-        modifier: linkModifier,
-        keyLabel: () => i18n.t('terminal.openPath', { modifier: modifierName }),
+        modifier: keymap.click.modifier,
+        keyLabel: () => i18n.t('terminal.openPath', { modifier: keymap.click.label }),
         cwd: () => watcher.get(id)?.cwd,
         openFolder: (path, x, y) => openFolderMenu(id, path, x, y),
         tip: setTipRegion,
@@ -642,6 +643,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       },
     },
     i18n.t,
+    keymap.label('review'),
   )
 
   elements.tabsNew.addEventListener('click', () => void open())
@@ -695,7 +697,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       void settings.update({ fontSize: size })
     },
   }
-  bindShortcuts(actions)
+  bindShortcuts(actions, keymap)
 
   const commands: Record<string, () => void> = {
     'tab:new': actions.newTab,
@@ -731,13 +733,21 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         label: i18n.t('menu.cat.tabs'),
         icon: 'window',
         items: [
-          { id: 'tab:new', label: i18n.t('tabs.new'), shortcut: 'Ctrl+Shift+T' },
-          { id: 'tab:close', label: i18n.t('tabs.close'), shortcut: 'Ctrl+Shift+W' },
-          { id: 'tab:next', label: i18n.t('tabs.next'), shortcut: 'Ctrl+Tab' },
-          { id: 'tab:previous', label: i18n.t('tabs.previous'), shortcut: 'Ctrl+Shift+Tab' },
+          { id: 'tab:new', label: i18n.t('tabs.new'), shortcut: keymap.label('newTab') },
+          { id: 'tab:close', label: i18n.t('tabs.close'), shortcut: keymap.label('closeTab') },
+          { id: 'tab:next', label: i18n.t('tabs.next'), shortcut: keymap.label('nextTab') },
+          {
+            id: 'tab:previous',
+            label: i18n.t('tabs.previous'),
+            shortcut: keymap.label('previousTab'),
+          },
           { id: 'tab:finished', label: i18n.t('tabs.nextFinished') },
-          { id: 'tab:review', label: i18n.t('review.toggle'), shortcut: 'Ctrl+Shift+D' },
-          { id: 'tab:review-layout', label: i18n.t('review.layout.toggle'), shortcut: LAYOUT_KEY },
+          { id: 'tab:review', label: i18n.t('review.toggle'), shortcut: keymap.label('review') },
+          {
+            id: 'tab:review-layout',
+            label: i18n.t('review.layout.toggle'),
+            shortcut: keymap.label('reviewLayout'),
+          },
         ],
       },
       {
@@ -748,9 +758,9 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
           {
             id: 'project:search',
             label: `${i18n.t('projects.search')}…`,
-            shortcut: 'Ctrl+Shift+P',
+            shortcut: keymap.label('projects'),
           },
-          { id: 'views:open', label: i18n.t('views.open'), shortcut: 'Ctrl+Shift+M' },
+          { id: 'views:open', label: i18n.t('views.open'), shortcut: keymap.label('views') },
           ...projects.map((project) => ({
             id: `${PROJECT_PREFIX}${project.path}`,
             label: projectLabel(project),
@@ -772,14 +782,26 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         label: i18n.t('menu.cat.system'),
         icon: 'sliders',
         items: [
-          { id: 'system:full-height', label: i18n.t('menu.system.fullHeight'), shortcut: 'F11' },
+          {
+            id: 'system:full-height',
+            label: i18n.t('menu.system.fullHeight'),
+            shortcut: keymap.label('fullHeight'),
+          },
           {
             id: 'system:settings',
             label: i18n.t('menu.system.settings'),
-            shortcut: 'Ctrl+,',
+            shortcut: keymap.label('settings'),
           },
-          { id: 'system:panel', label: i18n.t('menu.system.panel'), shortcut: 'Ctrl+Shift+B' },
-          { id: 'system:theme', label: i18n.t('menu.system.theme'), shortcut: 'Ctrl+Shift+L' },
+          {
+            id: 'system:panel',
+            label: i18n.t('menu.system.panel'),
+            shortcut: keymap.label('panel'),
+          },
+          {
+            id: 'system:theme',
+            label: i18n.t('menu.system.theme'),
+            shortcut: keymap.label('theme'),
+          },
         ],
       },
     ]
@@ -803,7 +825,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         else commands[item.id]?.()
       },
       switchTo: (id) => update(activateTab(state, id)),
-      triggerCode: () => settings.current().shortcuts.holdTrigger,
+      triggerCode: () => settings.current().shortcuts.holdTrigger ?? keymap.holdTrigger,
     },
     {
       after(milliseconds, task) {

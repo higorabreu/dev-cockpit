@@ -1,14 +1,17 @@
 import type { HostApi } from '@dck/core'
 import type { Terminal } from '@xterm/xterm'
+import type { Keymap } from '../platform/keymap.ts'
 
 const COPY_DELAY_MS = 150
 
 export interface ClipboardOptions {
   // On Linux the browser already pastes the primary selection on a middle click; pasting again doubles it
   readonly nativeMiddlePaste: boolean
+  readonly keymap: Pick<Keymap, 'clipboard'>
 }
 
-// Selecting copies; right and middle click paste; Ctrl+Shift+C and V as in other terminals
+// Selecting copies; right and middle click paste; the keymap's copy and paste keys, Ctrl+Shift+C and V
+// as in other terminals (the Mac's Edit menu gives Cmd+C and V)
 export function attachClipboard(
   terminal: Terminal,
   element: HTMLElement,
@@ -56,15 +59,15 @@ export function attachClipboard(
     void paste()
   })
 
-  // Keys xterm must not send to the shell: Ctrl+Shift+C and V copy and paste; false keeps them from xterm
+  // Keys xterm must not send to the shell: the copy and paste keys; false keeps them from xterm
   function onKey(event: KeyboardEvent): boolean {
-    if (event.type !== 'keydown' || !event.ctrlKey || !event.shiftKey) return true
-    const key = event.key.toLowerCase()
-    if (key === 'c' && terminal.hasSelection()) {
+    if (event.type !== 'keydown') return true
+    const action = options.keymap.clipboard(event)
+    if (action === 'copy' && terminal.hasSelection()) {
       copySelection()
       return false
     }
-    if (key === 'v') {
+    if (action === 'paste') {
       // Chromium pastes on Ctrl+Shift+V by itself too; without this the text arrives twice
       event.preventDefault()
       void paste()

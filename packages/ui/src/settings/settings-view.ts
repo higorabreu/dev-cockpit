@@ -17,6 +17,7 @@ import { closeButton } from '../kit/panel-frame.ts'
 import { createSelect } from '../kit/select.ts'
 import { h } from '../panel/dom.ts'
 import { inputGate } from '../platform/input-gate.ts'
+import type { Keymap } from '../platform/keymap.ts'
 import type { SettingsClient } from './settings-client.ts'
 
 type Child = Node | string | false | undefined
@@ -47,19 +48,19 @@ function patchFor(key: string, value: unknown): SettingsPatch {
   return patch as SettingsPatch
 }
 
-const REFERENCE: ReadonlyArray<readonly [string, string]> = [
-  ['tabs.new', 'Ctrl+Shift+T'],
-  ['tabs.close', 'Ctrl+Shift+W'],
-  ['tabs.next', 'Ctrl+Tab'],
-  ['tabs.previous', 'Ctrl+Shift+Tab'],
-  ['projects.search', 'Ctrl+Shift+P'],
-  ['views.open', 'Ctrl+Shift+M'],
-  ['menu.system.panel', 'Ctrl+Shift+B'],
-  ['menu.system.theme', 'Ctrl+Shift+L'],
-  ['menu.system.fullHeight', 'F11'],
-  ['settings.ref.opacity', 'Ctrl+Shift+↑ ↓'],
-  ['settings.ref.font', 'Ctrl + − 0'],
-  ['settings.ref.settings', 'Ctrl+,'],
+const reference = (keymap: Keymap): ReadonlyArray<readonly [string, string]> => [
+  ['tabs.new', keymap.label('newTab')],
+  ['tabs.close', keymap.label('closeTab')],
+  ['tabs.next', keymap.label('nextTab')],
+  ['tabs.previous', keymap.label('previousTab')],
+  ['projects.search', keymap.label('projects')],
+  ['views.open', keymap.label('views')],
+  ['menu.system.panel', keymap.label('panel')],
+  ['menu.system.theme', keymap.label('theme')],
+  ['menu.system.fullHeight', keymap.label('fullHeight')],
+  ['settings.ref.opacity', `${keymap.label('opacityUp')} ↓`],
+  ['settings.ref.font', `${keymap.modifiers('fontBigger')} + − 0`],
+  ['settings.ref.settings', keymap.label('settings')],
 ]
 
 const TABS = [
@@ -81,10 +82,13 @@ export function createSettingsView(
     onClose(): void
     // Shows the opacity while the control is dragged, before saving
     previewOpacity(value: number): void
+    readonly keymap: Keymap
   },
 ) {
   const { overlay, body } = elements
   const { settings, api, i18n } = deps
+  const mac = deps.keymap.keyboard === 'mac'
+  const needsModifier = mac ? 'settings.needsModifier.mac' : 'settings.needsModifier'
   const t = i18n.t
   let recording = false
   let autostart = false
@@ -188,11 +192,16 @@ export function createSettingsView(
 
   const disabled = (key: string) => settings.locked().includes(key)
 
-  function select(key: string, options: ReadonlyArray<readonly [string, string]>): HTMLElement {
+  // `current` stands in for a setting that is null until the user chooses it
+  function select(
+    key: string,
+    options: ReadonlyArray<readonly [string, string]>,
+    current = String(getPath(settings.current(), key)),
+  ): HTMLElement {
     const control = createSelect({
       id: `set-${key.replace(/\./g, '-')}`,
       options: options.map(([value, label]) => ({ value, label })),
-      value: String(getPath(settings.current(), key)),
+      value: current,
       labelledBy: labelId(key),
       disabled: disabled(key),
       onChange: (value) => void commit(patchFor(key, value)),
@@ -328,7 +337,7 @@ export function createSettingsView(
     if (result.type === 'invalid') {
       errors.set(
         'shortcuts.toggleWindow',
-        t(result.reason === 'needsModifier' ? 'settings.needsModifier' : 'settings.unsupported'),
+        t(result.reason === 'unsupported' ? 'settings.unsupported' : needsModifier),
       )
       return render()
     }
@@ -624,7 +633,7 @@ export function createSettingsView(
     focusNext = undefined
     const value = settings.current()
     const holdOptions = HOLD_TRIGGERS.map(
-      (id) => [id, t(`settings.holdTrigger.${id}` as const)] as const,
+      (id) => [id, t(`settings.holdTrigger.${mac ? 'mac.' : ''}${id}` as const)] as const,
     )
 
     const resetAll = h(
@@ -726,14 +735,18 @@ export function createSettingsView(
           row(
             'shortcuts.holdTrigger',
             t('settings.holdTrigger'),
-            select('shortcuts.holdTrigger', holdOptions),
+            select(
+              'shortcuts.holdTrigger',
+              holdOptions,
+              value.shortcuts.holdTrigger ?? deps.keymap.holdTrigger,
+            ),
           ),
         ),
         h(
           'section',
           { class: 'sgroup' },
           h('h2', {}, t('settings.group.reference')),
-          ...REFERENCE.map(([label, keys]) =>
+          ...reference(deps.keymap).map(([label, keys]) =>
             h(
               'div',
               { class: 'sref' },

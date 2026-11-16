@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import { createGitDiffSource, createGitInspector } from '@dck/adapter-node-git'
-import { connectTo, defaultConfigDir, defaultEndpoint } from '@dck/adapter-node-net'
+import { connectTo, defaultConfigDir, defaultEndpoint, defaultLogDir } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
 import {
   type ConnectionFields,
@@ -356,6 +356,8 @@ app.whenReady().then(async () => {
   async function startDaemonProcess() {
     await loginPath
     mkdirSync(dirname(endpoint), { recursive: true, mode: 0o700 })
+    const logDir = process.env.DCK_LOG_DIR ?? defaultLogDir(endpoint)
+    mkdirSync(logDir, { recursive: true, mode: 0o700 })
     launchDaemon(
       {
         spawn: (command, args, options) =>
@@ -367,7 +369,7 @@ app.whenReady().then(async () => {
         execPath: process.execPath,
         script: daemonScript,
         env: process.env,
-        logFd: openSync(join(dirname(endpoint), 'daemon.log'), 'a'),
+        logFd: openSync(join(logDir, 'daemon.log'), 'a'),
       },
       logger,
     )

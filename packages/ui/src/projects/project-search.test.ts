@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { createTranslator } from '@dck/core'
 import { afterEach, describe, expect, it } from 'vitest'
+import { createKeymap } from '../platform/keymap.ts'
 import { createProjectSearch, type SearchEntry } from './project-search.ts'
 
 const entry = (name: string): SearchEntry => ({
@@ -24,6 +25,7 @@ function setup(language: 'en' | 'pt-BR' = 'en') {
   const search = createProjectSearch(
     { overlay, input, results, hint },
     {
+      keymap: createKeymap('pc'),
       onPick: (path) => void picked.push(path),
       onClose: () => {
         closes += 1

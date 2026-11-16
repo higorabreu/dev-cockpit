@@ -2,6 +2,7 @@ import { searchItems, type Translate } from '@dck/core'
 import { closeButton, keyHint } from '../kit/panel-frame.ts'
 import { watchOverflow } from '../kit/scrollbar.ts'
 import { h } from '../panel/dom.ts'
+import type { Keymap } from '../platform/keymap.ts'
 
 export interface SearchEntry {
   readonly path: string
@@ -31,18 +32,21 @@ export interface SearchDeps {
   // Opens the system folder picker; the search is opened again with the outcome
   onChooseRoot(): void
   readonly t: Translate
+  readonly keymap: Keymap
 }
 
 // Project search: typing filters, the arrows choose, Enter opens, Esc closes
 export function createProjectSearch(elements: SearchElements, deps: SearchDeps) {
   const { overlay, input, results, hint } = elements
-  const { onPick, onClose, onToggleFavorite, t } = deps
+  const { onPick, onClose, onToggleFavorite, t, keymap } = deps
   // No projects folder chosen yet: the search asks for one instead of guessing it
   let needsRoot = false
   // Pinning has nothing to act on before there are projects, so the bar goes away
   const drawHint = () => {
     hint.hidden = needsRoot
-    hint.replaceChildren(...(needsRoot ? [] : [keyHint('Ctrl+D', t('projects.hint'))]))
+    hint.replaceChildren(
+      ...(needsRoot ? [] : [keyHint(keymap.commandLabel('d'), t('projects.hint'))]),
+    )
   }
   drawHint()
   watchOverflow(results)
@@ -129,7 +133,7 @@ export function createProjectSearch(elements: SearchElements, deps: SearchDeps) 
     else if (event.key === 'Enter') pick()
     else if (event.key === 'ArrowDown') move(1)
     else if (event.key === 'ArrowUp') move(-1)
-    else if (event.ctrlKey && event.key.toLowerCase() === 'd') {
+    else if (keymap.command(event, 'd')) {
       const entry = matches[selected]
       if (entry) onToggleFavorite(entry.path)
     } else return

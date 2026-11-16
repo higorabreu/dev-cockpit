@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { linkBox, linkModifierFor, opensLink } from './terminal-links.ts'
+import { linkBox, opensLink } from './terminal-links.ts'
 
 const click = { ctrlKey: false, metaKey: false }
 
@@ -22,17 +22,6 @@ describe('opensLink', () => {
 
   it('should ignore Cmd when the system is not macOS', () => {
     expect(opensLink({ ...click, metaKey: true }, 'ctrl')).toBe(false)
-  })
-})
-
-describe('linkModifierFor', () => {
-  it('should use Cmd when the platform is macOS', () => {
-    expect(linkModifierFor('MacIntel')).toBe('meta')
-  })
-
-  it('should use Ctrl when the platform is Linux or Windows', () => {
-    expect(linkModifierFor('Linux x86_64')).toBe('ctrl')
-    expect(linkModifierFor('Win32')).toBe('ctrl')
   })
 })
 

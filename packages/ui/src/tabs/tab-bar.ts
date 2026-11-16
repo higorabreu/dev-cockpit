@@ -1,6 +1,6 @@
 import type { AttentionKind, TabsState, Translate } from '@dck/core'
 import { h, icon } from '../panel/dom.ts'
-import { attentionMark, REVIEW_KEY, reviewMark, strongestMark } from './attention-mark.ts'
+import { attentionMark, reviewMark, strongestMark } from './attention-mark.ts'
 
 export interface TabBarCallbacks {
   activate(id: string): void
@@ -13,7 +13,13 @@ export interface TabBarCallbacks {
 const FADE_PX = 24
 const SPLIT_GLYPH = '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M12 5v14"/>'
 
-export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks, t: Translate) {
+// reviewKey is the label of the key that opens and closes the review, for the review mark's tooltip
+export function createTabBar(
+  container: HTMLElement,
+  callbacks: TabBarCallbacks,
+  t: Translate,
+  reviewKey: string,
+) {
   let dragging: HTMLElement | undefined
   let lastActive: string | undefined
   let hiddenAttention: AttentionKind | undefined
@@ -104,7 +110,7 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
                   role: 'img',
                   'aria-label': mark.label,
                   'data-tip': mark.label,
-                  'data-tip-key': REVIEW_KEY,
+                  'data-tip-key': reviewKey,
                 },
                 icon(SPLIT_GLYPH, 12),
               ),

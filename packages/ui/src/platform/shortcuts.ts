@@ -1,4 +1,6 @@
 import { inputGate } from './input-gate.ts'
+import type { Keymap, ShortcutId } from './keymap.ts'
+
 export interface ShortcutActions {
   newTab(): void
   closeTab(): void
@@ -18,49 +20,37 @@ export interface ShortcutActions {
 }
 
 // Listened for in the capture phase: the app's keys never reach the shell
-export function bindShortcuts(actions: ShortcutActions): () => void {
+export function bindShortcuts(actions: ShortcutActions, keymap: Keymap): () => void {
+  const bindings: ReadonlyArray<readonly [ShortcutId, () => void]> = [
+    ['newTab', actions.newTab],
+    ['closeTab', actions.closeTab],
+    ['nextTab', actions.nextTab],
+    ['previousTab', actions.previousTab],
+    ['settings', actions.openSettings],
+    ['review', actions.toggleReview],
+    ['reviewLayout', actions.toggleReviewLayout],
+    ['theme', actions.toggleTheme],
+    ['projects', actions.searchProjects],
+    ['views', actions.openViews],
+    ['panel', actions.togglePanel],
+    ['fullHeight', actions.toggleFullHeight],
+    ['opacityUp', () => actions.changeOpacity(1)],
+    ['opacityDown', () => actions.changeOpacity(-1)],
+    ['fontBigger', () => actions.changeFontSize(1)],
+    ['fontSmaller', () => actions.changeFontSize(-1)],
+    ['fontReset', () => actions.changeFontSize('reset')],
+  ]
   const handle = (event: KeyboardEvent) => {
     if (inputGate.blocked) return
-    const run = (action: () => void) => {
-      action()
-      event.preventDefault()
-      event.stopPropagation()
-    }
-
-    if (event.key === 'F11' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
-      return run(actions.toggleFullHeight)
-    }
-    if (event.ctrlKey && !event.shiftKey && !event.altKey && event.key === ',') {
-      return run(actions.openSettings)
-    }
-    if (event.ctrlKey && !event.altKey && event.key === 'Tab') {
-      return run(event.shiftKey ? actions.previousTab : actions.nextTab)
-    }
-    if (event.ctrlKey && !event.shiftKey && !event.altKey) {
-      if (event.key === 'PageDown') return run(actions.nextTab)
-      if (event.key === 'PageUp') return run(actions.previousTab)
-    }
-    if (event.ctrlKey && event.shiftKey && !event.altKey) {
-      if (event.key === 'ArrowUp') return run(() => actions.changeOpacity(1))
-      if (event.key === 'ArrowDown') return run(() => actions.changeOpacity(-1))
-      const key = event.key.toLowerCase()
-      if (key === 't') return run(actions.newTab)
-      if (key === 'w') return run(actions.closeTab)
-      if (key === 'd') return run(actions.toggleReview)
-      if (key === 'e') return run(actions.toggleReviewLayout)
-      if (key === 'l') return run(actions.toggleTheme)
-      if (key === 'p') return run(actions.searchProjects)
-      if (key === 'm') return run(actions.openViews)
-      if (key === 'b') return run(actions.togglePanel)
-    }
-    if (event.ctrlKey && !event.altKey) {
-      if (event.key === '=' || event.key === '+') return run(() => actions.changeFontSize(1))
-      if (event.key === '-') return run(() => actions.changeFontSize(-1))
-      if (event.key === '0') return run(() => actions.changeFontSize('reset'))
-    }
-    if (event.altKey && !event.ctrlKey && /^[1-9]$/.test(event.key)) {
-      return run(() => actions.goToTab(Number(event.key) - 1))
-    }
+    const tab = keymap.tabIndex(event)
+    const action =
+      tab === undefined
+        ? bindings.find(([id]) => keymap.matches(event, id))?.[1]
+        : () => actions.goToTab(tab)
+    if (!action) return
+    action()
+    event.preventDefault()
+    event.stopPropagation()
   }
   window.addEventListener('keydown', handle, true)
   return () => window.removeEventListener('keydown', handle, true)

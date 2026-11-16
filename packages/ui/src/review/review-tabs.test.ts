@@ -10,6 +10,7 @@ import {
 } from '@dck/core'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createTabView } from '../panes/tab-view.ts'
+import { createKeymap } from '../platform/keymap.ts'
 import { AGENT_SETTLE_MS } from './review-refresh.ts'
 import { createReviewTabs } from './review-tabs.ts'
 
@@ -53,8 +54,7 @@ function setup(width = 1201, height = 700) {
   const reviews = createReviewTabs({
     api,
     i18n: createTranslator('en'),
-    modifier: 'Ctrl',
-    isModified: () => false,
+    keymap: createKeymap('pc'),
     view: () => view,
     cwd: async () => '/home/ana/acme',
     agent: () => agent,

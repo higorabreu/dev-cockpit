@@ -14,6 +14,7 @@ import {
   reviewDiff,
 } from '@dck/core'
 import { afterEach, describe, expect, it } from 'vitest'
+import { createKeymap } from '../platform/keymap.ts'
 import { createReviewPane } from './review-pane.ts'
 
 const diffText = (from: number, to: number) =>
@@ -93,8 +94,7 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
     api,
     i18n: createTranslator('en'),
     memory,
-    modifier: 'Ctrl',
-    isModified: (event) => event.ctrlKey,
+    keymap: createKeymap('pc'),
     cwd: async () => cwd,
     baseFor: () => bases.get('/home/ana/acme'),
     chooseBase: async (root, name) => {

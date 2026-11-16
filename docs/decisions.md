@@ -740,3 +740,24 @@ and the toggle key behaved the same. The interface is text on the DOM, the termi
 renderer, D14), with little to gain from the GPU. `--in-process-gpu` was measured too and saved
 nothing: the main process grew by what the GPU process lost.
 **How to revert:** make `usesGpu` return true for Linux.
+
+## D51. On the Mac the cockpit's keys use Cmd where the Mac does, and Ctrl stays with the shell
+
+**Decision:** Q3 of [plans/macos.md](../plans/macos.md). One keymap per keyboard (`ui/src/platform/keymap.ts`,
+chosen by `keyboardFor(navigator.platform)`) both matches the keys and writes every label, so a tooltip,
+the hold menu and the reference in Settings never disagree with the key. On a Mac: `⌘T` and `⌘W` open and
+close a tab, `⌘1` to `⌘9` go to a tab, `⌃Tab` and `⌃⇧Tab` or `⇧⌘]` and `⇧⌘[` move between tabs, `⌘,`
+opens Settings, `⌘=`, `⌘−` and `⌘0` change the font, the cockpit's own keys are `⇧⌘` and the letter they
+have with `Ctrl+Shift` elsewhere (`⇧⌘D` the review, `⇧⌘P` the projects), the full height is `⌃⌘F`
+(F11 shows the desktop on a Mac) and the keys inside a panel are `⌘D`, `⌘R`, `⌘P` and `⌘C`. Labels use the
+Mac's symbols in its order (`⇧⌘D`). The app menu gains the system Edit menu, so `⌘C`, `⌘V`, `⌘X`, `⌘A`
+and `⌘Z` work in fields and in the terminal, where `Ctrl+Shift+C` and `V` stay a PC key and Ctrl goes to the
+shell; Option is Meta in the terminal (`⌥B`, `⌥F`). A chord with Alt
+reads the physical key, since Option changes the character (`⌥1` types `¡`); the global key recorder does
+the same. MacBook keyboards have no right Control, so `shortcuts.holdTrigger` stays null until the user picks
+a key and the keymap gives each keyboard its own: the right Option on a Mac, the right Ctrl elsewhere; a key
+the user chose is kept. The keymap also gives the click modifier for links and paths (`⌘` on a Mac).
+**Reason:** the maintainer's choice on 2026-11-16, before MAC-T7: Terminal.app and VS Code users expect Cmd,
+and the shell needs Ctrl. Option as Meta means Option no longer types accented letters in the terminal.
+**How to revert:** give the `mac` table in `keymap.ts` the `pc` chords, drop `{ role: 'editMenu' }` from
+`buildAppMenu` and `macOptionIsMeta` from `terminal-session.ts`, and set `HOLD_TRIGGER.mac` to `ControlRight`.

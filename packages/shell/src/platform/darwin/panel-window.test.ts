@@ -132,4 +132,16 @@ describe('buildAppMenu', () => {
     ])
     expect(ran).toEqual(['settings', 'quit'])
   })
+
+  it('should add the system Edit menu so copy and paste keys work when building the menu', () => {
+    // Act
+    const menu = buildAppMenu({
+      t: (key) => key,
+      openSettings: () => undefined,
+      quit: () => undefined,
+    })
+
+    // Assert
+    expect(menu.map((item) => item.role)).toEqual([undefined, 'editMenu'])
+  })
 })

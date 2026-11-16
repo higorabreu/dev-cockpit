@@ -1,7 +1,7 @@
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { connect } from 'node:net'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { createClient, createHub, silentLogger } from '@dck/core'
 import { afterEach, describe, expect, it } from 'vitest'
 import { connectTo, listenOn } from './ipc.ts'
@@ -29,6 +29,20 @@ async function serve(path: string) {
 }
 
 describe('node-net IPC', () => {
+  it('should refuse to listen or connect when the socket folder is open to other users', async () => {
+    // Arrange
+    const path = endpoint()
+    chmodSync(dirname(path), 0o777)
+
+    // Act
+    const listening = await serve(path)
+    const connected = await connectTo(path, silentLogger)
+
+    // Assert
+    expect(listening.ok ? 'listening' : listening.error.message).toContain('not a private folder')
+    expect(connected.ok ? 'connected' : connected.error.message).toContain('not a private folder')
+  })
+
   it('should answer a request over a real socket when the daemon is listening', async () => {
     const path = endpoint()
     await serve(path)
