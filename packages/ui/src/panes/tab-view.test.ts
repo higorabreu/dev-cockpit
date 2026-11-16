@@ -74,7 +74,7 @@ describe('createTabView', () => {
 
     view.open(review)
 
-    expect(widths()).toEqual(['0 0 600px', '0 0 600px'])
+    expect(widths()).toEqual(['0 1 600px', '0 1 600px'])
     expect(divider().hidden).toBe(false)
     expect(divider().getAttribute('role')).toBe('separator')
     expect(divider().getAttribute('aria-valuenow')).toBe('50')
@@ -90,7 +90,7 @@ describe('createTabView', () => {
     key(divider(), 'ArrowLeft')
     key(divider(), 'ArrowUp')
 
-    expect(widths()).toEqual(['0 0 568px', '0 0 632px'])
+    expect(widths()).toEqual(['0 1 568px', '0 1 632px'])
     expect(divider().getAttribute('aria-valuenow')).toBe('53')
     expect(saved.at(-1)?.[0]).toBe('side')
     expect(saved.at(-1)?.[1]).toBeCloseTo(568 / 1200, 3)
@@ -105,7 +105,7 @@ describe('createTabView', () => {
     expect(view.element.dataset.orientation).toBe('stacked')
     expect(divider().getAttribute('aria-orientation')).toBe('horizontal')
     expect(divider().getAttribute('aria-label')).toBe('Height of the review')
-    expect(widths()).toEqual(['0 0 348px', '0 0 372px'])
+    expect(widths()).toEqual(['0 1 348px', '0 1 372px'])
     expect(arrangements.at(-1)).toBe('stacked')
   })
 
@@ -116,7 +116,7 @@ describe('createTabView', () => {
     key(divider(), 'ArrowDown')
     key(divider(), 'ArrowLeft')
 
-    expect(widths()).toEqual(['0 0 516px', '0 0 484px'])
+    expect(widths()).toEqual(['0 1 516px', '0 1 484px'])
     expect(saved).toEqual([['stacked', 0.516]])
   })
 
@@ -127,7 +127,7 @@ describe('createTabView', () => {
     key(divider(), 'ArrowDown')
     key(divider(), 'ArrowDown')
 
-    expect(widths()).toEqual(['0 0 348px', '0 0 372px'])
+    expect(widths()).toEqual(['0 1 348px', '0 1 372px'])
     expect(saved).toEqual([])
   })
 
@@ -140,7 +140,7 @@ describe('createTabView', () => {
     view.relayout()
 
     expect(view.orientation()).toBe('stacked')
-    expect(widths()).toEqual(['0 0 600px', '0 0 400px'])
+    expect(widths()).toEqual(['0 1 600px', '0 1 400px'])
   })
 
   it('should measure the panes so a smaller terminal font fits side by side in auto', () => {

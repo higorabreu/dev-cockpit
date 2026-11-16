@@ -118,8 +118,10 @@ export function createTabView(host: HTMLElement, deps: TabViewDeps) {
     for (const [id, view] of views) {
       const size = shown.get(id)
       view.element.hidden = size === undefined
+      // The sizes come from the whole pixels of clientHeight; shrinking absorbs a fractional box, which
+      // would otherwise overflow the document by half a pixel and show the native scrollbar
       view.element.style.flex =
-        size === undefined ? '' : orientation === undefined ? '1 1 0' : `0 0 ${size}px`
+        size === undefined ? '' : orientation === undefined ? '1 1 0' : `0 1 ${size}px`
     }
     if (orientation) element.dataset.orientation = orientation
     else delete element.dataset.orientation
