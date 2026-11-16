@@ -3,6 +3,13 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.6.1](https://github.com/higorabreu/dev-cockpit/compare/v0.6.0...v0.6.1) (2026-11-16)
+
+
+### Bug Fixes
+
+* open the window whole on the pointer's monitor under Wayland ([315abfa](https://github.com/higorabreu/dev-cockpit/commit/315abfa275b04d414a9e3d72dfb4ad4fd6cfa8de))
+
 ## [0.6.0](https://github.com/higorabreu/dev-cockpit/compare/v0.5.0...v0.6.0) (2026-11-16)
 
 
