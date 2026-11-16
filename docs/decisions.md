@@ -761,3 +761,24 @@ the user chose is kept. The keymap also gives the click modifier for links and p
 and the shell needs Ctrl. Option as Meta means Option no longer types accented letters in the terminal.
 **How to revert:** give the `mac` table in `keymap.ts` the `pc` chords, drop `{ role: 'editMenu' }` from
 `buildAppMenu` and `macOptionIsMeta` from `terminal-session.ts`, and set `HOLD_TRIGGER.mac` to `ControlRight`.
+
+## D52. Under native Wayland the compositor gives the window its size before it shows
+
+**Decision:** in a Wayland session Electron runs as a Wayland client (`nativeWayland` in
+`shell/src/platform/select-platform.ts`). Before each show the shell asks the compositor how large a window
+opened now may be, through `xdg_toplevel.configure_bounds` (xdg-shell version 4), and the dock sizes the
+window with that answer instead of the monitor under the pointer (`boundedScreen`). A small client in
+`shell/src/platform/linux/wayland-bounds.ts` speaks the Wayland wire protocol over the session socket: it
+binds the compositor and `xdg_wm_base`, creates a toplevel that never gets a buffer, so nothing is mapped,
+reads the bounds that come before the first configure, and leaves. The compositor then puts the window on
+the pointer's monitor, and it fits. Without an answer within 150 ms the window opens with the last size it
+knew. X11 and XWayland keep the pointer and the work areas of D15.
+**Reason:** native Wayland reads the pointer as 0,0 and ignores a requested position, so the window was
+sized for the primary monitor and spilled onto the next one from a smaller laptop screen at 150% (the
+maintainer's desk, 2026-11-16). XWayland placed it whole but never followed the pointer onto monitors
+where only Wayland windows were. Guessing the monitor after showing, from the page's scale, made the
+window open twice and flash, because Chromium learns the scale some frames later. Mutter and KWin answer
+`configure_bounds` with the work area of the monitor the window would open on: on that desk 1920x1017,
+1920x985 and 1280x737 for the three monitors, in 1 to 14 ms.
+**How to revert:** drop `beforeShow` and `boundedScreen` from `shell/src/main.ts`; the window then opens
+sized for the primary monitor under native Wayland.

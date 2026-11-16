@@ -64,7 +64,7 @@ what exists today. The clips show example data.
 
 ## Install
 
-Requirements: Ubuntu or Debian on x86-64 or arm64 with X11, and `libsecret-tools` for the system keyring
+Requirements: Ubuntu or Debian on x86-64 or arm64, on X11 or Wayland, and `libsecret-tools` for the system keyring
 (the package declares it). macOS builds from source with `pnpm package:mac` and is being tested; it is
 not in the releases yet.
 
@@ -136,7 +136,7 @@ architecture, decisions and roadmap, and [AGENTS.md](AGENTS.md) for the coding s
 
 ## Known limits
 
-- Linux with X11 only in the releases, tested on Ubuntu 24.04 and GNOME. macOS builds from source and is
+- Linux in the releases, tested on Ubuntu with GNOME on X11 and Wayland. macOS builds from source and is
   being tested ([plans/macos.md](plans/macos.md)); Windows comes after it, as adapters.
 - The package runs with `--no-sandbox`, because of Ubuntu's sandbox restriction.
 - No agent metrics or approvals banner in the panel: the cockpit marks the tab where an agent needs you
