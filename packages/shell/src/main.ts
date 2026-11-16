@@ -65,7 +65,14 @@ import { createRecencyStore } from './projects/recency-store.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
 import { watchSettingsFile } from './settings/settings-watch.ts'
 
-const WAYLAND_PLACE_MS = 120
+// Resolves with the page's scale if it moves away from the expected one within the time, else null
+const scaleChangeScript = (expected: number, withinMs: number) => `new Promise((resolve) => {
+  const query = matchMedia('(resolution: ${expected}dppx)')
+  const done = (value) => { query.removeEventListener('change', changed); clearTimeout(timer); resolve(value) }
+  const changed = () => done(devicePixelRatio)
+  query.addEventListener('change', changed)
+  const timer = setTimeout(() => done(Math.abs(devicePixelRatio - ${expected}) < 0.01 ? null : devicePixelRatio), ${withinMs})
+})`
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
@@ -169,14 +176,16 @@ app.whenReady().then(async () => {
     screen,
     process.platform === 'linux' ? createGtkWorkareas() : undefined,
   )
+  const page = (script: string) => window.webContents.executeJavaScript(script).catch(() => null)
   const waylandFit = nativeWayland(process.platform, process.env, app.commandLine)
     ? createWaylandFit(systemScreen, {
-        pageScreen: () =>
-          window.webContents
-            .executeJavaScript(
-              '({ width: screen.width, height: screen.height, scale: devicePixelRatio })',
-            )
-            .catch(() => undefined),
+        frameScale: async () =>
+          (await page('new Promise((r) => requestAnimationFrame(() => r(devicePixelRatio)))')) ??
+          undefined,
+        scaleChange: async (expected, withinMs) =>
+          (await page(scaleChangeScript(expected, withinMs))) ?? undefined,
+        conceal: () => void page("document.documentElement.style.opacity = '0'"),
+        reveal: () => void page("document.documentElement.style.opacity = ''"),
         displays: () =>
           screen.getAllDisplays().map(({ id, bounds, workArea, scaleFactor }) => ({
             id: String(id),
@@ -188,13 +197,15 @@ app.whenReady().then(async () => {
         ...(traceDock ? { logger } : {}),
       })
     : undefined
+  // The first show starts hidden too, so a wrong first guess is never seen
+  if (waylandFit) window.webContents.once('did-finish-load', () => waylandFit.onHidden())
   const electronScreen = waylandFit?.screen ?? systemScreen
   const dockWindow = createElectronDockWindow(window, {
     onShown: () => {
       send(hostChannels.windowShown)
-      // The compositor places the window a moment after it shows
-      if (waylandFit) setTimeout(() => void waylandFit.onShown(), WAYLAND_PLACE_MS)
+      void waylandFit?.onShown()
     },
+    onHidden: () => waylandFit?.onHidden(),
   })
   const focusedDockWindow = platform.window.dock(dockWindow, window.webContents)
 
