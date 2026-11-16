@@ -52,6 +52,16 @@ export const processAdapters = (platform: NodeJS.Platform) =>
 // about 25 MB idle (D50). The Mac keeps it until it is measured there
 export const usesGpu = (platform: NodeJS.Platform) => platform !== 'linux'
 
+// Electron runs as a Wayland client in a Wayland session unless told to use XWayland
+export const nativeWayland = (
+  platform: NodeJS.Platform,
+  env: Readonly<Record<string, string | undefined>>,
+  commandLine: { getSwitchValue(name: string): string },
+) =>
+  platform === 'linux' &&
+  env.XDG_SESSION_TYPE === 'wayland' &&
+  commandLine.getSwitchValue('ozone-platform') !== 'x11'
+
 export function selectPlatform(context: PlatformContext): Platform {
   const { platform, env, home, packaged, execPath, appPath, resourcesPath, logger } = context
   const onGnome =
