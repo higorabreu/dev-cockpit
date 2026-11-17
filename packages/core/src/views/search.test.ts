@@ -115,4 +115,12 @@ describe('searchViewItems', () => {
     expect(keys(searchViewItems(list, '!41'))).toEqual(['!41', '!410'])
     expect(keys(searchViewItems(list, 'acme/backend!4'))).toEqual(['!4', '!410', '!41'])
   })
+
+  it('should find a pull request by its own reference mark when the item carries one', () => {
+    const list = [mr(410, { referenceMark: '#' }), mr(41, { referenceMark: '#' })]
+
+    expect(keys(searchViewItems(list, '#41'))).toEqual(['!41', '!410'])
+    expect(keys(searchViewItems(list, 'acme/backend#41'))).toEqual(['!41', '!410'])
+    expect(searchViewItems(list, 'acme/backend!41')).toEqual([])
+  })
 })

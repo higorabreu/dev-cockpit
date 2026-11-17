@@ -15,7 +15,7 @@ app reads the manifests, validates them, decides which ones win and reports the 
 | The manifest (version 1) and its validation | Extensions with code in a dedicated host process (phase 3) |
 | Contribution points as a mechanism, with one registered: `connectors` | Connectors from installed extensions (phase 3) |
 | Four sources with precedence and shadowing | Interface contributions and a shared index (phases 4 and 5) |
-| The built-in extensions: `dck.built-in` (empty), `dck.gitlab` and `dck.jira` | |
+| The built-in extensions: `dck.built-in` (empty), `dck.github`, `dck.gitlab` and `dck.jira` | |
 | The `extensions.disabled` setting | |
 | `dck ext list`, `dck ext enable`, `dck ext disable` | |
 
@@ -80,11 +80,12 @@ One point is registered: `connectors`. Any other key in `contributes` is refused
 
 ### `connectors`
 
-A connector brings the developer's work from a service (GitLab and Jira Cloud today) into the Work screen.
+A connector brings the developer's work from a service (GitHub, GitLab and Jira Cloud today) into the Work
+screen.
 Its code still ships with the app, because extensions cannot run code yet: **only built-in extensions may
 declare a connector**, and a connector from an installed, global or repository extension is refused with
 `DCK-EXT-002` until the extension host exists (phase 3). The contract below is internal until then; the
-second connector, Jira, fitted it without a change.
+second and third connectors, Jira and GitHub, fitted it without a change.
 
 `contributes.connectors` is a list of 1 to 4 connectors:
 
@@ -120,9 +121,10 @@ second connector, Jira, fitted it without a change.
 | --- | --- |
 | `id` | A lowercase letter, then up to 31 lowercase letters, digits or hyphens. It names the settings entry `connections.<id>` and the keyring key `<id>.token` |
 | `name` | The product name, 1 to 60 characters, the same in every language |
+| `ciTerm` | Optional: the service's word for the CI state of a merge request, `pipeline` (the default) or `checks`; the Work rows say "Pipeline failed" or "Checks failed" |
 | `connection.address` | Always asked; `placeholder` is shown in the empty field |
 | `connection.email` | Optional; when present the account e-mail is asked too, with its `placeholder` |
-| `connection.token` | Always asked; `label` and `hint` are keys of the text catalogs |
+| `connection.token` | Always asked; `label` and `hint` are keys of the text catalogs; `permissions`, optional, is a list of 1 to 6 keys shown under a "Permissions" disclosure below the hint |
 | `views` | 1 to 8 views. `id` is unique across connectors; `kind` is `mergeRequest` or `issue`; `title`, `description` and `empty` are catalog keys (the tab's name, its tooltip saying what the list holds, and the text of an empty list); `badge` is an optional plural catalog key, and the item count of that view becomes the rail badge |
 
 Jira declares the e-mail too, and a view of the other kind:
@@ -148,6 +150,50 @@ Jira declares the e-mail too, and a view of the other kind:
 }
 ```
 
+GitHub declares the same two lists as GitLab under view ids of its own, since a view id names one view
+across the product. Its address may be left empty, which means github.com:
+
+```json
+{
+  "id": "github",
+  "name": "GitHub",
+  "ciTerm": "checks",
+  "connection": {
+    "address": { "placeholder": "https://github.com" },
+    "token": {
+      "label": "connections.github.token",
+      "hint": "connections.github.token.hint",
+      "permissions": [
+        "connections.github.permission.pulls",
+        "connections.github.permission.statuses",
+        "connections.github.permission.metadata",
+        "connections.github.permission.classic"
+      ]
+    }
+  },
+  "views": [
+    {
+      "id": "github-review",
+      "kind": "mergeRequest",
+      "title": "views.review",
+      "description": "views.github.review.description",
+      "empty": "views.empty.github.review",
+      "badge": "views.github.waiting"
+    },
+    {
+      "id": "github-mine",
+      "kind": "mergeRequest",
+      "title": "views.mine",
+      "description": "views.github.mine.description",
+      "empty": "views.empty.github.mine"
+    }
+  ]
+}
+```
+
+When more than one connected view declares a `badge`, the rail badge sums them and its text names no kind
+of item.
+
 Every text is a key of the text catalogs (`core/src/i18n`), checked when the declaration is read, so a
 connector is translated like the rest of the interface. The declaration is strict: an unknown field is an
 error.
@@ -161,7 +207,7 @@ product:
 
 | Where | What |
 | --- | --- |
-| Settings, Connections | One section per enabled connector, with the fields it declares |
+| Settings, Connections | One section per enabled connector, with the fields it declares; the ones with an account come first |
 | `settings.json` | `connections.<id>` with `url` and, when declared, `email` (the token never) |
 | System keyring | `<id>.token`, prefixed with the profile in development (`dev:gitlab.token`) |
 | Daemon | One views service and one cache file per connector |
@@ -198,6 +244,7 @@ same loader as an installed extension: it can be disabled or refused by the same
 | Id | Contributes |
 | --- | --- |
 | `dck.built-in` | Nothing yet |
+| `dck.github` | The GitHub connector (github.com or GitHub Enterprise Server): pull requests waiting for your review and the ones you opened |
 | `dck.gitlab` | The GitLab connector: merge requests waiting for your review and the ones you opened |
 | `dck.jira` | The Jira Cloud connector: the open issues assigned to you, read only, in the Tasks tab |
 
@@ -261,7 +308,9 @@ system language; the detail after the message is always in English.
 ```
 $ dck ext list
 dck.built-in  0.3.0  built-in   active
+dck.github    0.3.0  built-in   active
 dck.gitlab    0.3.0  built-in   active
+dck.jira      0.3.0  built-in   active
 acme.commits  1.0.0  installed  active
 acme.reviews  0.4.1  installed  disabled
 
@@ -286,7 +335,9 @@ With nothing installed, only the built-in extensions show:
 ```
 $ dck ext list
 dck.built-in  0.3.0  built-in  active
+dck.github    0.3.0  built-in  active
 dck.gitlab    0.3.0  built-in  active
+dck.jira      0.3.0  built-in  active
 ```
 
 The command reads files and never talks to the daemon. It exits with 0 even when an extension is refused,

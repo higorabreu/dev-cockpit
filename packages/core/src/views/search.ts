@@ -1,3 +1,4 @@
+import type { MergeRequestSummary } from '../ports/code-review.ts'
 import type { ViewItem } from '../ports/views.ts'
 
 // Case and accents do not count, so a word typed without its accents still finds it
@@ -15,13 +16,19 @@ function startsAWord(text: string, word: string): boolean {
   return false
 }
 
+// How the service writes a merge request's number on its own and with its project
+export const shortReference = (item: MergeRequestSummary): string =>
+  `${item.referenceMark ?? '!'}${item.number}`
+export const mergeRequestReference = (item: MergeRequestSummary): string =>
+  `${item.project}${shortReference(item)}`
+
 // What people type to name one item: a task's key, a merge request's reference with or without its project
 const referencesOf = (item: ViewItem): readonly string[] =>
-  item.kind === 'issue' ? [item.key] : [`${item.project}!${item.number}`, `!${item.number}`]
+  item.kind === 'issue' ? [item.key] : [mergeRequestReference(item), shortReference(item)]
 
 const searchText = (item: ViewItem) =>
   item.kind === 'mergeRequest'
-    ? [`${item.project}!${item.number}`, item.title, item.author, item.sourceBranch].join(' ')
+    ? [mergeRequestReference(item), item.title, item.author, item.sourceBranch].join(' ')
     : [item.key, item.summary, item.type, item.status, item.project].join(' ')
 
 function rank(item: ViewItem, needle: string): number {

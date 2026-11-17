@@ -1,0 +1,17 @@
+{
+  "name": "@dck/adapter-github",
+  "private": true,
+  "version": "0.8.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@dck/core": "workspace:^",
+    "zod": "^4.6.7"
+  },
+  "license": "AGPL-3.0-only"
+}

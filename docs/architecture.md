@@ -14,7 +14,7 @@ code.
 
 1. **An embedded Guake-style terminal.** A global key opens and closes it, F11 toggles full height, and a
    collapsible side panel shows the context of the current task and the work queue.
-2. **Work views** from GitLab and Jira Cloud as saved queries, never a mirror of the board: my merge
+2. **Work views** from GitHub, GitLab and Jira Cloud as saved queries, never a mirror of the board: my merge
    requests with pending work, reviews waiting for me, the open tasks assigned to me (read only).
 3. **Projects and submodules mapped**, with quick switching.
 4. **An MCP server** (planned) for the Claude CLI to query the app: next task, briefing, project scope.
@@ -40,7 +40,7 @@ packages/
   daemon/     local process: IPC server, views, cache
   cli/        the dck command (toggle, ping, daemon, agent signal, ext)
   shell/      Electron: window, global shortcut, PTY host
-  adapters/   node-pty, node-git, node-net, node-fetch, gitlab, docker-cli, secret-tool,
+  adapters/   node-pty, node-git, node-net, node-fetch, github, gitlab, jira, docker-cli, secret-tool,
               gnome-shortcuts, linux-proc, extension-files
 ```
 

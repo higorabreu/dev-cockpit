@@ -40,6 +40,15 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
+  packages/adapters/github:
+    dependencies:
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../../core
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+
   packages/adapters/gitlab:
     dependencies:
       '@dck/core':
@@ -138,6 +147,9 @@ importers:
 
   packages/daemon:
     dependencies:
+      '@dck/adapter-github':
+        specifier: workspace:^
+        version: link:../adapters/github
       '@dck/adapter-gitlab':
         specifier: workspace:^
         version: link:../adapters/gitlab
@@ -170,6 +182,9 @@ importers:
       '@dck/adapter-docker-cli':
         specifier: workspace:^
         version: link:../adapters/docker-cli
+      '@dck/adapter-github':
+        specifier: workspace:^
+        version: link:../adapters/github
       '@dck/adapter-gitlab':
         specifier: workspace:^
         version: link:../adapters/gitlab

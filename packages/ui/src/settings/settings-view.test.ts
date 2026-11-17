@@ -5,6 +5,7 @@ import {
   type Connector,
   createTranslator,
   defaultSettings,
+  GITHUB_CONNECTOR,
   GITLAB_CONNECTOR,
   type HostApi,
   type Settings,
@@ -371,6 +372,103 @@ describe('settings view, connections', () => {
     expect(body.textContent).toContain(
       'read_api scope. Kept in the system keyring, never in a file.',
     )
+    view.close()
+  })
+
+  it('should put the connected GitLab above the GitHub section that is not connected', async () => {
+    const initial = {
+      ...defaultSettings,
+      connections: { gitlab: { url: 'https://gitlab.example.com' } },
+    }
+
+    const { sections, view } = await connectionsPage(
+      connectionsHost([GITHUB_CONNECTOR, GITLAB_CONNECTOR]).host,
+      initial,
+    )
+
+    expect(sections().map((rows) => rows[0])).toEqual(['GitLab', 'GitHub'])
+    view.close()
+  })
+
+  it('should keep the declared order when both accounts are connected or neither is', async () => {
+    const both = {
+      ...defaultSettings,
+      connections: {
+        gitlab: { url: 'https://gitlab.example.com' },
+        github: { url: 'https://github.com' },
+      },
+    }
+
+    for (const initial of [both, defaultSettings]) {
+      const { sections, view } = await connectionsPage(
+        connectionsHost([GITHUB_CONNECTOR, GITLAB_CONNECTOR]).host,
+        initial,
+      )
+
+      expect(sections().map((rows) => rows[0])).toEqual(['GitHub', 'GitLab'])
+      view.close()
+    }
+  })
+
+  it('should give GitHub a one-line read-only hint and the github.com placeholder', async () => {
+    const { body, view } = await connectionsPage(connectionsHost([GITHUB_CONNECTOR]).host)
+
+    expect(body.textContent).toContain(
+      'Fine-grained, read only. Kept in the system keyring, never in a file.',
+    )
+    expect(body.textContent).not.toContain('An empty address')
+    expect(
+      body.querySelector<HTMLInputElement>('[data-focus="conn-github-url"]')?.placeholder,
+    ).toBe('https://github.com')
+    view.close()
+  })
+
+  it('should fold the GitHub token permissions and unfold them in place when Permissions is pressed', async () => {
+    const { body, control, view } = await connectionsPage(connectionsHost([GITHUB_CONNECTOR]).host)
+    const button = control<HTMLButtonElement>('conn-github-permissions')
+    const list = () => body.querySelector<HTMLElement>('#conn-github-permissions-list')
+    button.focus()
+
+    const before = [button.getAttribute('aria-expanded'), list()?.hidden]
+    button.click()
+
+    expect(before).toEqual(['false', true])
+    expect(button.getAttribute('aria-expanded')).toBe('true')
+    expect(button.getAttribute('aria-controls')).toBe('conn-github-permissions-list')
+    expect(list()?.hidden).toBe(false)
+    expect([...(list()?.querySelectorAll('li') ?? [])].map((item) => item.textContent)).toEqual([
+      'Pull requests: Read',
+      'Commit statuses: Read',
+      'Metadata: Read',
+      'A classic token needs the repo scope for private repositories, and only a classic token reads their checks.',
+    ])
+    expect(document.activeElement).toBe(button)
+    view.close()
+  })
+
+  it('should keep the permissions open across a redraw and fold them again on a second press', async () => {
+    const { body, control, view, emit } = await connectionsPage(
+      connectionsHost([GITHUB_CONNECTOR]).host,
+    )
+    const first = control<HTMLButtonElement>('conn-github-permissions')
+    first.click()
+
+    emit(['theme'])
+    await settle()
+    const reopened = control<HTMLButtonElement>('conn-github-permissions')
+    const stillOpen = reopened.getAttribute('aria-expanded')
+    reopened.click()
+
+    expect(reopened).not.toBe(first)
+    expect(stillOpen).toBe('true')
+    expect(body.querySelector<HTMLElement>('#conn-github-permissions-list')?.hidden).toBe(true)
+    view.close()
+  })
+
+  it('should give the GitLab token no permissions button since it declares none', async () => {
+    const { body, view } = await connectionsPage(connectionsHost([GITLAB_CONNECTOR]).host)
+
+    expect(body.querySelector('.sdisclose')).toBeNull()
     view.close()
   })
 

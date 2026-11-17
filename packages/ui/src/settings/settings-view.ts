@@ -2,12 +2,14 @@ import {
   acceleratorFromEvent,
   type ConnectionStatus,
   type Connector,
+  connectedFirst,
   connectionErrorKey,
   type DisabledConnector,
   defaultSettings,
   HOLD_TRIGGERS,
   type HostApi,
   LIMITS,
+  type MessageKey,
   type Settings,
   type SettingsPatch,
   type Translator,
@@ -16,7 +18,7 @@ import { trapFocus } from '../kit/focus-trap.ts'
 import { keys as keyCaps } from '../kit/keys.ts'
 import { closeButton } from '../kit/panel-frame.ts'
 import { createSelect } from '../kit/select.ts'
-import { h } from '../panel/dom.ts'
+import { h, icon } from '../panel/dom.ts'
 import { inputGate } from '../platform/input-gate.ts'
 import type { Keymap } from '../platform/keymap.ts'
 import type { SettingsClient } from './settings-client.ts'
@@ -111,6 +113,8 @@ export function createSettingsView(
   // What was typed and not connected yet. The token only exists here between typing and connecting, and
   // the screen never gets it back
   const drafts = new Map<string, { url?: string; email?: string; token: string }>()
+  // The connectors whose token permissions the user unfolded, kept across redraws
+  const openPermissions = new Set<string>()
   const draftOf = (id: string) => {
     const found = drafts.get(id) ?? { token: '' }
     drafts.set(id, found)
@@ -177,6 +181,8 @@ export function createSettingsView(
     control: Child,
     hint?: string,
     resettable = true,
+    // Shown under the hint, such as a disclosure with more detail
+    more?: Child,
   ): HTMLElement {
     const locked = settings.locked().includes(key)
     const error = errors.get(key)
@@ -190,6 +196,7 @@ export function createSettingsView(
         (locked ? t('settings.locked') : hint) &&
           h('span', { class: 'shint' }, locked ? t('settings.locked') : (hint ?? '')),
         error && h('span', { class: 'serror', role: 'alert' }, error),
+        more,
       ),
       h('div', { class: 'scontrol' }, control, resettable && resetButton(key)),
     )
@@ -365,7 +372,8 @@ export function createSettingsView(
       api.connections.list(),
       api.connections.disabled(),
     ])
-    connectors = enabled
+    // Ordered once per opening, so a section does not jump while the user connects or disconnects it
+    connectors = connectedFirst(enabled, (id) => Boolean(storedAccount(id)?.url))
     disabledConnectors = disabled
     listed = true
     for (const { id } of connectors) statuses.set(id, 'checking')
@@ -432,6 +440,37 @@ export function createSettingsView(
     })
     input.value = value
     return input
+  }
+
+  // What a token needs, folded under its hint until asked for; it opens in place, so the focus stays on it
+  function permissionsDisclosure(id: string, permissions: readonly MessageKey[]): HTMLElement {
+    const listId = `conn-${id}-permissions-list`
+    const open = openPermissions.has(id)
+    const list = h(
+      'ul',
+      { class: 'sperms', id: listId, hidden: !open },
+      ...permissions.map((key) => h('li', {}, t(key))),
+    )
+    const button = h(
+      'button',
+      {
+        type: 'button',
+        class: 'sdisclose',
+        'data-focus': `conn-${id}-permissions`,
+        'aria-expanded': String(open),
+        'aria-controls': listId,
+      },
+      icon('<path d="M9 6l6 6-6 6"/>', 10, 'schev'),
+      t('connections.permissions'),
+    )
+    button.addEventListener('click', () => {
+      const now = !openPermissions.has(id)
+      if (now) openPermissions.add(id)
+      else openPermissions.delete(id)
+      button.setAttribute('aria-expanded', String(now))
+      list.hidden = !now
+    })
+    return h('div', { class: 'sdisclosure' }, button, list)
   }
 
   // One section per connector, drawn from the fields it declares
@@ -519,7 +558,14 @@ export function createSettingsView(
       row(key, connector.name, statusLine, undefined, false),
       row(`${key}.url`, t('connections.url'), urlInput, undefined, false),
       emailInput && row(`${key}.email`, t('connections.email'), emailInput, undefined, false),
-      row(`${key}.token`, t(connection.token.label), tokenInput, t(connection.token.hint), false),
+      row(
+        `${key}.token`,
+        t(connection.token.label),
+        tokenInput,
+        t(connection.token.hint),
+        false,
+        connection.token.permissions && permissionsDisclosure(id, connection.token.permissions),
+      ),
       row(
         `${key}.actions`,
         '',
