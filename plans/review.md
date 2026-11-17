@@ -176,8 +176,72 @@ and a long change has no memory of where the reading stopped.
 
 ## Phase 2: comments back to the agent
 
-Select one or more lines, write a comment, and "Send to the agent" types a short review (file, line,
-comment) into the tab's prompt without Enter, so any agent can take it. Detailed when phase 1 is used.
+The developer reads the change, leaves comments on lines as in a GitHub review, and hands them all to the
+agent in the tab at once: typed at the terminal's prompt, without Enter, so the developer can add a word
+and send it, whatever agent (or shell) is listening.
+
+Decided with the maintainer (2026-11-17):
+
+- **Selection, as on GitHub.** A click on a line selects it and Shift+click on another selects the range;
+  from the keyboard Shift+↑↓ extends the selection from the cursor. `c` opens a comment field for the
+  selected lines, or the cursor's line when nothing is selected. The mouse path is a small "+" on the
+  gutter of the line under the pointer, with `c` in its tooltip.
+- **Batched like a GitHub review.** Comments stay pending in the diff, under their lines, editable and
+  deletable. "Send to agent" in the review header, with the count, types all of them into the tab's
+  terminal prompt without pressing Enter, then clears them. Esc in the field cancels; Ctrl+Enter saves.
+- **One line per comment**, `path:lines: comment`, the code quoted below when it is short, typed with the
+  terminal's paste so a TUI reads it as one block (bracketed paste). Nothing assumes Claude Code.
+- **Pending comments belong to the tab's review**, follow their lines across refreshes and turn outdated
+  when the lines are gone, as GitHub says "Outdated". They do not survive a restart.
+
+Rules decided here:
+
+- **What can be commented.** The lines of the change: added, removed and the unchanged lines Git shows
+  around them in a hunk. A range stays inside one hunk: Shift+click or Shift+↑↓ past its edge stops at the
+  edge. Lines opened from a collapsed gap read but take no comment, as on GitHub, since they are not part
+  of the change and nothing could tell later whether they moved.
+- **The lines a comment names.** The new file's numbers of the selected lines that exist in it (added and
+  unchanged), first to last. When every selected line is removed, the old file's numbers followed by
+  ` (removed)`. One line is `13`, a range `13-14`.
+- **The text typed.** Comments ordered by path, then by their first line, then by when they were written.
+  Each starts a line `path:lines[ (removed)][ (outdated)]: first line of the comment`; the comment's other
+  lines follow indented by two spaces (blank lines dropped); when it covers at most 3 lines, each is quoted
+  below as `  > ` and the diff sign (`+`, `-` or a space) and the code, its trailing spaces trimmed and cut
+  at 120 characters with `…`. Tabs become four spaces and control characters are dropped, so no text can
+  end the bracketed paste early or press a key. Lines are joined with a newline and the text ends without
+  one, so nothing is sent until the developer presses Enter.
+- **Across refreshes.** After every read each comment looks for its lines (the same kinds and texts, in
+  order, inside one hunk) in its file's change; found, it moves to their new numbers (the match nearest
+  its old numbers wins); not found, or with its file gone, it keeps its last numbers and turns outdated. An
+  outdated comment that finds its lines again is current again. An outdated comment sits under its file's
+  header with its quoted lines and an "Outdated" label; one whose file left the change sits at the end of
+  the diff under "Outdated comments". Outdated comments are still sent, marked ` (outdated)`, since they
+  are the developer's words. A file folded as viewed or collapsed shows its comment count in its header.
+- **The send key.** Ctrl+Shift+Enter (⇧⌘Enter on the Mac): free in D13 and in Claude Code, and next to
+  Ctrl+Enter, which saves one comment. It works from the review and from the tab's terminal, and does
+  nothing when no comment is pending. A comment still open in its field is saved first when it has text.
+  After sending, the keys go to the terminal.
+
+| Id | Criterion | Verification |
+| --- | --- | --- |
+| R16 | Click, Shift+click and Shift+↑↓ select a range of one hunk; `c` and the gutter "+" open the comment field for it, or for the cursor's line | Tests |
+| R17 | A pending comment shows under its last line; Ctrl+Enter saves, Esc cancels, an empty comment cannot be saved; Enter and the edit button edit it, Delete and the delete button remove it | Tests, screenshots |
+| R18 | "Send to agent" shows the count and, like Ctrl+Shift+Enter, types every pending comment at the tab's prompt as one paste with no Enter, clears them and gives the keys to the terminal | Tests, a real-app run |
+| R19 | The typed text follows the rules above: lines, `(removed)`, `(outdated)`, the quote, the order, no control characters, no final newline | Tests in `core` |
+| R20 | A refresh moves a comment with its lines, marks it outdated when they are gone and current again when they come back; outdated comments show under their file or at the end and are still sent | Tests in `core` and `ui` |
+| R21 | Both themes, both languages, contrast checks for the selected lines, screen reader names for comments and selection | Tests, contrast check, screenshots |
+
+- [ ] RV-T15. `core`: the comment model, the lines a comment names, the typed text and finding a comment's
+  lines after a read, pure and tested. (R19, R20)
+- [ ] RV-T16. `core`: `changeRows` places comment rows under their last line, outdated ones under the file
+  header and the ones whose file left the change at the end. (R17, R20)
+- [ ] RV-T17. `ui`: the selection (click, Shift+click, Shift+↑↓) inside a hunk, the gutter "+" and `c`, and
+  the selected lines' tint with its contrast checks. (R16, R21)
+- [ ] RV-T18. `ui`: pending comments inline, the comment field (Esc, Ctrl+Enter), edit and delete, both
+  catalogs. (R17, R21)
+- [ ] RV-T19. `ui`: "Send to agent" in the header, Ctrl+Shift+Enter, the terminal's paste, comments kept
+  across refreshes. (R18, R20)
+- [ ] RV-T20. Docs: README's key table, D56, the roadmap; screenshots in both themes and languages.
 
 ## Acceptance criteria
 
