@@ -25,6 +25,7 @@ export type ShortcutId =
   | 'settings'
   | 'review'
   | 'reviewLayout'
+  | 'reviewSend'
   | 'theme'
   | 'projects'
   | 'views'
@@ -59,6 +60,8 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     settings: [{ ...C, key: ',' }],
     review: [{ ...CS, key: 'd' }],
     reviewLayout: [{ ...CS, key: 'e' }],
+    // Beside Ctrl+Enter, which saves one comment; Enter alone never leaves the cockpit for the shell
+    reviewSend: [{ ...CS, key: 'Enter' }],
     theme: [{ ...CS, key: 'l' }],
     projects: [{ ...CS, key: 'p' }],
     views: [{ ...CS, key: 'm' }],
@@ -92,6 +95,7 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     settings: [{ ...M, key: ',' }],
     review: [{ ...MS, key: 'd' }],
     reviewLayout: [{ ...MS, key: 'e' }],
+    reviewSend: [{ ...MS, key: 'Enter' }],
     theme: [{ ...MS, key: 'l' }],
     projects: [{ ...MS, key: 'p' }],
     views: [{ ...MS, key: 'm' }],

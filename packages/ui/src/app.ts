@@ -228,6 +228,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     chooseLayout: (orientation) => split.setPreference(orientation),
     baseFor: (cwd) => reviewBaseFor(settings.current(), cwd),
     chooseBase: (root, name) => settings.update(reviewBasePatch(root, name)).then(() => undefined),
+    paste: (tabId, text) => sessions.get(tabId)?.paste(text),
   })
 
   let activeSnapshot: SessionSnapshot | undefined
@@ -672,6 +673,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     newTab: () => void open(),
     toggleReview: () => state.activeId && toggleReview(state.activeId),
     toggleReviewLayout: () => state.activeId && reviews.toggleLayout(state.activeId),
+    sendReview: () => state.activeId && reviews.send(state.activeId),
     closeTab: () => state.activeId && close(state.activeId),
     nextTab: () => update(stepTab(state, 1)),
     previousTab: () => update(stepTab(state, -1)),

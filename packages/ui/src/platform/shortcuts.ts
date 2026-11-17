@@ -6,6 +6,7 @@ export interface ShortcutActions {
   closeTab(): void
   toggleReview(): void
   toggleReviewLayout(): void
+  sendReview(): void
   nextTab(): void
   previousTab(): void
   goToTab(index: number): void
@@ -29,6 +30,7 @@ export function bindShortcuts(actions: ShortcutActions, keymap: Keymap): () => v
     ['settings', actions.openSettings],
     ['review', actions.toggleReview],
     ['reviewLayout', actions.toggleReviewLayout],
+    ['reviewSend', actions.sendReview],
     ['theme', actions.toggleTheme],
     ['projects', actions.searchProjects],
     ['views', actions.openViews],

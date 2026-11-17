@@ -19,6 +19,8 @@ export interface FileHeadDeps {
   // Whether the file is marked viewed, and whether a mark went away because the file changed again
   viewed(file: DiffFile): { readonly viewed: boolean; readonly changed: boolean }
   toggleViewed(file: DiffFile): void
+  // How many comments are pending on the file, told in its header even when it is folded
+  commentCount(file: DiffFile): number
 }
 
 const BOX = '<rect x="4" y="4" width="16" height="16" rx="3"/>'
@@ -141,6 +143,7 @@ export function fileHead(
   }
   const unreadable = isCollapsed(notice) ? undefined : noticeText(file, notice, i18n)
   const changed = deps.viewed(file).changed
+  const comments = deps.commentCount(file)
   return h(
     'div',
     { class: 'rv-band rv-fhead' },
@@ -148,6 +151,7 @@ export function fileHead(
     path,
     ...labels(file, i18n).map((text) => h('span', { class: 'rv-label' }, text)),
     changed && h('span', { class: 'rv-label rv-changed' }, i18n.t('review.changedSinceViewed')),
+    comments > 0 && h('span', { class: 'rv-label' }, i18n.plural('review.comments', comments)),
     unreadable && h('span', { class: 'rv-why' }, unreadable),
     h('span', { class: 'rv-spacer' }),
     action,

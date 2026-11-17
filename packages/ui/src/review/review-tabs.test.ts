@@ -6,6 +6,7 @@ import {
   noBranchInfo,
   type Orientation,
   ok,
+  parseUnifiedDiff,
   reviewDiff,
 } from '@dck/core'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -17,8 +18,20 @@ import { createReviewTabs } from './review-tabs.ts'
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 const settle = () => new Promise((resolve) => setTimeout(resolve, AGENT_SETTLE_MS + 20))
 
-function setup(width = 1201, height = 700) {
+const invoice = [
+  'diff --git a/src/billing/invoice.ts b/src/billing/invoice.ts',
+  '--- a/src/billing/invoice.ts',
+  '+++ b/src/billing/invoice.ts',
+  '@@ -10,2 +10,2 @@',
+  ' const base = 1',
+  '-const timeout = 3000',
+  '+const timeout = 5000',
+  '',
+].join('\n')
+
+function setup(width = 1201, height = 700, diffText = '') {
   const layouts: Orientation[] = []
+  const pasted: string[] = []
   let reads = 0
   let agent: AgentState | undefined
   const api = {
@@ -27,7 +40,12 @@ function setup(width = 1201, height = 700) {
         reads += 1
         return ok({
           kind: 'ok' as const,
-          diff: reviewDiff('/home/ana/acme', 'uncommitted', noBranchInfo, []),
+          diff: reviewDiff(
+            '/home/ana/acme',
+            'uncommitted',
+            noBranchInfo,
+            parseUnifiedDiff(diffText),
+          ),
         })
       },
       fileLines: async () => ok([]),
@@ -62,11 +80,13 @@ function setup(width = 1201, height = 700) {
     chooseLayout: (orientation) => layouts.push(orientation),
     baseFor: () => undefined,
     chooseBase: async () => undefined,
+    paste: (tabId, text) => pasted.push(`${tabId}|${text}`),
   })
   return {
     reviews,
     view,
     terminal,
+    pasted,
     reads: () => reads,
     layouts,
     setAgent: (state: AgentState | undefined) => {
@@ -77,6 +97,47 @@ function setup(width = 1201, height = 700) {
 
 afterEach(() => {
   document.body.replaceChildren()
+})
+
+describe('createReviewTabs send', () => {
+  it('should paste the pending comments into the tab terminal and give it the keys when sent', async () => {
+    // Arrange
+    const { reviews, terminal, pasted } = setup(1201, 700, invoice)
+    reviews.toggle('tab-1')
+    await flush()
+    const lines = document.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+    const press = (target: Element, key: string, init: KeyboardEventInit = {}) =>
+      target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...init }))
+    press(lines, 'n')
+    press(lines, 'ArrowDown')
+    press(lines, 'ArrowDown')
+    press(lines, 'ArrowDown')
+    press(lines, 'c')
+    const field = document.querySelector('.rv-field') as HTMLTextAreaElement
+    field.value = 'use the constant from config'
+    press(field, 'Enter', { ctrlKey: true })
+
+    // Act
+    reviews.send('tab-1')
+
+    // Assert
+    expect(pasted).toEqual([
+      'tab-1|src/billing/invoice.ts:11: use the constant from config\n  > +const timeout = 5000',
+    ])
+    expect(document.activeElement).toBe(terminal)
+    expect(document.querySelector('.rv-send')?.hasAttribute('hidden')).toBe(true)
+  })
+
+  it('should paste nothing when no comment is pending', async () => {
+    const { reviews, pasted } = setup(1201, 700, invoice)
+    reviews.toggle('tab-1')
+    await flush()
+
+    reviews.send('tab-1')
+
+    expect(pasted).toEqual([])
+  })
 })
 
 describe('createReviewTabs', () => {

@@ -1,14 +1,21 @@
 import {
   type ChangeRow,
+  type CommentTarget,
   changedPairs,
   type DiffFile,
   type DiffGap,
   type DiffLine,
+  extendSelection,
   gapSize,
   isCollapsed,
+  isSelected,
+  type LineSelection,
+  selectionTarget,
+  selectLine,
   visibleRange,
 } from '@dck/core'
 import { h, icon } from '../panel/dom.ts'
+import { EDITOR_HEIGHT } from './comment-card.ts'
 import { type FileHeadDeps, fileHead, fileLabel } from './file-head.ts'
 import { type LineMarks, type Mark, wordMarks } from './word-marks.ts'
 
@@ -22,17 +29,32 @@ const OVERSCAN = 12
 const PAGE = 20
 const TAB_COLUMNS = 4
 const UNFOLD = '<path d="M12 3v6M9 6l3 3 3-3M12 21v-6M9 18l3-3 3 3M5 12h14"/>'
+const PLUS = '<path d="M12 6v12M6 12h12"/>'
+
+// The pending comments the diff draws under their lines, and the one comment field
+export interface DiffComments {
+  // A comment's card, drawn anew with its row
+  card(id: string): HTMLElement | undefined
+  label(id: string): string
+  // A card's height until it is measured on screen
+  estimate(id: string): number
+  // The field and the comment it writes; the same element while it is open, so it keeps its focus
+  editor(): { readonly id: string; readonly element: HTMLElement } | undefined
+  focusField(): void
+  edit(id: string): void
+  remove(id: string): void
+}
 
 export interface DiffViewDeps extends Omit<FileHeadDeps, 'showAnyway'> {
   readonly id: string
+  readonly comments: DiffComments
+  // The gutter's "+": the comment field for these lines
+  comment(target: CommentTarget): void
   expand(file: DiffFile, gap: DiffGap): void
   showAnyway(file: DiffFile): void
   // The file the diff is on changed: the one at its top, or the one the keys went to
   onCurrentFile(index: number): void
 }
-
-const heightOf = (row: ChangeRow) =>
-  row.kind === 'file' ? FILE_HEIGHT : row.kind === 'hunk' ? HUNK_HEIGHT : LINE_HEIGHT
 
 const columnsOf = (text: string) => {
   let tabs = 0
@@ -48,11 +70,14 @@ export function createDiffView(deps: DiffViewDeps) {
   const t = i18n.t
   const inner = h('div', { class: 'rv-inner' })
   const pin = h('div', { class: 'rv-pin', 'aria-hidden': 'true', hidden: true })
+  // The comment field floats over its row, outside the rows a scroll draws anew, so it keeps its focus
+  const editorHost = h('div', { class: 'rv-editor-host', hidden: true })
   const element = h(
     'div',
     { class: 'rv-lines scroll scroll-edges', role: 'listbox', tabindex: '0' },
     pin,
     inner,
+    editorHost,
   )
   let files: readonly DiffFile[] = []
   let rows: readonly ChangeRow[] = []
@@ -73,14 +98,36 @@ export function createDiffView(deps: DiffViewDeps) {
   // Removed and added lines that replace each other, per file and hunk, and their marks once computed
   let partners = new Map<string, Map<number, number>>()
   let marks = new Map<string, LineMarks>()
+  // The lines picked for a comment, and where each line and comment row is
+  let selection: LineSelection | undefined
+  let lineRows = new Map<string, number>()
+  let commentRows = new Map<string, number>()
+  // Each card's height once on screen, for the width it was measured at
+  let measured = new Map<string, number>()
+  let measuredWidth = 0
+  let totalHeight = 0
+
+  const lineKey = (file: number, hunk: number, line: number) => `${file}:${hunk}:${line}`
+  const commentHeight = (id: string) =>
+    deps.comments.editor()?.id === id
+      ? EDITOR_HEIGHT
+      : (measured.get(id) ?? deps.comments.estimate(id))
+  const heightOf = (row: ChangeRow) =>
+    row.kind === 'file'
+      ? FILE_HEIGHT
+      : row.kind === 'hunk' || row.kind === 'gone'
+        ? HUNK_HEIGHT
+        : row.kind === 'comment'
+          ? commentHeight(row.id)
+          : LINE_HEIGHT
 
   const rowId = (index: number) => `${deps.id}-row-${index}`
   const viewHeight = () => element.clientHeight || LINE_HEIGHT * 30
 
-  // The file a row belongs to, by its header's position
+  // The file a row belongs to; the comments of files gone count as the last file
   function fileAtRow(index: number): number {
     const row = rows[index]
-    return row ? row.file : 0
+    return row ? Math.min(row.file, Math.max(0, files.length - 1)) : 0
   }
 
   // The file whose rows cover this height of the scroll
@@ -166,7 +213,36 @@ export function createDiffView(deps: DiffViewDeps) {
     showAnyway: deps.showAnyway,
     viewed: deps.viewed,
     toggleViewed: deps.toggleViewed,
+    commentCount: deps.commentCount,
   })
+
+  // The gutter's "+" on a line of the change, shown under the pointer, `c` from the keys
+  const addButton = () =>
+    h(
+      'button',
+      {
+        type: 'button',
+        class: 'rv-add',
+        tabindex: '-1',
+        'aria-label': t('review.comment.add'),
+        'data-tip': t('review.comment.add'),
+        'data-tip-key': 'c',
+      },
+      icon(PLUS, 12),
+    )
+
+  // A pending comment's card; the one in the field leaves its row empty for the field to cover
+  function drawComment(id: string, attributes: Record<string, string>) {
+    const label = deps.comments.label(id)
+    if (deps.comments.editor()?.id === id) {
+      return h('div', { ...attributes, class: 'rv-row rv-comment', 'aria-label': label })
+    }
+    return h(
+      'div',
+      { ...attributes, class: 'rv-row rv-comment', 'data-comment': id, 'aria-label': label },
+      h('div', { class: 'rv-card-band' }, deps.comments.card(id)),
+    )
+  }
 
   function drawRow(row: ChangeRow, index: number): HTMLElement {
     const attributes = {
@@ -188,6 +264,20 @@ export function createDiffView(deps: DiffViewDeps) {
           'aria-label': fileLabel(file, row.notice, i18n, row.viewed),
         },
         fileHead(file, row.notice, headDeps()),
+      )
+    }
+    if (row.kind === 'comment') return drawComment(row.id, attributes)
+    if (row.kind === 'gone') {
+      const label = t('review.comment.gone')
+      return h(
+        'div',
+        { ...attributes, class: 'rv-row rv-hunk rv-gone', 'aria-label': label },
+        h(
+          'span',
+          { class: 'rv-band' },
+          h('span', { class: 'rv-fold' }),
+          h('span', { class: 'rv-code' }, label),
+        ),
       )
     }
     if (row.kind === 'expand') {
@@ -242,14 +332,23 @@ export function createDiffView(deps: DiffViewDeps) {
         code(row.text, []),
       )
     }
-    if (row.kind !== 'line') return h('div', attributes)
     const line = file?.hunks[row.hunk]?.lines[row.line]
     if (line === undefined) return h('div', attributes)
     const sign = line.kind === 'add' ? '+' : line.kind === 'remove' ? '−' : ''
+    const selected = isSelected(selection, row.file, row.hunk, row.line)
+    const side = gutter(line.old, line.new, sign)
+    side.append(addButton())
     return h(
       'div',
-      { ...attributes, 'data-kind': line.kind, 'aria-label': lineLabel(line) },
-      gutter(line.old, line.new, sign),
+      {
+        ...attributes,
+        'data-kind': line.kind,
+        'data-selected': selected ? 'true' : undefined,
+        'aria-label': selected
+          ? t('review.a11y.selected', { line: lineLabel(line) })
+          : lineLabel(line),
+      },
+      side,
       code(line.text, line.kind === 'context' ? [] : marksOf(row.file, row.hunk, row.line, line)),
     )
   }
@@ -303,7 +402,7 @@ export function createDiffView(deps: DiffViewDeps) {
           role: 'group',
           'aria-label': file
             ? fileLabel(file, header?.kind === 'file' ? header.notice : undefined, i18n)
-            : '',
+            : t('review.comment.gone'),
         })
         groups.push(group)
       }
@@ -318,11 +417,50 @@ export function createDiffView(deps: DiffViewDeps) {
       inner.style.setProperty('--rv-view', `${width}px`)
     }
     drawPin()
+    drawEditor()
     const now = target ?? fileAtTop(element.scrollTop + 1)
     if (now !== current && files.length > 0) {
       current = now
       deps.onCurrentFile(now)
     }
+    if (measureCards()) {
+      layout()
+      draw()
+    }
+  }
+
+  // The comment field over its row, following the sideways scroll like the bands
+  function drawEditor() {
+    const editing = deps.comments.editor()
+    const index = editing === undefined ? undefined : commentRows.get(editing.id)
+    if (editing === undefined || index === undefined) {
+      editorHost.hidden = true
+      editorHost.replaceChildren()
+      return
+    }
+    editorHost.hidden = false
+    if (editorHost.firstChild !== editing.element) editorHost.replaceChildren(editing.element)
+    editorHost.style.height = `${EDITOR_HEIGHT}px`
+    editorHost.style.width = viewWidth > 0 ? `${viewWidth}px` : ''
+    editorHost.style.transform = `translate(${element.scrollLeft}px, ${tops[index] ?? 0}px)`
+  }
+
+  // A card's text wraps to the width, so its height is known once drawn; true when one changed
+  function measureCards(): boolean {
+    if (viewWidth !== measuredWidth) {
+      measuredWidth = viewWidth
+      measured = new Map()
+    }
+    let moved = false
+    for (const card of inner.querySelectorAll<HTMLElement>('[data-comment]')) {
+      const id = card.dataset.comment ?? ''
+      const height = card.offsetHeight
+      if (height > 0 && height !== commentHeight(id)) {
+        measured.set(id, height)
+        moved = true
+      }
+    }
+    return moved
   }
 
   function schedule() {
@@ -373,6 +511,7 @@ export function createDiffView(deps: DiffViewDeps) {
 
   function moveTo(index: number) {
     if (rows.length === 0) return
+    selection = undefined
     cursor = Math.max(0, Math.min(rows.length - 1, index))
     reveal()
   }
@@ -382,10 +521,48 @@ export function createDiffView(deps: DiffViewDeps) {
     moveTo(cursor + step)
   }
 
+  const lineAt = (index: number) => {
+    const row = rows[index]
+    return row?.kind === 'line' ? row : undefined
+  }
+
+  // Shift+↑↓: the selection grows or shrinks from the cursor's line, inside its hunk
+  function extendBy(step: 1 | -1) {
+    const from = selection
+      ? lineRows.get(lineKey(selection.file, selection.hunk, selection.focus))
+      : cursor
+    const row = from === undefined ? undefined : lineAt(from)
+    if (!row) return moveBy(step)
+    const length = files[row.file]?.hunks[row.hunk]?.lines.length ?? 0
+    const start = selection ?? selectLine(row.file, row.hunk, row.line)
+    selection = extendSelection(start, row.file, row.hunk, start.focus + step, length)
+    cursor = lineRows.get(lineKey(selection.file, selection.hunk, selection.focus)) ?? cursor
+    reveal()
+  }
+
+  // A click picks its line; Shift+click reaches from the picked line to this one
+  function pick(index: number, extend: boolean) {
+    const row = lineAt(index)
+    if (!row) return
+    const length = files[row.file]?.hunks[row.hunk]?.lines.length ?? 0
+    selection =
+      extend && selection
+        ? extendSelection(selection, row.file, row.hunk, row.line, length)
+        : selectLine(row.file, row.hunk, row.line)
+  }
+
+  // The selected lines, else the cursor's line of the change
+  function commentTarget(): CommentTarget | undefined {
+    if (selection) return selectionTarget(selection)
+    const row = lineAt(cursor)
+    return row && { file: row.file, hunk: row.hunk, from: row.line, to: row.line }
+  }
+
   // A file read from its header: it lands at the top with the cursor on it
   function revealFile(index: number) {
     const start = starts[index]
     if (start === undefined) return false
+    selection = undefined
     cursor = start
     target = index
     scrollTo(tops[start] ?? 0)
@@ -407,6 +584,7 @@ export function createDiffView(deps: DiffViewDeps) {
     anchorCursor()
     for (let index = cursor + step; index >= 0 && index < rows.length; index += step) {
       if (rows[index]?.kind !== 'hunk') continue
+      selection = undefined
       cursor = index
       const file = fileAtRow(index)
       const fileTop = tops[starts[file] ?? 0] ?? 0
@@ -422,6 +600,11 @@ export function createDiffView(deps: DiffViewDeps) {
   function activate() {
     const row = rows[cursor]
     const file = row ? files[row.file] : undefined
+    if (row?.kind === 'comment') {
+      if (deps.comments.editor()?.id === row.id) deps.comments.focusField()
+      else deps.comments.edit(row.id)
+      return
+    }
     if (!row || !file) return
     if (row.kind === 'expand') deps.expand(file, row.gap)
     else if (row.kind === 'file' && isCollapsed(row.notice)) deps.showAnyway(file)
@@ -441,20 +624,47 @@ export function createDiffView(deps: DiffViewDeps) {
     },
     { passive: true },
   )
-  element.addEventListener('click', (event) => {
-    const clicked = (event.target as Element).closest<HTMLElement>('.rv-row')
-    if (!clicked?.id) return
+  const rowIndex = (target: EventTarget | null) => {
+    const clicked = (target as Element | null)?.closest<HTMLElement>('.rv-row')
+    if (!clicked?.id) return undefined
     const index = Number(clicked.id.slice(rowId(0).length - 1))
-    if (!Number.isInteger(index)) return
+    return Number.isInteger(index) ? index : undefined
+  }
+  const onAdd = (target: EventTarget | null) => (target as Element).closest('.rv-add') !== null
+  // Shift+click picks lines, not text, and the "+" leaves the focus where it is
+  element.addEventListener('mousedown', (event) => {
+    const index = rowIndex(event.target)
+    const onLine = index !== undefined && lineAt(index) !== undefined
+    if (onAdd(event.target) || (event.shiftKey && onLine)) event.preventDefault()
+  })
+  element.addEventListener('click', (event) => {
+    const index = rowIndex(event.target)
+    if (index === undefined) return
     cursor = index
     target = fileAtRow(index)
+    const row = lineAt(index)
+    if (onAdd(event.target)) {
+      if (row && !isSelected(selection, row.file, row.hunk, row.line)) pick(index, false)
+      draw()
+      const chosen = commentTarget()
+      if (chosen) deps.comment(chosen)
+      return
+    }
+    pick(index, event.shiftKey)
     if (rows[cursor]?.kind === 'expand') activate()
     else draw()
   })
   element.addEventListener('keydown', (event) => {
+    // The comment field's keys are its own
+    if (event.target !== element) return
     if (event.ctrlKey || event.altKey || event.metaKey) return
     const { key } = event
-    if (key === 'ArrowDown') moveBy(1)
+    const row = rows[cursor]
+    if (event.shiftKey && (key === 'ArrowDown' || key === 'ArrowUp')) {
+      extendBy(key === 'ArrowDown' ? 1 : -1)
+    } else if (row?.kind === 'comment' && (key === 'Delete' || key === 'Backspace')) {
+      deps.comments.remove(row.id)
+    } else if (key === 'ArrowDown') moveBy(1)
     else if (key === 'ArrowUp') moveBy(-1)
     else if (key === 'PageDown') moveBy(PAGE)
     else if (key === 'PageUp') moveBy(-PAGE)
@@ -465,6 +675,40 @@ export function createDiffView(deps: DiffViewDeps) {
     event.preventDefault()
     event.stopPropagation()
   })
+
+  // Where each row sits, which rows hold lines and comments, and the widest number and line
+  function layout() {
+    tops = []
+    starts = []
+    lineRows = new Map()
+    commentRows = new Map()
+    let height = 0
+    let digits = 1
+    let columns = 0
+    rows.forEach((row, index) => {
+      tops.push(height)
+      height += heightOf(row)
+      if (row.kind === 'file' || row.kind === 'gone') starts.push(index)
+      else if (row.kind === 'comment') commentRows.set(row.id, index)
+      else if (row.kind === 'context') {
+        digits = Math.max(digits, String(row.new).length, String(row.old).length)
+        columns = Math.max(columns, columnsOf(row.text))
+      } else if (row.kind === 'line') {
+        lineRows.set(lineKey(row.file, row.hunk, row.line), index)
+        const line = files[row.file]?.hunks[row.hunk]?.lines[row.line]
+        if (line) {
+          digits = Math.max(digits, String(line.old ?? line.new ?? 0).length)
+          columns = Math.max(columns, columnsOf(line.text))
+        }
+      }
+    })
+    totalHeight = height
+    inner.style.height = `${height}px`
+    inner.style.setProperty('--rv-digits', String(Math.max(3, digits)))
+    inner.style.setProperty('--rv-cols', String(columns))
+    // The field lines up with the code, past the gutter the rows have
+    editorHost.style.setProperty('--rv-digits', String(Math.max(3, digits)))
+  }
 
   // Where the reading was, as a file and a distance into it, so new rows open at the same place
   function anchor() {
@@ -490,32 +734,13 @@ export function createDiffView(deps: DiffViewDeps) {
         partners = new Map()
         marks = new Map()
       }
+      // A new read brings other files: a selection named lines of the old ones
+      if (nextFiles !== files) selection = undefined
       files = nextFiles
       rows = nextRows
-      tops = []
-      starts = []
       pinned = undefined
-      let height = 0
-      let digits = 1
-      let columns = 0
-      rows.forEach((row, index) => {
-        tops.push(height)
-        height += heightOf(row)
-        if (row.kind === 'file') starts.push(index)
-        else if (row.kind === 'context') {
-          digits = Math.max(digits, String(row.new).length, String(row.old).length)
-          columns = Math.max(columns, columnsOf(row.text))
-        } else if (row.kind === 'line') {
-          const line = files[row.file]?.hunks[row.hunk]?.lines[row.line]
-          if (line) {
-            digits = Math.max(digits, String(line.old ?? line.new ?? 0).length)
-            columns = Math.max(columns, columnsOf(line.text))
-          }
-        }
-      })
-      inner.style.height = `${height}px`
-      inner.style.setProperty('--rv-digits', String(Math.max(3, digits)))
-      inner.style.setProperty('--rv-cols', String(columns))
+      layout()
+      const height = totalHeight
       element.setAttribute('aria-label', i18n.plural('review.a11y.changes', files.length))
       const fileOf = (path: string | undefined) => files.findIndex((file) => file.path === path)
       if (kept === undefined) {
@@ -553,10 +778,31 @@ export function createDiffView(deps: DiffViewDeps) {
       rows = []
       tops = []
       starts = []
+      selection = undefined
       pinned = undefined
       pin.hidden = true
       inner.replaceChildren()
       inner.style.height = '0'
+      drawEditor()
+    },
+    commentTarget() {
+      anchorCursor()
+      return commentTarget()
+    },
+    clearSelection() {
+      selection = undefined
+      draw()
+    },
+    // Scrolls the comment field into view, below the pinned header
+    revealEditor() {
+      const editing = deps.comments.editor()
+      const index = editing === undefined ? undefined : commentRows.get(editing.id)
+      if (index === undefined) return
+      const top = (tops[index] ?? 0) - FILE_BAND
+      const bottom = (tops[index] ?? 0) + EDITOR_HEIGHT
+      if (bottom > element.scrollTop + viewHeight()) scrollTo(bottom - viewHeight())
+      else if (top < element.scrollTop) scrollTo(top)
+      draw()
     },
     focus: () => element.focus(),
     nextHunk: (step: 1 | -1) => stepHunk(step),

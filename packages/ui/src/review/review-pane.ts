@@ -10,6 +10,7 @@ import {
   type ErrorBody,
   errorCodeOf,
   type HostApi,
+  hunkLines,
   type Orientation,
   type PaneGrid,
   patchKey,
@@ -24,6 +25,7 @@ import { displayPath } from '../panel/format.ts'
 import type { Keymap } from '../platform/keymap.ts'
 import { createDiffView, LINE_HEIGHT } from './diff-view.ts'
 import { counts, createFileList } from './file-list.ts'
+import { createReviewComments } from './review-comments.ts'
 import { createReviewRefresh } from './review-refresh.ts'
 
 // Loads this fast never show "Reading the changes", so the pane does not flash
@@ -77,6 +79,8 @@ export interface ReviewPaneDeps {
   onClose(): void
   // The header's layout button: the other orientation, as the user's choice
   onToggleLayout(): void
+  // Types the pending comments at the tab's terminal prompt, without Enter, and gives it the keys
+  send(text: string): void
 }
 
 let measured: number | undefined
@@ -152,6 +156,19 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const close = iconButton(ICONS.close, 14, { 'data-tip-key': deps.keymap.label('review') })
   back.hidden = true
   layout.hidden = true
+  const sendCount = h('span', { class: 'rv-send-count' })
+  const sendText = h('span', {})
+  const send = h(
+    'button',
+    {
+      type: 'button',
+      class: 'vbtn rv-send',
+      'data-tip-key': deps.keymap.label('reviewSend'),
+      hidden: true,
+    },
+    sendText,
+    sendCount,
+  )
   const head = h(
     'div',
     { class: 'rv-head' },
@@ -160,12 +177,33 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     totals,
     status,
     h('span', { class: 'rv-spacer' }),
+    send,
     indexToggle,
     whitespace,
     layout,
     back,
     close,
   )
+
+  const comments = createReviewComments({
+    i18n,
+    editKey: 'Enter',
+    deleteKey: deps.keymap.keyboard === 'mac' ? '⌫' : 'Delete',
+    saveKey: deps.keymap.commandLabel('Enter'),
+    isSave: (event) => deps.keymap.command(event, 'Enter'),
+    onChange() {
+      drawSend()
+      if (state.kind === 'ok' && state.diff.files.length > 0) drawDiff()
+    },
+    onOpen() {
+      diff.revealEditor()
+      comments.focusField()
+    },
+    onDone() {
+      diff.clearSelection()
+      diff.focus()
+    },
+  })
 
   const list = createFileList({
     id: deps.id,
@@ -188,6 +226,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     },
     viewed: (file) => ({ viewed: isViewed(file), changed: changedSince.has(markId(file.path)) }),
     toggleViewed: (file) => toggleViewed(file),
+    commentCount: (file) => comments.countFor(file.path),
+    comments,
+    comment: (target) => startComment(target),
     onCurrentFile: (index) => list.highlight(index),
   })
   const body = h('div', { class: 'rv-body' }, list.element, diff.element)
@@ -255,8 +296,34 @@ export function createReviewPane(deps: ReviewPaneDeps) {
         shapes.set(file.path, shape)
       }
       reconcileMarks(state.diff.files)
+      comments.relocate(state.diff.files)
     }
     draw()
+  }
+
+  // The field for the selected lines, or the cursor's line, of a file of the change
+  function startComment(target: { file: number; hunk: number; from: number; to: number }) {
+    const file = files()[target.file]
+    const hunk = file?.hunks[target.hunk]
+    if (!file || !hunk) return
+    comments.start(file.path, hunkLines(hunk, target.from, target.to), {
+      hunk: target.hunk,
+      start: target.from,
+    })
+  }
+
+  // Every pending comment typed at the prompt at once; the keys go to the terminal to add a word and send
+  function sendComments() {
+    if (comments.count() === 0 && comments.editor() === undefined) return
+    const text = comments.take()
+    if (text !== '') deps.send(text)
+  }
+
+  function drawSend() {
+    const count = comments.count()
+    send.hidden = count === 0
+    sendCount.textContent = String(count)
+    send.setAttribute('aria-label', i18n.plural('review.send.a11y', count))
   }
 
   // The unchanged text comes from the working tree once, then every gap of that file opens from it
@@ -354,6 +421,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     back.setAttribute('aria-label', t('review.terminal'))
     close.dataset.tip = t('review.close')
     close.setAttribute('aria-label', t('review.close'))
+    sendText.textContent = t('review.send')
+    send.dataset.tip = t('review.send.tip')
+    drawSend()
     drawScope()
     drawIndexToggle()
     drawLayoutToggle()
@@ -401,6 +471,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
             keyHint('↑↓', t('review.hint.navigate')),
             keyHint('[ ]', t('review.hint.file')),
             keyHint('n p', t('review.hint.hunk')),
+            keyHint('c', t('review.hint.comment')),
             keyHint('v', t('review.hint.viewed')),
           ]
         : []),
@@ -492,13 +563,18 @@ export function createReviewPane(deps: ReviewPaneDeps) {
 
   function drawDiff() {
     const found = files()
-    const rows = changeRows(found, (file) => ({
-      expanded: expanded.get(file.path) ?? new Set(),
-      text: texts.get(file.path),
-      shownAnyway: shownAnyway.has(file.path),
-      viewed: isViewed(file),
-      comments: [],
-    }))
+    const gone = comments.gone(new Set(found.map((file) => file.path)))
+    const rows = changeRows(
+      found,
+      (file) => ({
+        expanded: expanded.get(file.path) ?? new Set(),
+        text: texts.get(file.path),
+        shownAnyway: shownAnyway.has(file.path),
+        viewed: isViewed(file),
+        comments: comments.forFile(file.path),
+      }),
+      gone,
+    )
     diff.show(found, rows, resetReading)
     resetReading = false
   }
@@ -584,6 +660,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     } else if (key === 'v') {
       const file = files()[where === 'index' ? list.selected() : diff.currentFile()]
       if (file) toggleViewed(file)
+    } else if (key === 'c' && where === 'diff') {
+      const target = diff.commentTarget()
+      if (target) startComment(target)
     } else return
     event.preventDefault()
     event.stopPropagation()
@@ -613,6 +692,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     diff.redraw()
   })
   layout.addEventListener('click', () => deps.onToggleLayout())
+  send.addEventListener('click', () => sendComments())
   back.addEventListener('click', () => deps.onEscape())
   close.addEventListener('click', () => deps.onClose())
 
@@ -639,6 +719,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       } else element.focus()
     },
     hasFocus: () => element.contains(document.activeElement),
+    send: sendComments,
     agentState: (agent: AgentState | undefined) => refresh.agentState(agent),
     // How the tab shows the review: beside or below the terminal, or alone in a narrow tab
     setArrangement(next: Orientation | undefined, narrow: boolean) {
