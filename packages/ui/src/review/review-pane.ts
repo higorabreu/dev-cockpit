@@ -504,13 +504,22 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     }
     const { diff: found } = state
     const viewed = found.files.filter(isViewed).length
+    const count = found.files.length
+    if (viewed === 0) {
+      totals.replaceChildren(
+        h('span', { class: 'rv-tally' }, i18n.plural('review.files', count)),
+        counts(found.additions, found.deletions),
+      )
+      return
+    }
+    const full = i18n.plural('review.viewedFiles', count, { viewed })
+    // A narrow review shows only the numbers; the whole sentence is in the tooltip
     totals.replaceChildren(
+      h('span', { class: 'rv-tally' }, full),
       h(
         'span',
-        {},
-        viewed === 0
-          ? i18n.plural('review.files', found.files.length)
-          : i18n.plural('review.viewedFiles', found.files.length, { viewed }),
+        { class: 'rv-tally-short', 'data-tip': full },
+        t('review.viewedFiles.short', { viewed, count }),
       ),
       counts(found.additions, found.deletions),
     )

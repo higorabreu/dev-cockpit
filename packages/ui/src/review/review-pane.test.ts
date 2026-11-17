@@ -584,6 +584,31 @@ describe('createReviewPane', () => {
     expect(pane.element.querySelector('.rv-changed')).toBeNull()
   })
 
+  it('should offer the viewed count as numbers alone with the sentence in the tooltip when a file is viewed', async () => {
+    // Arrange
+    const { pane, key } = setup(repository())
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+
+    // Act
+    key(lines, 'v')
+
+    // Assert: a narrow review shows the short form, by a container query
+    const short = pane.element.querySelector<HTMLElement>('.rv-tally-short')
+    expect(short?.textContent).toBe('1 / 2')
+    expect(short?.dataset.tip).toBe('1 / 2 files viewed')
+  })
+
+  it('should show no short count when no file is viewed', async () => {
+    const { pane } = setup(repository())
+    pane.open()
+    await flush()
+
+    expect(pane.element.querySelector('.rv-tally-short')).toBeNull()
+  })
+
   it('should give the keys back to the terminal on Esc and read again on Ctrl+R', async () => {
     const { pane, key, escapes, requests } = setup(repository())
     pane.open()

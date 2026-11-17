@@ -28,6 +28,13 @@
   border-bottom: 1px solid var(--line);
 }
 
+/* With little room the scope gives way first: it is as wide as its longest base only so it does not jump */
+.rv-head .select-field {
+  flex: 0 8 auto;
+  min-width: 96px;
+  display: flex;
+}
+
 .rv-head .select {
   padding-block: 3px;
 }
@@ -40,10 +47,19 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 0;
   color: var(--muted);
   font-size: 12px;
   white-space: nowrap;
+}
+
+.rv-tally {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rv-tally-short {
+  display: none;
 }
 
 .rv-status {
@@ -820,5 +836,13 @@
 @container (max-width: 520px) {
   .review .phint .pkey:nth-child(2) {
     display: none;
+  }
+
+  .rv-tally:has(+ .rv-tally-short) {
+    display: none;
+  }
+
+  .rv-tally-short {
+    display: inline;
   }
 }

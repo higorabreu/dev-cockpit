@@ -382,6 +382,7 @@ export const ptBR = {
   'review.viewed': 'Visualizado',
   'review.viewedFiles.one': '{viewed} / {count} arquivo visualizado',
   'review.viewedFiles.other': '{viewed} / {count} arquivos visualizados',
+  'review.viewedFiles.short': '{viewed} / {count}',
   'review.changedSinceViewed': 'Alterado desde a última visualização',
   'review.hint.viewed': 'visualizado',
   'review.a11y.viewed': '{file}, visualizado',
