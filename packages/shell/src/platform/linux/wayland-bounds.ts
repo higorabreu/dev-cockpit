@@ -1,6 +1,6 @@
 import { connect } from 'node:net'
 import { isAbsolute, join } from 'node:path'
-import type { Screen } from '@dck/core'
+import type { SystemScreen } from '../../electron/screen.ts'
 
 export interface Size {
   readonly width: number
@@ -163,14 +163,14 @@ export function readWaylandBounds(
 
 // Under native Wayland the pointer reads 0,0 and a requested position is ignored: the window takes the
 // size the compositor gave and the compositor puts it on the pointer's monitor
-export function boundedScreen(screen: Screen, area: () => Size | undefined): Screen {
+export function boundedScreen(screen: SystemScreen, area: () => Size | undefined): SystemScreen {
   return {
     cursorPoint: () => screen.cursorPoint(),
     displayNearest(point) {
       const size = area()
       if (!size) return screen.displayNearest(point)
       const rectangle = { x: 0, y: 0, ...size }
-      return { id: 'wayland', bounds: rectangle, workArea: rectangle }
+      return { id: 'wayland', bounds: rectangle, workArea: rectangle, source: 'wayland' }
     },
   }
 }

@@ -1,8 +1,25 @@
-import type { Point, Rectangle, Screen } from '@dck/core'
+import type { Display, Point, Rectangle, Screen } from '@dck/core'
 
 export interface ScreenApi {
   getCursorScreenPoint(): Point
-  getDisplayNearestPoint(point: Point): { id: number; bounds: Rectangle; workArea: Rectangle }
+  getDisplayNearestPoint(point: Point): {
+    id: number
+    bounds: Rectangle
+    workArea: Rectangle
+    scaleFactor: number
+  }
+}
+
+export type WorkAreaSource = 'electron' | 'gtk' | 'wayland'
+
+// What the dock log needs to tell where a work area came from
+export interface SystemDisplay extends Display {
+  readonly scaleFactor?: number
+  readonly source: WorkAreaSource
+}
+
+export interface SystemScreen extends Screen {
+  displayNearest(point: Point): SystemDisplay
 }
 
 const center = (rectangle: Rectangle): Point => ({
@@ -16,18 +33,44 @@ const contains = (rectangle: Rectangle, point: Point) =>
   point.y >= rectangle.y &&
   point.y < rectangle.y + rectangle.height
 
+const inside = (inner: Rectangle, outer: Rectangle) =>
+  inner.x >= outer.x &&
+  inner.y >= outer.y &&
+  inner.x + inner.width <= outer.x + outer.width &&
+  inner.y + inner.height <= outer.y + outer.height
+
+// Rounds the edges, not the size, so a work area that reaches the monitor edge still ends on it
+const toDip = (rectangle: Rectangle, scale: number): Rectangle => {
+  const x = Math.round(rectangle.x / scale)
+  const y = Math.round(rectangle.y / scale)
+  return {
+    x,
+    y,
+    width: Math.round((rectangle.x + rectangle.width) / scale) - x,
+    height: Math.round((rectangle.y + rectangle.height) / scale) - y,
+  }
+}
+
 // The system work area beats Electron's when the monitor reports it, because the window
-// manager shifts a window that goes past it
+// manager shifts a window that goes past it. The system counts device pixels and Electron DIPs
 export function createElectronScreen(
   api: ScreenApi,
   systemWorkAreas: () => readonly Rectangle[] = () => [],
-): Screen {
+): SystemScreen {
   return {
     cursorPoint: () => api.getCursorScreenPoint(),
     displayNearest(point) {
-      const { id, bounds, workArea } = api.getDisplayNearestPoint(point)
-      const refined = systemWorkAreas().find((area) => contains(area, center(bounds)))
-      return { id: String(id), bounds, workArea: refined ?? workArea }
+      const { id, bounds, workArea, scaleFactor } = api.getDisplayNearestPoint(point)
+      const refined = systemWorkAreas()
+        .map((area) => toDip(area, scaleFactor))
+        .find((area) => contains(area, center(bounds)) && inside(area, bounds))
+      return {
+        id: String(id),
+        bounds,
+        workArea: refined ?? workArea,
+        scaleFactor,
+        source: refined ? 'gtk' : 'electron',
+      }
     },
   }
 }

@@ -11,6 +11,7 @@ describe('createElectronScreen', () => {
         id: 42,
         bounds: { x: 0, y: 0, width: 1920, height: 1080 },
         workArea: { x: 0, y: 32, width: 1920, height: 1048 },
+        scaleFactor: 1,
       }),
     })
 
@@ -20,6 +21,8 @@ describe('createElectronScreen', () => {
       id: '42',
       bounds: { x: 0, y: 0, width: 1920, height: 1080 },
       workArea: { x: 0, y: 32, width: 1920, height: 1048 },
+      scaleFactor: 1,
+      source: 'electron',
     })
   })
 })

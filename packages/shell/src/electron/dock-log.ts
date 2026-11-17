@@ -1,8 +1,9 @@
-import type { DockWindow, Logger, Screen } from '@dck/core'
+import type { DockWindow, Logger } from '@dck/core'
+import type { SystemScreen } from './screen.ts'
 
 const SETTLE_MS = 400
 
-export function logScreen(screen: Screen, logger: Logger): Screen {
+export function logScreen(screen: SystemScreen, logger: Logger): SystemScreen {
   return {
     cursorPoint() {
       const point = screen.cursorPoint()
@@ -11,7 +12,13 @@ export function logScreen(screen: Screen, logger: Logger): Screen {
     },
     displayNearest(point) {
       const display = screen.displayNearest(point)
-      logger.info('dock display', { id: display.id, workArea: display.workArea })
+      logger.info('dock display', {
+        id: display.id,
+        bounds: display.bounds,
+        scaleFactor: display.scaleFactor,
+        workArea: display.workArea,
+        source: display.source,
+      })
       return display
     },
   }
