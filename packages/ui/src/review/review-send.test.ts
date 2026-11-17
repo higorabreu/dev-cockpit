@@ -225,16 +225,36 @@ describe('review send', () => {
     expect(button().getAttribute('aria-disabled')).toBe('true')
   })
 
-  it('should send when a fresh read finds an agent the watcher has not seen yet', async () => {
+  it('should drop the told reason from the header when the watcher sees an agent come to the tab', async () => {
     // Arrange
-    const { open, pane, run, sent } = setup({ running: at('idle', 'bash') })
+    const { open, pane, status } = setup({ running: at('busy', 'vim') })
     await open()
+    await pane.send()
+    pane.activity(at('busy', 'vim'))
+    const same = status()
+
+    // Act
+    pane.activity(at('agent', 'claude'))
+
+    // Assert
+    expect(same).toBe(`vim is running in the terminal. ${OPEN_AGENT}`)
+    expect(status()).toBe('')
+  })
+
+  it('should send and drop the earlier reason when a fresh read finds an agent the watcher has not seen yet', async () => {
+    // Arrange
+    const { open, pane, run, sent, status } = setup({ running: at('idle', 'bash') })
+    await open()
+    await pane.send()
+    const before = status()
     run(at('agent', 'codex'))
 
     // Act
     await pane.send()
 
     // Assert
+    expect(before).toBe(OPEN_AGENT)
     expect(sent).toEqual([LINE])
+    expect(status()).toBe('')
   })
 })

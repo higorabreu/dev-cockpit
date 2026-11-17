@@ -39,6 +39,8 @@ export function createReviewSend(deps: ReviewSendDeps) {
   let activity: SessionActivityInfo | undefined
   // A send waits for the file to be written; a second press meanwhile would write it twice
   let sending = false
+  // The reason the header shows for the last refused send, until the tab no longer gives it
+  let told: string | undefined
 
   const count = h('span', { class: 'rv-send-count' })
   const text = h('span', {})
@@ -77,6 +79,14 @@ export function createReviewSend(deps: ReviewSendDeps) {
     const path = folder === undefined ? saved.value : pathFrom(folder, saved.value)
     if (!deps.type(reviewPrompt(t, path))) return deps.notice(t('review.send.refused'))
     comments.clear(pending)
+    forget()
+  }
+
+  // A reason told before (no agent in the tab, a program running) no longer holds
+  function forget() {
+    if (told === undefined) return
+    told = undefined
+    deps.notice('')
   }
 
   // The button and Ctrl+Shift+Enter: decided by what runs in the terminal right now, not the last read
@@ -87,8 +97,10 @@ export function createReviewSend(deps: ReviewSendDeps) {
       activity = (await deps.activity()) ?? activity
       draw()
       const reason = reviewSendBlock(t, activity)
-      if (reason) deps.notice(reason)
-      else await deliver()
+      if (reason) {
+        told = reason
+        deps.notice(reason)
+      } else await deliver()
     } finally {
       sending = false
     }
@@ -105,6 +117,7 @@ export function createReviewSend(deps: ReviewSendDeps) {
     // The watcher read the tab again: the button follows what runs in its terminal
     sync(next: SessionActivityInfo | undefined) {
       activity = next
+      if (told !== undefined && reviewSendBlock(t, activity) !== told) forget()
       draw()
     },
   }
