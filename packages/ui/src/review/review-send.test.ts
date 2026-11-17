@@ -184,7 +184,7 @@ describe('review send', () => {
     expect(label).toBe('Start Claude Code with the review1')
     expect(name).toBe('Start Claude Code with 1 comment')
     expect(tip).toBe(
-      'Writes the comments to a file and types claude with a line pointing to it at the terminal prompt, without Enter',
+      'Writes the comments to a file and types claude with its path at the terminal prompt, without Enter',
     )
     expect(notes).toHaveLength(1)
     expect(sent).toEqual([`claude '${LINE}'`])

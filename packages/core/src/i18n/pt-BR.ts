@@ -463,7 +463,7 @@ export const ptBR = {
     'Nenhum agente está em execução no terminal e nenhum foi encontrado no PATH para iniciar ({commands}). Os comentários continuam pendentes',
   'review.start': 'Iniciar {agent} com a revisão',
   'review.start.tip':
-    'Grava os comentários em um arquivo e digita no prompt do terminal {command} com uma linha que aponta para ele, sem Enter',
+    'Grava os comentários em um arquivo e digita {command} com o caminho dele no prompt do terminal, sem Enter',
   'review.start.a11y.one': 'Iniciar {agent} com {count} comentário',
   'review.start.a11y.other': 'Iniciar {agent} com {count} comentários',
   'review.startAny': 'Iniciar um agente com a revisão',

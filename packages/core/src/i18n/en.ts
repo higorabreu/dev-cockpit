@@ -462,7 +462,7 @@ export const en: Record<MessageKey, string> = {
     'No agent is running in the terminal and none was found on its PATH to start ({commands}). The comments stay pending',
   'review.start': 'Start {agent} with the review',
   'review.start.tip':
-    'Writes the comments to a file and types {command} with a line pointing to it at the terminal prompt, without Enter',
+    'Writes the comments to a file and types {command} with its path at the terminal prompt, without Enter',
   'review.start.a11y.one': 'Start {agent} with {count} comment',
   'review.start.a11y.other': 'Start {agent} with {count} comments',
   'review.startAny': 'Start an agent with the review',
