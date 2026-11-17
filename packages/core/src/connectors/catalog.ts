@@ -56,3 +56,15 @@ export const connectorOfView = (
   view: string,
 ): Connector | undefined =>
   connectors.find((connector) => connector.views.some((candidate) => candidate.id === view))
+
+// The connectors the user has an account on come first, so a service they do not use never sits above one
+// they do; each group keeps the order it was given
+export function connectedFirst<T extends { readonly id: string }>(
+  connectors: readonly T[],
+  connected: (id: string) => boolean,
+): readonly T[] {
+  return [
+    ...connectors.filter((connector) => connected(connector.id)),
+    ...connectors.filter((connector) => !connected(connector.id)),
+  ]
+}

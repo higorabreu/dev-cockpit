@@ -2,6 +2,7 @@
 import {
   type Connector,
   createTranslator,
+  GITHUB_CONNECTOR,
   GITLAB_CONNECTOR,
   type HostApi,
   JIRA_CONNECTOR,
@@ -257,6 +258,166 @@ describe('views view badge', () => {
     await view.warm()
 
     expect(badges.at(-1)).toEqual({ count: 0, label: 'views.waiting' })
+  })
+})
+
+describe('views view with GitHub', () => {
+  const pullRequest = (number: number): ViewItem => ({
+    ...(mergeRequest(number) as Extract<ViewItem, { kind: 'mergeRequest' }>),
+    id: `acme/backend#${number}`,
+    url: `https://github.example.com/acme/backend/pull/${number}`,
+    referenceMark: '#',
+  })
+  const github = [
+    snapshot('github-review', 'idle', [pullRequest(7)]),
+    snapshot('github-mine', 'idle', [pullRequest(9), pullRequest(8)]),
+  ]
+  const githubOnly = [...github, ...unconnected]
+
+  it('should count the GitHub reviews with their own text when GitHub is the only one connected', async () => {
+    const { view, badges, refreshed } = setup({
+      connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
+      snapshots: githubOnly,
+    })
+
+    await view.warm()
+
+    expect(badges.at(-1)).toEqual({ count: 1, label: 'views.github.waiting' })
+    expect(refreshed).toEqual(['github-review', 'review'])
+  })
+
+  it('should sum the reviews of both services and name no kind when both are connected', async () => {
+    const { view, badges } = setup({
+      connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
+      snapshots: [...github, ...connected],
+    })
+
+    await view.warm()
+
+    expect(badges.at(-1)).toEqual({ count: 3, label: 'views.waiting.any' })
+  })
+
+  it('should keep the GitLab badge text when GitLab is the only one connected', async () => {
+    const { view, badges } = setup({
+      connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
+      snapshots: [
+        snapshot('github-review', 'unconfigured'),
+        snapshot('github-mine', 'unconfigured'),
+        ...connected,
+      ],
+    })
+
+    await view.warm()
+
+    expect(badges.at(-1)).toEqual({ count: 2, label: 'views.waiting' })
+  })
+
+  it('should write the pull request reference with # and open it when Enter is pressed', async () => {
+    const { view, overlay, opened } = setup({
+      connectors: [GITHUB_CONNECTOR],
+      snapshots: github,
+    })
+
+    await view.open()
+    press(overlay.querySelector('.vinput'), 'Enter')
+
+    expect(overlay.querySelector('.vrow .vref')?.textContent).toBe('acme/backend#7')
+    expect(opened).toEqual(['https://github.example.com/acme/backend/pull/7'])
+  })
+
+  it('should say checks on a GitHub row and pipeline on a GitLab row when the CI is not green', async () => {
+    const ci = (item: ViewItem, pipeline: 'failed' | 'running' | 'pending' | 'canceled') =>
+      ({ ...item, pipeline }) as ViewItem
+    const states = ['failed', 'running', 'pending', 'canceled'] as const
+    const { view, overlay } = setup({
+      connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
+      snapshots: [
+        snapshot(
+          'github-review',
+          'idle',
+          states.map((state, index) => ci(pullRequest(index + 1), state)),
+        ),
+        snapshot('github-mine', 'idle', []),
+        snapshot(
+          'review',
+          'idle',
+          states.map((state, index) => ci(mergeRequest(index + 1), state)),
+        ),
+        snapshot('mine', 'idle', []),
+      ],
+    })
+    const flags = () =>
+      [...overlay.querySelectorAll('.vrow .vflag-text')].map((flag) => flag.textContent)
+
+    await view.open()
+    const github = flags()
+    press(overlay.querySelector('.vinput'), 'ArrowRight')
+    press(overlay.querySelector('.vinput'), 'ArrowRight')
+    const gitlab = flags()
+
+    expect(github).toEqual(['Checks failed', 'Checks running', 'Checks queued', 'Checks canceled'])
+    expect(gitlab).toEqual([
+      'Pipeline failed',
+      'Pipeline running',
+      'Pipeline queued',
+      'Pipeline canceled',
+    ])
+    expect(overlay.querySelector('.vrow')?.textContent).toContain('Pipeline failed')
+  })
+
+  it('should say checks in Portuguese on a GitHub row when the language is pt-BR', async () => {
+    const failing = { ...(pullRequest(3) as object), pipeline: 'failed' } as ViewItem
+    const { view, overlay } = setup({
+      connectors: [GITHUB_CONNECTOR],
+      snapshots: [
+        snapshot('github-review', 'idle', [failing]),
+        snapshot('github-mine', 'idle', []),
+      ],
+      language: 'pt-BR',
+    })
+
+    await view.open()
+
+    expect(overlay.querySelector('.vrow .vflag-text')?.textContent).toBe('Checks com falha')
+  })
+
+  it('should show only the connected GitLab tabs when GitHub is not connected', async () => {
+    const { view, overlay } = setup({
+      connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
+      snapshots: [
+        snapshot('github-review', 'unconfigured'),
+        snapshot('github-mine', 'unconfigured'),
+        ...connected,
+      ],
+    })
+
+    await view.open()
+
+    expect(
+      [...overlay.querySelectorAll('.vgroup, .vtab')].map((element) => element.textContent),
+    ).toEqual(['GitLab', 'To review2', 'Follow up0'])
+  })
+
+  it('should group the GitHub tabs under its name and describe them as pull requests', async () => {
+    const { view, overlay } = setup({
+      connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
+      snapshots: [...github, ...connected],
+    })
+
+    await view.open()
+
+    const labels = [...overlay.querySelectorAll('.vtab')].map((tab) =>
+      tab.getAttribute('aria-label'),
+    )
+    expect(labels).toEqual([
+      'GitHub, To review, 1',
+      'GitHub, Follow up, 2',
+      'GitLab, To review, 2',
+      'GitLab, Follow up, 0',
+    ])
+    expect(overlay.querySelector('.vtab')?.getAttribute('data-tip')).toBe(
+      'Pull requests waiting for your review',
+    )
   })
 })
 
@@ -972,5 +1133,152 @@ describe('work list search', () => {
     }
 
     expect(titles()).toEqual(['Merge request 41'])
+  })
+})
+
+describe('views view header with three services', () => {
+  const three = [
+    snapshot('github-review', 'idle', [mergeRequest(7)]),
+    snapshot('github-mine', 'idle', []),
+    ...connected,
+    snapshot('tasks', 'idle', [task('ACME-1')]),
+  ]
+  const connectors = [GITHUB_CONNECTOR, GITLAB_CONNECTOR, JIRA_CONNECTOR]
+  const TAB_WIDTH = 90
+  const TAB_STEP = 100
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // The strip is `width` wide; its content is `full` wide with the service names and `compact` without
+  function sizeStrip(overlay: HTMLElement, width: number, full: number, compact: number) {
+    const strip = overlay.querySelector<HTMLElement>('.vtabs')
+    if (!strip) throw new Error('invariant: the strip exists')
+    Object.defineProperty(strip, 'clientWidth', { configurable: true, get: () => width })
+    Object.defineProperty(strip, 'scrollWidth', {
+      configurable: true,
+      get: () => (strip.hasAttribute('data-compact') ? compact : full),
+    })
+    // Each tab is laid out one step after the other inside the strip
+    vi.spyOn(HTMLElement.prototype, 'offsetLeft', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return [...strip.querySelectorAll('.vtab')].indexOf(this) * TAB_STEP
+    })
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(TAB_WIDTH)
+    return strip
+  }
+
+  it('should keep the service names when the tabs fit', async () => {
+    const { view, overlay } = setup({ connectors, snapshots: three })
+    const strip = sizeStrip(overlay, 900, 700, 560)
+
+    await view.open()
+
+    expect(strip.hasAttribute('data-compact')).toBe(false)
+    expect(strip.hasAttribute('data-scrolls')).toBe(false)
+    expect(overlay.querySelector('.vtab')?.getAttribute('data-tip')).toBe(
+      'Pull requests waiting for your review',
+    )
+  })
+
+  it('should hide the service names and name the service in each tab tooltip when the tabs do not fit', async () => {
+    const { view, overlay } = setup({ connectors, snapshots: three })
+    const strip = sizeStrip(overlay, 600, 700, 560)
+
+    await view.open()
+
+    const tabs = [...overlay.querySelectorAll('.vtab')]
+    expect(strip.hasAttribute('data-compact')).toBe(true)
+    expect(strip.hasAttribute('data-scrolls')).toBe(false)
+    expect(tabs[0]?.getAttribute('data-tip')).toBe('GitHub · Pull requests waiting for your review')
+    expect(tabs.at(-1)?.getAttribute('data-tip')).toBe('Jira · Jira issues assigned to you')
+    expect(tabs[0]?.getAttribute('aria-label')).toBe('GitHub, To review, 1')
+    expect(overlay.querySelectorAll('.vgroup')).toHaveLength(3)
+  })
+
+  it('should scroll the strip when even without the names the tabs do not fit', async () => {
+    const { view, overlay } = setup({ connectors, snapshots: three })
+    const strip = sizeStrip(overlay, 250, 700, 560)
+
+    await view.open()
+
+    expect(strip.hasAttribute('data-compact')).toBe(true)
+    expect(strip.hasAttribute('data-scrolls')).toBe(true)
+    expect(strip.classList.contains('scroll')).toBe(true)
+  })
+
+  it('should keep the active tab in view when it changes by keyboard and by mouse', async () => {
+    const { view, overlay } = setup({ connectors, snapshots: three })
+    const strip = sizeStrip(overlay, 250, 700, 560)
+    await view.open()
+    const input = overlay.querySelector('.vinput')
+
+    for (let step = 0; step < 4; step++) press(input, 'ArrowRight')
+    const byKeyboard = strip.scrollLeft
+    overlay.querySelector<HTMLElement>('.vtab')?.click()
+    const byMouse = strip.scrollLeft
+
+    // The fifth tab ends at 490; with the 24px faded edge beside it the strip shows up to 514
+    expect(byKeyboard).toBe(4 * TAB_STEP + TAB_WIDTH + 24 - 250)
+    expect(byMouse).toBe(0)
+    expect(strip.dataset.fade).toBe('end')
+  })
+
+  it('should show when the list was updated in the hint bar beside Refresh, not in the header', async () => {
+    const { view, overlay } = setup({ connectors, snapshots: three })
+
+    await view.open()
+
+    const status = overlay.querySelector('.vstatus')
+    expect(overlay.querySelector('.vhead .vstatus')).toBeNull()
+    expect(status?.parentElement?.classList.contains('phint')).toBe(true)
+    expect(status?.nextElementSibling?.classList.contains('pact')).toBe(true)
+  })
+
+  it('should scroll the strip sideways when the wheel turns over it', async () => {
+    const { view, overlay } = setup({ connectors, snapshots: three })
+    const strip = sizeStrip(overlay, 250, 700, 560)
+    await view.open()
+    strip.scrollLeft = 0
+
+    strip.dispatchEvent(new WheelEvent('wheel', { deltaY: 60, bubbles: true, cancelable: true }))
+
+    expect(strip.scrollLeft).toBe(60)
+  })
+})
+
+describe('views view hint bar', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('should hide navigate and then switch view, and keep the update time and Refresh, when the bar is too narrow', async () => {
+    const { view, overlay } = setup({
+      connectors: [GITLAB_CONNECTOR, JIRA_CONNECTOR],
+      snapshots: [...connected, snapshot('tasks', 'idle', [task('ACME-1')])],
+    })
+    const bar = overlay.querySelector<HTMLElement>('.phint')
+    if (!bar) throw new Error('invariant: the hint bar exists')
+    // Every part shown takes 100px of a 400px bar
+    Object.defineProperty(bar, 'clientWidth', { configurable: true, get: () => 400 })
+    Object.defineProperty(bar, 'scrollWidth', {
+      configurable: true,
+      get: () => [...bar.children].filter((child) => !(child as HTMLElement).hidden).length * 100,
+    })
+    await view.open()
+    press(overlay.querySelector('.vinput'), 'ArrowLeft')
+
+    const shown = [...bar.children]
+      .filter((child) => !(child as HTMLElement).hidden)
+      .map((child) => child.textContent)
+
+    expect(shown).toEqual([
+      'Enter open in browser',
+      'Ctrl+C copy key',
+      expect.stringMatching(/^Updated /),
+      'Ctrl+R Refresh',
+    ])
   })
 })

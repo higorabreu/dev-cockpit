@@ -168,5 +168,40 @@
     "category": "unavailable",
     "retryable": true,
     "rpc": -32030
+  },
+  "DCK-GHB-001": {
+    "category": "permission_denied",
+    "retryable": false,
+    "rpc": -32031
+  },
+  "DCK-GHB-002": {
+    "category": "permission_denied",
+    "retryable": false,
+    "rpc": -32032
+  },
+  "DCK-GHB-003": {
+    "category": "not_found",
+    "retryable": false,
+    "rpc": -32033
+  },
+  "DCK-GHB-004": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32034
+  },
+  "DCK-GHB-005": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32035
+  },
+  "DCK-GHB-006": {
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32036
+  },
+  "DCK-GHB-007": {
+    "category": "invalid_argument",
+    "retryable": false,
+    "rpc": -32037
   }
 }

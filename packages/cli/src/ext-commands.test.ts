@@ -221,7 +221,7 @@ describe('runExtCommand', () => {
 
     expect(code).toBe(EXIT.ok)
     expect(cli.out.join('')).toBe(
-      `${BUILT_IN_EXTENSION_ID}  0.3.0  built-in  active\ndck.gitlab    0.3.0  built-in  active\ndck.jira      0.3.0  built-in  active\n`,
+      `${BUILT_IN_EXTENSION_ID}  0.3.0  built-in  active\ndck.github    0.3.0  built-in  active\ndck.gitlab    0.3.0  built-in  active\ndck.jira      0.3.0  built-in  active\n`,
     )
     expect(cli.err).toEqual([])
   })
@@ -235,6 +235,7 @@ describe('runExtCommand', () => {
     expect(cli.out.join('')).toBe(
       [
         'dck.built-in  0.3.0  built-in    active',
+        'dck.github    0.3.0  built-in    active',
         'dck.gitlab    0.3.0  built-in    active',
         'dck.jira      0.3.0  built-in    active',
         'acme.commits  1.0.0  installed   active',
@@ -262,7 +263,7 @@ describe('runExtCommand', () => {
     await cli.run(['list'])
 
     expect(cli.out.join('')).toBe(
-      'dck.built-in  0.3.0  embutida  ativa\ndck.gitlab    0.3.0  embutida  ativa\ndck.jira      0.3.0  embutida  ativa\n',
+      'dck.built-in  0.3.0  embutida  ativa\ndck.github    0.3.0  embutida  ativa\ndck.gitlab    0.3.0  embutida  ativa\ndck.jira      0.3.0  embutida  ativa\n',
     )
   })
 

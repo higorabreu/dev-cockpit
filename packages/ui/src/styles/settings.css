@@ -169,6 +169,55 @@
   font-size: 12px;
 }
 
+/* A quiet text button under a hint that unfolds more detail in place, like the Git section's groups */
+.sdisclose {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 1px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+}
+
+.sdisclose:hover {
+  color: var(--fg);
+}
+
+.sdisclose:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+.schev {
+  flex: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .schev {
+    transition: transform var(--motion-fast);
+  }
+}
+
+.sdisclose[aria-expanded="true"] .schev {
+  transform: rotate(90deg);
+}
+
+.sperms {
+  margin: 2px 0 0;
+  padding-left: 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sperms[hidden] {
+  display: none;
+}
+
 .serror {
   color: var(--critical);
   font-size: 12px;

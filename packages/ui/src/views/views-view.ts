@@ -1,4 +1,5 @@
 import {
+  type CiTerm,
   type ConnectorView,
   connectionErrorKey,
   filterViewItems,
@@ -6,6 +7,7 @@ import {
   type HostApi,
   type MessageKey,
   matchesReference,
+  mergeRequestReference,
   type PluralKey,
   type Translator,
   type ViewItem,
@@ -20,6 +22,8 @@ import { type LaidSection, layOutList, ROW_HEIGHT, rowSpan } from './list-layout
 import { createProjectSelect } from './project-select.ts'
 
 const OVERSCAN = 4
+// Room kept beside the active tab when the strip scrolls it into view: the width of the faded edge
+const TAB_EDGE_PX = 24
 // How long the header says what was copied before it goes back to the update time
 const COPIED_MS = 2000
 // Data older than this is fetched again on open
@@ -43,6 +47,30 @@ const GLYPHS = {
   dot: '<circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>',
   ring: '<circle cx="12" cy="12" r="5.5"/>',
 } as const
+
+type CiState = 'failed' | 'running' | 'pending' | 'canceled'
+// Each service's own word for the CI state, chosen by the connector the open tab comes from
+const CI_FLAGS: Readonly<Record<CiTerm, Readonly<Record<CiState, MessageKey>>>> = {
+  pipeline: {
+    failed: 'views.flag.pipeline.failed',
+    running: 'views.flag.pipeline.running',
+    pending: 'views.flag.pipeline.pending',
+    canceled: 'views.flag.pipeline.canceled',
+  },
+  checks: {
+    failed: 'views.flag.checks.failed',
+    running: 'views.flag.checks.running',
+    pending: 'views.flag.checks.pending',
+    canceled: 'views.flag.checks.canceled',
+  },
+}
+// How each CI state is drawn, the same for every service
+const CI_CHIPS: Readonly<Record<CiState, readonly [string, keyof typeof GLYPHS]>> = {
+  failed: ['critical', 'cross'],
+  running: ['warning', 'dot'],
+  pending: ['warning', 'ring'],
+  canceled: ['muted', 'ring'],
+}
 
 export interface ViewsViewDeps {
   readonly api: HostApi
@@ -74,6 +102,8 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   let serviceOf: ReadonlyMap<string, string> = new Map()
   // The id of the connector each view comes from
   let connectorOf: ReadonlyMap<string, string> = new Map()
+  // The word the connector of each view uses for its CI state
+  let ciTermOf: ReadonlyMap<string, CiTerm> = new Map()
   let current: string | undefined
   let query = ''
   let onlyPending = false
@@ -92,11 +122,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const settleCurrent = () => {
     if (currentView() === undefined) current = connectedViews()[0]?.id
   }
+  const badgeViews = () => views.filter((view) => view.badge !== undefined)
+  // The connected views that feed the badge are summed; with two services the text names no kind of item
   const announceCount = () => {
-    const badge = views.find((view) => view.badge !== undefined)
-    const snapshot = badge && snapshotOf(badge.id)
-    const count = snapshot && snapshot.state !== 'unconfigured' ? snapshot.items.length : 0
-    deps.onBadge(count, badge?.badge)
+    const counted = badgeViews().filter((view) => snapshotOf(view.id).state !== 'unconfigured')
+    const count = counted.reduce((total, view) => total + snapshotOf(view.id).items.length, 0)
+    const label: PluralKey | undefined =
+      counted.length > 1 ? 'views.waiting.any' : (counted[0] ?? badgeViews()[0])?.badge
+    deps.onBadge(count, label)
     deps.onItems?.()
   }
 
@@ -111,8 +144,9 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     'aria-label': t('views.filter.placeholder'),
     placeholder: t('views.filter.placeholder'),
   })
+  // Scrolls sideways when even without the service names the tabs do not fit
   const tabs = h('div', {
-    class: 'vtabs',
+    class: 'vtabs scroll',
     role: 'tablist',
     'aria-label': t('views.title'),
   })
@@ -144,7 +178,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const box = h(
     'div',
     { id: 'views-box' },
-    h('div', { class: 'vhead' }, tabs, heading, status, closeButton(t, close)),
+    h('div', { class: 'vhead' }, tabs, heading, closeButton(t, close)),
     bar,
     notice,
     list,
@@ -181,15 +215,36 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     input.setAttribute('aria-label', placeholder)
     hint.replaceChildren(
       ...[
-        keyHint('↑↓', t('views.hint.navigate')),
-        keyHint('Enter', t('views.hint.open')),
+        yieldable(keyHint('↑↓', t('views.hint.navigate')), 1),
+        yieldable(keyHint('Enter', t('views.hint.open')), 3),
         kind === 'issue'
-          ? keyHint(deps.keymap.commandLabel('c'), t('views.hint.copyKey'))
+          ? yieldable(keyHint(deps.keymap.commandLabel('c'), t('views.hint.copyKey')), 4)
           : undefined,
-        switchable ? keyHint('←→', t('views.hint.switch')) : undefined,
+        switchable ? yieldable(keyHint('←→', t('views.hint.switch')), 2) : undefined,
+        // When the list was fetched sits by the refresh it is about
+        status,
         refreshButton(),
       ].filter((element) => element !== undefined),
     )
+    fitHints()
+  }
+
+  // A hint that gives way when the bar is too narrow, in this order: the keys a user learns first go first
+  const yieldable = (element: HTMLElement, order: number) => {
+    element.dataset.yield = String(order)
+    return element
+  }
+
+  // The bar keeps one line on the real width: hints give way one by one, never the update time or Refresh
+  function fitHints() {
+    const hints = [...hint.querySelectorAll<HTMLElement>('[data-yield]')].sort(
+      (a, b) => Number(a.dataset.yield) - Number(b.dataset.yield),
+    )
+    for (const element of hints) element.hidden = false
+    for (const element of hints) {
+      if (hint.scrollWidth <= hint.clientWidth + 1) return
+      element.hidden = true
+    }
   }
 
   // A tablist may own only tabs, so the service's name is a visual label hidden from assistive technology and
@@ -201,7 +256,13 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       const service = serviceOf.get(view.id) ?? ''
       if (service !== group) {
         group = service
-        children.push(h('span', { class: 'vgroup', 'aria-hidden': 'true' }, service))
+        children.push(
+          h(
+            'span',
+            { class: 'vgroup', 'aria-hidden': 'true', 'data-tip': service },
+            h('span', { class: 'vgroup-name' }, service),
+          ),
+        )
       }
       const title = t(view.title)
       const count = String(snapshotOf(view.id).items.length)
@@ -217,6 +278,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
           // The tooltip describes the list only under the mouse; this says it to a screen reader too
           'aria-description': description,
           'data-tip': description,
+          'data-service': service,
           tabindex: '-1',
         },
         title,
@@ -226,6 +288,42 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       children.push(tab)
     }
     tabs.replaceChildren(...children)
+    fitTabs()
+  }
+
+  // The service names go first when the tabs do not fit, measured on the real width; each tab then names
+  // its service in its tooltip, as its accessible name already does. Past that the strip scrolls
+  function fitTabs() {
+    tabs.removeAttribute('data-compact')
+    const compact = tabs.scrollWidth > tabs.clientWidth + 1
+    tabs.toggleAttribute('data-compact', compact)
+    for (const tab of tabs.querySelectorAll<HTMLElement>('.vtab')) {
+      const description = tab.getAttribute('aria-description') ?? ''
+      tab.dataset.tip = compact ? `${tab.dataset.service} · ${description}` : description
+    }
+    tabs.toggleAttribute('data-scrolls', tabs.scrollWidth > tabs.clientWidth + 1)
+    keepActiveTabInView()
+    fadeTabEdges()
+  }
+
+  // The side with more tabs out of sight fades, so a tab cut by the edge reads as scrolled, not clipped
+  function fadeTabEdges() {
+    const start = tabs.scrollLeft > 1
+    const end = tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 1
+    if (start && end) tabs.dataset.fade = 'both'
+    else if (start) tabs.dataset.fade = 'start'
+    else if (end) tabs.dataset.fade = 'end'
+    else delete tabs.dataset.fade
+  }
+
+  function keepActiveTabInView() {
+    const active = tabs.querySelector<HTMLElement>('.vtab[aria-selected="true"]')
+    if (!active) return
+    const start = active.offsetLeft
+    const end = start + active.offsetWidth
+    if (start - TAB_EDGE_PX < tabs.scrollLeft) tabs.scrollLeft = Math.max(0, start - TAB_EDGE_PX)
+    else if (end + TAB_EDGE_PX > tabs.scrollLeft + tabs.clientWidth)
+      tabs.scrollLeft = end + TAB_EDGE_PX - tabs.clientWidth
   }
 
   function flags(item: MergeRequestItem): HTMLElement[] {
@@ -240,15 +338,11 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     if (item.draft) out.push(chip('muted', 'ring', t('views.flag.draft')))
     if (item.hasConflicts) out.push(chip('critical', 'cross', t('views.flag.conflict')))
     if (item.openDiscussions) out.push(chip('warning', 'dot', t('views.flag.discussions')))
-    const pipeline = {
-      failed: ['critical', 'cross', 'views.flag.pipeline.failed'],
-      running: ['warning', 'dot', 'views.flag.pipeline.running'],
-      pending: ['warning', 'ring', 'views.flag.pipeline.pending'],
-      canceled: ['muted', 'ring', 'views.flag.pipeline.canceled'],
-    } as const
-    if (item.pipeline in pipeline) {
-      const [kind, glyph, key] = pipeline[item.pipeline as keyof typeof pipeline]
-      out.push(chip(kind, glyph, t(key)))
+    if (Object.hasOwn(CI_CHIPS, item.pipeline)) {
+      const state = item.pipeline as CiState
+      const [kind, glyph] = CI_CHIPS[state]
+      const term = (current === undefined ? undefined : ciTermOf.get(current)) ?? 'pipeline'
+      out.push(chip(kind, glyph, t(CI_FLAGS[term][state])))
     }
     return out
   }
@@ -265,7 +359,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
         h(
           'span',
           { class: 'vmeta' },
-          h('span', { class: 'vref' }, `${item.project}!${item.number}`),
+          h('span', { class: 'vref' }, mergeRequestReference(item)),
           h('span', { class: 'vbranch' }, item.sourceBranch),
           h('span', {}, `${item.author} · ${elapsedSince(item.updatedAt)}`),
         ),
@@ -442,17 +536,18 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   let copiedTimer: ReturnType<typeof setTimeout> | undefined
 
   function drawStatus() {
-    if (copiedKey !== undefined) {
-      status.textContent = t('views.copied', { key: copiedKey })
-      return
-    }
+    status.textContent = statusText()
+    fitHints()
+  }
+
+  function statusText(): string {
+    if (copiedKey !== undefined) return t('views.copied', { key: copiedKey })
     const snapshot = current === undefined ? undefined : snapshotOf(current)
-    if (snapshot?.state === 'refreshing') status.textContent = t('views.refreshing')
-    else if (snapshot?.updatedAt === undefined) status.textContent = ''
-    else
-      status.textContent = t('views.updated', {
-        ago: agoText(i18n, Date.now() / 1000, snapshot.updatedAt / 1000),
-      })
+    if (snapshot?.state === 'refreshing') return t('views.refreshing')
+    if (snapshot?.updatedAt === undefined) return ''
+    return t('views.updated', {
+      ago: agoText(i18n, Date.now() / 1000, snapshot.updatedAt / 1000),
+    })
   }
 
   function refilter(keepId?: string) {
@@ -584,6 +679,11 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     connectorOf = new Map(
       connectors.flatMap((connector) => connector.views.map((view) => [view.id, connector.id])),
     )
+    ciTermOf = new Map(
+      connectors.flatMap((connector) =>
+        connector.views.map((view) => [view.id, connector.ciTerm ?? 'pipeline'] as const),
+      ),
+    )
     for (const view of snapshots.keys())
       if (!views.some((known) => known.id === view)) snapshots.delete(view)
   }
@@ -643,6 +743,23 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     event.stopPropagation()
   })
   list.addEventListener('scroll', schedule, { passive: true })
+  new ResizeObserver(() => {
+    if (!tabs.hidden) fitTabs()
+  }).observe(tabs)
+  new ResizeObserver(() => {
+    if (!hint.hidden) fitHints()
+  }).observe(hint)
+  tabs.addEventListener('scroll', fadeTabEdges, { passive: true })
+  // The vertical wheel scrolls the strip sideways, as on the terminal's tab bar
+  tabs.addEventListener(
+    'wheel',
+    (event) => {
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return
+      tabs.scrollLeft += event.deltaY
+      event.preventDefault()
+    },
+    { passive: false },
+  )
   pendingButton.addEventListener('click', () => {
     onlyPending = !onlyPending
     refilter()
@@ -700,11 +817,15 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     // Without opening the screen: loads what is stored and refreshes if older than 5 minutes, for the rail badge
     async warm() {
       await loadViews()
-      const badge = views.find((view) => view.badge !== undefined)
-      const snapshot = badge && (await api.views.refresh(badge.id, WARM_STALE_MS))
-      if (badge && snapshot) snapshots.set(badge.id, snapshot)
+      const badges = badgeViews()
+      for (const badge of badges) {
+        const snapshot = await api.views.refresh(badge.id, WARM_STALE_MS)
+        if (snapshot) snapshots.set(badge.id, snapshot)
+      }
       // The tasks the daemon already stored, never fetched for this: the Git section matches its ticket to them
-      for (const view of views.filter((known) => known.kind === 'issue' && known !== badge)) {
+      for (const view of views.filter(
+        (known) => known.kind === 'issue' && !badges.includes(known),
+      )) {
         const stored = await api.views.snapshot(view.id)
         if (stored) snapshots.set(view.id, stored)
       }
