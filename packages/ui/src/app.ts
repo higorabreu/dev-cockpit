@@ -23,6 +23,7 @@ import {
   type ProgramStatus,
   type Project,
   recentTabs,
+  renameTab,
   reorderTabs,
   reviewBaseFor,
   reviewBasePatch,
@@ -639,12 +640,17 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         state = reorderTabs(state, ids)
         render()
       },
+      rename(id, name) {
+        if (name !== undefined) state = renameTab(state, id, name)
+        render()
+      },
       contextMenu(id, x, y) {
         const several = state.tabs.length > 1
         menu.open(
           [
             { label: i18n.t('tabs.close'), enabled: several, run: () => close(id) },
             { label: i18n.t('tabs.closeOthers'), enabled: several, run: () => closeOthers(id) },
+            { label: i18n.t('tabs.rename'), enabled: true, run: () => tabBar.rename(id) },
             { label: i18n.t('tabs.duplicate'), enabled: true, run: () => void duplicate(id) },
             {
               label: i18n.t(reviews.isOpen(id) ? 'review.close' : 'review.toggle'),
@@ -690,6 +696,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     toggleReviewLayout: () => state.activeId && reviews.toggleLayout(state.activeId),
     sendReview: () => void (state.activeId && reviews.send(state.activeId)),
     closeTab: () => state.activeId && close(state.activeId),
+    renameTab: () => state.activeId && tabBar.rename(state.activeId),
     nextTab: () => update(stepTab(state, 1)),
     previousTab: () => update(stepTab(state, -1)),
     goToTab: (index: number) => update(activateTabAt(state, index)),
@@ -719,6 +726,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const commands: Record<string, () => void> = {
     'tab:new': actions.newTab,
     'tab:close': actions.closeTab,
+    'tab:rename': actions.renameTab,
     'tab:next': actions.nextTab,
     'tab:previous': actions.previousTab,
     'tab:finished': actions.nextFinished,
@@ -752,6 +760,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         items: [
           { id: 'tab:new', label: i18n.t('tabs.new'), shortcut: keymap.label('newTab') },
           { id: 'tab:close', label: i18n.t('tabs.close'), shortcut: keymap.label('closeTab') },
+          { id: 'tab:rename', label: i18n.t('tabs.rename'), shortcut: keymap.label('renameTab') },
           { id: 'tab:next', label: i18n.t('tabs.next'), shortcut: keymap.label('nextTab') },
           {
             id: 'tab:previous',

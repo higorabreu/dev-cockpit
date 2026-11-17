@@ -157,6 +157,34 @@ body.full #bar {
   outline: 1px dashed var(--muted);
 }
 
+/* The name being typed sits where the label was, at the tab's height, so the bar does not move */
+.tab.editing {
+  padding: 2px 4px;
+  background: var(--tab-active);
+  cursor: auto;
+}
+
+.tab-name {
+  field-sizing: content;
+  min-width: 8ch;
+  max-width: 220px;
+  padding: 2px 6px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-small);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+.tab-name:focus {
+  outline: 2px solid var(--fg);
+  outline-offset: 0;
+}
+
+.tab-name::placeholder {
+  color: var(--muted);
+}
+
 #main {
   order: 1;
   flex: 1;

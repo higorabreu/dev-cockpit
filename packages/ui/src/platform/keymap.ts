@@ -20,6 +20,7 @@ type Modifiers = Omit<Chord, 'key'>
 export type ShortcutId =
   | 'newTab'
   | 'closeTab'
+  | 'renameTab'
   | 'nextTab'
   | 'previousTab'
   | 'settings'
@@ -49,6 +50,7 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
   pc: {
     newTab: [{ ...CS, key: 't' }],
     closeTab: [{ ...CS, key: 'w' }],
+    renameTab: [{ ...CS, key: 'r' }],
     nextTab: [
       { ...C, key: 'Tab' },
       { ...C, key: 'PageDown' },
@@ -81,6 +83,7 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
   mac: {
     newTab: [{ ...M, key: 't' }],
     closeTab: [{ ...M, key: 'w' }],
+    renameTab: [{ ...MS, key: 'r' }],
     // Shift turns the bracket into a brace in event.key on some layouts
     nextTab: [
       { ...C, key: 'Tab' },

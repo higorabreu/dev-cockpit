@@ -982,3 +982,18 @@ of a 768 pixel screen the Tabs and Agent lists show one row and cover the top or
 **How to revert:** drop `placeWheel`, `wheelSize` and the overlap from `ui/src/hold-menu/list-fit.ts`,
 the compact geometry from `menu-view.ts`, the placement in the controller and the `--wheel` and `top` rules
 in `styles/hold-menu.css`, and set the card back to `position: relative` in the centered flex scrim.
+
+## D62. A tab is renamed in place and keeps its automatic name underneath
+
+**Decision:** the tab's name turns into a field on the tab itself, opened by a double-click on the tab, by
+Rename tab in its context menu and in the hold menu's Tabs list, and by `Ctrl+Shift+R` (`⇧⌘R` on the Mac)
+for the active tab. Enter or a click elsewhere keeps the name, Esc leaves the old one, and an empty field
+brings back the automatic name, which shows in the field as its hint. The automatic name stays what it
+was (the project's name, or "shell N"); a typed name only covers it. A name is at most 64 characters,
+trimmed, with its spaces joined. While the field is open the tab bar does not redraw, so an attention mark
+arriving then shows once the edit ends.
+**Reason:** the maintainer asked to name a tab beyond the folder it opened in (2026-11-17). Editing in place
+was chosen over a small dialog: it keeps the eye on the tab and costs no extra surface. Following the
+terminal's current folder was offered and declined: the automatic name stays as it was.
+**How to revert:** drop `renameTab` and `autoLabel` from `core/src/tabs/tabs.ts`, `rename` from
+`ui/src/tabs/tab-bar.ts`, the `renameTab` shortcut, the menu items and the `.tab-name` styles.

@@ -104,6 +104,7 @@ next launch, `--yes` restarts without asking and `--skip-build` installs the `.d
 | `F12` (configurable) | Shows or hides the window, on the monitor where the mouse is |
 | `F11` | Full height or anchored |
 | `Ctrl+Shift+T` / `W` | New tab / close tab |
+| `Ctrl+Shift+R` | Rename the tab in place (also a double-click on it); an empty name brings back the automatic one |
 | `Ctrl+Tab`, `Ctrl+Shift+Tab` | Next / previous tab |
 | `Alt+1` to `9` | Go to tab |
 | Hold the right `Ctrl` | Action wheel: tabs, projects, agent, system. Releasing runs the item |

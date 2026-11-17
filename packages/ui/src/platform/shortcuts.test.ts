@@ -16,6 +16,7 @@ function bind(keyboard: Keyboard) {
   const actions: ShortcutActions = {
     newTab: record('newTab'),
     closeTab: record('closeTab'),
+    renameTab: record('renameTab'),
     toggleReview: record('toggleReview'),
     toggleReviewLayout: record('toggleReviewLayout'),
     sendReview: record('sendReview'),

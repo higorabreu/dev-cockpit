@@ -67,6 +67,8 @@ export const en: Record<MessageKey, string> = {
   'tabs.close': 'Close tab',
   'tabs.closeOthers': 'Close others',
   'tabs.duplicate': 'Duplicate tab',
+  'tabs.rename': 'Rename tab',
+  'tabs.nameField': 'Tab name',
   'tabs.next': 'Next tab',
   'tabs.previous': 'Previous tab',
   'tabs.nextFinished': 'Next waiting for you',

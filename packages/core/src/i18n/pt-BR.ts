@@ -66,6 +66,8 @@ export const ptBR = {
   'tabs.close': 'Fechar aba',
   'tabs.closeOthers': 'Fechar as outras',
   'tabs.duplicate': 'Duplicar aba',
+  'tabs.rename': 'Renomear aba',
+  'tabs.nameField': 'Nome da aba',
   'tabs.next': 'Próxima aba',
   'tabs.previous': 'Aba anterior',
   'tabs.nextFinished': 'Próxima esperando você',
