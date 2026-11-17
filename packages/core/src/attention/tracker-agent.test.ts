@@ -268,6 +268,43 @@ describe('createAttentionTracker with agent signals', () => {
     expect(tracker.nextUnseen()).toBe('a')
   })
 
+  it('should end a long working turn without a mark or a notification when the agent rests', () => {
+    const { tracker, advance } = setup()
+    tracker.signal('a', 'working', false)
+    advance(60_000)
+
+    tracker.rest('a')
+
+    expect(tracker.agent('a')).toBe('your-turn')
+    expect(tracker.unseenIds()).toEqual([])
+    expect(tracker.hasWorkingAgent()).toBe(false)
+  })
+
+  it('should clear the needs you mark silently when the agent rests after asking', () => {
+    const { tracker, advance } = setup()
+    tracker.signal('a', 'working', false)
+    tracker.signal('a', 'needs-you', false)
+    advance(60_000)
+
+    tracker.rest('a')
+
+    expect(tracker.agent('a')).toBe('your-turn')
+    expect(tracker.attention('a')).toBeUndefined()
+  })
+
+  it('should change nothing when the agent rests with no turn running', () => {
+    const { tracker, advance } = setup()
+    tracker.rest('a')
+    tracker.signal('b', 'working', false)
+    advance(5000)
+    tracker.signal('b', 'your-turn', false)
+
+    tracker.rest('b')
+
+    expect(tracker.agent('a')).toBeUndefined()
+    expect(tracker.attention('b')).toBe('finished')
+  })
+
   it('should not report a finished command for a needs you mark when asked what finished', () => {
     const { tracker } = setup()
     tracker.signal('a', 'needs-you', false)
