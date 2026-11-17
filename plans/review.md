@@ -177,8 +177,8 @@ and a long change has no memory of where the reading stopped.
 ## Phase 2: comments back to the agent
 
 The developer reads the change, leaves comments on lines as in a GitHub review, and hands them all to the
-agent in the tab at once: typed at the terminal's prompt, without Enter, so the developer can add a word
-and send it, whatever agent (or shell) is listening.
+agent in the tab at once: written to a Markdown file, with one line naming it typed at the terminal's
+prompt, without Enter, so the developer can add a word and send it, whatever agent is listening.
 
 Decided with the maintainer (2026-11-17):
 
@@ -187,10 +187,13 @@ Decided with the maintainer (2026-11-17):
   selected lines, or the cursor's line when nothing is selected. The mouse path is a small "+" on the
   gutter of the line under the pointer, with `c` in its tooltip.
 - **Batched like a GitHub review.** Comments stay pending in the diff, under their lines, editable and
-  deletable. "Send to agent" in the review header, with the count, types all of them into the tab's
-  terminal prompt without pressing Enter, then clears them. Esc in the field cancels; Ctrl+Enter saves.
-- **One line per comment**, `path:lines: comment`, the code quoted below when it is short, typed with the
-  terminal's paste so a TUI reads it as one block (bracketed paste). Nothing assumes Claude Code.
+  deletable. "Send to agent" in the review header, with the count, hands all of them over, then clears
+  them. Esc in the field cancels; Ctrl+Enter saves.
+- **A file and one line** (revised by the maintainer after the first version, which pasted every comment
+  as `path:lines: comment` lines; a multi-line paste presses Enter at each line break in a program that
+  did not ask for bracketed paste, and a long review crowds the prompt). The comments go to a structured
+  Markdown file; the prompt gets one line, "Address the review comments in <path>", in the interface
+  language, without Enter and without a line break. Nothing assumes Claude Code.
 - **Pending comments belong to the tab's review**, follow their lines across refreshes and turn outdated
   when the lines are gone, as GitHub says "Outdated". They do not survive a restart.
 
@@ -203,21 +206,34 @@ Rules decided here:
 - **The lines a comment names.** The new file's numbers of the selected lines that exist in it (added and
   unchanged), first to last. When every selected line is removed, the old file's numbers followed by
   ` (removed)`. One line is `13`, a range `13-14`.
-- **The text typed.** Comments ordered by path, then by their first line, then by when they were written.
-  Each starts a line `path:lines[ (removed)][ (outdated)]: first line of the comment`; the comment's other
-  lines follow indented by two spaces (blank lines dropped); when it covers at most 3 lines, each is quoted
-  below as `  > ` and the diff sign (`+`, `-` or a space) and the code, its trailing spaces trimmed and cut
-  at 120 characters with `…`. Tabs become four spaces and control characters are dropped, so no text can
-  end the bracketed paste early or press a key. Lines are joined with a newline and the text ends without
-  one, so nothing is sent until the developer presses Enter.
+- **Where the file goes.** In the repository's git folder, `<git dir>/dck/review-<YYYYMMDD-HHMMSS>.md`,
+  when that folder is inside the repository (a usual clone, `<root>/.git`): an agent reads it without a
+  permission prompt, since it is inside the project, and git never lists it. A linked worktree or a
+  submodule keeps its git folder elsewhere, so there the file goes to the system's temporary folder as
+  `dck-review-<stamp>.md`. The folder is created 0700 and the file 0600, written whole to a temporary
+  name and renamed; a second review in the same second gets `-2`. Only the newest 5 review files of the
+  folder stay. The write is the `ReviewNotes` port, its adapter in `node-git` (`git rev-parse
+  --absolute-git-dir`), behind a host channel that only takes a root a diff returned. A failure is
+  `DCK-GIT-006` and its text shows in the review header for 8 s; the comments stay pending.
+- **The file.** Markdown in the interface language: a title; one line with how many comments on how many
+  files and that the numbers are the working tree's (the old file's for removed lines); one `##` section
+  per file by path; per comment, by line, a `###` heading with its lines ("Lines 9-10", "Removed line 10",
+  plus "(outdated: the lines changed after this comment)"), a fenced `diff` block quoting all its lines
+  with their signs (at most 40, then a note with how many more), and the comment as written. The fence is
+  longer than any run of backticks in the code, 3 at least.
+- **The line typed.** en "Address the review comments in {path}", pt-BR "Resolva os comentários da revisão
+  em {path}". The path is relative to the tab's current folder when the file is inside it
+  (`.git/dck/review-20261117-143000.md` from the repository's top), else absolute, and quoted for a POSIX
+  shell only when it needs it. The comments are cleared only when the file was written and the line
+  reached the terminal.
 - **Across refreshes.** After every read each comment looks for its lines (the same kinds and texts, in
   order, inside one hunk) in its file's change; found, it moves to their new numbers (the match nearest
   its old numbers wins); not found, or with its file gone, it keeps its last numbers and turns outdated. An
   outdated comment that finds its lines again is current again. An outdated comment sits under its file's
   header with its quoted lines and an "Outdated" label; one whose file left the change sits at the end of
-  the diff under "Outdated comments". Outdated comments are still sent, marked ` (outdated)`, since they
-  are the developer's words. Each file header counts its pending comments, so a file folded as viewed or
-  collapsed still says it has some.
+  the diff under "Outdated comments". Outdated comments are still sent, marked outdated and under their
+  path, since they are the developer's words. Each file header counts its pending comments, so a file
+  folded as viewed or collapsed still says it has some.
 - **The send key.** Ctrl+Shift+Enter (⇧⌘Enter on the Mac): free in D13 and in Claude Code, and next to
   Ctrl+Enter, which saves one comment. It works from the review and from the tab's terminal, and does
   nothing when no comment is pending. A comment still open in its field is saved first when it has text.
@@ -227,13 +243,13 @@ Rules decided here:
 | --- | --- | --- |
 | R16 | Click, Shift+click and Shift+↑↓ select a range of one hunk; `c` and the gutter "+" open the comment field for it, or for the cursor's line | Tests |
 | R17 | A pending comment shows under its last line; Ctrl+Enter saves, Esc cancels, an empty comment cannot be saved; Enter and the edit button edit it, Delete and the delete button remove it | Tests, screenshots |
-| R18 | "Send to agent" shows the count and, like Ctrl+Shift+Enter, types every pending comment at the tab's prompt as one paste with no Enter, clears them and gives the keys to the terminal | Tests, a real-app run |
-| R19 | The typed text follows the rules above: lines, `(removed)`, `(outdated)`, the quote, the order, no control characters, no final newline | Tests in `core` |
+| R18 | "Send to agent" shows the count and, like Ctrl+Shift+Enter, writes every pending comment to the review file and types one line naming it at the tab's prompt, with no Enter; it clears them only when both worked and gives the keys to the terminal | Tests, a real-app run |
+| R19 | The file follows the rules above (sections, headings, the diff quote and its cap, a safe fence, both languages); it sits in the git folder of a usual clone, out of `git status`, private, at most 5 kept, and in the temporary folder for a linked worktree | Tests in `core` and against real repositories |
 | R20 | A refresh moves a comment with its lines, marks it outdated when they are gone and current again when they come back; outdated comments show under their file or at the end and are still sent | Tests in `core` and `ui` |
 | R21 | Both themes, both languages, contrast checks for the selected lines, screen reader names for comments and selection | Tests, contrast check, screenshots |
 
-- [x] RV-T15. `core`: the comment model, the lines a comment names, the typed text and finding a comment's
-  lines after a read, pure and tested. (R19, R20)
+- [x] RV-T15. `core`: the comment model, the lines a comment names and finding a comment's lines after a
+  read, pure and tested. (R20)
 - [x] RV-T16. `core`: `changeRows` places comment rows under their last line, outdated ones under the file
   header and the ones whose file left the change at the end. (R17, R20)
 - [x] RV-T17. `ui`: the selection (click, Shift+click, Shift+↑↓) inside a hunk, the gutter "+" and `c`, and
@@ -249,6 +265,14 @@ Rules decided here:
   Ctrl+Shift+Enter in the terminal; a commented line changed from the terminal turned the comment
   outdated at the next check.
 - [x] RV-T20. Docs: README's key table, D56, the roadmap; screenshots in both themes and languages.
+- [x] RV-T21. `core`: the review file's Markdown (`review-markdown.ts`), its name, which old files go and
+  the typed line (`review-notes.ts`), pure and tested; the `ReviewNotes` port, `DCK-GIT-006` in both
+  catalogs. (R19)
+- [x] RV-T22. `node-git`: the adapter, tested against a temporary repository and a linked worktree; the
+  `review:notes` channel with zod and the known roots; the pane writes, then types the line, and keeps the
+  comments on any failure. (R18, R19) Checked in the real app under Xvfb in both themes and languages:
+  the line waits at the bash prompt, the file reads well with `cat`, `git status` does not list it, and in
+  a linked worktree the line names `/tmp/dck-review-<stamp>.md`.
 
 ## Acceptance criteria
 
