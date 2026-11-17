@@ -18,7 +18,7 @@ import {
   type Translate,
 } from '@dck/core'
 import { inputGate } from '../platform/input-gate.ts'
-import { fitRows, followSelection, listAnchor, listLimit } from './list-fit.ts'
+import { fitRows, followSelection, listAnchor, listBand, listLimit } from './list-fit.ts'
 import { type MenuMarkup, switcherMarkup, wheelMarkup } from './menu-view.ts'
 import { createPointerIntent } from './pointer-intent.ts'
 
@@ -129,8 +129,7 @@ export function createHoldMenuController(
     const anchor = listAnchor(menu.category, menu.categories.length)
     // offsetTop ignores the card's opening scale, which would skew a bounding box
     const anchorY = elements.card.offsetTop + anchor.y
-    const bar = elements.bar.getBoundingClientRect()
-    const band = { top: EDGE, bottom: (bar.height > 0 ? bar.top : window.innerHeight) - EDGE }
+    const band = listBand(elements.bar.getBoundingClientRect(), window.innerHeight, EDGE)
     const limit = listLimit(anchor.opening, anchorY, band)
     return fitRows({ total, rows, height: list.offsetHeight, pitch, cues }, limit)
   }

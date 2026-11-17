@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { fitRows, followSelection, listAnchor, listLimit, WHEEL_SIZE } from './list-fit.ts'
+import {
+  fitRows,
+  followSelection,
+  listAnchor,
+  listBand,
+  listLimit,
+  WHEEL_SIZE,
+} from './list-fit.ts'
 
 describe('listAnchor', () => {
   it('should open the list up, to the side, down and to the side when the wheel has four sectors', () => {
@@ -18,6 +25,27 @@ describe('listAnchor', () => {
 
     expect(anchor.x).toBeCloseTo(WHEEL_SIZE / 2)
     expect(anchor.y).toBeLessThan(0)
+  })
+})
+
+describe('listBand', () => {
+  it('should end the band above the tab bar when the bar sits under the terminal', () => {
+    // Arrange
+    const bar = { top: 505, bottom: 540, height: 35 }
+
+    // Act
+    const band = listBand(bar, 540, 8)
+
+    // Assert
+    expect(band).toEqual({ top: 8, bottom: 497 })
+  })
+
+  it('should start the band under the tab bar when full screen puts the bar on top', () => {
+    expect(listBand({ top: 0, bottom: 35, height: 35 }, 1080, 8)).toEqual({ top: 43, bottom: 1072 })
+  })
+
+  it('should use the whole window when the tab bar takes no room', () => {
+    expect(listBand({ top: 0, bottom: 0, height: 0 }, 1080, 8)).toEqual({ top: 8, bottom: 1072 })
   })
 })
 
