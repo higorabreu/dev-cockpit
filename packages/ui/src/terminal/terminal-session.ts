@@ -5,6 +5,7 @@ import { Terminal } from '@xterm/xterm'
 import type { Keymap } from '../platform/keymap.ts'
 import { terminalTheme } from '../platform/theme.ts'
 import { attachClipboard } from './clipboard-behavior.ts'
+import { attachDrop } from './terminal-drop.ts'
 import { attachLinks, type LinkOptions } from './terminal-links.ts'
 import { attachPaths, type PathLinkOptions } from './terminal-paths.ts'
 
@@ -72,6 +73,11 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     keymap: options.keymap,
   })
   terminal.attachCustomKeyEventHandler(clipboard.onKey)
+  const drop = attachDrop(element, {
+    pathOf: (file) => api.files.pathOf(file),
+    paste: (text) => terminal.paste(text),
+    focus: () => terminal.focus(),
+  })
 
   // The tab must be visible for xterm to measure the columns; the caller shows it before creating
   fit.fit()
@@ -146,6 +152,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
       stopExit()
       observer.disconnect()
       clipboard.dispose()
+      drop.dispose()
       api.pty.kill(id)
       terminal.dispose()
       element.remove()

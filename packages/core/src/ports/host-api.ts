@@ -42,6 +42,10 @@ export interface HostApi {
     readText(): Promise<string>
     writeText(text: string): Promise<void>
   }
+  readonly files: {
+    // Where a file or folder dropped on the window lives on disk (a DOM File); empty when it has no path
+    pathOf(file: object): string
+  }
   readonly notifications: {
     show(notification: TabNotification): void
     onClick(listener: (tabId: string) => void): Unsubscribe
