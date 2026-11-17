@@ -752,6 +752,22 @@
   text-align: center;
 }
 
+/* Nothing can go now (a program runs, no agent to start): it stays focusable for its tooltip, and the
+   count loses its fill so the state is not told by the text color alone */
+.vbtn.rv-send[aria-disabled="true"] {
+  color: var(--muted);
+}
+
+.vbtn.rv-send[aria-disabled="true"]:hover {
+  background: none;
+}
+
+.rv-send[aria-disabled="true"] .rv-send-count {
+  box-shadow: inset 0 0 0 1px var(--muted);
+  background: none;
+  color: var(--muted);
+}
+
 /* The keyboard's row, shown only while the diff has the focus; a header draws it on its band */
 .rv-lines:focus-visible .rv-row[aria-selected="true"]:not(.rv-filerow) {
   outline: 2px solid var(--fg);

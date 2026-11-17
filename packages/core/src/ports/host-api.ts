@@ -113,6 +113,8 @@ export interface HostApi {
     onSignal(listener: (signal: AgentSignal) => void): Unsubscribe
     // The agents the cockpit recognizes, with how to connect each one
     profiles(): Promise<readonly AgentProfile[]>
+    // The agents whose `launch` command is found on the PATH of the tab's terminal; none for an unknown tab
+    launchable(ptyId: number): Promise<readonly AgentProfile[]>
   }
   readonly projects: {
     list(): Promise<readonly Project[]>
@@ -168,6 +170,7 @@ export const hostChannels = {
   sessionInspect: 'session:inspect',
   agentSignal: 'agent:signal',
   agentProfiles: 'agent:profiles',
+  agentLaunchable: 'agent:launchable',
   projectsList: 'projects:list',
   projectsTouch: 'projects:touch',
   projectsToggleFavorite: 'projects:toggle-favorite',

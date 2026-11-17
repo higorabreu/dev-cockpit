@@ -1,4 +1,5 @@
 import {
+  type AgentProfile,
   type AgentState,
   type BranchInfo,
   branchName,
@@ -14,10 +15,8 @@ import {
   type Orientation,
   type PaneGrid,
   patchKey,
-  pathFrom,
   type ReviewBase,
-  reviewMarkdown,
-  reviewPrompt,
+  type SessionActivityInfo,
   type Translator,
 } from '@dck/core'
 import { tokens } from '@dck/design'
@@ -30,6 +29,7 @@ import { createDiffView, LINE_HEIGHT } from './diff-view.ts'
 import { counts, createFileList } from './file-list.ts'
 import { createReviewComments } from './review-comments.ts'
 import { createReviewRefresh } from './review-refresh.ts'
+import { type AgentChoice, createReviewSend } from './review-send.ts'
 
 // Loads this fast never show "Reading the changes", so the pane does not flash
 const LOADING_TEXT_MS = 200
@@ -87,6 +87,12 @@ export interface ReviewPaneDeps {
   // Types a line at the tab's terminal prompt, without Enter, and gives it the keys; false when the
   // terminal could not take it
   send(text: string): boolean
+  // What runs in the tab's terminal, read fresh, and the agents that could start there
+  activity(): Promise<SessionActivityInfo | undefined>
+  launchable(): Promise<readonly AgentProfile[]>
+  profiles(): readonly AgentProfile[]
+  // The small menu to pick the agent to start, under the send button
+  chooseAgent(anchor: HTMLElement, choices: readonly AgentChoice[], focusAt: number): void
 }
 
 let measured: number | undefined
@@ -111,8 +117,6 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   let busy = false
   // A short sentence beside the totals, such as why the comments were not sent
   let notice = ''
-  // A send waits for the file to be written; a second press meanwhile would write it twice
-  let sending = false
   let noticeTimer: ReturnType<typeof setTimeout> | undefined
   let showLoading = false
   // What the base and unpushed scopes compare with, from the last read of a repository, and that one
@@ -167,19 +171,6 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const close = iconButton(ICONS.close, 14, { 'data-tip-key': deps.keymap.label('review') })
   back.hidden = true
   layout.hidden = true
-  const sendCount = h('span', { class: 'rv-send-count' })
-  const sendText = h('span', {})
-  const send = h(
-    'button',
-    {
-      type: 'button',
-      class: 'vbtn rv-send',
-      'data-tip-key': deps.keymap.label('reviewSend'),
-      hidden: true,
-    },
-    sendText,
-    sendCount,
-  )
   const head = h(
     'div',
     { class: 'rv-head' },
@@ -188,7 +179,6 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     totals,
     status,
     h('span', { class: 'rv-spacer' }),
-    send,
     indexToggle,
     whitespace,
     layout,
@@ -203,7 +193,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     saveKey: deps.keymap.commandLabel('Enter'),
     isSave: (event) => deps.keymap.command(event, 'Enter'),
     onChange() {
-      drawSend()
+      sender.draw()
       if (state.kind === 'ok' && state.diff.files.length > 0) drawDiff()
     },
     onOpen() {
@@ -215,6 +205,23 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       diff.focus()
     },
   })
+
+  const sender = createReviewSend({
+    api,
+    i18n,
+    keymap: deps.keymap,
+    comments,
+    root: () => root,
+    cwd: deps.cwd,
+    activity: deps.activity,
+    launchable: deps.launchable,
+    profiles: deps.profiles,
+    type: deps.send,
+    choose: deps.chooseAgent,
+    notice: showNotice,
+  })
+  // Beside the other header controls, before the index toggle
+  head.insertBefore(sender.element, indexToggle)
 
   const list = createFileList({
     id: deps.id,
@@ -332,23 +339,6 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     })
   }
 
-  // Every pending comment goes to a file the agent reads, and one line naming it is typed at the prompt;
-  // the keys go to the terminal to add a word and press Enter. Until both worked, the comments stay
-  // pending and the header says why
-  async function sendComments() {
-    if (sending || (comments.count() === 0 && comments.editor() === undefined)) return
-    const pending = comments.pending()
-    if (pending.length === 0 || root === undefined) return
-    sending = true
-    const saved = await api.review.saveNotes(root, reviewMarkdown(pending, i18n))
-    const folder = saved.ok ? await deps.cwd() : undefined
-    sending = false
-    if (!saved.ok) return showNotice(t(`error.${errorCodeOf(saved.error)}`))
-    const path = folder === undefined ? saved.value : pathFrom(folder, saved.value)
-    if (deps.send(reviewPrompt(t, path))) comments.clear(pending)
-    else showNotice(t('review.send.refused'))
-  }
-
   function showNotice(text: string) {
     notice = text
     drawStatus()
@@ -357,13 +347,6 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       notice = ''
       drawStatus()
     }, NOTICE_MS)
-  }
-
-  function drawSend() {
-    const count = comments.count()
-    send.hidden = count === 0
-    sendCount.textContent = String(count)
-    send.setAttribute('aria-label', i18n.plural('review.send.a11y', count))
   }
 
   // The unchanged text comes from the working tree once, then every gap of that file opens from it
@@ -461,9 +444,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     back.setAttribute('aria-label', t('review.terminal'))
     close.dataset.tip = t('review.close')
     close.setAttribute('aria-label', t('review.close'))
-    sendText.textContent = t('review.send')
-    send.dataset.tip = t('review.send.tip')
-    drawSend()
+    sender.draw()
     drawScope()
     drawIndexToggle()
     drawLayoutToggle()
@@ -732,7 +713,6 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     diff.redraw()
   })
   layout.addEventListener('click', () => deps.onToggleLayout())
-  send.addEventListener('click', () => void sendComments())
   back.addEventListener('click', () => deps.onEscape())
   close.addEventListener('click', () => deps.onClose())
 
@@ -743,6 +723,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     open() {
       document.addEventListener('visibilitychange', onVisibility)
       refresh.open()
+      sender.recheck()
       diff.unpark()
     },
     // The reading stays: reopened in the same tab, the review is where it was left
@@ -759,8 +740,10 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       } else element.focus()
     },
     hasFocus: () => element.contains(document.activeElement),
-    send: sendComments,
+    send: () => sender.send(),
     agentState: (agent: AgentState | undefined) => refresh.agentState(agent),
+    // The watcher's read of the tab: the send button follows what runs in its terminal
+    activity: (info: SessionActivityInfo | undefined) => sender.sync(info),
     // How the tab shows the review: beside or below the terminal, or alone in a narrow tab
     setArrangement(next: Orientation | undefined, narrow: boolean) {
       orientation = next
