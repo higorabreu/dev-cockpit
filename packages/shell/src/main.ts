@@ -5,7 +5,11 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
-import { createGitDiffSource, createGitInspector } from '@dck/adapter-node-git'
+import {
+  createGitDiffSource,
+  createGitInspector,
+  createGitReviewNotes,
+} from '@dck/adapter-node-git'
 import { connectTo, defaultConfigDir, defaultEndpoint, defaultLogDir } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
 import {
@@ -305,6 +309,7 @@ app.whenReady().then(async () => {
       return canceled ? undefined : filePaths[0]
     },
     review: createGitDiffSource(),
+    reviewNotes: createGitReviewNotes(),
     sessions: createSessionInspector({
       processes: platform.processes,
       git: createGitInspector(),

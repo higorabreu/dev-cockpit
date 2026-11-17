@@ -824,6 +824,43 @@ using the review shows they are missed.
 **How to revert:** drop `fingerprint` from `DiffSource` and the watch from `review/review-refresh.ts` (the
 review then reads on open, Ctrl+R and the agent's state, as in D47); drop `viewed` from `FileOpening`.
 
+## D56. Review comments go to the agent as a Markdown file and one typed line, batched like a GitHub review
+
+**Decision:** the review takes comments on lines of the change, as GitHub does: a click selects a line,
+Shift+click or Shift+↑↓ stretches the selection inside the same hunk, and `c` or the gutter's "+" (with `c`
+in its tooltip) opens a comment field under the last selected line (or the cursor's line). Lines opened from
+a collapsed gap take no comment, as on GitHub. Ctrl+Enter saves (⌘Enter on the Mac), Esc cancels, an empty
+comment cannot be saved; a saved comment stays pending as a card under its lines, with edit (Enter) and
+delete (Delete) buttons, and its file's header counts it. "Send to agent" in the review header, with the
+count, and Ctrl+Shift+Enter (⇧⌘Enter), from the review or the tab's terminal, write every pending comment to
+a Markdown file and type one line at the tab's prompt, "Address the review comments in <path>" in the
+interface language, with no Enter and no line break; the keys go to the terminal. The file goes to
+`<git dir>/dck/review-<YYYYMMDD-HHMMSS>.md` when the git folder is inside the repository (an agent reads it
+without a permission prompt and git never lists it), else, in a linked worktree or a submodule, to the
+system's temporary folder as `dck-review-<stamp>.md`; folder 0700, file 0600, written to a temporary name
+and renamed, the newest 5 kept. The `ReviewNotes` port has its adapter in `node-git` and a host channel
+that only takes a root a diff returned; a failure is `DCK-GIT-006`. The path typed is relative to the tab's
+folder when the file is inside it, else absolute, quoted for a shell only when needed. The Markdown
+(`core/src/diff/review-markdown.ts`) has a title, how many comments on how many files and which numbers
+they use (the working tree's, the old file's for removed lines), a section per file by path and per comment
+a heading with its lines and an outdated mark, a `diff` block quoting up to 40 of its lines in a fence
+longer than any backtick run in the code, and the comment as written. The comments are cleared only when
+the file was written and the line reached the terminal, else they stay and the header says why. After every
+read a comment looks for its lines (same kinds and texts, in one hunk, nearest its old numbers) and moves
+with them; when they are gone it keeps its numbers, says "Outdated" and quotes its code; a comment on a file
+that left the change sits at the end of the diff and still goes, marked outdated. The comments live with the
+tab's review, across scopes, and not across a restart. The selected lines take the new `mix.lineSelected`
+tint over their own, a bar at the gutter and the primary text for their numbers, with contrast checks.
+**Reason:** reading the agent's change and telling it what to fix belong in the same place, and a batch
+reads as one instruction (the maintainer, 2026-11-17, `plans/review.md` phase 2). The first version pasted
+every comment as lines of text; a multi-line paste presses Enter at each line break in a program that did
+not ask for bracketed paste, and a long review crowded the prompt, so the maintainer chose a file the agent
+reads and one line that names it, which works with any agent. Ctrl+Shift+Enter is free in D13 and in Claude
+Code and sits beside Ctrl+Enter.
+**How to revert:** drop `review-comments.ts` and `comment-card.ts` from `ui/src/review`, the `comments`
+deps of the diff view and the send button of the pane, the `reviewSend` key, `paste` of the terminal
+session, the `review:notes` channel and `createGitReviewNotes`; drop `comments` from `FileOpening` and the
+`comment` and `gone` rows from `changeRows`.
 ## D57. GitHub is the third built-in connector, through the REST API with a rate gate
 
 **Decision:** GitHub ships as `dck.github`, a code review connector shaped like GitLab's (`plans/github.md`):

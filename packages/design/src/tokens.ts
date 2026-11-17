@@ -58,6 +58,8 @@ export interface Tokens {
     readonly sectorIdle: number
     readonly sectorSelected: number
     readonly listSelected: number
+    // The fg share over a diff line's own tint when the line is selected for a comment
+    readonly lineSelected: number
     readonly iconIdle: number
   }
   readonly font: { readonly sans: string; readonly mono: string }

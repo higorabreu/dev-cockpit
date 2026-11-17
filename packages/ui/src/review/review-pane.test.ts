@@ -74,6 +74,7 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
   let escapes = 0
   let closes = 0
   let layouts = 0
+  const sent: string[] = []
   const memory = { indexHidden: false }
   const bases = new Map<string, string>()
   const api = {
@@ -111,6 +112,10 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
     onToggleLayout: () => {
       layouts += 1
     },
+    send: (text) => {
+      sent.push(text)
+      return true
+    },
   })
   document.body.append(pane.element)
   return {
@@ -120,6 +125,7 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
     escapes: () => escapes,
     closes: () => closes,
     layouts: () => layouts,
+    sent,
     memory,
     bases,
     text: (selector: string) => pane.element.querySelector(selector)?.textContent ?? '',
@@ -257,6 +263,24 @@ describe('createReviewPane', () => {
     expect(reads).toEqual(['/home/ana/acme|src/billing/invoice.ts'])
     expect(labels('.rv-expand')).toEqual(['Expand 8 lines'])
     expect(labels('.rv-row[data-kind="context"]')[0]).toBe('Line 1: text 1')
+  })
+
+  it('should keep an expanded gap open when the review reads the same change again', async () => {
+    // Arrange
+    const { pane, reads, labels, key } = setup(repository())
+    pane.open()
+    await flush()
+    pane.element.querySelector<HTMLElement>('.rv-expand')?.click()
+    await flush()
+
+    // Act
+    key(pane.element, 'r', { ctrlKey: true })
+    await flush()
+
+    // Assert
+    expect(labels('.rv-expand')).toEqual(['Expand 8 lines'])
+    expect(labels('.rv-row[data-kind="context"]')[0]).toBe('Line 1: text 1')
+    expect(reads).toEqual(['/home/ana/acme|src/billing/invoice.ts'])
   })
 
   it('should cross files with n and p and land on file headers with ] and [', async () => {
@@ -425,7 +449,7 @@ describe('createReviewPane', () => {
     const inside = text('.phint')
     outside.focus()
 
-    expect(inside).toBe('↑↓ navigate[ ] filen p hunkv viewedEsc terminalCtrl+R Refresh')
+    expect(inside).toBe('↑↓ navigate[ ] filen p hunkc commentv viewedEsc terminalCtrl+R Refresh')
     expect(text('.phint')).toBe('Ctrl+Shift+D review')
   })
 

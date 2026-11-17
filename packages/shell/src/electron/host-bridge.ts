@@ -20,6 +20,7 @@ import {
   type PtyHost,
   type PtyOptions,
   type PtySession,
+  type ReviewNotes,
   type SessionActivityInfo,
   type SessionSnapshot,
   type SettingsPatch,
@@ -112,6 +113,12 @@ const fileLinesSchema = z.object({
   root: absolutePathSchema,
   path: pathText(MAX_ABSOLUTE_LENGTH).refine((text) => !isAbsolute(text)),
 })
+// The comments of one review: a few kilobytes, so a megabyte is a bug or abuse, not a review
+const MAX_NOTES_LENGTH = 1024 * 1024
+const notesSchema = z.object({
+  root: absolutePathSchema,
+  markdown: z.string().max(MAX_NOTES_LENGTH),
+})
 
 // The picker's answer becomes `projects.root`, so it must fit the setting and be an absolute folder
 const chosenRootSchema = pathText(LIMITS.projectsRoot.max).refine((text) => isAbsolute(text))
@@ -141,6 +148,7 @@ export interface BridgeOptions {
   readonly environment: { status(pid: number): Promise<ComposeStatus> }
   readonly files: TerminalFiles
   readonly review: DiffSource
+  readonly reviewNotes: ReviewNotes
   readonly sessions: {
     activity(pid: number): Promise<SessionActivityInfo | undefined>
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
@@ -288,6 +296,18 @@ export function registerHostBridge(options: BridgeOptions) {
       return fail(errorBody('DCK-IPC-003', 'review file'))
     }
     return options.review.fileLines(parsed.data.root, parsed.data.path)
+  })
+  // The only write of the review: the comments for the agent, beside a repository a diff found
+  ipcMain.handle(hostChannels.reviewNotes, async (_event, payload: unknown) => {
+    const parsed = notesSchema.safeParse(payload)
+    if (!parsed.success || !reviewRoots.has(parsed.data.root)) {
+      logger.warn('review request refused', { kind: 'notes' })
+      return fail(errorBody('DCK-IPC-003', 'review notes'))
+    }
+    const result = await options.reviewNotes.save(parsed.data.root, parsed.data.markdown)
+    if (result.ok) logger.info('review comments saved', { file: result.value })
+    else logger.warn('review comments not saved', { error: result.error.message })
+    return result
   })
   // Asked every few seconds while a review is open: a refused folder answers nothing, without a log line
   ipcMain.handle(hostChannels.reviewFingerprint, async (_event, cwd: unknown) => {
