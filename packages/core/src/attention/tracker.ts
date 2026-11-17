@@ -161,6 +161,12 @@ export function createAttentionTracker(options: AttentionOptions) {
       state.workingAt = options.clock.now()
       clearNeedsYou(tabId)
     },
+    // The agent says it rests with no answer, as after Esc: a turn in progress ends, silently like settle
+    rest(tabId: string) {
+      const state = tabs.get(tabId)
+      if (state?.agent !== 'working' && state?.agent !== 'needs-you') return
+      endTurn(tabId, state, options.clock.now(), true)
+    },
     // A working agent whose terminal went quiet was interrupted (Esc fires no hook): the turn just ends,
     // silently, since a quiet agent may still be working and the user who pressed Esc is looking
     settle(lastOutputAt: (tabId: string) => number | undefined) {

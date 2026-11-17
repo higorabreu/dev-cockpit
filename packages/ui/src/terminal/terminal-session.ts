@@ -1,10 +1,11 @@
-import type { HostApi, PaneGrid } from '@dck/core'
+import type { HostApi, PaneGrid, ProgramStatus } from '@dck/core'
 import { type ThemeName, tokens } from '@dck/design'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import type { Keymap } from '../platform/keymap.ts'
 import { terminalTheme } from '../platform/theme.ts'
 import { attachClipboard } from './clipboard-behavior.ts'
+import { attachProgramStatus } from './program-status.ts'
 import { attachDrop } from './terminal-drop.ts'
 import { attachLinks, type LinkOptions } from './terminal-links.ts'
 import { attachPaths, type PathLinkOptions } from './terminal-paths.ts'
@@ -44,6 +45,8 @@ export interface SessionOptions {
   onExit(): void
   // A key the user typed, not the replies xterm sends by itself (focus and cursor reports)
   onInput?(): void
+  // What the program in the terminal reports about itself (OSC 7501)
+  onProgramStatus?(status: ProgramStatus): void
 }
 
 export async function createTerminalSession(options: SessionOptions): Promise<TerminalSession> {
@@ -90,6 +93,10 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     ...(options.cwd ? { cwd: options.cwd } : {}),
   })
   terminal.onData((data) => api.pty.write(id, data))
+  const programStatus = attachProgramStatus(terminal.parser, {
+    reply: (data) => api.pty.write(id, data),
+    report: (status) => options.onProgramStatus?.(status),
+  })
   terminal.onKey(() => options.onInput?.())
   terminal.onResize(({ cols, rows }) => api.pty.resize(id, cols, rows))
   let lastOutputAt = Date.now()
@@ -161,6 +168,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
       observer.disconnect()
       clipboard.dispose()
       drop.dispose()
+      programStatus.dispose()
       api.pty.kill(id)
       terminal.dispose()
       element.remove()

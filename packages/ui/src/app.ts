@@ -20,6 +20,7 @@ import {
   type MenuCategory,
   openTab,
   type PluralKey,
+  type ProgramStatus,
   type Project,
   recentTabs,
   reorderTabs,
@@ -349,15 +350,23 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     return undefined
   }
 
-  api.agent.onSignal((signal) => {
-    const tabId = tabOfPty(signal.ptyId)
-    if (!tabId) return
+  // An agent's state reaches its tab from `dck agent signal` or from its own terminal (OSC 7501)
+  function applyAgentStatus(tabId: string, status: ProgramStatus) {
     connectHint.signal(tabId)
-    const event = attention.signal(tabId, signal.state, isSeen(tabId))
-    if (event) announce(event)
+    if (status === 'idle') {
+      attention.rest(tabId)
+    } else {
+      const event = attention.signal(tabId, status, isSeen(tabId))
+      if (event) announce(event)
+    }
     reviews.syncAgents()
     watchQuiet()
     showAttention()
+  }
+
+  api.agent.onSignal((signal) => {
+    const tabId = tabOfPty(signal.ptyId)
+    if (tabId) applyAgentStatus(tabId, signal.state)
   })
 
   function markActiveSeen() {
@@ -526,6 +535,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         attention.input(id)
         watchQuiet()
       },
+      onProgramStatus: (status) => applyAgentStatus(id, status),
     })
     sessions.set(id, session)
     view.setTerminal({
