@@ -98,7 +98,7 @@ describe('watchSettingsFile', () => {
     stop()
 
     expect(warnings.map((warning) => warning.message)).toEqual([
-      'cannot watch the settings file, changes from the CLI apply at the next start',
+      'cannot watch the settings file, edits made outside the window apply at the next start',
     ])
   })
 })

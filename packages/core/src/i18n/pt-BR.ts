@@ -150,6 +150,7 @@ export const ptBR = {
   'cli.ext.rejected': 'Recusadas:',
 
   'menu.system.settings': 'Configurações',
+  'menu.system.settingsFile': 'Abrir o arquivo de configurações',
   'tray.settings': 'Configurações',
 
   'settings.title': 'Configurações',
@@ -343,6 +344,22 @@ export const ptBR = {
   'settings.ref.opacity': 'Opacidade',
   'settings.ref.font': 'Tamanho da fonte',
   'settings.ref.settings': 'Configurações',
+  'settings.file.open': 'Abrir o arquivo de configurações',
+  'settings.file.openFailed': 'Nenhum aplicativo abriu o settings.json.',
+  'settings.file.invalid':
+    'O settings.json tem um erro na linha {line}, coluna {column}. As últimas configurações válidas continuam em uso, e as mudanças feitas aqui esperam a correção.',
+  'settings.file.issues.one': '1 valor do settings.json não é usado como está escrito',
+  'settings.file.issues.other':
+    '{count} valores do settings.json não são usados como estão escritos',
+  'settings.file.more': 'e mais {count} no arquivo',
+  'settings.issue.ignored': 'Inválido, usa {used}',
+  'settings.issue.dropped': 'Inválido, deixado de fora',
+  'settings.issue.adjusted': 'Ajustado para {used}',
+  'settings.issue.unknown': 'Não é uma configuração',
+  'settings.issue.refused': 'Outro programa usa, mantém {used}',
+  'settings.issue.missingFolder': 'Pasta não encontrada',
+  'settings.adjusted': 'Ajustado para {value}: o intervalo é de {min} a {max}.',
+  'settings.projectsRoot.missing': 'Esta pasta não existe.',
   'projects.pin': 'Fixar projeto',
   'projects.unpin': 'Soltar projeto',
   'projects.pinned': 'Fixado',

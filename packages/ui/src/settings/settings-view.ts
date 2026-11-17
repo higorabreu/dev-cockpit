@@ -12,6 +12,7 @@ import {
   type MessageKey,
   noSystemFonts,
   type Settings,
+  type SettingsIssue,
   type SettingsPatch,
   type SystemFontsInfo,
   type Translator,
@@ -108,6 +109,8 @@ export function createSettingsView(
   // The fonts installed, asked for each time the screen opens so a font installed since then shows up
   let fonts: SystemFontsInfo = noSystemFonts
   let confirmingReset = false
+  // The last "Open the settings file" found no app to open it; cleared when the screen opens again
+  let openFailed = false
   let activeTab: TabId = TABS[0].id
   // The enabled connectors, each with its own section on the Connections page
   let connectors: readonly Connector[] = []
@@ -130,6 +133,8 @@ export function createSettingsView(
   }
   // Error message per key, shown beside its control
   const errors = new Map<string, string>()
+  // A calmer word beside a control, such as a typed value that was adjusted to fit
+  const notes = new Map<string, string>()
   // Changes made here need not redraw everything: the control already has the right value
   let local = 0
 
@@ -137,16 +142,20 @@ export function createSettingsView(
 
   async function commit(patch: SettingsPatch, errorKey?: string) {
     local += 1
+    const fileBefore = settings.file()
+    let redraw = errorKey !== undefined
     try {
       const result = await settings.update(patch)
       if (errorKey) {
         if (result.rejected.length > 0) errors.set(errorKey, t('settings.shortcutRefused'))
         else errors.delete(errorKey)
       }
+      // A refused change (the file is broken) puts the controls back to the values in use
+      if (result.rejected.length > 0) redraw = true
       return result
     } finally {
       local -= 1
-      if (errorKey) render()
+      if (redraw || settings.file() !== fileBefore) render()
       else refreshResets()
     }
   }
@@ -194,6 +203,7 @@ export function createSettingsView(
   ): HTMLElement {
     const locked = settings.locked().includes(key)
     const error = errors.get(key)
+    const note = notes.get(key) ?? fileNote(key)
     return h(
       'div',
       { class: 'srow2', 'data-locked': locked ? 'true' : undefined },
@@ -204,6 +214,7 @@ export function createSettingsView(
         (locked ? t('settings.locked') : hint) &&
           h('span', { class: 'shint' }, locked ? t('settings.locked') : (hint ?? '')),
         error && h('span', { class: 'serror', role: 'alert' }, error),
+        note && h('span', { class: 'snote', role: 'status' }, note),
         more,
       ),
       h('div', { class: 'scontrol' }, control, resettable && resetButton(key)),
@@ -211,6 +222,77 @@ export function createSettingsView(
   }
 
   const disabled = (key: string) => settings.locked().includes(key)
+
+  // What the file says about a key that is better told beside its control too
+  function fileNote(key: string): string | undefined {
+    const file = settings.file()
+    if (file.kind !== 'ok') return undefined
+    const issue = file.issues.find((item) => item.key === key && item.kind === 'missingFolder')
+    return issue && t('settings.projectsRoot.missing')
+  }
+
+  const issueText = (issue: SettingsIssue) =>
+    t(`settings.issue.${issue.kind}`, { used: issue.used ?? '' })
+
+  // At most this many issues are listed; the rest are counted, and the file has them all
+  const NOTICE_ROWS = 5
+
+  // Above the tabs: what settings.json says, whichever page is open. Nothing when all is well
+  function fileNotice(): HTMLElement | false {
+    const file = settings.file()
+    const warn = icon(
+      '<path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17.5v.01"/>',
+      14,
+      'snotice-icon',
+    )
+    if (file.kind === 'invalid')
+      return h(
+        'div',
+        { class: 'snotice', role: 'status' },
+        warn,
+        h('p', { class: 'snotice-text' }, t('settings.file.invalid', file)),
+      )
+    if (openFailed)
+      return h(
+        'div',
+        { class: 'snotice', role: 'status' },
+        warn,
+        h('p', { class: 'snotice-text' }, t('settings.file.openFailed')),
+      )
+    if (file.issues.length === 0) return false
+    const shown = file.issues.slice(0, NOTICE_ROWS)
+    const hidden = file.issues.length - shown.length
+    return h(
+      'div',
+      { class: 'snotice', role: 'status' },
+      warn,
+      h(
+        'div',
+        { class: 'snotice-body' },
+        h('p', { class: 'snotice-text' }, i18n.plural('settings.file.issues', file.issues.length)),
+        h(
+          'ul',
+          { class: 'snotice-list' },
+          ...shown.map((issue) =>
+            h(
+              'li',
+              {},
+              h('span', { class: 'snotice-key' }, issue.key),
+              h('span', { class: 'snotice-found' }, issue.found),
+              h('span', { class: 'snotice-why' }, issueText(issue)),
+            ),
+          ),
+          hidden > 0 &&
+            h('li', { class: 'snotice-more' }, t('settings.file.more', { count: hidden })),
+        ),
+      ),
+    )
+  }
+
+  async function openFile() {
+    openFailed = !(await settings.openFile())
+    if (isOpen()) render()
+  }
 
   // `current` stands in for a setting that is null until the user chooses it
   function select(
@@ -287,7 +369,15 @@ export function createSettingsView(
     input.value = String(getPath(settings.current(), key))
     input.addEventListener('change', () => {
       const parsed = Number(input.value)
-      if (Number.isFinite(parsed)) void commit(patchFor(key, parsed)).then(render)
+      if (!Number.isFinite(parsed)) return
+      void commit(patchFor(key, parsed)).then((result) => {
+        // A value out of range is clamped: say so beside the field instead of changing it silently
+        const used = getPath(result.settings, key)
+        if (result.rejected.length === 0 && used !== parsed)
+          notes.set(key, t('settings.adjusted', { value: String(used), min, max }))
+        else notes.delete(key)
+        render()
+      })
     })
     return h('span', { class: 'snumber' }, input, unit && h('span', { class: 'sunit' }, unit))
   }
@@ -637,12 +727,31 @@ export function createSettingsView(
     return sections
   }
 
+  function fileButton(): HTMLElement {
+    const button = h(
+      'button',
+      {
+        type: 'button',
+        class: 'pclose',
+        'data-focus': 'set-open-file',
+        'data-tip': t('settings.file.open'),
+        'aria-label': t('settings.file.open'),
+      },
+      icon(
+        '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M10 12l-1.5 2.5L10 17M14 12l1.5 2.5L14 17"/>',
+        14,
+      ),
+    )
+    button.addEventListener('click', () => void openFile())
+    return button
+  }
+
   function header(): HTMLElement {
     return h(
       'header',
       { class: 'shead2' },
       h('h1', {}, t('settings.title')),
-      closeButton(t, closeView, 'set-close'),
+      h('div', { class: 'shead-actions' }, fileButton(), closeButton(t, closeView, 'set-close')),
     )
   }
 
@@ -929,8 +1038,10 @@ export function createSettingsView(
       ],
     }
 
+    const notice = fileNotice()
     body.replaceChildren(
       header(),
+      ...(notice ? [notice] : []),
       h(
         'div',
         { class: 'sbody' },
@@ -956,8 +1067,10 @@ export function createSettingsView(
 
   function open(tab: TabId = TABS[0].id) {
     confirmingReset = false
+    openFailed = false
     activeTab = tab
     errors.clear()
+    notes.clear()
     overlay.classList.add('open')
     render()
     body.querySelector<HTMLElement>('.snav-item[aria-selected="true"]')?.focus()
@@ -993,6 +1106,11 @@ export function createSettingsView(
   })
   overlay.addEventListener('mousedown', (event) => {
     if (event.target === overlay) closeView()
+  })
+
+  // The file was saved by hand: its errors and ignored values show at once
+  settings.onFile(() => {
+    if (isOpen() && local === 0) render()
   })
 
   // A change coming from outside (opacity shortcut, elsewhere) updates the open screen

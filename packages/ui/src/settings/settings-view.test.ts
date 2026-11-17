@@ -8,35 +8,60 @@ import {
   GITHUB_CONNECTOR,
   GITLAB_CONNECTOR,
   type HostApi,
+  mergeSettings,
   type Settings,
+  type SettingsFileState,
   type SettingsPatch,
+  settingsFileOk,
 } from '@dck/core'
 import { describe, expect, it } from 'vitest'
 import { createKeymap, type Keyboard } from '../platform/keymap.ts'
 import type { SettingsClient } from './settings-client.ts'
 import { createSettingsView } from './settings-view.ts'
 
-function fakeSettings(locked: readonly string[] = [], initial: Settings = defaultSettings) {
+function fakeSettings(
+  locked: readonly string[] = [],
+  initial: Settings = defaultSettings,
+  initialFile: SettingsFileState = settingsFileOk,
+) {
   let current: Settings = initial
+  let file = initialFile
+  let opens = 0
   const patches: SettingsPatch[] = []
   const listeners = new Set<(settings: Settings, changed: readonly string[]) => void>()
+  const fileListeners = new Set<(file: SettingsFileState) => void>()
   const client: SettingsClient = {
     current: () => current,
     locked: () => locked,
     async update(patch) {
       patches.push(patch)
-      current = { ...current, ...patch } as Settings
-      return { settings: current, locked, fresh: false, rejected: [] }
+      if (file.kind === 'invalid')
+        return { settings: current, locked, fresh: false, file, rejected: Object.keys(patch) }
+      current = mergeSettings(current, patch)
+      return { settings: current, locked, fresh: false, file, rejected: [] }
     },
     onChange: (listener) => {
       listeners.add(listener)
       return () => void listeners.delete(listener)
     },
+    file: () => file,
+    onFile: (listener) => {
+      fileListeners.add(listener)
+      return () => void fileListeners.delete(listener)
+    },
+    openFile: async () => {
+      opens += 1
+      return opens < 2
+    },
   }
   const emit = (changed: readonly string[]) => {
     for (const listener of listeners) listener(current, changed)
   }
-  return { client, patches, emit }
+  const emitFile = (next: SettingsFileState) => {
+    file = next
+    for (const listener of fileListeners) listener(next)
+  }
+  return { client, patches, emit, emitFile, opens: () => opens }
 }
 
 // Only what opening the screen asks the host for
@@ -63,13 +88,14 @@ function open(
   host: HostApi = api,
   initial?: Settings,
   keyboard: Keyboard = 'pc',
+  file: SettingsFileState = settingsFileOk,
 ) {
   document.body.replaceChildren()
   const overlay = document.createElement('div')
   const body = document.createElement('div')
   overlay.append(body)
   document.body.append(overlay)
-  const settings = fakeSettings(locked, initial)
+  const settings = fakeSettings(locked, initial, file)
   let closed = false
   const view = createSettingsView(
     { overlay, body },
@@ -96,6 +122,8 @@ function open(
     combobox,
     patches: settings.patches,
     emit: settings.emit,
+    emitFile: settings.emitFile,
+    opens: settings.opens,
     isClosed: () => closed,
   }
 }
@@ -632,6 +660,146 @@ describe('settings view, focus around a connection', () => {
 
     expect(page.isClosed()).toBe(true)
     fake.answer()
+  })
+})
+
+describe('settings view, the settings file', () => {
+  const withIssues: SettingsFileState = {
+    kind: 'ok',
+    issues: [
+      { key: 'theme', kind: 'ignored', found: '"purple"', used: '"dark"' },
+      { key: 'system.notifyAfterSeconds', kind: 'adjusted', found: '2', used: '5' },
+      { key: 'them', kind: 'unknown', found: '"light"' },
+    ],
+  }
+
+  it('should show no notice when the file is used as written', () => {
+    const { body, view } = open()
+
+    expect(body.querySelector('.snotice')).toBeNull()
+    view.close()
+  })
+
+  it('should list each value it did not use with the key, the value found and the one in use', () => {
+    const { body, view } = open([], api, undefined, 'pc', withIssues)
+
+    const notice = body.querySelector('.snotice')
+    const rows = [...body.querySelectorAll('.snotice-list li')].map((row) =>
+      [...row.children].map((cell) => cell.textContent),
+    )
+
+    expect(notice?.querySelector('.snotice-text')?.textContent).toBe(
+      '3 values in settings.json are not used as written',
+    )
+    expect(rows).toEqual([
+      ['theme', '"purple"', 'Not valid, uses "dark"'],
+      ['system.notifyAfterSeconds', '2', 'Adjusted to 5'],
+      ['them', '"light"', 'Not a setting'],
+    ])
+    view.close()
+  })
+
+  it('should count the issues past the first five when the file has many', () => {
+    const many: SettingsFileState = {
+      kind: 'ok',
+      issues: Array.from({ length: 7 }, (_, index) => ({
+        key: `typo${index}`,
+        kind: 'unknown' as const,
+        found: '1',
+      })),
+    }
+
+    const { body, view } = open([], api, undefined, 'pc', many)
+
+    expect(body.querySelectorAll('.snotice-key')).toHaveLength(5)
+    expect(body.querySelector('.snotice-more')?.textContent).toBe('and 2 more in the file')
+    view.close()
+  })
+
+  it('should say where the file broke when it is not valid', () => {
+    const { body, view } = open([], api, undefined, 'pc', { kind: 'invalid', line: 4, column: 12 })
+
+    expect(body.querySelector('.snotice-text')?.textContent).toBe(
+      'settings.json has an error at line 4, column 12. The last valid settings stay in use, and changes here wait until it is fixed.',
+    )
+    view.close()
+  })
+
+  it('should draw the notice at once when the file is saved by hand while the screen is open', () => {
+    const { body, emitFile, view } = open()
+
+    emitFile(withIssues)
+
+    expect(body.querySelectorAll('.snotice-list li')).toHaveLength(3)
+    view.close()
+  })
+
+  it('should put a refused choice back when the file is broken', async () => {
+    const { combobox, patches, view } = open([], api, undefined, 'pc', {
+      kind: 'invalid',
+      line: 1,
+      column: 2,
+    })
+    const theme = combobox('theme')
+    theme.focus()
+
+    press(theme, 'Enter')
+    press(theme, 'ArrowDown')
+    press(theme, 'Enter')
+    await settle()
+
+    expect(patches).toEqual([{ theme: 'light' }])
+    expect(combobox('theme').querySelector('[data-current]')?.textContent).toBe('Dark')
+    view.close()
+  })
+
+  it('should open the file from the header button and say so when no app opened it', async () => {
+    const { body, opens, view } = open()
+    const button = body.querySelector<HTMLButtonElement>('[data-focus="set-open-file"]')
+
+    button?.click()
+    await settle()
+    body.querySelector<HTMLButtonElement>('[data-focus="set-open-file"]')?.click()
+    await settle()
+
+    expect(button?.getAttribute('data-tip')).toBe('Open the settings file')
+    expect(opens()).toBe(2)
+    expect(body.querySelector('.snotice-text')?.textContent).toBe('No app opened settings.json.')
+    view.close()
+  })
+
+  it('should say beside the field that a typed number was adjusted when it is out of range', async () => {
+    const { body, view } = open()
+    body.querySelector<HTMLElement>('#settings-tab-system')?.click()
+    const input = body.querySelector<HTMLInputElement>(
+      '[data-focus="set-system.notifyAfterSeconds"]',
+    )
+    if (!input) throw new Error('invariant: the System page has the notify field')
+
+    input.value = '2'
+    input.dispatchEvent(new Event('change'))
+    await settle()
+
+    const field = body.querySelector<HTMLInputElement>(
+      '[data-focus="set-system.notifyAfterSeconds"]',
+    )
+    expect(field?.value).toBe('5')
+    expect(body.querySelector('.snote')?.textContent).toBe('Adjusted to 5: the range is 5 to 600.')
+    view.close()
+  })
+
+  it('should say beside the folder field that the folder does not exist when the file reports it', () => {
+    const missing: SettingsFileState = {
+      kind: 'ok',
+      issues: [{ key: 'projects.root', kind: 'missingFolder', found: '"/home/ana/gone"' }],
+    }
+    const { body, view } = open([], api, undefined, 'pc', missing)
+
+    body.querySelector<HTMLElement>('#settings-tab-projects')?.click()
+
+    expect(body.querySelector('.snote')?.textContent).toBe('This folder does not exist.')
+    expect(body.querySelector('.snotice-why')?.textContent).toBe('Folder not found')
+    view.close()
   })
 })
 

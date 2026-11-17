@@ -3,6 +3,7 @@ import { EXTENSION_ID_MAX, parseManifest } from '../extensions/manifest.ts'
 import { acceleratorFromEvent } from './accelerator.ts'
 import {
   changedKeys,
+  changedPaths,
   defaultSettings,
   LIMITS,
   mergeSettings,
@@ -258,6 +259,19 @@ describe('mergeSettings', () => {
     mergeSettings(defaultSettings, { theme: 'light' })
 
     expect(defaultSettings).toEqual(before)
+  })
+})
+
+describe('changedPaths', () => {
+  it('should keep a folder with a dot as one key when a review base changes', () => {
+    const after = mergeSettings(
+      defaultSettings,
+      reviewBasePatch('/home/ana/acme.backend', 'origin/dev'),
+    )
+
+    expect(changedPaths(defaultSettings, after)).toEqual([
+      ['review', 'bases', '/home/ana/acme.backend'],
+    ])
   })
 })
 

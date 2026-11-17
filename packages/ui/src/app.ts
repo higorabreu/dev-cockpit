@@ -821,6 +821,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     'system:full-height': () => api.window.toggleFullHeight(),
     'system:theme': toggleTheme,
     'system:settings': () => settingsView.open(),
+    'system:settings-file': () => void settings.openFile(),
     'system:panel': togglePanel,
     'project:search': searchProjects,
     'views:open': () => void viewsView.open(),
@@ -901,6 +902,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
             label: i18n.t('menu.system.settings'),
             shortcut: keymap.label('settings'),
           },
+          { id: 'system:settings-file', label: i18n.t('menu.system.settingsFile') },
           {
             id: 'system:panel',
             label: i18n.t('menu.system.panel'),

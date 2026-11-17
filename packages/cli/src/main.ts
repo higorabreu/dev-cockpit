@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { findRepositoryRoot } from '@dck/adapter-extension-files'
+import { createJsoncSettingsText } from '@dck/adapter-jsonc'
 import {
   connectTo,
   defaultConfigDir,
@@ -57,12 +58,16 @@ if (profile?.kind === 'invalid') {
   process.on('SIGTERM', stopDaemon)
 } else {
   const configDir = process.env.DCK_CONFIG_DIR ?? defaultConfigDir()
-  const settingsText = await readFile(join(configDir, 'settings.json'), 'utf8').catch(
+  const settingsText = createJsoncSettingsText()
+  const settingsContent = await readFile(join(configDir, 'settings.json'), 'utf8').catch(
     () => undefined,
   )
   // The language chosen in the window's settings, else the terminal's
   const t = createTranslator(
-    localeFor(settingsFromText(settingsText).language, environmentLanguages(process.env)),
+    localeFor(
+      settingsFromText(settingsText, settingsContent).language,
+      environmentLanguages(process.env),
+    ),
   ).t
   process.exitCode = await runCli(args, {
     endpoint,
@@ -76,6 +81,7 @@ if (profile?.kind === 'invalid') {
       repositoryRoot: (await findRepositoryRoot(process.cwd())) ?? process.cwd(),
       appVersion: packageJson.version,
       logger: silentLogger,
+      text: settingsText,
       readFile: (path) => readFile(path, 'utf8').catch(() => undefined),
       writeFile: async (path, text) => {
         const temporary = `${path}.tmp`

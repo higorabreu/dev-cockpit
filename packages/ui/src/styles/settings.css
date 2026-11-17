@@ -108,6 +108,73 @@
   font-weight: 600;
 }
 
+.shead-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* What settings.json says: one calm strip above the pages, only while there is something to say */
+.snotice {
+  flex: none;
+  padding: 8px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.snotice-icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--warning);
+}
+
+.snotice-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.snotice-text {
+  margin: 0;
+}
+
+.snotice-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: max-content minmax(0, max-content) minmax(0, 1fr);
+  column-gap: 12px;
+  row-gap: 2px;
+  list-style: none;
+}
+
+.snotice-list li {
+  display: contents;
+}
+
+.snotice-key,
+.snotice-found {
+  overflow: hidden;
+  font: 11.5px var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snotice-found,
+.snotice-why,
+.snotice-list .snotice-more {
+  color: var(--muted);
+}
+
+.snotice-list .snotice-more {
+  display: block;
+  grid-column: 1 / -1;
+}
+
 .pclose {
   width: 26px;
   height: 26px;
@@ -220,6 +287,11 @@
 
 .serror {
   color: var(--critical);
+  font-size: 12px;
+}
+
+.snote {
+  color: var(--warning);
   font-size: 12px;
 }
 

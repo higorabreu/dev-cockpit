@@ -40,6 +40,11 @@
         },
         {
           "type": "json",
+          "path": "packages/adapters/jsonc/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "packages/adapters/linux-proc/package.json",
           "jsonpath": "$.version"
         },

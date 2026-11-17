@@ -33,9 +33,9 @@ Decided with the maintainer:
 
 ## Front B: the settings file (delegated, branch `feat/settings-file`)
 
-- [ ] B1. Comments and trailing commas in `settings.json`; the screen's writes keep the user's comments.
-- [ ] B2. Any field saved by hand applies at once; the window's own writes do not loop; a file that is not
+- [x] B1. Comments and trailing commas in `settings.json`; the screen's writes keep the user's comments.
+- [x] B2. Any field saved by hand applies at once; the window's own writes do not loop; a file that is not
   valid JSON leaves the settings as they were and the screen says where it broke.
-- [ ] B3. The screen lists the fields it ignored or clamped, with the value it found.
-- [ ] B4. "Open the settings file" in the settings screen and the hold menu's System list.
-- [ ] B5. Decision, README, a check in the real app.
+- [x] B3. The screen lists the fields it ignored or clamped, with the value it found.
+- [x] B4. "Open the settings file" in the settings screen and the hold menu's System list.
+- [x] B5. Decision, README, a check in the real app.

@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { createJsoncSettingsText } from '@dck/adapter-jsonc'
 import { createTranslator, silentLogger } from '@dck/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { runCli } from './cli.ts'
@@ -34,6 +35,7 @@ const deps = () =>
     repositoryRoot: join(root, 'project'),
     appVersion: '0.3.0',
     logger: silentLogger,
+    text: createJsoncSettingsText(),
     readFile: (path) => readFile(path, 'utf8').catch(() => undefined),
     writeFile: async (path, text) => {
       await writeFile(path, text)
@@ -123,6 +125,20 @@ describe('createExtDeps saveDisabled', () => {
     expect(after.extensions.disabled).toEqual(['dck.gitlab'])
     expect(after.theme).toBe('light')
     expect(after.connections).toEqual(before.connections)
+  })
+
+  it('should keep the comments and the other values as written when the file was edited by hand', async () => {
+    await writeFile(
+      settingsFile(),
+      '{\n  // Light by day\n  "theme": "light",\n  "fontSize": 99,\n}\n',
+    )
+
+    const result = await deps().saveDisabled(new Set(['dck.gitlab']))
+
+    expect(result).toEqual({ kind: 'saved' })
+    expect(await readFile(settingsFile(), 'utf8')).toBe(
+      '{\n  // Light by day\n  "theme": "light",\n  "fontSize": 99,\n  "extensions": {\n    "disabled": [\n      "dck.gitlab"\n    ]\n  },\n}\n',
+    )
   })
 
   it('should write the list when there is no settings file yet', async () => {

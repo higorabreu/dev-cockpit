@@ -148,6 +148,7 @@ export interface BridgeOptions {
   readonly settings: {
     get(): SettingsView
     update(patch: SettingsPatch): Promise<SettingsUpdate>
+    openFile(): Promise<boolean>
   }
   readonly autostart: Autostart
   readonly connections: Connections
@@ -228,6 +229,8 @@ export function registerHostBridge(options: BridgeOptions) {
   ipcMain.handle(hostChannels.settingsUpdate, (_event, patch: unknown) =>
     options.settings.update(patchSchema.parse(patch) as SettingsPatch),
   )
+  // Takes no argument on purpose: the host knows the one file it opens
+  ipcMain.handle(hostChannels.settingsOpenFile, () => options.settings.openFile())
   const { connections } = options
   const byId =
     (action: (id: string) => Promise<ConnectionStatus>) => (_event: unknown, id: unknown) => {

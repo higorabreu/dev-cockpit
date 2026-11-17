@@ -4,6 +4,7 @@ import { realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
+import { createJsoncSettingsText } from '@dck/adapter-jsonc'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import {
   createGitDiffSource,
@@ -155,6 +156,12 @@ app.whenReady().then(async () => {
     file: settingsFile,
     logger,
     env: process.env,
+    text: createJsoncSettingsText(),
+    isFolder: (path) =>
+      stat(path).then(
+        (stats) => stats.isDirectory(),
+        () => false,
+      ),
     async veto(next, changed) {
       if (!changed.includes('shortcuts.toggleWindow')) return []
       const key = next.shortcuts.toggleWindow
@@ -281,7 +288,17 @@ app.whenReady().then(async () => {
       },
       writeText: async (text) => clipboard.writeText(text),
     },
-    settings: settingsStore,
+    settings: {
+      get: settingsStore.get,
+      update: settingsStore.update,
+      // Only this file: the window asks for it and never names a path
+      async openFile() {
+        if (!(await settingsStore.ensureFile())) return false
+        const error = await electronShell.openPath(settingsFile)
+        if (error) logger.warn('could not open the settings file', { file: settingsFile, error })
+        return error === ''
+      },
+    },
     connections,
     views,
     external: {
@@ -379,10 +396,11 @@ app.whenReady().then(async () => {
       if (!settings.connections[id]?.url) void connection.forgetToken()
     }
   })
+  settingsStore.onFile((file) => send(hostChannels.settingsFile, file))
   const stopWatchingSettings = watchSettingsFile({
     file: settingsFile,
     watch: (folder, listener) => watch(folder, listener),
-    onChange: () => void settingsStore.reloadExtensions(),
+    onChange: () => void settingsStore.reload(),
     scheduler: {
       after(milliseconds, task) {
         const timer = setTimeout(task, milliseconds)

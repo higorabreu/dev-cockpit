@@ -11,9 +11,13 @@ paths:
   (`shell/src/settings/settings-store.ts`) and validated by the model in `core/src/settings/settings.ts`. An
   invalid field goes back to its default by itself; a number out of range is clamped. Never use
   `localStorage` for a user preference.
+- The file is JSON with comments (D65), read and edited through the `SettingsText` port
+  (`@dck/adapter-jsonc`): a write changes only the values that changed and keeps the user's comments and
+  layout; a new file is plain pretty JSON. A file that is not valid is never written over.
 - One exception (D41): `dck ext enable|disable` writes `extensions.disabled` and nothing else, atomically,
-  keeping every other field, and leaves a file that is not valid JSON untouched. The window watches the file
-  (`shell/src/settings/settings-watch.ts`) and applies only that list at once.
+  through the same port. The window watches the file (`shell/src/settings/settings-watch.ts`) and applies
+  any field saved by hand at once (`store.reload`); a value the model does not use as written is listed on
+  the screen by `settingsIssues` in `core/src/settings/settings-file.ts`.
 - **New setting:** add the field to `settingsSchema` with a default and limits, add the row in
   `ui/src/settings/settings-view.ts` with its text in both catalogs, and react to the change in
   `settings.onChange`.

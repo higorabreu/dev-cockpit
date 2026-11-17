@@ -6,6 +6,7 @@ import { EXTENSION_ID_MAX, EXTENSION_ID_PATTERN } from '../extensions/manifest.t
 import { isFontName } from '../fonts/fonts.ts'
 import { PANE_RATIO, SPLIT_PREFERENCES } from '../panes/panes.ts'
 import type { ConnectionFields } from '../ports/connections.ts'
+import type { SettingsFileState } from './settings-file.ts'
 
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
 export const THEMES = ['dark', 'light', 'system'] as const
@@ -227,18 +228,23 @@ const sameValue = (a: unknown, b: unknown) =>
     ? a.length === b.length && a.every((item, index) => item === b[index])
     : a === b
 
-// Keys (dotted) that changed between two settings, to react only to what matters
-export function changedKeys(before: Settings, after: Settings): readonly string[] {
-  const keys: string[] = []
-  const walk = (a: unknown, b: unknown, path: string) => {
+// What changed between two settings, each as its list of keys: a folder used as a key may hold a dot
+export function changedPaths(before: Settings, after: Settings): readonly (readonly string[])[] {
+  const paths: string[][] = []
+  const walk = (a: unknown, b: unknown, path: string[]) => {
     if (isRecord(a) && isRecord(b)) {
       for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
-        walk(a[key], b[key], path ? `${path}.${key}` : key)
+        walk(a[key], b[key], [...path, key])
       }
-    } else if (!sameValue(a, b)) keys.push(path)
+    } else if (!sameValue(a, b)) paths.push(path)
   }
-  walk(before, after, '')
-  return keys
+  walk(before, after, [])
+  return paths
+}
+
+// Keys (dotted) that changed between two settings, to react only to what matters
+export function changedKeys(before: Settings, after: Settings): readonly string[] {
+  return changedPaths(before, after).map((path) => path.join('.'))
 }
 
 export interface SettingsView {
@@ -248,6 +254,8 @@ export interface SettingsView {
   readonly locked: readonly string[]
   // There was no file: first run, when it is worth importing the old preferences
   readonly fresh: boolean
+  // Whether the file could be read and which of its values were not used as written
+  readonly file: SettingsFileState
 }
 
 export interface SettingsUpdate extends SettingsView {

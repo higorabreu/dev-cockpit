@@ -62,6 +62,20 @@ export function buildCli(outfile) {
     platform: 'node',
     format: 'esm',
     logLevel: 'warning',
+    // Its UMD build loads its parts with a require the bundler cannot follow; the ESM build bundles whole
+    alias: {
+      'jsonc-parser': join(
+        repository,
+        'packages',
+        'adapters',
+        'jsonc',
+        'node_modules',
+        'jsonc-parser',
+        'lib',
+        'esm',
+        'main.js',
+      ),
+    },
     banner: {
       js: "import { createRequire as __dckRequire } from 'node:module'; const require = __dckRequire(import.meta.url);",
     },
