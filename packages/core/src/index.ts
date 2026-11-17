@@ -1,6 +1,7 @@
 export * from './attention/agent-signal.ts'
 export * from './attention/connect-hint.ts'
 export * from './attention/duration.ts'
+export * from './attention/notification.ts'
 export * from './attention/program-status.ts'
 export * from './attention/tracker.ts'
 export * from './connections/errors.ts'

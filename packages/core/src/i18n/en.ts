@@ -335,6 +335,7 @@ export const en: Record<MessageKey, string> = {
 
   'notify.title': 'Dev Cockpit',
   'notify.finished': '{tab}: {process} finished in {duration}',
+  'notify.finishedUnknown': '{tab}: the command finished in {duration}',
   'notify.needsYou': '{tab}: the agent needs you',
   'notify.agentAnswered': '{tab}: the agent answered in {duration}',
 

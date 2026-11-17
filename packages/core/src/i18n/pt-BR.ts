@@ -336,6 +336,7 @@ export const ptBR = {
 
   'notify.title': 'Dev Cockpit',
   'notify.finished': '{tab}: {process} terminou em {duration}',
+  'notify.finishedUnknown': '{tab}: o comando terminou em {duration}',
   'notify.needsYou': '{tab}: o agente precisa de você',
   'notify.agentAnswered': '{tab}: o agente respondeu em {duration}',
 

@@ -87,6 +87,7 @@ describe('createAttentionTracker with agent signals', () => {
     expect(event).toEqual({
       kind: 'finished',
       tabId: 'a',
+      source: 'agent',
       process: 'claude',
       durationMs: 5000,
       notify: false,

@@ -18,6 +18,7 @@ import {
   jiraTicketLink,
   localeFor,
   type MenuCategory,
+  notificationText,
   openTab,
   type PluralKey,
   type ProgramStatus,
@@ -277,13 +278,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     if (!event.notify || !tab) return
     api.notifications.show({
       title: i18n.t('notify.title'),
-      body:
-        event.kind === 'needs-you'
-          ? i18n.t('notify.needsYou', { tab: tab.label })
-          : i18n.t('notify.agentAnswered', {
-              tab: tab.label,
-              duration: formatDuration(event.durationMs),
-            }),
+      body: notificationText(event, tab.label, i18n.t),
       tabId: tab.id,
     })
   }
