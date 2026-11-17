@@ -62,6 +62,7 @@ function setup(picked: string | undefined = undefined) {
   const shownPaths: string[] = []
   const diffRequests: DiffRequest[] = []
   const fileReads: string[] = []
+  const savedNotes: string[] = []
   const bridge = registerHostBridge({
     ipcMain,
     ptyHost,
@@ -112,6 +113,12 @@ function setup(picked: string | undefined = undefined) {
         return ok(['one'])
       },
       fingerprint: async (cwd) => `print of ${cwd}`,
+    },
+    reviewNotes: {
+      save: async (root, markdown) => {
+        savedNotes.push(`${root}|${markdown}`)
+        return ok(`${root}/.git/dck/review-20261117-143000.md`)
+      },
     },
     settings: {
       get: () => ({ settings: defaultSettings, locked: [], fresh: true }),
@@ -198,6 +205,7 @@ function setup(picked: string | undefined = undefined) {
     shownPaths,
     diffRequests,
     fileReads,
+    savedNotes,
     fullHeights: () => fullHeightToggles,
   }
 }
@@ -815,6 +823,44 @@ describe('registerHostBridge review', () => {
 
     expect(result).toMatchObject({ ok: false })
     expect(fileReads).toEqual([])
+  })
+
+  it('should save the comments only beside a root a diff answered with', async () => {
+    // Arrange
+    const { call, savedNotes, warnings } = setup()
+    const notes = { root: '/srv/acme/backend', markdown: '# Review comments\n' }
+
+    // Act
+    const before = await call(hostChannels.reviewNotes, notes)
+    await call(hostChannels.reviewDiff, request('/srv/acme/backend'))
+    const after = await call(hostChannels.reviewNotes, notes)
+
+    // Assert
+    expect(before).toMatchObject({ ok: false, error: { data: { code: 'DCK-IPC-003' } } })
+    expect(after).toEqual({
+      ok: true,
+      value: '/srv/acme/backend/.git/dck/review-20261117-143000.md',
+    })
+    expect(savedNotes).toEqual(['/srv/acme/backend|# Review comments\n'])
+    expect(warnings).toEqual([{ message: 'review request refused', context: { kind: 'notes' } }])
+  })
+
+  it.each([
+    ['a relative root', { root: 'srv/acme/backend', markdown: 'x' }],
+    ['no text', { root: '/srv/acme/backend' }],
+    [
+      'a text over a megabyte',
+      { root: '/srv/acme/backend', markdown: 'x'.repeat(1024 * 1024 + 1) },
+    ],
+    ['a payload that is not an object', '/srv/acme/backend'],
+  ])('should refuse to save the comments when the request has %s', async (_label, payload) => {
+    const { call, savedNotes } = setup()
+    await call(hostChannels.reviewDiff, request('/srv/acme/backend'))
+
+    const result = await call(hostChannels.reviewNotes, payload)
+
+    expect(result).toMatchObject({ ok: false, error: { data: { code: 'DCK-IPC-003' } } })
+    expect(savedNotes).toEqual([])
   })
 
   it('should give the fingerprint of an existing folder and nothing for a path it refuses', async () => {

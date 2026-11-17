@@ -9,7 +9,7 @@ ones stay here as intent until their turn comes.
 | 1. Minimal shell | A hotkey window with terminal, panel, projects and hook-based approvals | The author uses it in place of Guake for a week | 0.1.0 shipped. Deferred: approvals through a hook. Agent attention, the tab that needs you, through the agent's own hooks: [plans/agent-attention.md](../plans/agent-attention.md) (D37) |
 | 2. Flow | Real GitLab and Jira, day-to-day views, a user settings screen | The Mine and Review views replace opening Jira and GitLab | In progress: GitLab (To review, Follow up) and Jira Cloud (Tasks, read only) connected as built-in connectors (D41) |
 | E. Extensions | A small foundation (manifest, contribution points, sources), then connectors and interface contributions in an extension host, then a shared index | Each phase has its own criteria in the plan | Foundation done; the harness and packs were dropped (D36); the next phase waits for a real use: [plans/extensions.md](../plans/extensions.md) (D35) |
-| 3. Polish | A diff reader with comments, task refinement | Each item with its own criterion | In progress: the read-only review beside or below the terminal (Ctrl+Shift+D, D47, D48) is phases 1 and 1b of [plans/review.md](../plans/review.md), and phase 1c keeps it up with the agent (D55); comments back to the agent are phase 2 |
+| 3. Polish | A diff reader with comments, task refinement | Each item with its own criterion | In progress: the read-only review beside or below the terminal (Ctrl+Shift+D, D47, D48) is phases 1 and 1b of [plans/review.md](../plans/review.md), phase 1c keeps it up with the agent (D55) and phase 2 sends comments on its lines back to the agent (D56) |
 
 ## Why this order
 
@@ -30,3 +30,9 @@ hook and the signal of the review loop were still bets.
 A graph of people and blockers, automatic context resumption, a "what if" simulation of deadlines, day
 planning against the calendar, project actions for ops, Codex support, Windows packaging. The macOS
 port has a plan in [plans/macos.md](../plans/macos.md).
+
+**Editing files** (asked by the maintainer, 2026-11-17): find a file of the project the way VS Code's quick
+open and the cockpit's project search do, and edit it in place. To weigh before a plan: the editor (CodeMirror
+6 is light and reads the language and `.editorconfig` to keep the indentation; Monaco is VS Code's own but
+costs tens of MB against the idle budget; or the user's terminal editor in a tab), and saving safely while
+an agent may be changing the same file.

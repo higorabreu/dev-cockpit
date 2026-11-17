@@ -22,6 +22,7 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
   const sectorSelected = mix(fg, surface, share(tokens.mix.sectorSelected))
   const listSelected = mix(fg, surface, share(tokens.mix.listSelected))
   const iconIdle = mix(fg, surface, share(tokens.mix.iconIdle))
+  const selectedLine = (base: string) => mix(fg, rgb(base), share(tokens.mix.lineSelected))
 
   const pairs: ReadonlyArray<readonly [string, Rgb, Rgb, number]> = [
     ['primary text on the window', fg, rgb(color.bg), TEXT],
@@ -55,6 +56,10 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     ['code on a removed word', fg, rgb(color.diffRemoveWord), TEXT],
     ['number on a removed line', rgb(color.diffRemoveInk), rgb(color.diffRemove), TEXT],
     ['removed count on the window', rgb(color.diffRemoveInk), rgb(color.bg), TEXT],
+    // A line selected for a comment draws its code, numbers and sign in the primary text
+    ['code on a selected line', fg, selectedLine(color.bg), TEXT],
+    ['code on a selected added line', fg, selectedLine(color.diffAdd), TEXT],
+    ['code on a selected removed line', fg, selectedLine(color.diffRemove), TEXT],
     // A file's state is a letter (M, A, D...) in the ink of its counts, on the index (the window) and on
     // a file's header (the surface); a selected row turns it to primary text, renamed is secondary text
     ['modified file letter on the window', rgb(color.warning), rgb(color.bg), TEXT],

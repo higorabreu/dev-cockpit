@@ -65,6 +65,7 @@ const api: HostApi = {
     diff: (request) => ipcRenderer.invoke(hostChannels.reviewDiff, request),
     fileLines: (root, path) => ipcRenderer.invoke(hostChannels.reviewFile, { root, path }),
     fingerprint: (cwd) => ipcRenderer.invoke(hostChannels.reviewFingerprint, cwd),
+    saveNotes: (root, markdown) => ipcRenderer.invoke(hostChannels.reviewNotes, { root, markdown }),
   },
   autostart: {
     isEnabled: () => ipcRenderer.invoke(hostChannels.autostartGet),

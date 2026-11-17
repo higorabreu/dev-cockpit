@@ -24,6 +24,7 @@ describe('createKeymap labels', () => {
     ['settings', 'Ctrl+,', '⌘,'],
     ['review', 'Ctrl+Shift+D', '⇧⌘D'],
     ['reviewLayout', 'Ctrl+Shift+E', '⇧⌘E'],
+    ['reviewSend', 'Ctrl+Shift+Enter', '⇧⌘Enter'],
     ['fullHeight', 'F11', '⌃⌘F'],
     ['opacityUp', 'Ctrl+Shift+↑', '⇧⌘↑'],
   ] as const)('should label %s as %s on a PC and %s on a Mac', (id, onPc, onMac) => {
