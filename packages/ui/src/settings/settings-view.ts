@@ -759,6 +759,12 @@ export function createSettingsView(
             t('settings.panelOnFullHeight'),
             checkbox('window.panelOnFullHeight'),
           ),
+          row(
+            'window.restoreTabs',
+            t('settings.restoreTabs'),
+            checkbox('window.restoreTabs'),
+            t('settings.restoreTabs.hint'),
+          ),
         ),
         group(
           t('settings.group.review'),

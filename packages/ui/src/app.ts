@@ -27,12 +27,15 @@ import {
   reorderTabs,
   reviewBaseFor,
   reviewBasePatch,
+  type SavedTabs,
   type SessionSnapshot,
+  sameSavedTabs,
   stepFontSize,
   stepOpacity,
   stepTab,
   storedAccount,
   type TabsState,
+  tabsToSave,
 } from '@dck/core'
 import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
 import { createHoldMenuController } from './hold-menu/hold-menu-controller.ts'
@@ -92,6 +95,9 @@ export interface AppElements {
   readonly settings: HTMLElement
   readonly settingsBody: HTMLElement
 }
+
+// A burst of changes, such as several tabs opening, is written once
+const SAVE_TABS_MS = 600
 
 interface OpenOptions {
   readonly cwd?: string
@@ -364,6 +370,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       }
       reviews.syncAgents()
       showAttention()
+      // A cd moved a tab's folder
+      saveTabsSoon()
     },
   })
 
@@ -441,6 +449,57 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     focusActive()
     markActiveSeen()
     panel.refresh()
+    saveTabsSoon()
+  }
+
+  // Tabs that opened with a name of their own (a project's), which the next start gives them again
+  const namedTabs = new Set<string>()
+  // While the last run's tabs open one by one, there is nothing to save yet
+  let restoring = false
+  let lastSaved: SavedTabs | undefined
+  let saveTimer: ReturnType<typeof setTimeout> | undefined
+
+  const projectOf = (id: string) => [...projectTabs].find(([, tabId]) => tabId === id)?.[0]
+
+  // After every change of the tabs and every cd the watcher sees; written only when something changed
+  function saveTabsSoon() {
+    if (restoring || !settings.current().window.restoreTabs) return
+    clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => {
+      const next = tabsToSave(state, (id) => {
+        const cwd = watcher.get(id)?.cwd
+        const project = projectOf(id)
+        return {
+          ...(cwd ? { cwd } : {}),
+          ...(project ? { project } : {}),
+          named: namedTabs.has(id),
+        }
+      })
+      if (sameSavedTabs(lastSaved, next)) return
+      lastSaved = next
+      api.tabs.save(next)
+    }, SAVE_TABS_MS)
+  }
+
+  // The last run's tabs, in their order, folders and names, with the one that was active; else one tab
+  async function restoreTabs() {
+    const saved = settings.current().window.restoreTabs ? await api.tabs.saved() : undefined
+    if (!saved || saved.tabs.length === 0) {
+      await open()
+      return
+    }
+    restoring = true
+    for (const tab of saved.tabs) {
+      const id = await open({
+        ...(tab.cwd ? { cwd: tab.cwd } : {}),
+        ...(tab.label ? { label: tab.label } : {}),
+        ...(tab.project ? { project: tab.project } : {}),
+      })
+      if (tab.name) state = renameTab(state, id, tab.name)
+    }
+    restoring = false
+    lastSaved = saved
+    update(activateTabAt(state, Math.min(saved.active, state.tabs.length - 1)))
   }
 
   function update(next: TabsState) {
@@ -458,6 +517,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     attention.forget(id)
     connectHint.forget(id)
     for (const [path, tabId] of projectTabs) if (tabId === id) projectTabs.delete(path)
+    namedTabs.delete(id)
   }
 
   function close(id: string) {
@@ -472,9 +532,10 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     update(closeOtherTabs(state, id))
   }
 
-  async function open(options: OpenOptions = {}) {
+  async function open(options: OpenOptions = {}): Promise<string> {
     counter += 1
     const id = `tab-${counter}`
+    if (options.label) namedTabs.add(id)
     const view = createTabView(host, {
       t: i18n.t,
       preferences: () => split.current(),
@@ -522,6 +583,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     })
     if (options.project) projectTabs.set(options.project, id)
     update(openTab(state, { id, label: options.label ?? i18n.t('tabs.default', { n: counter }) }))
+    return id
   }
 
   // A folder Ctrl+clicked in a terminal: a tab there or the file manager; the focus returns to that terminal
@@ -891,5 +953,5 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   })
 
   await refreshProjects()
-  await open()
+  await restoreTabs()
 }

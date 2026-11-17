@@ -74,6 +74,7 @@ import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
 import { watchSettingsFile } from './settings/settings-watch.ts'
+import { createSavedTabsFile } from './tabs/saved-tabs-file.ts'
 
 // The compositor answers in a few milliseconds; past this the window opens with the last size it knew
 const WAYLAND_BOUNDS_MS = 150
@@ -299,6 +300,7 @@ app.whenReady().then(async () => {
       createRecencyStore(join(app.getPath('userData'), 'recent-projects.json'), logger),
       createFavoritesStore(join(app.getPath('userData'), 'favorite-projects.json'), logger),
     ),
+    savedTabs: createSavedTabsFile(join(app.getPath('userData'), 'open-tabs.json'), logger),
     // Modal to the window: it stays on top of everything, so a free dialog would open behind it
     async pickFolder() {
       const { canceled, filePaths } = await dialog.showOpenDialog(window, {

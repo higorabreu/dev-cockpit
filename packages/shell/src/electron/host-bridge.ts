@@ -21,6 +21,7 @@ import {
   type PtyOptions,
   type PtySession,
   type ReviewNotes,
+  type SavedTabs,
   type SessionActivityInfo,
   type SessionSnapshot,
   type SettingsPatch,
@@ -30,6 +31,7 @@ import {
 } from '@dck/core'
 import { z } from 'zod'
 import type { ViewsGateway } from '../daemon/views-gateway.ts'
+import { savedTabsSchema } from '../tabs/saved-tabs-file.ts'
 import { createTerminalPaths, type TerminalFiles } from './terminal-paths.ts'
 
 // Each field's value is validated and corrected by the settings model itself
@@ -133,6 +135,11 @@ export interface BridgeOptions {
   readonly ptyHost: PtyHost
   readonly clipboard: Clipboard
   readonly projects: ProjectCatalog
+  // The tabs of the last run, read on start and written as they change
+  readonly savedTabs: {
+    load(): Promise<SavedTabs | undefined>
+    save(tabs: SavedTabs): Promise<void>
+  }
   // The system folder picker over the window; undefined when the user cancels
   pickFolder(): Promise<string | undefined>
   readonly notifier: Notifier
@@ -168,12 +175,20 @@ export function registerHostBridge(options: BridgeOptions) {
   const paths = createTerminalPaths({ files: options.files, home: options.home, logger })
   let nextId = 1
 
-  ipcMain.handle(hostChannels.ptyCreate, (_event, create: PtyCreateOptions) => {
+  const isFolder = (path: string) =>
+    options.files.stat(path).then(
+      (stats) => stats.isDirectory(),
+      () => false,
+    )
+
+  ipcMain.handle(hostChannels.ptyCreate, async (_event, create: PtyCreateOptions) => {
     const id = nextId++
+    // A folder a restored tab kept may be gone since: the terminal starts at home rather than not at all
+    const cwd = create.cwd !== undefined && (await isFolder(create.cwd)) ? create.cwd : options.home
     const session = ptyHost.spawn({
       file: options.shell.file,
       args: options.shell.args,
-      cwd: create.cwd ?? options.home,
+      cwd,
       // Anything running in this terminal, like an agent's hooks, knows which tab it belongs to
       env: { DCK_PTY_ID: String(id) },
       cols: create.cols,
@@ -273,11 +288,6 @@ export function registerHostBridge(options: BridgeOptions) {
   })
   // A file is only read from a repository a diff found, never from any folder the window names
   const reviewRoots = new Set<string>()
-  const isFolder = (path: string) =>
-    options.files.stat(path).then(
-      (stats) => stats.isDirectory(),
-      () => false,
-    )
   ipcMain.handle(hostChannels.reviewDiff, async (_event, payload: unknown) => {
     const parsed = diffRequestSchema.safeParse(payload)
     if (!parsed.success || !(await isFolder(parsed.data.cwd))) {
@@ -353,6 +363,12 @@ export function registerHostBridge(options: BridgeOptions) {
     void options.projects.touch(path)
   })
   ipcMain.on(hostChannels.windowToggleFullHeight, () => options.toggleFullHeight())
+  ipcMain.handle(hostChannels.tabsSaved, () => options.savedTabs.load())
+  ipcMain.on(hostChannels.tabsSave, (_event, payload: unknown) => {
+    const parsed = savedTabsSchema.safeParse(payload)
+    if (parsed.success) void options.savedTabs.save(parsed.data)
+    else logger.warn('tabs to save refused')
+  })
 
   return {
     killAll() {

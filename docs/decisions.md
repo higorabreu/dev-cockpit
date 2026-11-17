@@ -997,3 +997,19 @@ was chosen over a small dialog: it keeps the eye on the tab and costs no extra s
 terminal's current folder was offered and declined: the automatic name stays as it was.
 **How to revert:** drop `renameTab` and `autoLabel` from `core/src/tabs/tabs.ts`, `rename` from
 `ui/src/tabs/tab-bar.ts`, the `renameTab` shortcut, the menu items and the `.tab-name` styles.
+
+## D64. The tabs of the last run open again on start
+
+**Decision:** on start the window opens the tabs of the last run in their order, each in the folder its
+terminal was in (it follows `cd`), with the name the user gave it, and activates the one that was. A
+project's tab keeps its project's name and stays tied to the project. A folder that is gone opens the
+home folder. What ran in a tab (an agent, a server) does not come back: only its shell, in its folder.
+The window writes `open-tabs.json` in the app's data folder after every change of the tabs and every
+`cd` the watcher sees, debounced and only when something changed; the host validates it with zod and
+writes it atomically. "Reopen the tabs on start" in the Window group of the settings turns it off; it is
+on by default.
+**Reason:** the maintainer asked for the tabs, by folder and with their names, to survive a restart
+(2026-11-17), and chose the terminal's current folder over the one the tab opened in.
+**How to revert:** drop `core/src/tabs/saved-tabs.ts`, the `tabs` part of the host API and its channels,
+`shell/src/tabs/saved-tabs-file.ts`, the `window.restoreTabs` setting and `restoreTabs` and
+`saveTabsSoon` in `ui/src/app.ts`, and open one tab on start again.

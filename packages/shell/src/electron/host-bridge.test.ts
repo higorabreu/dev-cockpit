@@ -9,6 +9,7 @@ import {
   noBranchInfo,
   ok,
   reviewDiff,
+  type SavedTabs,
   type TabNotification,
 } from '@dck/core'
 import { FakePtyHost, MemoryClipboard } from '@dck/core/testing'
@@ -63,6 +64,7 @@ function setup(picked: string | undefined = undefined) {
   const diffRequests: DiffRequest[] = []
   const fileReads: string[] = []
   const savedNotes: string[] = []
+  let savedTabs: SavedTabs | undefined
   const bridge = registerHostBridge({
     ipcMain,
     ptyHost,
@@ -171,6 +173,12 @@ function setup(picked: string | undefined = undefined) {
       touch: async (path: string) => void touched.push(path),
       toggleFavorite: async (path: string) => !path.endsWith('/pinned'),
     },
+    savedTabs: {
+      load: async () => savedTabs,
+      save: async (tabs) => {
+        savedTabs = tabs
+      },
+    },
     pickFolder: async () => picked,
     shell: { file: '/bin/zsh', args: [] },
     home: '/home/usuario',
@@ -219,6 +227,22 @@ describe('registerHostBridge pty', () => {
     expect(id).toBe(1)
     expect(ptyHost.sessions).toHaveLength(1)
     expect(ptyHost.sessions[0]?.size).toEqual({ cols: 100, rows: 30 })
+  })
+
+  it('should start a terminal in the folder a restored tab kept when it still exists', async () => {
+    const { call, ptyHost } = setup()
+
+    await call(hostChannels.ptyCreate, { cols: 80, rows: 24, cwd: '/srv/acme/backend/src' })
+
+    expect(ptyHost.sessions[0]?.cwd).toBe('/srv/acme/backend/src')
+  })
+
+  it('should start a terminal at home when the folder a restored tab kept is gone', async () => {
+    const { call, ptyHost } = setup()
+
+    await call(hostChannels.ptyCreate, { cols: 80, rows: 24, cwd: '/srv/acme/removed' })
+
+    expect(ptyHost.sessions[0]?.cwd).toBe('/home/usuario')
   })
 
   it('should forward the process output to the interface when the session prints', async () => {
@@ -876,5 +900,29 @@ describe('registerHostBridge review', () => {
 
     // Assert
     expect(answers).toEqual(['print of /srv/acme/backend', undefined, undefined])
+  })
+})
+
+describe('registerHostBridge saved tabs', () => {
+  it('should give back the tabs it was asked to keep', async () => {
+    // Arrange
+    const { call } = setup()
+    const tabs = { tabs: [{ cwd: '/srv/acme/backend', name: 'api' }, {}], active: 1 }
+
+    // Act
+    call(hostChannels.tabsSave, tabs)
+
+    // Assert
+    expect(await call(hostChannels.tabsSaved)).toEqual(tabs)
+  })
+
+  it('should refuse tabs that do not match the shape and keep what it had', async () => {
+    const { call, warnings } = setup()
+    call(hostChannels.tabsSave, { tabs: [{ name: 'api' }], active: 0 })
+
+    call(hostChannels.tabsSave, { tabs: [{ name: '' }], active: -1 })
+
+    expect(await call(hostChannels.tabsSaved)).toEqual({ tabs: [{ name: 'api' }], active: 0 })
+    expect(warnings.map((warning) => warning.message)).toContain('tabs to save refused')
   })
 })

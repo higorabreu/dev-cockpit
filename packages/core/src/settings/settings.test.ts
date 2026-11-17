@@ -26,7 +26,7 @@ describe('parseSettings', () => {
       theme: 'dark',
       opacity: 0.92,
       fontSize: 16,
-      window: { heightRatio: 0.5, panelOnFullHeight: true },
+      window: { heightRatio: 0.5, panelOnFullHeight: true, restoreTabs: true },
       shortcuts: { toggleWindow: 'F12', holdTrigger: null },
       projects: { root: null, depth: 2 },
       connections: {},
@@ -196,7 +196,7 @@ describe('mergeSettings', () => {
   it('should change only the given field and keep the rest when merging a patch', () => {
     const merged = mergeSettings(defaultSettings, { window: { heightRatio: 0.7 } })
 
-    expect(merged.window).toEqual({ heightRatio: 0.7, panelOnFullHeight: true })
+    expect(merged.window).toEqual({ heightRatio: 0.7, panelOnFullHeight: true, restoreTabs: true })
     expect(merged.theme).toBe('dark')
   })
 

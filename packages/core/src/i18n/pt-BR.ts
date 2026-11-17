@@ -229,6 +229,9 @@ export const ptBR = {
   'settings.heightRatio': 'Altura ancorada',
   'settings.heightRatio.hint': 'Parte da altura da tela que a janela ocupa.',
   'settings.panelOnFullHeight': 'Abrir o painel em altura total',
+  'settings.restoreTabs': 'Reabrir as abas ao iniciar',
+  'settings.restoreTabs.hint':
+    'Cada uma na sua pasta e com o seu nome. O que rodava na aba, como um agente, não volta.',
   'settings.group.shortcuts': 'Atalhos',
   'settings.toggleWindow': 'Abrir e fechar a janela',
   'settings.toggleWindow.hint': 'Atalho global: vale em qualquer programa.',
