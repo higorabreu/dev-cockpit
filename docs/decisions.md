@@ -783,6 +783,18 @@ window open twice and flash, because Chromium learns the scale some frames later
 **How to revert:** drop `beforeShow` and `boundedScreen` from `shell/src/main.ts`; the window then opens
 sized for the primary monitor under native Wayland.
 
+## D53. With no catalog for the system language, the cockpit speaks English
+
+**Decision:** when the language setting is automatic and no system language has a catalog, the window,
+the tray and the `dck` command use English (`pickLocale` in `core/src/i18n/translator.ts`). The command
+also follows the language chosen in the window's settings, and with the automatic setting reads the
+terminal the way gettext does: the `LANGUAGE` list first, then `LC_ALL`, `LC_MESSAGES` and `LANG`, with
+`LANGUAGE` ignored under the C locale (`environmentLanguages`). The `.deb` menu action is in English with
+a Portuguese translation.
+**Reason:** a German or French system opened the cockpit in Portuguese, the first impression for most
+people who find the project, and `dck` answered in the terminal's language even when the window had
+another one chosen.
+**How to revert:** return `'pt-BR'` from the end of `pickLocale`.
 ## D54. The .deb runs on Ubuntu 22.04 and Debian 12, and says what glibc it needs
 
 **Decision:** the `.deb` is built on a pinned runner (`ubuntu-24.04` for both processors), never on

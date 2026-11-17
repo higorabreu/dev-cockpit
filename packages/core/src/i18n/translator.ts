@@ -59,12 +59,26 @@ export function createLiveTranslator(initial: Locale): LiveTranslator {
   }
 }
 
-// System language, falling back to Portuguese when nothing matches
+// System language, falling back to English when there is no catalog for it
 export function pickLocale(languages: readonly string[]): Locale {
   for (const language of languages) {
     const lower = language.toLowerCase()
     if (lower.startsWith('pt')) return 'pt-BR'
     if (lower.startsWith('en')) return 'en'
   }
-  return 'pt-BR'
+  return 'en'
+}
+
+// The user's choice wins over the system language
+export function localeFor(setting: 'auto' | Locale, systemLanguages: readonly string[]): Locale {
+  return setting === 'auto' ? pickLocale(systemLanguages) : setting
+}
+
+// A terminal's languages in gettext's order: the LANGUAGE list first, then the message locale.
+// gettext ignores LANGUAGE under the C locale
+export function environmentLanguages(env: Readonly<Record<string, string | undefined>>): string[] {
+  const locale = env.LC_ALL || env.LC_MESSAGES || env.LANG || ''
+  const isC = locale === '' || /^(C|POSIX)([._@]|$)/.test(locale)
+  const preferred = isC ? [] : (env.LANGUAGE ?? '').split(':')
+  return [...preferred, locale].filter((language) => language !== '')
 }

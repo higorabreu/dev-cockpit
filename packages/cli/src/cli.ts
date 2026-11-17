@@ -46,7 +46,7 @@ const usage = (text: string, unavailable: readonly string[]) =>
     .join('\n')
 
 export async function runCli(argv: readonly string[], deps: CliDeps): Promise<number> {
-  const t = deps.t ?? createTranslator('pt-BR').t
+  const t = deps.t ?? createTranslator('en').t
   const [command, ...rest] = argv
   if (command === 'agent' && rest[0] === 'signal') {
     await signalAgent(rest.slice(1), { ...deps, env: deps.env ?? {} })
