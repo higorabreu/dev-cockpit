@@ -18,6 +18,11 @@
   display: none;
 }
 
+/* The pane is a container, so its open dropdown cannot rise above the divider beside it: the pane does */
+.review:has(.select[aria-expanded="true"]) {
+  z-index: 3;
+}
+
 .rv-head {
   flex: none;
   display: flex;
