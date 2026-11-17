@@ -174,3 +174,21 @@ export function boundedScreen(screen: SystemScreen, area: () => Size | undefined
     },
   }
 }
+
+export interface WaylandArea {
+  // The last size the compositor gave, if it ever answered
+  current(): Size | undefined
+  // Asks again; a compositor that does not answer in time leaves the last size in place
+  refresh(): Promise<void>
+}
+
+export function createWaylandArea(read: () => Promise<Size | undefined>): WaylandArea {
+  let current: Size | undefined
+  return {
+    current: () => current,
+    async refresh() {
+      const area = await read()
+      if (area) current = area
+    },
+  }
+}
