@@ -75,8 +75,8 @@ export function fileLabel(
   const named = i18n.t('review.a11y.file', {
     path: file.path,
     status: i18n.t(statusKey(file)),
-    added: file.additions,
-    removed: file.deletions,
+    added: i18n.plural('review.a11y.added', file.additions),
+    removed: i18n.plural('review.a11y.removed', file.deletions),
   })
   const name = viewed ? i18n.t('review.a11y.viewed', { file: named }) : named
   const why = noticeText(file, notice, i18n)
