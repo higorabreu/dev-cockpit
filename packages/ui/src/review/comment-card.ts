@@ -135,8 +135,9 @@ export function createCommentEditor(
 ) {
   const { i18n } = deps
   const label = i18n.t('review.comment.field', { lines: linesLabel(comment.lines, i18n) })
+  // The design system's scrollbar, as every scrolling area of the cockpit has
   const field = h('textarea', {
-    class: 'rv-field',
+    class: 'rv-field scroll',
     rows: '4',
     'aria-label': label,
     placeholder: i18n.t('review.comment.placeholder'),
