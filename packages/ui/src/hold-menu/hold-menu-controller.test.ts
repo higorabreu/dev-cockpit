@@ -140,23 +140,43 @@ describe('createHoldMenuController list', () => {
     menu.release()
   })
 
-  it('should move the selection one row per step when the mouse wheel turns over the list', () => {
+  it('should move the selection one row per notch when the mouse wheel turns over the list', () => {
     // Arrange
     const menu = setup()
 
     // Act
-    const event = wheel(menu.list(), 80)
+    const events = [wheel(menu.list(), 100), wheel(menu.list(), 100)]
 
     // Assert
-    expect(event.defaultPrevented).toBe(true)
+    expect(events.every((event) => event.defaultPrevented)).toBe(true)
     expect(menu.selected()).toBe('2')
+    menu.release()
+  })
+
+  it('should add up small deltas into one row when a touchpad scrolls the list', () => {
+    const menu = setup()
+
+    for (const delta of [15, 15, 15]) wheel(menu.list(), delta)
+
+    expect(menu.selected()).toBe('1')
+    menu.release()
+  })
+
+  it('should move the selection up when the mouse wheel turns the other way', () => {
+    const menu = setup()
+    wheel(menu.list(), 100)
+    wheel(menu.list(), 100)
+
+    wheel(menu.list(), -100)
+
+    expect(menu.selected()).toBe('1')
     menu.release()
   })
 
   it('should stop at the last row when the mouse wheel turns past it', () => {
     const menu = setup()
 
-    wheel(menu.list(), 1000)
+    for (let notch = 0; notch < 10; notch++) wheel(menu.list(), 100)
 
     expect(menu.selected()).toBe('6')
     menu.release()
@@ -164,7 +184,7 @@ describe('createHoldMenuController list', () => {
 
   it('should run the row the mouse wheel selected when the trigger is released', () => {
     const menu = setup()
-    wheel(menu.list(), 120)
+    for (let notch = 0; notch < 3; notch++) wheel(menu.list(), 100)
 
     menu.release()
 

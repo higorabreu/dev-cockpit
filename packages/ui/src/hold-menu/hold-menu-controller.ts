@@ -26,7 +26,8 @@ import { createPointerIntent } from './pointer-intent.ts'
 const EDGE = 8
 // Measuring settles the rows in two repaints at most; the third pass is a guard
 const FIT_PASSES = 3
-// Pixels of mouse wheel travel per row
+// Wheel travel that moves the selection one row: a mouse notch (about 100 pixels) moves one row, not
+// several, so the selection stays precise; a touchpad's small deltas add up to it
 const WHEEL_STEP = 40
 
 export interface MenuTab {
@@ -248,10 +249,10 @@ export function createHoldMenuController(
     consume(event)
     wheelTravel +=
       event.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? event.deltaY : event.deltaY * WHEEL_STEP
-    const steps = Math.trunc(wheelTravel / WHEEL_STEP)
-    if (steps === 0) return
-    wheelTravel -= steps * WHEEL_STEP
-    selectRow(selectedIndex(mode.menu) + steps)
+    if (Math.abs(wheelTravel) < WHEEL_STEP) return
+    const step = Math.sign(wheelTravel)
+    wheelTravel = 0
+    selectRow(selectedIndex(mode.menu) + step)
   }
 
   function onPointer(event: MouseEvent) {
