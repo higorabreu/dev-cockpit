@@ -247,6 +247,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const body = h('div', { class: 'rv-body' }, list.element, diff.element)
   const message = h('div', { class: 'rv-state' })
   const hints = hintBar()
+  new ResizeObserver(() => fitHints()).observe(hints)
   const element = h(
     'section',
     { class: 'review', id: deps.id, tabindex: '-1' },
@@ -485,7 +486,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   let hintsFor: string | undefined
   function drawHints() {
     const withFiles = state.kind === 'ok' && state.diff.files.length > 0
-    const key = `${withFiles} ${focusInside}`
+    // In the comment field only its own keys apply
+    const typing = document.activeElement instanceof HTMLTextAreaElement && focusInside
+    const key = `${withFiles} ${focusInside} ${typing}`
     if (hintsFor === key) return
     hintsFor = key
     if (!focusInside) {
@@ -494,21 +497,46 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       hints.replaceChildren(come)
       return
     }
+    if (typing) {
+      hints.replaceChildren(
+        keyHint(deps.keymap.commandLabel('Enter'), t('review.hint.save')),
+        keyHint('Esc', t('review.hint.cancel')),
+      )
+      return
+    }
     const refreshAction = actionHint(deps.keymap.commandLabel('r'), t('review.refresh'))
     refreshAction.addEventListener('click', () => refresh.request())
+    // The number is the order in which a hint gives way when the bar has no room for all of them
+    const droppable = (hint: HTMLElement, order: number) => {
+      hint.dataset.drop = String(order)
+      return hint
+    }
     hints.replaceChildren(
       ...(withFiles
         ? [
-            keyHint('↑↓', t('review.hint.navigate')),
-            keyHint('[ ]', t('review.hint.file')),
-            keyHint('n p', t('review.hint.hunk')),
-            keyHint('c', t('review.hint.comment')),
-            keyHint('v', t('review.hint.viewed')),
+            droppable(keyHint('↑↓', t('review.hint.navigate')), 5),
+            droppable(keyHint('[ ]', t('review.hint.file')), 3),
+            droppable(keyHint('n p', t('review.hint.hunk')), 2),
+            droppable(keyHint('c', t('review.hint.comment')), 4),
+            droppable(keyHint('v', t('review.hint.viewed')), 1),
           ]
         : []),
       keyHint('Esc', t('review.hint.terminal')),
       refreshAction,
     )
+    fitHints()
+  }
+
+  // The way back to the terminal and Refresh always stay; the review's keys give way one by one
+  function fitHints() {
+    const droppable = [...hints.querySelectorAll<HTMLElement>('[data-drop]')].sort(
+      (a, b) => Number(a.dataset.drop) - Number(b.dataset.drop),
+    )
+    for (const hint of droppable) hint.hidden = false
+    for (const hint of droppable) {
+      if (hints.scrollWidth <= hints.clientWidth) return
+      hint.hidden = true
+    }
   }
 
   function drawStatus() {

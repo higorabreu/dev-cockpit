@@ -859,9 +859,7 @@
   white-space: nowrap;
 }
 
-/* In a narrow pane the hints that are also on the screen give way to the keys */
-@container (max-width: 520px) {
-  .review .phint .pkey:nth-child(2) {
-    display: none;
-  }
+/* A hint that gives way when the bar has no room for every one (fitHints) */
+.review .phint > [hidden] {
+  display: none;
 }

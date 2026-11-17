@@ -421,6 +421,8 @@ export const ptBR = {
   'review.hint.expand': 'expandir',
   'review.hint.terminal': 'terminal',
   'review.hint.review': 'revisão',
+  'review.hint.save': 'salvar',
+  'review.hint.cancel': 'cancelar',
   'review.a11y.dividerStacked': 'Altura da revisão',
   'review.a11y.changes.one': 'Alterações em {count} arquivo',
   'review.a11y.changes.other': 'Alterações em {count} arquivos',

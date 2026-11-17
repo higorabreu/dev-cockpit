@@ -420,6 +420,8 @@ export const en: Record<MessageKey, string> = {
   'review.hint.expand': 'expand',
   'review.hint.terminal': 'terminal',
   'review.hint.review': 'review',
+  'review.hint.save': 'save',
+  'review.hint.cancel': 'cancel',
   'review.a11y.dividerStacked': 'Height of the review',
   'review.a11y.changes.one': 'Changes in {count} file',
   'review.a11y.changes.other': 'Changes in {count} files',
