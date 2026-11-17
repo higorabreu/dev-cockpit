@@ -5,6 +5,7 @@ import {
   type Connector,
   createTranslator,
   defaultSettings,
+  GITHUB_CONNECTOR,
   GITLAB_CONNECTOR,
   type HostApi,
   type Settings,
@@ -371,6 +372,18 @@ describe('settings view, connections', () => {
     expect(body.textContent).toContain(
       'read_api scope. Kept in the system keyring, never in a file.',
     )
+    view.close()
+  })
+
+  it('should give GitHub the fine-grained read-only permissions in its token hint', async () => {
+    const { body, view } = await connectionsPage(connectionsHost([GITHUB_CONNECTOR]).host)
+
+    expect(body.textContent).toContain(
+      'Fine-grained, read only: Pull requests, Commit statuses and Metadata.',
+    )
+    expect(
+      body.querySelector<HTMLInputElement>('[data-focus="conn-github-url"]')?.placeholder,
+    ).toBe('https://github.com')
     view.close()
   })
 
