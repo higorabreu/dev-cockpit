@@ -8,7 +8,13 @@ import {
   type Translate,
 } from '@dck/core'
 import { keysMarkup } from '../kit/keys.ts'
-import { listAnchor, type RowWindow, WHEEL_SIZE } from './list-fit.ts'
+import {
+  COMPACT_WHEEL,
+  listAnchor,
+  type RowWindow,
+  WHEEL_SIZE,
+  type WheelLayout,
+} from './list-fit.ts'
 
 const PATHS: Record<string, string> = {
   window: 'M4 6h16v12H4zM4 10h16',
@@ -23,9 +29,17 @@ const ICON_ATTRS =
 const IDENTITY_PATH =
   'M20 64C20 38 36 22 56 22C73 22 84 33 84 48L84 64C84 71 79 76 72 76L32 76C25 76 20 71 20 64ZM46 44H80V60C80 64 77 67 73 67H52C48.7 67 46 64.3 46 61Z'
 
-const INNER = 38
-const OUTER = 96
+// Radii of the hub, the sectors and the labels' centers; the compact wheel keeps the text at full size
+interface Geometry {
+  readonly size: number
+  readonly inner: number
+  readonly outer: number
+  readonly label: number
+}
+const FULL: Geometry = { size: WHEEL_SIZE, inner: 38, outer: 96, label: 68 }
+const COMPACT: Geometry = { size: COMPACT_WHEEL, inner: 26, outer: 80, label: 52 }
 const GAP = 4
+const CENTERED: WheelLayout = { size: WHEEL_SIZE, top: 0, overlap: 0 }
 
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
 const escapeHtml = (text: string) => text.replace(/[&<>"]/g, (char) => ENTITIES[char] ?? char)
@@ -34,7 +48,7 @@ const point = (radius: number, angle: number) =>
   [Math.cos(angle) * radius, Math.sin(angle) * radius] as const
 
 // Each radial edge is shifted inward from the sector, leaving a constant-width gap
-function sectorPath(index: number, count: number) {
+function sectorPath(index: number, count: number, geometry: Geometry) {
   const step = (2 * Math.PI) / count
   const start = sectorAngle(index, count) - step / 2
   const end = start + step
@@ -44,18 +58,20 @@ function sectorPath(index: number, count: number) {
     const uy = Math.sin(angle)
     return `${fixed(ux * radius - uy * half * side)} ${fixed(uy * radius + ux * half * side)}`
   }
-  const outer = fixed(Math.hypot(OUTER, half))
-  const inner = fixed(Math.hypot(INNER, half))
-  return `M${edge(start, OUTER, 1)} A${outer} ${outer} 0 0 1 ${edge(end, OUTER, -1)} L${edge(end, INNER, -1)} A${inner} ${inner} 0 0 0 ${edge(start, INNER, 1)}Z`
+  const { inner, outer } = geometry
+  const outerArc = fixed(Math.hypot(outer, half))
+  const innerArc = fixed(Math.hypot(inner, half))
+  return `M${edge(start, outer, 1)} A${outerArc} ${outerArc} 0 0 1 ${edge(end, outer, -1)} L${edge(end, inner, -1)} A${innerArc} ${innerArc} 0 0 0 ${edge(start, inner, 1)}Z`
 }
 
-function fanStyle(index: number, count: number) {
-  const { opening, x, y } = listAnchor(index, count)
+function fanStyle(index: number, count: number, layout: WheelLayout) {
+  const { opening, x, y } = listAnchor(index, count, layout.size)
   let shift = 'translate(-50%, 0)'
   if (opening === 'side')
-    shift = x > WHEEL_SIZE / 2 ? 'translate(0, -50%)' : 'translate(-100%, -50%)'
+    shift = x > layout.size / 2 ? 'translate(0, -50%)' : 'translate(-100%, -50%)'
   else if (opening === 'up') shift = 'translate(-50%, -100%)'
-  return `left:${fixed(x)}px;top:${fixed(y)}px;transform:${shift}`
+  const top = opening === 'up' ? y + layout.overlap : y - layout.overlap
+  return `left:${fixed(x)}px;top:${fixed(top)}px;transform:${shift}`
 }
 
 const CHEVRONS = { before: 'M4 10l4-4 4 4', after: 'M4 6l4 4 4-4' }
@@ -103,14 +119,22 @@ export interface MenuMarkup {
 }
 
 // Shows the selected category's rows inside `shown`, or all of them; the rest sits behind overflow cues
-export function wheelMarkup(state: HoldMenuState, t: Translate, shown?: RowWindow): MenuMarkup {
+export function wheelMarkup(
+  state: HoldMenuState,
+  t: Translate,
+  shown?: RowWindow,
+  layout = CENTERED,
+): MenuMarkup {
   const count = state.categories.length
   const category = currentCategory(state)
+  // Below the compact size the compact drawing scales down with the wheel
+  const geometry = layout.size >= WHEEL_SIZE ? FULL : COMPACT
+  const half = geometry.size / 2
   const sectors = state.categories
     .map((entry, index) => {
-      const [x, y] = point(68, sectorAngle(index, count))
+      const [x, y] = point(geometry.label, sectorAngle(index, count))
       const on = index === state.category ? ' on' : ''
-      return `<g class="sec${on}" data-category="${index}"><path d="${sectorPath(index, count)}"/><svg class="glyph" x="${fixed(x - 10)}" y="${fixed(y - 19)}" width="20" height="20" ${ICON_ATTRS}><path d="${PATHS[entry.icon] ?? ''}"/></svg><text x="${fixed(x)}" y="${fixed(y + 17)}">${escapeHtml(entry.label)}</text></g>`
+      return `<g class="sec${on}" data-category="${index}"><path d="${sectorPath(index, count, geometry)}"/><svg class="glyph" x="${fixed(x - 10)}" y="${fixed(y - 19)}" width="20" height="20" ${ICON_ATTRS}><path d="${PATHS[entry.icon] ?? ''}"/></svg><text x="${fixed(x)}" y="${fixed(y + 17)}">${escapeHtml(entry.label)}</text></g>`
     })
     .join('')
   const hub = category
@@ -119,10 +143,10 @@ export function wheelMarkup(state: HoldMenuState, t: Translate, shown?: RowWindo
   const list =
     state.category === CENTER
       ? ''
-      : `<div class="list fan" style="${fanStyle(state.category, count)}">${category ? listMarkup(category, selectedIndex(state), shown, t) : ''}</div>`
+      : `<div class="list fan" style="${fanStyle(state.category, count, layout)}">${category ? listMarkup(category, selectedIndex(state), shown, t) : ''}</div>`
   return {
     mode: 'wheel-mode',
-    card: `<svg class="wheel" width="${WHEEL_SIZE}" height="${WHEEL_SIZE}" viewBox="-98 -98 196 196"><circle class="backdrop" r="98"/>${sectors}${hub}</svg>${list}`,
+    card: `<svg class="wheel" width="${fixed(layout.size)}" height="${fixed(layout.size)}" viewBox="${-half} ${-half} ${geometry.size} ${geometry.size}"><circle class="backdrop" r="${half}"/>${sectors}${hub}</svg>${list}`,
     hint: `<span>${kbd(['←', '→', '↑', '↓'])} ${escapeHtml(t('menu.hint.navigate'))}</span><span>${escapeHtml(t('menu.hint.release'))}</span><span>${kbd(['Esc'])} ${escapeHtml(t('menu.hint.cancel'))}</span>`,
   }
 }

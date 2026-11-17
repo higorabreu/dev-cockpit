@@ -40,7 +40,9 @@ const TABS: MenuCategory = {
   items: Array.from({ length: 7 }, (_, index) => ({ id: `tab:${index}`, label: `Tab ${index}` })),
 }
 
-function setup() {
+// A short window by default: the compact wheel, moved down, leaves room for two rows above it
+function setup(windowHeight = 340) {
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: windowHeight })
   document.body.replaceChildren()
   const [scrim, card, hint, bar] = ['div', 'div', 'div', 'div'].map((tag) =>
     document.createElement(tag),
@@ -81,7 +83,7 @@ function setup() {
   const visible = () =>
     [...list().querySelectorAll<HTMLElement>('.it:not(.gone)')].map((row) => row.dataset.item)
   const release = () => key('keyup', 'ControlRight')
-  return { list, selected, visible, release, runs }
+  return { card, list, selected, visible, release, runs }
 }
 
 const wheel = (target: HTMLElement, deltaY: number) => {
@@ -94,6 +96,7 @@ describe('createHoldMenuController list', () => {
   const descriptors = {
     height: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight'),
     top: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop'),
+    window: Object.getOwnPropertyDescriptor(window, 'innerHeight'),
   }
 
   beforeEach(fakeLayout)
@@ -102,15 +105,48 @@ describe('createHoldMenuController list', () => {
     if (descriptors.height)
       Object.defineProperty(HTMLElement.prototype, 'offsetHeight', descriptors.height)
     if (descriptors.top) Object.defineProperty(HTMLElement.prototype, 'offsetTop', descriptors.top)
+    if (descriptors.window) Object.defineProperty(window, 'innerHeight', descriptors.window)
+    else Reflect.deleteProperty(window, 'innerHeight')
+  })
+
+  it('should move the wheel down so every row fits above it when centering leaves too little room', () => {
+    // Arrange and Act: centered in 600 pixels, the wheel leaves 182 above it; the seven rows need 243
+    const menu = setup(600)
+
+    // Assert
+    expect(menu.visible()).toEqual(['0', '1', '2', '3', '4', '5', '6'])
+    expect(menu.card.style.top).toBe('263px')
+    expect(menu.card.style.getPropertyValue('--wheel')).toBe('196px')
+    menu.release()
+  })
+
+  it('should place the wheel without a slide each time the menu opens', () => {
+    // Arrange
+    const menu = setup()
+    const placedWhileOpen = menu.card.dataset.placed
+
+    // Act
+    menu.release()
+
+    // Assert: the slide is on only once the wheel is on screen, so it never starts from the last opening
+    expect(placedWhileOpen).toBe('')
+    expect(menu.card.dataset.placed).toBeUndefined()
+  })
+
+  it('should draw the compact wheel when the window is short', () => {
+    const menu = setup()
+
+    expect(menu.card.style.getPropertyValue('--wheel')).toBe('164px')
+    menu.release()
   })
 
   it('should window the list and show a cue below when the rows do not fit above the wheel', () => {
-    // Arrange and Act: a wheel at the top of the window leaves no room above it
+    // Arrange and Act: the wheel sits at the bottom of a short window and leaves room for two rows
     const menu = setup()
 
     // Assert
-    expect(menu.visible()).toEqual(['0'])
-    expect(menu.list().querySelector('button.cue')?.getAttribute('aria-label')).toBe('6 more below')
+    expect(menu.visible()).toEqual(['0', '1'])
+    expect(menu.list().querySelector('button.cue')?.getAttribute('aria-label')).toBe('5 more below')
     menu.release()
   })
 
@@ -123,8 +159,8 @@ describe('createHoldMenuController list', () => {
     cue?.click()
 
     // Assert
-    expect(menu.selected()).toBe('1')
-    expect(menu.visible()).toEqual(['1'])
+    expect(menu.selected()).toBe('2')
+    expect(menu.visible()).toEqual(['1', '2'])
     expect(menu.runs).toEqual([])
     menu.release()
   })
