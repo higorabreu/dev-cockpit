@@ -814,7 +814,7 @@ changed path) and reads the diff again, quietly and in the same place, only when
 a check slower than 300 ms doubles the interval up to 16 s, and a closed review or a hidden window checks
 nothing. Files can be marked viewed, as on GitHub (a checkbox in the header and `v`): a viewed file folds
 to its header, the cursor moves to the next file not viewed, and the mark is tied to a key of the file's
-change, so a later change clears it and the header says "Changed since viewed". The marks live with the
+change, so a later change clears it and the header says "Changed since last viewed". The marks live with the
 tab, per scope and whitespace setting, and do not survive a restart. A file's state is a letter, as in VS
 Code (M, A, D, R, C, U), in the ink of the counts, held to the text contrast minimum.
 **Reason:** the agent keeps changing files while the developer reads, and a long change had no memory of

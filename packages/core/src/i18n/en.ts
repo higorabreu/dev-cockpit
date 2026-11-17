@@ -348,7 +348,7 @@ export const en: Record<MessageKey, string> = {
   'review.viewed': 'Viewed',
   'review.viewedFiles.one': '{viewed} / {count} file viewed',
   'review.viewedFiles.other': '{viewed} / {count} files viewed',
-  'review.changedSinceViewed': 'Changed since viewed',
+  'review.changedSinceViewed': 'Changed since last viewed',
   'review.hint.viewed': 'viewed',
   'review.a11y.viewed': '{file}, viewed',
   'review.renamedFrom': 'Renamed from {path}',

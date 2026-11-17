@@ -535,7 +535,7 @@ describe('createReviewPane', () => {
     await flush()
 
     expect(text('.rv-totals')).toContain('2 files')
-    expect(text('.rv-filerow[data-file="1"] .rv-changed')).toBe('Changed since viewed')
+    expect(text('.rv-filerow[data-file="1"] .rv-changed')).toBe('Changed since last viewed')
     expect(
       pane.element
         .querySelector('.rv-filerow[data-file="1"] .rv-viewed')

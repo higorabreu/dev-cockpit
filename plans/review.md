@@ -151,7 +151,7 @@ and a long change has no memory of where the reading stopped.
   cursor. A viewed file folds to its header, and marking it moves the cursor to the next file not yet
   viewed. The index marks viewed files with a check, and the header counts "3 / 12 viewed". The mark
   belongs to the file's patch: when the agent changes that file again, the mark goes away and the header
-  says "Changed since viewed". The marks live with the tab and do not survive a restart, until using it
+  says "Changed since last viewed". The marks live with the tab and do not survive a restart, until using it
   shows they should.
 - **The state as a letter, as in VS Code.** M, A, D, R, C and U (untracked) replace the glyph, in the file
   index and in each file header, in the state's color, with the full name in the tooltip and for screen
@@ -169,7 +169,7 @@ and a long change has no memory of where the reading stopped.
 - [x] RV-T11. Host API and refresh: the fingerprint channel, the 2 s check with its back-off, paused when
   closed or hidden, and a refresh that keeps the reader's place. (R12, R13)
 - [x] RV-T12. Viewed: the checkbox, `v`, the fold, the jump to the next unviewed file, the index check, the
-  count and "Changed since viewed", in both catalogs. (R14)
+  count and "Changed since last viewed", in both catalogs. (R14)
 - [x] RV-T13. Status letters in the index and the headers, tokens and contrast checks, screenshots in both
   themes and languages. (R15)
 - [x] RV-T14. Docs: the README's key table (`v`), a decision record, the roadmap.
