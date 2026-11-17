@@ -351,6 +351,7 @@ export const en: Record<MessageKey, string> = {
   'settings.file.issues.other': '{count} values in settings.json are not used as written',
   'settings.file.more': 'and {count} more in the file',
   'settings.issue.ignored': 'Not valid, uses {used}',
+  'settings.issue.ignoredDefault': 'Not valid, uses the default',
   'settings.issue.dropped': 'Not valid, left out',
   'settings.issue.adjusted': 'Adjusted to {used}',
   'settings.issue.unknown': 'Not a setting',

@@ -680,6 +680,22 @@ describe('settings view, the settings file', () => {
     view.close()
   })
 
+  it('should name the default instead of null when a font in the file is not valid', () => {
+    // Arrange
+    const file: SettingsFileState = {
+      kind: 'ok',
+      issues: [{ key: 'terminal.fontFamily', kind: 'ignored', found: '"Nope;}"', used: 'null' }],
+    }
+
+    // Act
+    const { body, view } = open([], api, undefined, 'pc', file)
+
+    // Assert
+    const row = body.querySelector('.snotice-list li')
+    expect(row?.lastElementChild?.textContent).toBe('Not valid, uses the default')
+    view.close()
+  })
+
   it('should list each value it did not use with the key, the value found and the one in use', () => {
     const { body, view } = open([], api, undefined, 'pc', withIssues)
 

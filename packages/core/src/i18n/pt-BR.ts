@@ -353,6 +353,7 @@ export const ptBR = {
     '{count} valores do settings.json não são usados como estão escritos',
   'settings.file.more': 'e mais {count} no arquivo',
   'settings.issue.ignored': 'Inválido, usa {used}',
+  'settings.issue.ignoredDefault': 'Inválido, usa o padrão',
   'settings.issue.dropped': 'Inválido, deixado de fora',
   'settings.issue.adjusted': 'Ajustado para {used}',
   'settings.issue.unknown': 'Não é uma configuração',

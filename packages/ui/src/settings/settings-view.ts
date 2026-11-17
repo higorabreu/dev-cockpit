@@ -231,8 +231,11 @@ export function createSettingsView(
     return issue && t('settings.projectsRoot.missing')
   }
 
+  // A setting whose default is null (a font) has no value worth showing: the default is named instead
   const issueText = (issue: SettingsIssue) =>
-    t(`settings.issue.${issue.kind}`, { used: issue.used ?? '' })
+    issue.kind === 'ignored' && issue.used === 'null'
+      ? t('settings.issue.ignoredDefault')
+      : t(`settings.issue.${issue.kind}`, { used: issue.used ?? '' })
 
   // At most this many issues are listed; the rest are counted, and the file has them all
   const NOTICE_ROWS = 5
