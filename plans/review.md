@@ -133,6 +133,47 @@ Measured under Xvfb at 1400x760 and 1920x1040: Ctrl+Shift+D to the index 130-210
 10 000-line file to the painted rows 24-26 ms; 239 scrolled frames at a 16.7 ms median, none dropped, with
 41 rows in the page (73 at full height).
 
+## Phase 1c: a review that keeps up with the agent
+
+Asked by the maintainer after using 1b (2026-11-17): the agent keeps changing files while the developer reads,
+and a long change has no memory of where the reading stopped.
+
+- **It follows the working tree.** While the review is open and the window shown, it checks every 2 s
+  whether the change moved, with a fingerprint that costs one `git status` instead of a whole diff: the
+  porcelain status with HEAD, plus the size and modification time of each changed path. Only a different
+  fingerprint reads the diff again. When `git status` itself takes over 300 ms (a huge repository), the
+  interval doubles up to 16 s. Nothing runs while the review is closed or the window hidden. Ctrl+R and the
+  agent's state change stay as they are.
+- **A refresh never moves the reader.** The line under the cursor, the scroll, the opened gaps and the
+  collapsed or viewed files stay where they were; when the file at the cursor is gone, the cursor goes to
+  the next file. A background refresh shows no loading text.
+- **Viewed, as on GitHub.** Each file header has a "Viewed" checkbox, and `v` toggles it for the file at the
+  cursor. A viewed file folds to its header, and marking it moves the cursor to the next file not yet
+  viewed. The index marks viewed files with a check, and the header counts "3 / 12 viewed". The mark
+  belongs to the file's patch: when the agent changes that file again, the mark goes away and the header
+  says "Changed since viewed". The marks live with the tab and do not survive a restart, until using it
+  shows they should.
+- **The state as a letter, as in VS Code.** M, A, D, R, C and U (untracked) replace the glyph, in the file
+  index and in each file header, in the state's color, with the full name in the tooltip and for screen
+  readers.
+
+| Id | Criterion | Verification |
+| --- | --- | --- |
+| R12 | A file the agent changes while the review is open shows up within 3 s, with the cursor, scroll and opened gaps where they were | Tests with a fake clock, a real-app run |
+| R13 | Closed or with the window hidden, the review runs no `git`; open and idle on this repository it costs under 1% of a core | Tests, measured |
+| R14 | `v` and the checkbox mark a file viewed, fold it and move to the next unviewed one; the count follows; a later change to that file clears the mark and says so | Tests |
+| R15 | Every state has its letter in both places, in both themes, with 3:1 contrast and the name in the tooltip and the accessible name | Tests, contrast check, screenshots |
+
+- [ ] RV-T10. `core`: the change fingerprint and the patch key of a file (a small hash of its hunks), pure
+  and tested; the `DiffSource` port and the `node-git` adapter answer the fingerprint. (R12, R14)
+- [ ] RV-T11. Host API and refresh: the fingerprint channel, the 2 s check with its back-off, paused when
+  closed or hidden, and a refresh that keeps the reader's place. (R12, R13)
+- [ ] RV-T12. Viewed: the checkbox, `v`, the fold, the jump to the next unviewed file, the index check, the
+  count and "Changed since viewed", in both catalogs. (R14)
+- [ ] RV-T13. Status letters in the index and the headers, tokens and contrast checks, screenshots in both
+  themes and languages. (R15)
+- [ ] RV-T14. Docs: the README's key table (`v`), a decision record, the roadmap.
+
 ## Phase 2: comments back to the agent
 
 Select one or more lines, write a comment, and "Send to the agent" types a short review (file, line,
