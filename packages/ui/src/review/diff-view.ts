@@ -164,6 +164,8 @@ export function createDiffView(deps: DiffViewDeps) {
     isModified: deps.isModified,
     open: deps.open,
     showAnyway: deps.showAnyway,
+    viewed: deps.viewed,
+    toggleViewed: deps.toggleViewed,
   })
 
   function drawRow(row: ChangeRow, index: number): HTMLElement {
@@ -183,7 +185,7 @@ export function createDiffView(deps: DiffViewDeps) {
           ...attributes,
           class: 'rv-row rv-filerow',
           'data-file': String(row.file),
-          'aria-label': fileLabel(file, row.notice, i18n),
+          'aria-label': fileLabel(file, row.notice, i18n, row.viewed),
         },
         fileHead(file, row.notice, headDeps()),
       )
@@ -559,6 +561,11 @@ export function createDiffView(deps: DiffViewDeps) {
     nextHunk: (step: 1 | -1) => stepHunk(step),
     nextFile: (step: 1 | -1) => stepFile(step),
     revealFile,
+    // The file being read: the one the keys went to, else the one at the cursor
+    currentFile() {
+      anchorCursor()
+      return target ?? fileAtRow(cursor)
+    },
     // Detached from the page the scroll is lost; it is kept on close and given back on open
     park() {
       parked = { top: element.scrollTop, left: element.scrollLeft }

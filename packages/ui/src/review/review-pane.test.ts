@@ -396,7 +396,7 @@ describe('createReviewPane', () => {
     const inside = text('.phint')
     outside.focus()
 
-    expect(inside).toBe('↑↓ navigate[ ] filen p hunkEsc terminalCtrl+R Refresh')
+    expect(inside).toBe('↑↓ navigate[ ] filen p hunkv viewedEsc terminalCtrl+R Refresh')
     expect(text('.phint')).toBe('Ctrl+Shift+D review')
   })
 
@@ -449,6 +449,85 @@ describe('createReviewPane', () => {
     expect(before).toBe('review-tab-1-row-3')
     expect(lines.getAttribute('aria-activedescendant')).toBe('review-tab-1-row-1')
     expect(current()).toBe('src/zeta.ts, added, 1 added, 0 removed')
+  })
+
+  it('should fold the file at the cursor, count it and move to the next unviewed file when v is pressed', async () => {
+    // Arrange
+    const { pane, key, text } = setup(repository())
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+    key(lines, ']')
+    const boxes = () =>
+      [...pane.element.querySelectorAll('.rv-filerow .rv-viewed')].map((box) =>
+        box.getAttribute('aria-checked'),
+      )
+
+    // Act
+    key(lines, 'v')
+
+    // Assert
+    expect(text('.rv-totals')).toContain('1 / 2 files viewed')
+    expect(boxes()).toEqual(['false', 'true'])
+    expect(lines.getAttribute('aria-activedescendant')).toBe('review-tab-1-row-0')
+    expect(pane.element.querySelector('.rv-file-viewed')?.getAttribute('aria-label')).toBe(
+      'src/billing/invoice.ts, modified, 1 added, 1 removed, viewed',
+    )
+  })
+
+  it('should mark and unmark a file with its Viewed checkbox', async () => {
+    const { pane } = setup(repository())
+    pane.open()
+    await flush()
+    const box = () =>
+      pane.element.querySelector<HTMLElement>('.rv-filerow[data-file="1"] .rv-viewed')
+
+    box()?.click()
+    const marked = box()?.getAttribute('aria-checked')
+    box()?.click()
+
+    expect(marked).toBe('true')
+    expect(box()?.getAttribute('aria-checked')).toBe('false')
+  })
+
+  it('should drop the mark and say so when a viewed file changes again', async () => {
+    let answer = repository()
+    const { pane, key, text } = setup(() => answer)
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+    key(lines, ']')
+    key(lines, 'v')
+
+    answer = repository(diffText(3000, 7000) + lockText)
+    key(pane.element, 'r', { ctrlKey: true })
+    await flush()
+
+    expect(text('.rv-totals')).toContain('2 files')
+    expect(text('.rv-filerow[data-file="1"] .rv-changed')).toBe('Changed since viewed')
+    expect(
+      pane.element
+        .querySelector('.rv-filerow[data-file="1"] .rv-viewed')
+        ?.getAttribute('aria-checked'),
+    ).toBe('false')
+  })
+
+  it('should keep the mark when the file comes back with the same change', async () => {
+    const { pane, key, text } = setup(repository())
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+    key(lines, ']')
+    key(lines, 'v')
+
+    key(pane.element, 'r', { ctrlKey: true })
+    await flush()
+
+    expect(text('.rv-totals')).toContain('1 / 2 files viewed')
+    expect(pane.element.querySelector('.rv-changed')).toBeNull()
   })
 
   it('should give the keys back to the terminal on Esc and read again on Ctrl+R', async () => {

@@ -54,7 +54,10 @@ export interface FileListDeps {
   onSelect(index: number): void
   // Enter: the diff takes the keys
   onOpen(): void
+  isViewed(file: DiffFile): boolean
 }
+
+const TICK = '<path d="M6 12.5l4 4L18 8.5"/>'
 
 // The index of the changed files, virtualized: the selected row is the file the diff is on, and picking
 // one scrolls the diff to it
@@ -74,27 +77,31 @@ export function createFileList(deps: FileListDeps) {
 
   function row(file: DiffFile, index: number): HTMLElement {
     const status = i18n.t(statusKey(file))
+    const viewed = deps.isViewed(file)
+    const name = i18n.t('review.a11y.file', {
+      path: file.path,
+      status,
+      added: file.additions,
+      removed: file.deletions,
+    })
     const element = h(
       'div',
       {
-        class: 'rv-file',
+        class: viewed ? 'rv-file rv-file-viewed' : 'rv-file',
         role: 'option',
         id: rowId(index),
         'aria-selected': String(index === selected),
         'aria-posinset': String(index + 1),
         'aria-setsize': String(files.length),
-        'aria-label': i18n.t('review.a11y.file', {
-          path: file.path,
-          status,
-          added: file.additions,
-          removed: file.deletions,
-        }),
+        'aria-label': viewed ? i18n.t('review.a11y.viewed', { file: name }) : name,
         'data-index': String(index),
         style: `transform: translateY(${index * FILE_ROW_HEIGHT}px)`,
       },
       fileGlyph(file),
       pathLabel(file.path),
       file.hunks.length === 0 ? undefined : counts(file.additions, file.deletions),
+      viewed &&
+        h('span', { class: 'rv-tick', 'data-tip': i18n.t('review.viewed') }, icon(TICK, 14)),
     )
     return element
   }
