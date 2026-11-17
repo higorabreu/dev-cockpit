@@ -31,6 +31,18 @@ export interface Band {
   readonly bottom: number
 }
 
+// The window's height free for the list: the tab bar sits under the terminal, or on top in full screen
+export function listBand(
+  bar: { readonly top: number; readonly bottom: number; readonly height: number },
+  windowHeight: number,
+  edge: number,
+): Band {
+  if (bar.height <= 0) return { top: edge, bottom: windowHeight - edge }
+  return bar.top > windowHeight / 2
+    ? { top: edge, bottom: bar.top - edge }
+    : { top: bar.bottom + edge, bottom: windowHeight - edge }
+}
+
 // Tallest list that stays inside the band: a side list is centered on its anchor, the others grow away
 export function listLimit(opening: Opening, anchorY: number, band: Band): number {
   if (opening === 'up') return anchorY - band.top
