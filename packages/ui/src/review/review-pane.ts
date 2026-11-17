@@ -298,12 +298,21 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     else state = result.value
     if (state.kind === 'no-base' || state.kind === 'no-upstream') root = state.root
     if (state.kind === 'ok') {
+      // Another repository shares no file; in the same one, a file whose hunks kept their place keeps its
+      // opened gaps and their text, since the lines between hunks are the unchanged ones
+      if (root !== state.diff.root) {
+        texts.clear()
+        expanded.clear()
+        shapes.clear()
+      }
       root = state.diff.root
       branch = state.diff.branch
-      texts.clear()
       for (const file of state.diff.files) {
         const shape = file.hunks.map((hunk) => `${hunk.newStart},${hunk.newCount}`).join(' ')
-        if (shapes.get(file.path) !== shape) expanded.delete(file.path)
+        if (shapes.get(file.path) !== shape) {
+          expanded.delete(file.path)
+          texts.delete(file.path)
+        }
         shapes.set(file.path, shape)
       }
       reconcileMarks(state.diff.files)
