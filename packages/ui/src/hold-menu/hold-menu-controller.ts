@@ -321,8 +321,26 @@ export function createHoldMenuController(
 
   window.addEventListener('keydown', onKeyDown, true)
   window.addEventListener('keyup', onKeyUp, true)
-  // A click while the trigger is down is Ctrl+click on a link, not the start of the menu
-  window.addEventListener('mousedown', () => gesture.otherKey(), true)
+  const offCard = (event: Event) =>
+    mode.kind !== 'closed' &&
+    !(event.target instanceof Node && elements.card.contains(event.target))
+  // A click while the trigger is down is Ctrl+click on a link, not the start of the menu; held a little
+  // longer, the menu opened first, and a click off its card closes it and still reaches the terminal
+  window.addEventListener(
+    'mousedown',
+    (event) => {
+      gesture.otherKey()
+      if (!offCard(event)) return
+      gesture.cancel()
+      close()
+    },
+    true,
+  )
+  // The scrim lets the pointer through to the terminal, so its link stays found; the wheel stops there
+  window.addEventListener('wheel', (event) => offCard(event) && consume(event), {
+    capture: true,
+    passive: false,
+  })
   window.addEventListener('blur', () => {
     gesture.cancel()
     close()

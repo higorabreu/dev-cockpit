@@ -22,8 +22,13 @@
   transition: opacity var(--motion-fast) ease;
 }
 
+/* Only the card takes the pointer: off it, the pointer stays on the terminal, so Ctrl+click on a link still
+   finds the link with the menu open over it */
 #menu.open {
   opacity: 1;
+}
+
+#menu.open #menu-card {
   pointer-events: auto;
 }
 

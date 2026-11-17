@@ -83,7 +83,7 @@ function setup(windowHeight = 340) {
   const visible = () =>
     [...list().querySelectorAll<HTMLElement>('.it:not(.gone)')].map((row) => row.dataset.item)
   const release = () => key('keyup', 'ControlRight')
-  return { card, list, selected, visible, release, runs }
+  return { scrim, card, list, selected, visible, release, runs }
 }
 
 const wheel = (target: HTMLElement, deltaY: number) => {
@@ -131,6 +131,34 @@ describe('createHoldMenuController list', () => {
     // Assert: the slide is on only once the wheel is on screen, so it never starts from the last opening
     expect(placedWhileOpen).toBe('')
     expect(menu.card.dataset.placed).toBeUndefined()
+  })
+
+  it('should close the menu and let the click reach the terminal when it lands off the card', () => {
+    // Arrange: the trigger was held long enough to open the menu over a link
+    const menu = setup()
+    const terminal = document.createElement('div')
+    document.body.append(terminal)
+
+    // Act
+    const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true, ctrlKey: true })
+    terminal.dispatchEvent(press)
+
+    // Assert
+    expect(menu.scrim.classList.contains('open')).toBe(false)
+    expect(press.defaultPrevented).toBe(false)
+    menu.release()
+    expect(menu.runs).toEqual([])
+  })
+
+  it('should keep the wheel of the mouse from the terminal while the menu is open', () => {
+    const menu = setup()
+    const terminal = document.createElement('div')
+    document.body.append(terminal)
+
+    const turned = wheel(terminal, 100)
+
+    expect(turned.defaultPrevented).toBe(true)
+    menu.release()
   })
 
   it('should draw the compact wheel when the window is short', () => {
