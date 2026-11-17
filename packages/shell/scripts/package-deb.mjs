@@ -7,12 +7,14 @@ import {
   cpSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   renameSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { compareVersions, newestGlibc, SUPPORTED_GLIBC } from './glibc.mjs'
 import {
   buildCli,
   electronDist,
@@ -98,6 +100,20 @@ exit 0
 write(join(stage, 'DEBIAN', 'postinst'), refresh, 0o755)
 write(join(stage, 'DEBIAN', 'postrm'), refresh, 0o755)
 
+// node-pty is compiled here, against this machine's glibc: the package declares it, so an older system
+// refuses to install instead of opening a window with no terminal. A release must still run on Ubuntu 22.04
+const glibc = readdirSync(stage, { recursive: true })
+  .filter((path) => path.endsWith('.node'))
+  .map((path) => newestGlibc(readFileSync(join(stage, path))))
+  .filter((version) => version !== undefined)
+  .sort(compareVersions)
+  .at(-1)
+if (glibc && compareVersions(glibc, SUPPORTED_GLIBC) > 0) {
+  const message = `node-pty needs glibc ${glibc}, newer than ${SUPPORTED_GLIBC} (Ubuntu 22.04, Debian 12)`
+  if (process.env.CI) throw new Error(`${message}: build on an older runner`)
+  console.warn(`warning: ${message}; this package only installs on systems as new as this one`)
+}
+
 const sizeKb = Math.ceil(
   Number(execFileSync('du', ['-sk', stage], { encoding: 'utf8' }).split('\t')[0]),
 )
@@ -110,7 +126,7 @@ Priority: optional
 Architecture: ${architecture}
 Installed-Size: ${sizeKb}
 Maintainer: Dev Cockpit <noreply@localhost>
-Depends: libgtk-3-0t64 | libgtk-3-0, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0t64 | libatspi2.0-0, libuuid1, libsecret-tools
+Depends: ${glibc ? `libc6 (>= ${glibc}), ` : ''}libgtk-3-0t64 | libgtk-3-0, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0t64 | libatspi2.0-0, libuuid1, libsecret-tools
 Recommends: x11-utils
 Description: Guake-style terminal with a project panel
  Terminal window that opens with a global hotkey, with tabs, project search,
