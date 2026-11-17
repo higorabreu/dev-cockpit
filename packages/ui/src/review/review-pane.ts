@@ -497,6 +497,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       text: texts.get(file.path),
       shownAnyway: shownAnyway.has(file.path),
       viewed: isViewed(file),
+      comments: [],
     }))
     diff.show(found, rows, resetReading)
     resetReading = false

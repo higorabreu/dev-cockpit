@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { changeRows, type FileOpening, fileNotice, isCollapsed } from './change-rows.ts'
+import { hunkLines, type ReviewComment } from './comments.ts'
 import type { DiffFile } from './diff.ts'
 import { parseUnifiedDiff } from './parse.ts'
 
@@ -32,6 +33,7 @@ const closed: FileOpening = {
   text: undefined,
   shownAnyway: false,
   viewed: false,
+  comments: [],
 }
 
 describe('fileNotice', () => {
@@ -101,15 +103,65 @@ describe('changeRows', () => {
   it('should unfold an opened gap into context lines of its file when its text is known', () => {
     const lines = Array.from({ length: 8 }, (_, index) => `n${index + 1}`)
     const rows = changeRows(files(), (file) =>
-      file.path === 'src/a.ts'
-        ? { expanded: new Set([0]), text: lines, shownAnyway: false, viewed: false }
-        : closed,
+      file.path === 'src/a.ts' ? { ...closed, expanded: new Set([0]), text: lines } : closed,
     )
 
     expect(rows.slice(1, 4)).toEqual([
       { kind: 'context', file: 0, old: 1, new: 1, text: 'n1' },
       { kind: 'context', file: 0, old: 2, new: 2, text: 'n2' },
       { kind: 'context', file: 0, old: 3, new: 3, text: 'n3' },
+    ])
+  })
+
+  it('should draw each comment under its last line and an outdated one under the header', () => {
+    // Arrange
+    const [source] = files()
+    const hunk = source?.hunks[0]
+    if (!source || !hunk) throw new Error('invariant: the fixture has a hunk')
+    const current: ReviewComment = {
+      id: 'c1',
+      path: source.path,
+      lines: hunkLines(hunk, 0, 1),
+      body: 'why?',
+      place: { hunk: 0, start: 0 },
+    }
+    const outdated: ReviewComment = { ...current, id: 'c2', place: undefined }
+
+    // Act
+    const rows = changeRows(files(), (file) =>
+      file.path === source.path ? { ...closed, comments: [current, outdated] } : closed,
+    )
+
+    // Assert
+    expect(rows.slice(0, 7).map((row) => (row.kind === 'comment' ? row.id : row.kind))).toEqual([
+      'file',
+      'c2',
+      'expand',
+      'hunk',
+      'line',
+      'line',
+      'c1',
+    ])
+  })
+
+  it('should leave the comments out of a folded file and list those of files gone at the end', () => {
+    const gone: ReviewComment = {
+      id: 'c3',
+      path: 'src/old.ts',
+      lines: [],
+      body: 'gone',
+      place: undefined,
+    }
+    const folded = { ...closed, viewed: true, comments: [{ ...gone, path: 'src/a.ts' }] }
+
+    const rows = changeRows(files(), (file) => (file.path === 'src/a.ts' ? folded : closed), [gone])
+
+    expect(rows.map((row) => `${row.kind}:${row.file}`)).toEqual([
+      'file:0',
+      'file:1',
+      'file:2',
+      'gone:3',
+      'comment:3',
     ])
   })
 })

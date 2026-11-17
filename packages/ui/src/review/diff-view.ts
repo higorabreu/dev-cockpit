@@ -242,6 +242,7 @@ export function createDiffView(deps: DiffViewDeps) {
         code(row.text, []),
       )
     }
+    if (row.kind !== 'line') return h('div', attributes)
     const line = file?.hunks[row.hunk]?.lines[row.line]
     if (line === undefined) return h('div', attributes)
     const sign = line.kind === 'add' ? '+' : line.kind === 'remove' ? '−' : ''
