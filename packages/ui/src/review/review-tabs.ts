@@ -99,9 +99,9 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
     },
     close,
     toggleLayout,
-    // Ctrl+Shift+Enter: the open review's pending comments go to its terminal
-    send(tabId: string) {
-      panes.get(tabId)?.send()
+    // Ctrl+Shift+Enter: the open review's pending comments go to its agent
+    send(tabId: string): Promise<void> {
+      return panes.get(tabId)?.send() ?? Promise.resolve()
     },
     arranged(tabId: string, orientation: Orientation | undefined, narrow: boolean) {
       panes.get(tabId)?.setArrangement(orientation, narrow)

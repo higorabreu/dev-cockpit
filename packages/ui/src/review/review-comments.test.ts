@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
 import {
   createTranslator,
+  errorBody,
+  fail,
   type HostApi,
   noBranchInfo,
   ok,
@@ -38,9 +40,19 @@ const tax = [
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
-function setup(first = invoice()) {
+const NOTE = '/home/ana/acme/.git/dck/review-20261117-143000.md'
+
+interface Options {
+  // The tab's folder when the comments are sent
+  readonly cwd?: string
+  // The note cannot be written
+  readonly failing?: boolean
+}
+
+function setup(first = invoice(), options: Options = {}) {
   let text = first
   const sent: string[] = []
+  const notes: { root: string; markdown: string }[] = []
   const api = {
     review: {
       diff: async () =>
@@ -50,6 +62,11 @@ function setup(first = invoice()) {
         }),
       fileLines: async () => ok([]),
       fingerprint: async () => undefined,
+      saveNotes: async (root: string, markdown: string) => {
+        if (options.failing) return fail(errorBody('DCK-GIT-006', 'disk full'))
+        notes.push({ root, markdown })
+        return ok(NOTE)
+      },
     },
     paths: { openFile: () => undefined },
   } as unknown as HostApi
@@ -59,7 +76,7 @@ function setup(first = invoice()) {
     i18n: createTranslator('en'),
     memory: { indexHidden: false },
     keymap: createKeymap('pc'),
-    cwd: async () => '/home/ana/acme',
+    cwd: async () => options.cwd ?? '/home/ana/acme',
     baseFor: () => undefined,
     chooseBase: async () => undefined,
     onEscape: () => undefined,
@@ -99,7 +116,7 @@ function setup(first = invoice()) {
     key(lines(), 'r', { ctrlKey: true })
     await flush()
   }
-  return { pane, sent, find, all, lines, line, key, click, field, open, write, change }
+  return { pane, sent, notes, find, all, lines, line, key, click, field, open, write, change }
 }
 
 afterEach(() => {
@@ -232,9 +249,9 @@ describe('review comments', () => {
     expect(find('.rv-send').hidden).toBe(true)
   })
 
-  it('should send every pending comment as one text with the header button and clear them', async () => {
+  it('should write every pending comment to a file and type one line naming it when sent', async () => {
     // Arrange
-    const { open, line, click, write, find, all, sent } = setup()
+    const { open, line, click, write, find, all, sent, notes } = setup()
     await open()
     click(line(1))
     write('keep the retry')
@@ -243,30 +260,58 @@ describe('review comments', () => {
 
     // Act
     click(find('.rv-send'))
+    await flush()
 
     // Assert
-    expect(sent).toEqual([
-      [
-        'src/billing/invoice.ts:11 (removed): keep the retry',
-        '  > -const timeout = 3000',
-        'src/billing/invoice.ts:12: name the limit',
-        '  > +const limit = 10',
-      ].join('\n'),
-    ])
+    expect(notes).toHaveLength(1)
+    expect(notes[0]?.root).toBe('/home/ana/acme')
+    expect(notes[0]?.markdown).toContain('2 comments on 1 file.')
+    expect(notes[0]?.markdown).toContain(
+      '### Removed line 11\n\n```diff\n-const timeout = 3000\n```\n\nkeep the retry',
+    )
+    expect(notes[0]?.markdown).toContain('### Line 12\n\n```diff\n+const limit = 10\n```')
+    expect(sent).toEqual(['Address the review comments in .git/dck/review-20261117-143000.md'])
     expect(all('.rv-comment')).toHaveLength(0)
     expect(find('.rv-send').hidden).toBe(true)
   })
 
+  it('should type the absolute path when the tab is in a folder that does not hold the file', async () => {
+    const { open, line, click, write, pane, sent } = setup(invoice(), { cwd: '/home/ana/acme/src' })
+    await open()
+    click(line(3))
+    write('name the limit')
+
+    await pane.send()
+
+    expect(sent).toEqual([`Address the review comments in ${NOTE}`])
+  })
+
+  it('should keep the comments and say why when the file cannot be written', async () => {
+    // Arrange
+    const { open, line, click, write, pane, sent, find, all } = setup(invoice(), { failing: true })
+    await open()
+    click(line(3))
+    write('name the limit')
+
+    // Act
+    await pane.send()
+
+    // Assert
+    expect(sent).toEqual([])
+    expect(all('.rv-comment')).toHaveLength(1)
+    expect(find('.rv-status').textContent).toBe('The review comments could not be saved')
+  })
+
   it('should save a comment still in its field when the review is sent', async () => {
-    const { open, line, click, key, lines, field, pane, sent } = setup()
+    const { open, line, click, key, lines, field, pane, notes } = setup()
     await open()
     click(line(3))
     key(lines(), 'c')
     field().value = 'not saved yet'
 
-    pane.send()
+    await pane.send()
 
-    expect(sent).toEqual(['src/billing/invoice.ts:12: not saved yet\n  > +const limit = 10'])
+    expect(notes[0]?.markdown).toContain('```\n\nnot saved yet\n')
   })
 
   it('should move a comment with its lines on a refresh and mark it outdated when they are gone', async () => {
@@ -291,7 +336,7 @@ describe('review comments', () => {
 
   it('should list the comments of a file that left the change at the end and still send them', async () => {
     // Arrange
-    const { open, line, click, write, change, find, pane, sent } = setup()
+    const { open, line, click, write, change, find, pane, notes } = setup()
     await open()
     click(line(3))
     write('name the limit')
@@ -300,13 +345,13 @@ describe('review comments', () => {
     await change(tax)
     const gone = find('.rv-gone').getAttribute('aria-label')
     const path = find('.rv-card-path').textContent
-    pane.send()
+    await pane.send()
 
     // Assert
     expect(gone).toBe('Outdated comments on files no longer changed')
     expect(path).toBe('src/billing/invoice.ts')
-    expect(sent).toEqual([
-      'src/billing/invoice.ts:12 (outdated): name the limit\n  > +const limit = 10',
-    ])
+    expect(notes[0]?.markdown).toContain(
+      '## src/billing/invoice.ts\n\n### Line 12 (outdated: the lines changed after this comment)',
+    )
   })
 })

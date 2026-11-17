@@ -673,7 +673,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     newTab: () => void open(),
     toggleReview: () => state.activeId && toggleReview(state.activeId),
     toggleReviewLayout: () => state.activeId && reviews.toggleLayout(state.activeId),
-    sendReview: () => state.activeId && reviews.send(state.activeId),
+    sendReview: () => void (state.activeId && reviews.send(state.activeId)),
     closeTab: () => state.activeId && close(state.activeId),
     nextTab: () => update(stepTab(state, 1)),
     previousTab: () => update(stepTab(state, -1)),

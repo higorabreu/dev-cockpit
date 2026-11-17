@@ -50,6 +50,7 @@ function setup(width = 1201, height = 700, diffText = '', accepts = true) {
       },
       fileLines: async () => ok([]),
       fingerprint: async () => undefined,
+      saveNotes: async (root: string) => ok(`${root}/.git/dck/review-20261117-143000.md`),
     },
   } as unknown as HostApi
   const host = document.createElement('div')
@@ -104,7 +105,7 @@ afterEach(() => {
 })
 
 describe('createReviewTabs send', () => {
-  it('should paste the pending comments into the tab terminal and give it the keys when sent', async () => {
+  it('should type the line naming the comments file into the tab terminal and give it the keys when sent', async () => {
     // Arrange
     const { reviews, terminal, pasted } = setup(1201, 700, invoice)
     reviews.toggle('tab-1')
@@ -123,17 +124,17 @@ describe('createReviewTabs send', () => {
     press(field, 'Enter', { ctrlKey: true })
 
     // Act
-    reviews.send('tab-1')
+    await reviews.send('tab-1')
 
     // Assert
     expect(pasted).toEqual([
-      'tab-1|src/billing/invoice.ts:11: use the constant from config\n  > +const timeout = 5000',
+      'tab-1|Address the review comments in .git/dck/review-20261117-143000.md',
     ])
     expect(document.activeElement).toBe(terminal)
     expect(document.querySelector('.rv-send')?.hasAttribute('hidden')).toBe(true)
   })
 
-  it('should keep the comments pending and say why when the terminal refuses a multi-line paste', async () => {
+  it('should keep the comments pending and say why when the terminal refuses the line', async () => {
     // Arrange
     const { reviews, terminal, pasted } = setup(1201, 700, invoice, false)
     reviews.toggle('tab-1')
@@ -152,14 +153,14 @@ describe('createReviewTabs send', () => {
     press(field, 'Enter', { ctrlKey: true })
 
     // Act
-    reviews.send('tab-1')
+    await reviews.send('tab-1')
 
     // Assert
     expect(pasted).toEqual([])
     expect(document.activeElement).not.toBe(terminal)
     expect(document.querySelector('.rv-send-count')?.textContent).toBe('1')
     expect(document.querySelector('.rv-status')?.textContent).toBe(
-      'The program in this terminal does not accept a multi-line paste, so the comments stay pending',
+      'The terminal did not take the line, so the comments stay pending',
     )
   })
 
@@ -168,7 +169,7 @@ describe('createReviewTabs send', () => {
     reviews.toggle('tab-1')
     await flush()
 
-    reviews.send('tab-1')
+    await reviews.send('tab-1')
 
     expect(pasted).toEqual([])
   })

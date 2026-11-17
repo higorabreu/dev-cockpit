@@ -2,12 +2,13 @@ import {
   commentSpan,
   type DiffLine,
   isOutdated,
-  QUOTED_LINES,
   type ReviewComment,
   type Translator,
 } from '@dck/core'
 import { h, icon } from '../panel/dom.ts'
 
+// An outdated card quotes this many of the lines it was left on
+const CARD_QUOTE = 3
 // The comment field's row: 8px of air, the label, a four-line field, the buttons and 8px of air
 export const EDITOR_HEIGHT = 150
 // A card before it is measured: air, its head, its text and its quote at 18px a line
@@ -38,7 +39,7 @@ export function commentLabel(comment: ReviewComment, i18n: Translator): string {
 
 // An outdated comment no longer sits under its lines, so it quotes them as they were
 const quoted = (comment: ReviewComment) =>
-  isOutdated(comment) ? comment.lines.slice(0, QUOTED_LINES) : []
+  isOutdated(comment) ? comment.lines.slice(0, CARD_QUOTE) : []
 
 export function cardEstimate(comment: ReviewComment): number {
   const lines = comment.body.split('\n').length + quoted(comment).length

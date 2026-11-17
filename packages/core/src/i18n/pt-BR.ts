@@ -410,9 +410,16 @@ export const ptBR = {
   'review.comments.one': '{count} comentário',
   'review.comments.other': '{count} comentários',
   'review.send': 'Enviar ao agente',
-  'review.send.tip': 'Digita os comentários no prompt do terminal, sem Enter',
-  'review.send.refused':
-    'O programa deste terminal não aceita colar várias linhas, então os comentários continuam pendentes',
+  'review.send.tip':
+    'Grava os comentários em um arquivo e digita no prompt do terminal uma linha que aponta para ele, sem Enter',
+  'review.send.refused': 'O terminal não aceitou a linha, então os comentários continuam pendentes',
+  'review.notes.title': 'Comentários da revisão',
+  'review.notes.summary':
+    '{comments} em {files}. Os números de linha são os da árvore de trabalho; as linhas removidas usam os do arquivo antigo.',
+  'review.notes.outdated': '{lines} (desatualizado: as linhas mudaram depois deste comentário)',
+  'review.notes.more.one': 'Mais {count} linha não exibida.',
+  'review.notes.more.other': 'Mais {count} linhas não exibidas.',
+  'review.notes.prompt': 'Resolva os comentários da revisão em {path}',
   'review.send.a11y.one': 'Enviar {count} comentário ao agente',
   'review.send.a11y.other': 'Enviar {count} comentários ao agente',
   'review.hint.comment': 'comentar',
@@ -460,6 +467,7 @@ export const ptBR = {
   'error.DCK-GIT-003': 'As alterações são grandes demais para mostrar',
   'error.DCK-GIT-004': 'O arquivo está fora do repositório',
   'error.DCK-GIT-005': 'O Git não está instalado',
+  'error.DCK-GIT-006': 'Não foi possível salvar os comentários da revisão',
 } as const
 
 export type MessageKey = keyof typeof ptBR

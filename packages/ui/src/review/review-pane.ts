@@ -14,7 +14,10 @@ import {
   type Orientation,
   type PaneGrid,
   patchKey,
+  pathFrom,
   type ReviewBase,
+  reviewMarkdown,
+  reviewPrompt,
   type Translator,
 } from '@dck/core'
 import { tokens } from '@dck/design'
@@ -81,8 +84,8 @@ export interface ReviewPaneDeps {
   onClose(): void
   // The header's layout button: the other orientation, as the user's choice
   onToggleLayout(): void
-  // Types the pending comments at the tab's terminal prompt, without Enter, and gives it the keys; false
-  // when the terminal could not take them
+  // Types a line at the tab's terminal prompt, without Enter, and gives it the keys; false when the
+  // terminal could not take it
   send(text: string): boolean
 }
 
@@ -108,6 +111,8 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   let busy = false
   // A short sentence beside the totals, such as why the comments were not sent
   let notice = ''
+  // A send waits for the file to be written; a second press meanwhile would write it twice
+  let sending = false
   let noticeTimer: ReturnType<typeof setTimeout> | undefined
   let showLoading = false
   // What the base and unpushed scopes compare with, from the last read of a repository, and that one
@@ -318,13 +323,20 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     })
   }
 
-  // Every pending comment typed at the prompt at once; the keys go to the terminal to add a word and send.
-  // A program that would run each line keeps them pending and the header says why
-  function sendComments() {
-    if (comments.count() === 0 && comments.editor() === undefined) return
-    const text = comments.text()
-    if (text === '') return
-    if (deps.send(text)) comments.clear()
+  // Every pending comment goes to a file the agent reads, and one line naming it is typed at the prompt;
+  // the keys go to the terminal to add a word and press Enter. Until both worked, the comments stay
+  // pending and the header says why
+  async function sendComments() {
+    if (sending || (comments.count() === 0 && comments.editor() === undefined)) return
+    const pending = comments.pending()
+    if (pending.length === 0 || root === undefined) return
+    sending = true
+    const saved = await api.review.saveNotes(root, reviewMarkdown(pending, i18n))
+    const folder = saved.ok ? await deps.cwd() : undefined
+    sending = false
+    if (!saved.ok) return showNotice(t(`error.${errorCodeOf(saved.error)}`))
+    const path = folder === undefined ? saved.value : pathFrom(folder, saved.value)
+    if (deps.send(reviewPrompt(t, path))) comments.clear(pending)
     else showNotice(t('review.send.refused'))
   }
 
@@ -711,7 +723,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     diff.redraw()
   })
   layout.addEventListener('click', () => deps.onToggleLayout())
-  send.addEventListener('click', () => sendComments())
+  send.addEventListener('click', () => void sendComments())
   back.addEventListener('click', () => deps.onEscape())
   close.addEventListener('click', () => deps.onClose())
 

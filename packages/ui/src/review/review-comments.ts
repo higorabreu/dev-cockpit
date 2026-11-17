@@ -5,7 +5,6 @@ import {
   locateComment,
   locateComments,
   type ReviewComment,
-  reviewText,
   type Translator,
 } from '@dck/core'
 import {
@@ -169,16 +168,17 @@ export function createReviewComments(deps: ReviewCommentsDeps) {
       const comment = comments.find((found) => found.id === id)
       return comment ? cardEstimate(comment) : 0
     },
-    // Every pending comment as the text for the agent, a field with text saved first
-    text(): string {
+    // Every pending comment for the agent, a field with text saved first
+    pending(): readonly ReviewComment[] {
       settle()
       changed()
-      return reviewText(comments)
+      return comments
     },
-    // Once the text reached the terminal, nothing is left pending
-    clear() {
-      comments = []
-      draft = undefined
+    // Once the agent has them, the sent ones are no longer pending; one written meanwhile stays
+    clear(sent: readonly ReviewComment[]) {
+      const ids = new Set(sent.map((comment) => comment.id))
+      comments = comments.filter((comment) => !ids.has(comment.id))
+      if (draft?.existing && ids.has(draft.comment.id)) draft = undefined
       changed()
     },
   }

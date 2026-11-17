@@ -411,9 +411,16 @@ export const en: Record<MessageKey, string> = {
   'review.comments.one': '{count} comment',
   'review.comments.other': '{count} comments',
   'review.send': 'Send to agent',
-  'review.send.tip': 'Types the comments at the terminal prompt, without Enter',
-  'review.send.refused':
-    'The program in this terminal does not accept a multi-line paste, so the comments stay pending',
+  'review.send.tip':
+    'Writes the comments to a file and types a line pointing to it at the terminal prompt, without Enter',
+  'review.send.refused': 'The terminal did not take the line, so the comments stay pending',
+  'review.notes.title': 'Review comments',
+  'review.notes.summary':
+    "{comments} on {files}. Line numbers are the working tree's; removed lines use the old file's.",
+  'review.notes.outdated': '{lines} (outdated: the lines changed after this comment)',
+  'review.notes.more.one': '{count} more line not shown.',
+  'review.notes.more.other': '{count} more lines not shown.',
+  'review.notes.prompt': 'Address the review comments in {path}',
   'review.send.a11y.one': 'Send {count} comment to the agent',
   'review.send.a11y.other': 'Send {count} comments to the agent',
   'review.hint.comment': 'comment',
@@ -461,4 +468,5 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-GIT-003': 'The changes are too large to show',
   'error.DCK-GIT-004': 'The file is outside the repository',
   'error.DCK-GIT-005': 'Git is not installed',
+  'error.DCK-GIT-006': 'The review comments could not be saved',
 }
