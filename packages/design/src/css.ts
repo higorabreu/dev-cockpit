@@ -15,6 +15,9 @@ function themeDeclarations(tokens: Tokens, theme: ThemeName): string[] {
     `--sector-idle: ${mixed(mix.sectorIdle, '--surface')};`,
     `--sector-selected: ${mixed(mix.sectorSelected, '--surface')};`,
     `--list-selected: ${mixed(mix.listSelected, '--surface')};`,
+    `--line-selected: ${mixed(mix.lineSelected, '--bg')};`,
+    `--line-selected-add: ${mixed(mix.lineSelected, '--diff-add')};`,
+    `--line-selected-remove: ${mixed(mix.lineSelected, '--diff-remove')};`,
     `--icon-idle: ${mixed(mix.iconIdle, '--surface')};`,
     `color-scheme: ${theme};`,
   ]

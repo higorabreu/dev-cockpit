@@ -50,4 +50,18 @@ describe('contrastChecks', () => {
       )
     }
   })
+
+  it('should check the code on every tint of a line selected for a comment when checking each theme', () => {
+    for (const theme of themeNames) {
+      const names = contrastChecks(tokens, theme).map((check) => check.name)
+
+      expect(names).toEqual(
+        expect.arrayContaining([
+          'code on a selected line',
+          'code on a selected added line',
+          'code on a selected removed line',
+        ]),
+      )
+    }
+  })
 })
