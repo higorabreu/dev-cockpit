@@ -94,6 +94,8 @@ export interface HostApi {
     diff(request: DiffRequest): Promise<Result<DiffOutcome, ErrorBody>>
     // Only for a root a diff answered with, and a path inside it
     fileLines(root: string, path: string): Promise<Result<readonly string[], ErrorBody>>
+    // Changes when the diff of the folder's repository may have changed; undefined when unknown
+    fingerprint(cwd: string): Promise<string | undefined>
   }
   readonly autostart: {
     isEnabled(): Promise<boolean>
@@ -156,6 +158,7 @@ export const hostChannels = {
   viewsChanged: 'views:changed',
   reviewDiff: 'review:diff',
   reviewFile: 'review:file',
+  reviewFingerprint: 'review:fingerprint',
   autostartGet: 'autostart:get',
   autostartSet: 'autostart:set',
   sessionActivity: 'session:activity',

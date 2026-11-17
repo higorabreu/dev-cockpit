@@ -27,7 +27,12 @@ const files = (): readonly DiffFile[] =>
     file.path === 'src/a.ts' ? { ...file, newLineCount: 8 } : file,
   )
 
-const closed: FileOpening = { expanded: new Set(), text: undefined, shownAnyway: false }
+const closed: FileOpening = {
+  expanded: new Set(),
+  text: undefined,
+  shownAnyway: false,
+  viewed: false,
+}
 
 describe('fileNotice', () => {
   it('should name why a file shows no lines when it is binary, generated or empty', () => {
@@ -62,7 +67,22 @@ describe('changeRows', () => {
       'file:1',
       'file:2',
     ])
-    expect(rows[7]).toEqual({ kind: 'file', file: 1, notice: 'generated' })
+    expect(rows[7]).toEqual({ kind: 'file', file: 1, notice: 'generated', viewed: false })
+  })
+
+  it('should fold a viewed file to its header and keep the others open', () => {
+    // Arrange
+    const viewed = (file: { path: string }) => ({
+      ...closed,
+      viewed: file.path === files()[0]?.path,
+    })
+
+    // Act
+    const rows = changeRows(files(), viewed)
+
+    // Assert
+    expect(rows.map((row) => `${row.kind}:${row.file}`)).toEqual(['file:0', 'file:1', 'file:2'])
+    expect(rows[0]).toEqual({ kind: 'file', file: 0, notice: undefined, viewed: true })
   })
 
   it('should show the lines of a collapsed file when it is shown anyway', () => {
@@ -82,7 +102,7 @@ describe('changeRows', () => {
     const lines = Array.from({ length: 8 }, (_, index) => `n${index + 1}`)
     const rows = changeRows(files(), (file) =>
       file.path === 'src/a.ts'
-        ? { expanded: new Set([0]), text: lines, shownAnyway: false }
+        ? { expanded: new Set([0]), text: lines, shownAnyway: false, viewed: false }
         : closed,
     )
 

@@ -42,7 +42,8 @@ changed, and your merge requests and tasks.
 - **Review.** `Ctrl+Shift+D` shows what changed in the tab's repository beside or below its terminal, in
   one scroll: uncommitted changes, everything since the branch it came from, or the commits not pushed
   yet. The base branch is read from what git and VS Code recorded, never guessed from a name, and you can
-  pick another.
+  pick another. It follows the agent as it works, keeping your place, and marks files as viewed as on
+  GitHub.
 - **Connectors.** Your GitLab merge requests and Jira tasks in one screen (below).
 - **Terminal.** `Ctrl+click` opens links in the browser and file or folder paths in their default app;
   selecting copies and the right or middle button pastes.
@@ -104,7 +105,7 @@ next launch, `--yes` restarts without asking and `--skip-build` installs the `.d
 | `Ctrl+Shift+P` | Project search (`Ctrl+D` pins or unpins a favorite) |
 | `Ctrl+Shift+M` | Work screen: merge requests and tasks |
 | `Ctrl+Shift+B` | Side panel |
-| `Ctrl+Shift+D` | Review what changed in the tab's repository beside or below its terminal; from the terminal it goes back to an open review, from the review it closes it (`Esc` back to the terminal; inside it `↑↓`, `Enter`, `[` `]` file, `n` `p` hunk, `Ctrl+R` refresh) |
+| `Ctrl+Shift+D` | Review what changed in the tab's repository beside or below its terminal; from the terminal it goes back to an open review, from the review it closes it (`Esc` back to the terminal; inside it `↑↓`, `Enter`, `[` `]` file, `n` `p` hunk, `v` viewed, `Ctrl+R` refresh) |
 | `Ctrl+Shift+E` | Switch the review between side by side and stacked (Settings brings back Automatic) |
 | `Ctrl+Shift+Up` / `Down` | Opacity |
 | `Ctrl +`, `-`, `0` | Font size |

@@ -805,3 +805,21 @@ as `libc6 (>= x)` in `Depends`, and in CI it stops when that is newer than 2.35,
 amd64 packages asked for glibc 2.42 (0.5.0 to 0.7.0): they installed on Ubuntu 24.04 and Debian 12 and
 opened a window whose terminal never started. The arm64 runner was already pinned and asked for 2.34.
 **How to revert:** drop the glibc block from `package-deb.mjs` and let the runners float.
+
+## D55. The review follows the working tree, remembers what was viewed and names states by letter
+
+**Decision:** while the review is open and the window shown, it asks every 2 s for a fingerprint of the
+tab's repository (`git status --porcelain=v2` with HEAD, plus the size and modification time of each
+changed path) and reads the diff again, quietly and in the same place, only when the fingerprint changed;
+a check slower than 300 ms doubles the interval up to 16 s, and a closed review or a hidden window checks
+nothing. Files can be marked viewed, as on GitHub (a checkbox in the header and `v`): a viewed file folds
+to its header, the cursor moves to the next file not viewed, and the mark is tied to a key of the file's
+change, so a later change clears it and the header says "Changed since last viewed". The marks live with the
+tab, per scope and whitespace setting, and do not survive a restart. A file's state is a letter, as in VS
+Code (M, A, D, R, C, U), in the ink of the counts, held to the text contrast minimum.
+**Reason:** the agent keeps changing files while the developer reads, and a long change had no memory of
+where the reading stopped (the maintainer, 2026-11-17). A file watcher was set aside: on a large repository
+with `node_modules` it can run out of the system's inotify watches. Marks that survive a restart wait until
+using the review shows they are missed.
+**How to revert:** drop `fingerprint` from `DiffSource` and the watch from `review/review-refresh.ts` (the
+review then reads on open, Ctrl+R and the agent's state, as in D47); drop `viewed` from `FileOpening`.

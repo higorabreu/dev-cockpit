@@ -55,9 +55,14 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     ['code on a removed word', fg, rgb(color.diffRemoveWord), TEXT],
     ['number on a removed line', rgb(color.diffRemoveInk), rgb(color.diffRemove), TEXT],
     ['removed count on the window', rgb(color.diffRemoveInk), rgb(color.bg), TEXT],
-    ['modified file mark on the window', rgb(color.warning), rgb(color.bg), GRAPHIC],
-    ['added file mark on the window', rgb(color.success), rgb(color.bg), GRAPHIC],
-    ['deleted file mark on the window', rgb(color.critical), rgb(color.bg), GRAPHIC],
+    // A file's state is a letter (M, A, D...) in the ink of its counts, on the index (the window) and on
+    // a file's header (the surface); a selected row turns it to primary text, renamed is secondary text
+    ['modified file letter on the window', rgb(color.warning), rgb(color.bg), TEXT],
+    ['modified file letter on the surface', rgb(color.warning), surface, TEXT],
+    ['added file letter on the window', rgb(color.diffAddInk), rgb(color.bg), TEXT],
+    ['added file letter on the surface', rgb(color.diffAddInk), surface, TEXT],
+    ['deleted file letter on the window', rgb(color.diffRemoveInk), rgb(color.bg), TEXT],
+    ['deleted file letter on the surface', rgb(color.diffRemoveInk), surface, TEXT],
   ]
 
   // The dark theme's black serves as background for colored text and is not read as text

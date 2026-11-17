@@ -31,6 +31,7 @@ function setup(width = 1201, height = 700) {
         })
       },
       fileLines: async () => ok([]),
+      fingerprint: async () => undefined,
     },
   } as unknown as HostApi
   const host = document.createElement('div')

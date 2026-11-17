@@ -8,6 +8,7 @@ import {
   type ErrorBody,
   errorBody,
   fail,
+  hashText,
   ok,
   parseUnifiedDiff,
   type Result,
@@ -23,12 +24,17 @@ const UNTRACKED_LIMIT = 300
 const UNTRACKED_MAX_BYTES = 1024 * 1024
 const READ_MAX_BYTES = 8 * 1024 * 1024
 const PARALLEL = 8
+// The status of a huge repository can be long; past this many changed paths only the status counts
+const STAMP_LIMIT = 2000
+const STATUS = { timeoutMs: 5000, maxBytes: 8 * 1024 * 1024 }
 const DIFF_FLAGS = ['--no-color', '--no-ext-diff', '-M'] as const
 
 export interface DiffFiles {
   readFile(path: string): Promise<Buffer>
   size(path: string): Promise<number | undefined>
   realpath(path: string): Promise<string>
+  // Size and modification time, which change when a file is written; undefined when it is gone
+  stamp(path: string): Promise<string | undefined>
 }
 
 export interface GitDiffOptions {
@@ -44,6 +50,29 @@ const nodeFiles: DiffFiles = {
       () => undefined,
     ),
   realpath: (path) => realpath(path),
+  stamp: (path) =>
+    stat(path).then(
+      (stats) => `${stats.size}:${stats.mtimeMs}`,
+      () => undefined,
+    ),
+}
+
+// The paths of `git status --porcelain=v2 -z`, relative to the folder it ran in: a changed entry has the
+// path after 8 fields, a rename after 9 with the old path as the next entry, a conflict after 10
+export function statusPaths(output: string): string[] {
+  const entries = output.split('\0')
+  const paths: string[] = []
+  const after = (entry: string, fields: number) => entry.split(' ').slice(fields).join(' ')
+  for (let index = 0; index < entries.length; index++) {
+    const entry = entries[index] ?? ''
+    if (entry.startsWith('1 ')) paths.push(after(entry, 8))
+    else if (entry.startsWith('2 ')) {
+      paths.push(after(entry, 9))
+      index++
+    } else if (entry.startsWith('u ')) paths.push(after(entry, 10))
+    else if (entry.startsWith('? ')) paths.push(entry.slice(2))
+  }
+  return paths
 }
 
 function failed(failure: GitFailure, step: string): ErrorBody {
@@ -199,6 +228,18 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
         complete(root, file, marked.has(file.path)),
       )
       return ok({ kind: 'ok', diff: reviewDiff(root, request.scope, branch, completed) })
+    },
+
+    async fingerprint(cwd) {
+      const status = await run(
+        cwd,
+        ['status', '--porcelain=v2', '-z', '--branch', '--untracked-files=all'],
+        STATUS,
+      )
+      if (!status.ok) return undefined
+      const paths = statusPaths(status.stdout).slice(0, STAMP_LIMIT)
+      const stamps = await inBatches(paths, PARALLEL * 2, (path) => files.stamp(join(cwd, path)))
+      return hashText(`${status.stdout}\0${stamps.map((stamp) => stamp ?? '-').join('\0')}`)
     },
 
     async fileLines(root, path): Promise<Result<readonly string[], ErrorBody>> {

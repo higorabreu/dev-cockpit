@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { DiffOutcome, DiffRequest, ErrorBody, Result } from '@dck/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createGitDiffSource } from './git-diff.ts'
+import { createGitDiffSource, statusPaths } from './git-diff.ts'
 import type { GitAnswer } from './git-run.ts'
 
 let directory = ''
@@ -244,4 +244,65 @@ describe('createGitDiffSource', () => {
       expect(result.ok || result.error.data?.code).toBe(code)
     },
   )
+})
+
+describe('statusPaths', () => {
+  it('should read the path of each kind of entry when the status lists them', () => {
+    // Arrange
+    const output = [
+      '# branch.oid 1234',
+      '1 .M N... 100644 100644 100644 aaa bbb src/main file.ts',
+      '2 R. N... 100644 100644 100644 aaa bbb R100 docs/new.md',
+      'docs/old.md',
+      'u UU N... 100644 100644 100644 100644 aaa bbb ccc conflict.ts',
+      '? notes.txt',
+      '',
+    ].join('\0')
+
+    // Act
+    const paths = statusPaths(output)
+
+    // Assert
+    expect(paths).toEqual(['src/main file.ts', 'docs/new.md', 'conflict.ts', 'notes.txt'])
+  })
+})
+
+describe('fingerprint', () => {
+  it('should stay the same when nothing changed and change when a changed file is written again', async () => {
+    // Arrange
+    const path = await repo('acme', { 'main.ts': 'one\n' })
+    await writeFile(join(path, 'main.ts'), 'two\n')
+    const source = createGitDiffSource()
+    const first = await source.fingerprint(path)
+
+    // Act
+    const again = await source.fingerprint(path)
+    await writeFile(join(path, 'main.ts'), 'three, longer\n')
+    const after = await source.fingerprint(path)
+
+    // Assert
+    expect(first).toMatch(/^[0-9a-f]{8}$/)
+    expect(again).toBe(first)
+    expect(after).not.toBe(first)
+  })
+
+  it('should change when a new file appears or a commit moves HEAD', async () => {
+    const path = await repo('acme', { 'main.ts': 'one\n' })
+    const source = createGitDiffSource()
+    const clean = await source.fingerprint(path)
+
+    await writeFile(join(path, 'notes.txt'), 'new\n')
+    const untracked = await source.fingerprint(path)
+    run(path, 'add', '.')
+    run(path, 'commit', '-m', 'second')
+    const committed = await source.fingerprint(path)
+
+    expect(untracked).not.toBe(clean)
+    expect(committed).not.toBe(untracked)
+    expect(committed).not.toBe(clean)
+  })
+
+  it('should give nothing when the folder is not inside a repository', async () => {
+    expect(await createGitDiffSource().fingerprint(directory)).toBeUndefined()
+  })
 })

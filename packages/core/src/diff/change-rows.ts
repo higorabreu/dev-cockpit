@@ -20,7 +20,13 @@ export const isCollapsed = (notice: FileNotice | undefined) =>
 // One row of the whole change: every file's header, then its hunks, lines and the unchanged stretches
 // left out (or opened); `file` is the file's index
 export type ChangeRow =
-  | { readonly kind: 'file'; readonly file: number; readonly notice: FileNotice | undefined }
+  | {
+      readonly kind: 'file'
+      readonly file: number
+      readonly notice: FileNotice | undefined
+      // Marked viewed: the header alone, until the mark goes
+      readonly viewed: boolean
+    }
   | { readonly kind: 'expand'; readonly file: number; readonly gap: DiffGap }
   | { readonly kind: 'hunk'; readonly file: number; readonly hunk: number }
   | { readonly kind: 'line'; readonly file: number; readonly hunk: number; readonly line: number }
@@ -32,24 +38,26 @@ export type ChangeRow =
       readonly text: string
     }
 
-// What the user did to one file: the gaps opened, the text that fills them, a collapse lifted
+// What the user did to one file: the gaps opened, the text that fills them, a collapse lifted, a mark
 export interface FileOpening {
   readonly expanded: ReadonlySet<number>
   readonly text: readonly string[] | undefined
   readonly shownAnyway: boolean
+  readonly viewed: boolean
 }
 
-// All the files in one list, the way a merge request reads: a file with a notice is its header alone
+// All the files in one list, the way a merge request reads: a file with a notice, or viewed, is its
+// header alone
 export function changeRows(
   files: readonly DiffFile[],
   opening: (file: DiffFile) => FileOpening,
 ): ChangeRow[] {
   const rows: ChangeRow[] = []
   files.forEach((file, index) => {
-    const { expanded, text, shownAnyway } = opening(file)
+    const { expanded, text, shownAnyway, viewed } = opening(file)
     const notice = fileNotice(file, shownAnyway)
-    rows.push({ kind: 'file', file: index, notice })
-    if (notice !== undefined) return
+    rows.push({ kind: 'file', file: index, notice, viewed })
+    if (notice !== undefined || viewed) return
     for (const row of diffRows(file, expanded, text)) {
       if (row.kind === 'end') rows.push({ kind: 'expand', file: index, gap: row.gap })
       else if (row.kind === 'hunk') {

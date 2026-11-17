@@ -12,6 +12,7 @@ import {
   type HostApi,
   type Orientation,
   type PaneGrid,
+  patchKey,
   type ReviewBase,
   type Translator,
 } from '@dck/core'
@@ -113,7 +114,22 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const shownAnyway = new Set<string>()
   // A file whose hunks moved since the last read loses its open gaps, which named the old hunks
   const shapes = new Map<string, string>()
+  // Files marked viewed in this tab, per scope and whitespace setting, each tied to the change it had;
+  // a mark that went away because the file changed again is remembered to say so
+  const viewedMarks = new Map<string, string>()
+  const changedSince = new Set<string>()
+  const keys = new WeakMap<DiffFile, string>()
   let drawnOptions = ''
+
+  const markId = (path: string) => `${scope}|${ignoreWhitespace ? 'w' : ''}|${path}`
+  function keyOf(file: DiffFile): string {
+    const known = keys.get(file)
+    if (known !== undefined) return known
+    const key = patchKey(file)
+    keys.set(file, key)
+    return key
+  }
+  const isViewed = (file: DiffFile) => viewedMarks.get(markId(file.path)) === keyOf(file)
 
   const scopeLabel = h('span', { id: `${deps.id}-scope-label`, hidden: true })
   const select = createSelect({
@@ -156,6 +172,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     i18n,
     onSelect: (index) => diff.revealFile(index),
     onOpen: () => diff.focus(),
+    isViewed,
   })
   list.element.id = `${deps.id}-files`
   const diff = createDiffView({
@@ -169,6 +186,8 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       shownAnyway.add(file.path)
       drawDiff()
     },
+    viewed: (file) => ({ viewed: isViewed(file), changed: changedSince.has(markId(file.path)) }),
+    toggleViewed: (file) => toggleViewed(file),
     onCurrentFile: (index) => list.highlight(index),
   })
   const body = h('div', { class: 'rv-body' }, list.element, diff.element)
@@ -187,18 +206,27 @@ export function createReviewPane(deps: ReviewPaneDeps) {
 
   const refresh = createReviewRefresh({
     load,
+    fingerprint: async () => {
+      const folder = await deps.cwd()
+      return folder ? api.review.fingerprint(folder) : undefined
+    },
+    visible: () => !document.hidden,
+    now: () => performance.now(),
     after(milliseconds, task) {
       const timer = setTimeout(task, milliseconds)
       return () => clearTimeout(timer)
     },
   })
 
-  async function load() {
-    busy = true
-    const loadingTimer = setTimeout(() => {
-      showLoading = true
-      draw()
-    }, LOADING_TEXT_MS)
+  // A quiet read (the change moved, the agent spoke) shows no loading text: the diff just updates
+  async function load(quiet: boolean) {
+    busy = !quiet
+    const loadingTimer = quiet
+      ? undefined
+      : setTimeout(() => {
+          showLoading = true
+          draw()
+        }, LOADING_TEXT_MS)
     drawStatus()
     cwd = await deps.cwd()
     const chosen = cwd ? deps.baseFor(cwd) : undefined
@@ -210,7 +238,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
           ...(chosen === undefined ? {} : { base: chosen }),
         })
       : { ok: true as const, value: undefined }
-    clearTimeout(loadingTimer)
+    if (loadingTimer) clearTimeout(loadingTimer)
     busy = false
     showLoading = false
     if (!result.ok) state = { kind: 'error', error: result.error }
@@ -226,6 +254,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
         if (shapes.get(file.path) !== shape) expanded.delete(file.path)
         shapes.set(file.path, shape)
       }
+      reconcileMarks(state.diff.files)
     }
     draw()
   }
@@ -372,6 +401,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
             keyHint('↑↓', t('review.hint.navigate')),
             keyHint('[ ]', t('review.hint.file')),
             keyHint('n p', t('review.hint.hunk')),
+            keyHint('v', t('review.hint.viewed')),
           ]
         : []),
       keyHint('Esc', t('review.hint.terminal')),
@@ -389,8 +419,15 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       return
     }
     const { diff: found } = state
+    const viewed = found.files.filter(isViewed).length
     totals.replaceChildren(
-      h('span', {}, i18n.plural('review.files', found.files.length)),
+      h(
+        'span',
+        {},
+        viewed === 0
+          ? i18n.plural('review.files', found.files.length)
+          : i18n.plural('review.viewedFiles', found.files.length, { viewed }),
+      ),
       counts(found.additions, found.deletions),
     )
   }
@@ -413,12 +450,53 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     return button
   }
 
+  // A viewed file that changed again loses its mark and says so; a file that is gone forgets both
+  function reconcileMarks(found: readonly DiffFile[]) {
+    const prefix = markId('')
+    const byId = new Map(found.map((file) => [markId(file.path), file]))
+    for (const [id, key] of viewedMarks) {
+      if (!id.startsWith(prefix)) continue
+      const file = byId.get(id)
+      if (file === undefined) viewedMarks.delete(id)
+      else if (keyOf(file) !== key) {
+        viewedMarks.delete(id)
+        changedSince.add(id)
+      }
+    }
+    for (const id of changedSince)
+      if (id.startsWith(prefix) && !byId.has(id)) changedSince.delete(id)
+  }
+
+  // Marking a file viewed folds it and moves on to the next file not viewed yet, as on GitHub
+  function toggleViewed(file: DiffFile) {
+    const found = files()
+    const index = found.indexOf(file)
+    if (index < 0) return
+    const id = markId(file.path)
+    const marking = !isViewed(file)
+    if (marking) {
+      viewedMarks.set(id, keyOf(file))
+      changedSince.delete(id)
+    } else viewedMarks.delete(id)
+    drawDiff()
+    drawTotals()
+    list.redraw()
+    if (!marking) return
+    const order = [...found.keys()].map((step) => (index + 1 + step) % found.length)
+    const next = order.find((candidate) => {
+      const other = found[candidate]
+      return other !== undefined && !isViewed(other)
+    })
+    diff.revealFile(next ?? index)
+  }
+
   function drawDiff() {
     const found = files()
     const rows = changeRows(found, (file) => ({
       expanded: expanded.get(file.path) ?? new Set(),
       text: texts.get(file.path),
       shownAnyway: shownAnyway.has(file.path),
+      viewed: isViewed(file),
     }))
     diff.show(found, rows, resetReading)
     resetReading = false
@@ -502,6 +580,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     } else if (key === 'n' || key === 'p') {
       diff.nextHunk(key === 'n' ? 1 : -1)
       if (where === 'index') diff.focus()
+    } else if (key === 'v') {
+      const file = files()[where === 'index' ? list.selected() : diff.currentFile()]
+      if (file) toggleViewed(file)
     } else return
     event.preventDefault()
     event.stopPropagation()
@@ -534,14 +615,18 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   back.addEventListener('click', () => deps.onEscape())
   close.addEventListener('click', () => deps.onClose())
 
+  const onVisibility = () => refresh.visibility()
+
   const pane = {
     element,
     open() {
+      document.addEventListener('visibilitychange', onVisibility)
       refresh.open()
       diff.unpark()
     },
     // The reading stays: reopened in the same tab, the review is where it was left
     close() {
+      document.removeEventListener('visibilitychange', onVisibility)
       diff.park()
       refresh.close()
     },

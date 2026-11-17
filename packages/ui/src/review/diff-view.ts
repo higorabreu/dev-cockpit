@@ -164,6 +164,8 @@ export function createDiffView(deps: DiffViewDeps) {
     isModified: deps.isModified,
     open: deps.open,
     showAnyway: deps.showAnyway,
+    viewed: deps.viewed,
+    toggleViewed: deps.toggleViewed,
   })
 
   function drawRow(row: ChangeRow, index: number): HTMLElement {
@@ -183,7 +185,7 @@ export function createDiffView(deps: DiffViewDeps) {
           ...attributes,
           class: 'rv-row rv-filerow',
           'data-file': String(row.file),
-          'aria-label': fileLabel(file, row.notice, i18n),
+          'aria-label': fileLabel(file, row.notice, i18n, row.viewed),
         },
         fileHead(file, row.notice, headDeps()),
       )
@@ -470,8 +472,10 @@ export function createDiffView(deps: DiffViewDeps) {
     const cursorFile = fileAtRow(cursor)
     return {
       path: files[file]?.path,
+      file,
       offset: element.scrollTop - (tops[starts[file] ?? 0] ?? 0),
       cursorPath: files[cursorFile]?.path,
+      cursorFile,
       cursorOffset: cursor - (starts[cursorFile] ?? 0),
     }
   }
@@ -520,19 +524,25 @@ export function createDiffView(deps: DiffViewDeps) {
         scrollTo(0)
         element.scrollLeft = 0
       } else {
-        const topFile = fileOf(kept.path)
-        const cursorFile = fileOf(kept.cursorPath)
+        // A file that is gone gives its place to the one that now sits where it was: the next one
+        const nearest = (path: string | undefined, index: number) => {
+          const found = fileOf(path)
+          return found >= 0 ? found : Math.min(index, starts.length - 1)
+        }
+        const topFile = nearest(kept.path, kept.file)
+        const cursorFile = nearest(kept.cursorPath, kept.cursorFile)
         const fileStart = (file: number) => tops[starts[file] ?? 0] ?? 0
         const fileEnd = (file: number) => (file + 1 < starts.length ? fileStart(file + 1) : height)
+        const stayed = (path: string | undefined) => fileOf(path) >= 0
         if (topFile >= 0) {
-          scrollTo(
-            fileStart(topFile) + Math.min(kept.offset, fileEnd(topFile) - fileStart(topFile)),
-          )
+          const offset = stayed(kept.path) ? kept.offset : 0
+          scrollTo(fileStart(topFile) + Math.min(offset, fileEnd(topFile) - fileStart(topFile)))
         }
         if (cursorFile >= 0) {
           const last = (starts[cursorFile + 1] ?? rows.length) - 1
-          cursor = Math.min((starts[cursorFile] ?? 0) + kept.cursorOffset, last)
-        } else cursor = Math.min(cursor, Math.max(0, rows.length - 1))
+          const offset = stayed(kept.cursorPath) ? kept.cursorOffset : 0
+          cursor = Math.min((starts[cursorFile] ?? 0) + offset, last)
+        } else cursor = 0
         if (target !== undefined && target >= starts.length) target = undefined
       }
       draw()
@@ -551,6 +561,11 @@ export function createDiffView(deps: DiffViewDeps) {
     nextHunk: (step: 1 | -1) => stepHunk(step),
     nextFile: (step: 1 | -1) => stepFile(step),
     revealFile,
+    // The file being read: the one the keys went to, else the one at the cursor
+    currentFile() {
+      anchorCursor()
+      return target ?? fileAtRow(cursor)
+    },
     // Detached from the page the scroll is lost; it is kept on close and given back on open
     park() {
       parked = { top: element.scrollTop, left: element.scrollLeft }

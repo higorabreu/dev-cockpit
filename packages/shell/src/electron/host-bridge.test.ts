@@ -111,6 +111,7 @@ function setup(picked: string | undefined = undefined) {
         fileReads.push(`${root}|${path}`)
         return ok(['one'])
       },
+      fingerprint: async (cwd) => `print of ${cwd}`,
     },
     settings: {
       get: () => ({ settings: defaultSettings, locked: [], fresh: true }),
@@ -814,5 +815,20 @@ describe('registerHostBridge review', () => {
 
     expect(result).toMatchObject({ ok: false })
     expect(fileReads).toEqual([])
+  })
+
+  it('should give the fingerprint of an existing folder and nothing for a path it refuses', async () => {
+    // Arrange
+    const { call } = setup()
+
+    // Act
+    const answers = [
+      await call(hostChannels.reviewFingerprint, '/srv/acme/backend'),
+      await call(hostChannels.reviewFingerprint, 'srv/acme'),
+      await call(hostChannels.reviewFingerprint, 42),
+    ]
+
+    // Assert
+    expect(answers).toEqual(['print of /srv/acme/backend', undefined, undefined])
   })
 })

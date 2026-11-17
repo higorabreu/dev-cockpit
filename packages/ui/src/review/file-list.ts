@@ -5,27 +5,30 @@ export const FILE_ROW_HEIGHT = 28
 const OVERSCAN = 6
 const PAGE = 8
 
-// The shape tells the state as well as the color, like the file tree of a merge request
-const GLYPHS = {
-  added: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8.5v7M8.5 12h7"/>',
-  deleted: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12h7"/>',
-  modified:
-    '<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/>',
-  renamed: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12h7M12.5 9l3 3-3 3"/>',
-} as const
+// The state as a letter, as in VS Code: the letter tells it as well as the color does
+const LETTERS = { added: 'A', modified: 'M', deleted: 'D', renamed: 'R', copied: 'C' } as const
 
-export type FileState = keyof typeof GLYPHS
+export type FileState = 'added' | 'modified' | 'deleted' | 'renamed'
 
+// The color of the letter: untracked reads as added, copied as renamed
 export const fileState = (file: DiffFile): FileState =>
-  file.status === 'copied' ? 'renamed' : file.status
+  file.untracked ? 'added' : file.status === 'copied' ? 'renamed' : file.status
 
 export const statusKey = (file: DiffFile): MessageKey =>
   file.untracked ? 'review.status.untracked' : `review.status.${file.status}`
 
-export const fileGlyph = (file: DiffFile, size = 15) => {
-  const state = fileState(file)
-  return h('span', { class: 'rv-glyph', 'data-state': state }, icon(GLYPHS[state], size))
-}
+// The full name is in the row's own name for a screen reader and in the tooltip for the eye
+export const fileLetter = (file: DiffFile, i18n: Translator) =>
+  h(
+    'span',
+    {
+      class: 'rv-letter',
+      'data-state': fileState(file),
+      'data-tip': i18n.t(statusKey(file)),
+      'aria-hidden': 'true',
+    },
+    file.untracked ? 'U' : LETTERS[file.status],
+  )
 
 // A long path keeps its file name whole and loses the middle of its folders, with the whole path in the tooltip
 export function pathLabel(path: string): HTMLElement {
@@ -54,7 +57,10 @@ export interface FileListDeps {
   onSelect(index: number): void
   // Enter: the diff takes the keys
   onOpen(): void
+  isViewed(file: DiffFile): boolean
 }
+
+const TICK = '<path d="M6 12.5l4 4L18 8.5"/>'
 
 // The index of the changed files, virtualized: the selected row is the file the diff is on, and picking
 // one scrolls the diff to it
@@ -74,27 +80,31 @@ export function createFileList(deps: FileListDeps) {
 
   function row(file: DiffFile, index: number): HTMLElement {
     const status = i18n.t(statusKey(file))
+    const viewed = deps.isViewed(file)
+    const name = i18n.t('review.a11y.file', {
+      path: file.path,
+      status,
+      added: file.additions,
+      removed: file.deletions,
+    })
     const element = h(
       'div',
       {
-        class: 'rv-file',
+        class: viewed ? 'rv-file rv-file-viewed' : 'rv-file',
         role: 'option',
         id: rowId(index),
         'aria-selected': String(index === selected),
         'aria-posinset': String(index + 1),
         'aria-setsize': String(files.length),
-        'aria-label': i18n.t('review.a11y.file', {
-          path: file.path,
-          status,
-          added: file.additions,
-          removed: file.deletions,
-        }),
+        'aria-label': viewed ? i18n.t('review.a11y.viewed', { file: name }) : name,
         'data-index': String(index),
         style: `transform: translateY(${index * FILE_ROW_HEIGHT}px)`,
       },
-      fileGlyph(file),
+      fileLetter(file, i18n),
       pathLabel(file.path),
       file.hunks.length === 0 ? undefined : counts(file.additions, file.deletions),
+      viewed &&
+        h('span', { class: 'rv-tick', 'data-tip': i18n.t('review.viewed') }, icon(TICK, 14)),
     )
     return element
   }
