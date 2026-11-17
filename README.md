@@ -55,11 +55,12 @@ changed, and your merge requests and tasks.
 </p>
 
 `Ctrl+Shift+M` opens the work screen. **GitLab** lists the merge requests waiting for your review and
-your own, with conflicts, pipelines, open discussions and drafts at a glance. **Jira Cloud** lists the
-tasks assigned to you, grouped by progress and filtered by project. Connect them in Settings,
-Connections; tokens stay in the system keyring.
+your own, with conflicts, pipelines, open discussions and drafts at a glance. **GitHub** (github.com or
+GitHub Enterprise Server) does the same for pull requests, with conflicts, checks and drafts, including
+the reviews requested from your teams. **Jira Cloud** lists the tasks assigned to you, grouped by progress
+and filtered by project. Connect them in Settings, Connections; tokens stay in the system keyring.
 
-Both ship as built-in connector extensions that can be turned off (`dck ext disable dck.gitlab`).
+All three ship as built-in connector extensions that can be turned off (`dck ext disable dck.github`).
 Connectors from third-party extensions are planned; [docs/extensions.md](docs/extensions.md) describes
 what exists today. The clips show example data.
 

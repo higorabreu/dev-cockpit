@@ -823,3 +823,33 @@ with `node_modules` it can run out of the system's inotify watches. Marks that s
 using the review shows they are missed.
 **How to revert:** drop `fingerprint` from `DiffSource` and the watch from `review/review-refresh.ts` (the
 review then reads on open, Ctrl+R and the agent's state, as in D47); drop `viewed` from `FileOpening`.
+
+## D57. GitHub is the third built-in connector, through the REST API with a rate gate
+
+**Decision:** GitHub ships as `dck.github`, a code review connector shaped like GitLab's (`plans/github.md`):
+"To review" (`github-review`) and "Follow up" (`github-mine`) as merge request items, an address that is
+empty for github.com or the root of a GitHub Enterprise Server (API at `<address>/api/v3`), and the token
+only in the system keyring as `github.token`. The adapter `@dck/adapter-github` reads `GET /user`, then
+`GET /search/issues` with `is:pr is:open archived:false review-requested:<login>` (teams included) or
+`author:<login>`, 100 per page following `Link`, at most 5 pages, and per pull request, 5 at a time,
+`pulls/{n}` for the branches and conflicts and the check runs and commit statuses of its head for the CI
+state; a failed lookup leaves that row's branch empty or its CI unknown. A rate gate reads
+`x-ratelimit-*` and `retry-after`, fails a limited request with `DCK-GHB-004`, does not call that
+resource again before its reset (60 s without one, never more than an hour), and stops the per-row
+lookups while fewer than 100 requests are left; the daemon keeps one gate per address for its whole life.
+Error codes `DCK-GHB-001` to `007`. GitLab and GitHub share the window's connection
+(`code-review-connection.ts`) and the daemon's views service (`code-review-views.ts`), each with its own
+address rules, error code and cache file. A merge request item carries its reference mark, `#` for GitHub,
+and an item without one reads as GitLab's `!`. The rail badge sums the connected views that declare a
+badge; with one service it keeps that service's text, with two it says "{count} waiting for your review".
+Open discussions are always false for GitHub: only the GraphQL API knows whether a review thread is
+resolved, and the HTTP port only sends `GET`.
+**Reason:** GitHub is where most developers outside GitLab shops review code; it fitted the connector
+contract of D41 with no change to it. The search endpoint answers both lists with one query each, and its
+own limit (30 requests a minute) is why the pages are capped and the gate exists.
+**Accepted cost:** about three requests per pull request on every refresh; a review request disappears once
+the user submits a review, which is how GitHub records it; the CI chip still says "Pipeline", GitLab's
+word.
+**How to revert:** drop the `dck.github` candidate from `core/src/extensions/built-in.ts`, the adapter and
+the two entries in `shell/src/connections/connector-connections.ts` and `daemon/src/connector-views.ts`;
+the shared connection and views files keep working for GitLab alone.

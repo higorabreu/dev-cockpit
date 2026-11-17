@@ -15,7 +15,7 @@ app reads the manifests, validates them, decides which ones win and reports the 
 | The manifest (version 1) and its validation | Extensions with code in a dedicated host process (phase 3) |
 | Contribution points as a mechanism, with one registered: `connectors` | Connectors from installed extensions (phase 3) |
 | Four sources with precedence and shadowing | Interface contributions and a shared index (phases 4 and 5) |
-| The built-in extensions: `dck.built-in` (empty), `dck.gitlab` and `dck.jira` | |
+| The built-in extensions: `dck.built-in` (empty), `dck.github`, `dck.gitlab` and `dck.jira` | |
 | The `extensions.disabled` setting | |
 | `dck ext list`, `dck ext enable`, `dck ext disable` | |
 
@@ -80,11 +80,12 @@ One point is registered: `connectors`. Any other key in `contributes` is refused
 
 ### `connectors`
 
-A connector brings the developer's work from a service (GitLab and Jira Cloud today) into the Work screen.
+A connector brings the developer's work from a service (GitHub, GitLab and Jira Cloud today) into the Work
+screen.
 Its code still ships with the app, because extensions cannot run code yet: **only built-in extensions may
 declare a connector**, and a connector from an installed, global or repository extension is refused with
 `DCK-EXT-002` until the extension host exists (phase 3). The contract below is internal until then; the
-second connector, Jira, fitted it without a change.
+second and third connectors, Jira and GitHub, fitted it without a change.
 
 `contributes.connectors` is a list of 1 to 4 connectors:
 
@@ -148,6 +149,40 @@ Jira declares the e-mail too, and a view of the other kind:
 }
 ```
 
+GitHub declares the same two lists as GitLab under view ids of its own, since a view id names one view
+across the product. Its address may be left empty, which means github.com:
+
+```json
+{
+  "id": "github",
+  "name": "GitHub",
+  "connection": {
+    "address": { "placeholder": "https://github.com" },
+    "token": { "label": "connections.github.token", "hint": "connections.github.token.hint" }
+  },
+  "views": [
+    {
+      "id": "github-review",
+      "kind": "mergeRequest",
+      "title": "views.review",
+      "description": "views.github.review.description",
+      "empty": "views.empty.github.review",
+      "badge": "views.github.waiting"
+    },
+    {
+      "id": "github-mine",
+      "kind": "mergeRequest",
+      "title": "views.mine",
+      "description": "views.github.mine.description",
+      "empty": "views.empty.github.mine"
+    }
+  ]
+}
+```
+
+When more than one connected view declares a `badge`, the rail badge sums them and its text names no kind
+of item.
+
 Every text is a key of the text catalogs (`core/src/i18n`), checked when the declaration is read, so a
 connector is translated like the rest of the interface. The declaration is strict: an unknown field is an
 error.
@@ -198,6 +233,7 @@ same loader as an installed extension: it can be disabled or refused by the same
 | Id | Contributes |
 | --- | --- |
 | `dck.built-in` | Nothing yet |
+| `dck.github` | The GitHub connector (github.com or GitHub Enterprise Server): pull requests waiting for your review and the ones you opened |
 | `dck.gitlab` | The GitLab connector: merge requests waiting for your review and the ones you opened |
 | `dck.jira` | The Jira Cloud connector: the open issues assigned to you, read only, in the Tasks tab |
 
@@ -261,7 +297,9 @@ system language; the detail after the message is always in English.
 ```
 $ dck ext list
 dck.built-in  0.3.0  built-in   active
+dck.github    0.3.0  built-in   active
 dck.gitlab    0.3.0  built-in   active
+dck.jira      0.3.0  built-in   active
 acme.commits  1.0.0  installed  active
 acme.reviews  0.4.1  installed  disabled
 
@@ -286,7 +324,9 @@ With nothing installed, only the built-in extensions show:
 ```
 $ dck ext list
 dck.built-in  0.3.0  built-in  active
+dck.github    0.3.0  built-in  active
 dck.gitlab    0.3.0  built-in  active
+dck.jira      0.3.0  built-in  active
 ```
 
 The command reads files and never talks to the daemon. It exits with 0 even when an extension is refused,
