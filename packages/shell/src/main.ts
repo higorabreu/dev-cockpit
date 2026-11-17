@@ -58,6 +58,7 @@ import { createElectronStatusIcon } from './electron/status-icon.ts'
 import { createToggleKeyBinder } from './electron/toggle-key-binder.ts'
 import { buildTrayMenu } from './electron/tray-menu.ts'
 import { createWindowSender } from './electron/window-sender.ts'
+import { createAgentLaunchers } from './inspectors/agent-launchers.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
@@ -316,6 +317,14 @@ app.whenReady().then(async () => {
       agents: agentProfiles,
     }),
     agents: agentProfiles,
+    // The PTY host gives every tab this process's environment, so its PATH is the one the tabs start with
+    launchers: createAgentLaunchers({
+      agents: agentProfiles,
+      path: () => process.env.PATH,
+      platform: process.platform,
+      stat: (path) => stat(path),
+      ...(process.env.PATHEXT ? { pathext: process.env.PATHEXT } : {}),
+    }),
 
     environment: createEnvironmentInspector({
       processes: platform.processes,
