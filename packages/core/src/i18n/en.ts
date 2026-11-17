@@ -89,6 +89,8 @@ export const en: Record<MessageKey, string> = {
   'menu.system.theme': 'Light or dark theme',
   'menu.hub.count': '{index} of {total}',
   'menu.empty': 'Nothing here',
+  'menu.more.before': '{count} more above',
+  'menu.more.after': '{count} more below',
   'menu.hint.navigate': 'navigate',
   'menu.hint.release': 'release to run',
   'menu.hint.cancel': 'cancel',

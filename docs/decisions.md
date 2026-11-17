@@ -936,3 +936,26 @@ protocol (OpenTUI writes it too), so it adds no coupling to Codex (D24, D37).
 **How to revert:** drop `attachProgramStatus` from `terminal-session.ts` and `onProgramStatus` from
 `app.ts`, then `program-status.ts` in `core/src/attention` and `ui/src/terminal`, and the tracker's `rest`;
 the Codex profile can stay, and Codex tabs then show only their process activity.
+
+## D60. The hold menu list fits the window and cues the rows it hides
+
+**Decision:** the list beside the wheel (D12) always opens in its sector's direction. It measures how many
+rows fit between the window's top edge and the tab bar on that side of the wheel and shows every row that
+fits; only a list that does not fit is windowed, with no scrollbar and a chevron strip above and below,
+24 pixels tall (the WCAG 2.2 target size), with an empty strip of the same height when nothing is hidden on
+that side, so the list keeps its height as the window moves. The chevron's tooltip says how many rows are
+hidden there. The window moves only when the selection reaches its edge, as a scrolled list does. The
+mouse wheel over the list moves the selection one row per notch, and a click on a chevron selects the
+nearest hidden row without running it or taking the focus. Rows outside the window keep sizing the list,
+so its width does not jump.
+**Reason:** the fixed caps (5 rows up and down, 9 to the sides) hid rows that had room in a tall window and
+ran off the top or over the tab bar's hint in a short one: at the default height (half the screen) the
+Tabs list lost its first rows above the window. Chevrons read calmer than a fade, which dims a real row,
+and than a "3 more" line, which costs a row of height; the hub already says "4 of 7". Opening a cramped
+list beside the wheel was tried and dropped: on the right, the Tabs list read as the Projects list.
+**Accepted cost:** the wheel sits in the middle of the window, so at half of a 1080 pixel screen the Tabs
+list shows 3 of its 7 rows, and at half of a 768 pixel screen 1, while the Agent list there (1 of 3) runs
+over the tab bar and its hint.
+**How to revert:** restore the fixed `maxRows` and the centered `visibleWindow` in
+`ui/src/hold-menu/menu-view.ts`, and drop `ui/src/hold-menu/list-fit.ts`, the measuring in the controller
+and the `.cue` styles.

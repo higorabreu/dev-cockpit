@@ -2,6 +2,7 @@ import {
   commitSwitcher,
   createHoldGesture,
   createHoldMenu,
+  currentCategory,
   type Direction,
   type HoldMenuState,
   type MenuCategory,
@@ -17,8 +18,17 @@ import {
   type Translate,
 } from '@dck/core'
 import { inputGate } from '../platform/input-gate.ts'
+import { fitRows, followSelection, listAnchor, listLimit } from './list-fit.ts'
 import { type MenuMarkup, switcherMarkup, wheelMarkup } from './menu-view.ts'
 import { createPointerIntent } from './pointer-intent.ts'
+
+// Space the list keeps from the window's top edge and from the tab bar, in CSS pixels
+const EDGE = 8
+// Measuring settles the rows in two repaints at most; the third pass is a guard
+const FIT_PASSES = 3
+// Wheel travel that moves the selection one row: a mouse notch (about 100 pixels) moves one row, not
+// several, so the selection stays precise; a touchpad's small deltas add up to it
+const WHEEL_STEP = 40
 
 export interface MenuTab {
   readonly id: string
@@ -72,12 +82,21 @@ export function createHoldMenuController(
 ) {
   let mode: Mode = { kind: 'closed' }
   const pointer = createPointerIntent()
+  // Per category: how many rows fit on its side of the wheel, and the first one on screen
+  const rowsFit = new Map<number, number>()
+  const firstRow = new Map<number, number>()
+  let wheelTravel = 0
 
   const gesture = createHoldGesture({
     scheduler,
     onOpen() {
-      if (mode.kind === 'closed')
+      if (mode.kind === 'closed') {
         mode = { kind: 'wheel', menu: createHoldMenu(actions.categories()) }
+        // The window may have changed size since the last time
+        rowsFit.clear()
+        firstRow.clear()
+        wheelTravel = 0
+      }
       pointer.keysTakeOver()
       draw()
     },
@@ -93,8 +112,48 @@ export function createHoldMenuController(
     elements.hint.style.top = `${Math.round(box.top + (box.height - elements.hint.offsetHeight) / 2)}px`
   }
 
+  // Rows that fit the room on the list's side of the wheel, or undefined when there is nothing to measure
+  function measureFit(menu: HoldMenuState, rows: number, total: number): number | undefined {
+    const list = elements.card.querySelector<HTMLElement>('.list')
+    const shown = list?.querySelectorAll<HTMLElement>('.it:not(.gone)')
+    const first = shown?.[0]
+    const last = shown?.[shown.length - 1]
+    if (!list || !shown || !first || !last) return undefined
+    const pitch =
+      shown.length > 1
+        ? (last.offsetTop - first.offsetTop) / (shown.length - 1)
+        : first.offsetHeight
+    if (pitch <= 0) return undefined
+    let cues = 0
+    for (const cue of list.querySelectorAll<HTMLElement>('.cue')) cues += cue.offsetHeight
+    const anchor = listAnchor(menu.category, menu.categories.length)
+    // offsetTop ignores the card's opening scale, which would skew a bounding box
+    const anchorY = elements.card.offsetTop + anchor.y
+    const bar = elements.bar.getBoundingClientRect()
+    const band = { top: EDGE, bottom: (bar.height > 0 ? bar.top : window.innerHeight) - EDGE }
+    const limit = listLimit(anchor.opening, anchorY, band)
+    return fitRows({ total, rows, height: list.offsetHeight, pitch, cues }, limit)
+  }
+
+  function drawWheel(menu: HoldMenuState) {
+    const category = menu.category
+    const total = currentCategory(menu)?.items.length ?? 0
+    let rows = Math.min(rowsFit.get(category) ?? total, total)
+    for (let pass = 1; ; pass++) {
+      const shown = followSelection(total, selectedIndex(menu), rows, firstRow.get(category))
+      paint(wheelMarkup(menu, t, shown))
+      const fit = pass < FIT_PASSES ? measureFit(menu, rows, total) : undefined
+      if (fit === undefined || fit === rows) {
+        firstRow.set(category, shown.start)
+        break
+      }
+      rows = fit
+    }
+    rowsFit.set(category, rows)
+  }
+
   function draw() {
-    if (mode.kind === 'wheel') paint(wheelMarkup(mode.menu, t))
+    if (mode.kind === 'wheel') drawWheel(mode.menu)
     if (mode.kind === 'switcher') {
       const { switcher, tabs } = mode
       const chips = switcher.order.map((id) => {
@@ -172,9 +231,38 @@ export function createHoldMenuController(
     else close()
   }
 
+  // Selects a row of the open list without running it; the window follows, as with the arrows
+  function selectRow(index: number) {
+    if (mode.kind !== 'wheel') return
+    const menu = mode.menu
+    const total = currentCategory(menu)?.items.length ?? 0
+    const next = Math.min(Math.max(index, 0), total - 1)
+    if (total === 0 || next === selectedIndex(menu)) return
+    mode = { ...mode, menu: select(menu, menu.category, next) }
+    pointer.keysTakeOver()
+    draw()
+  }
+
+  function onWheel(event: WheelEvent) {
+    if (mode.kind !== 'wheel' || !(event.target instanceof Element)) return
+    if (!event.target.closest('.list')) return
+    consume(event)
+    wheelTravel +=
+      event.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? event.deltaY : event.deltaY * WHEEL_STEP
+    if (Math.abs(wheelTravel) < WHEEL_STEP) return
+    const step = Math.sign(wheelTravel)
+    wheelTravel = 0
+    selectRow(selectedIndex(mode.menu) + step)
+  }
+
   function onPointer(event: MouseEvent) {
     if (mode.kind !== 'wheel' || !(event.target instanceof Element)) return
     const click = event.type === 'click'
+    const cue = event.target.closest<HTMLElement>('[data-reveal]')
+    if (cue) {
+      if (click) selectRow(Number(cue.dataset.reveal))
+      return
+    }
     if (!click && !pointer.moved(event.clientX, event.clientY)) return
     const sector = event.target.closest<HTMLElement>('[data-category]')
     const row = event.target.closest<HTMLElement>('[data-item]')
@@ -200,4 +288,10 @@ export function createHoldMenuController(
   })
   elements.card.addEventListener('mousemove', onPointer)
   elements.card.addEventListener('click', onPointer)
+  elements.card.addEventListener('wheel', onWheel, { passive: false })
+  // A cue only moves the window, so it must not take the focus from the terminal
+  elements.card.addEventListener('mousedown', (event) => {
+    if (event.target instanceof Element && event.target.closest('[data-reveal]'))
+      event.preventDefault()
+  })
 }

@@ -88,6 +88,8 @@ export const ptBR = {
   'menu.system.theme': 'Tema claro ou escuro',
   'menu.hub.count': '{index} de {total}',
   'menu.empty': 'Nada por aqui',
+  'menu.more.before': 'Mais {count} acima',
+  'menu.more.after': 'Mais {count} abaixo',
   'menu.hint.navigate': 'navegar',
   'menu.hint.release': 'soltar executa',
   'menu.hint.cancel': 'cancela',

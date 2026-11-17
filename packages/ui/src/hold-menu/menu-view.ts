@@ -2,11 +2,13 @@ import {
   CENTER,
   currentCategory,
   type HoldMenuState,
+  type MenuCategory,
   sectorAngle,
   selectedIndex,
   type Translate,
 } from '@dck/core'
 import { keysMarkup } from '../kit/keys.ts'
+import { listAnchor, type RowWindow, WHEEL_SIZE } from './list-fit.ts'
 
 const PATHS: Record<string, string> = {
   window: 'M4 6h16v12H4zM4 10h16',
@@ -21,7 +23,6 @@ const ICON_ATTRS =
 const IDENTITY_PATH =
   'M20 64C20 38 36 22 56 22C73 22 84 33 84 48L84 64C84 71 79 76 72 76L32 76C25 76 20 71 20 64ZM46 44H80V60C80 64 77 67 73 67H52C48.7 67 46 64.3 46 61Z'
 
-export const WHEEL_SIZE = 196
 const INNER = 38
 const OUTER = 96
 const GAP = 4
@@ -48,33 +49,49 @@ function sectorPath(index: number, count: number) {
   return `M${edge(start, OUTER, 1)} A${outer} ${outer} 0 0 1 ${edge(end, OUTER, -1)} L${edge(end, INNER, -1)} A${inner} ${inner} 0 0 0 ${edge(start, INNER, 1)}Z`
 }
 
-// The list opens outside the wheel, in the direction of the selected sector
 function fanStyle(index: number, count: number) {
-  const angle = sectorAngle(index, count)
-  const cx = Math.cos(angle)
-  const cy = Math.sin(angle)
-  const reach = WHEEL_SIZE / 2 + 12
-  const x = WHEEL_SIZE / 2 + cx * reach
-  const y = WHEEL_SIZE / 2 + cy * reach
+  const { opening, x, y } = listAnchor(index, count)
   let shift = 'translate(-50%, 0)'
-  if (cx > 0.35) shift = 'translate(0, -50%)'
-  else if (cx < -0.35) shift = 'translate(-100%, -50%)'
-  else if (cy < 0) shift = 'translate(-50%, -100%)'
+  if (opening === 'side')
+    shift = x > WHEEL_SIZE / 2 ? 'translate(0, -50%)' : 'translate(-100%, -50%)'
+  else if (opening === 'up') shift = 'translate(-50%, -100%)'
   return `left:${fixed(x)}px;top:${fixed(y)}px;transform:${shift}`
 }
 
-const SIDE_ROWS = 9
-const VERTICAL_ROWS = 5
+const CHEVRONS = { before: 'M4 10l4-4 4 4', after: 'M4 6l4 4 4-4' }
+const CHEVRON_ATTRS =
+  'width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'
 
-// Top and bottom sectors have less room, so the list opens vertically
-const maxRows = (index: number, count: number) =>
-  index >= 0 && Math.abs(Math.cos(sectorAngle(index, count))) > 0.35 ? SIDE_ROWS : VERTICAL_ROWS
+// An empty cue keeps its slot, so the list does not change height as the window moves. A click on a cue
+// selects the nearest hidden row on its side
+function cueMarkup(side: 'before' | 'after', hidden: number, reveal: number, t: Translate) {
+  if (hidden === 0) return `<span class="cue" aria-hidden="true"></span>`
+  const label = escapeHtml(t(`menu.more.${side}`, { count: hidden }))
+  return `<button type="button" class="cue" tabindex="-1" data-reveal="${reveal}" data-tip="${label}" aria-label="${label}"><svg ${CHEVRON_ATTRS}><path d="${CHEVRONS[side]}"/></svg></button>`
+}
 
-// Window of rows around the selected one, for lists taller than the screen
-function visibleWindow(total: number, selected: number, rows: number): readonly number[] {
-  const size = Math.min(total, rows)
-  const start = Math.min(Math.max(selected - Math.floor(size / 2), 0), total - size)
-  return Array.from({ length: size }, (_, offset) => start + offset)
+// Rows outside the window stay in the list without height, so its width follows the longest label and does
+// not jump while the window moves
+function listMarkup(
+  category: MenuCategory,
+  selected: number,
+  shown: RowWindow | undefined,
+  t: Translate,
+) {
+  const total = category.items.length
+  if (total === 0) return `<div class="empty">${escapeHtml(t('menu.empty'))}</div>`
+  const first = Math.max(0, shown?.start ?? 0)
+  const last = Math.min(total, first + (shown?.size ?? total)) - 1
+  const items = category.items
+    .map((item, index) => {
+      const content = `<span class="l">${escapeHtml(item.label)}</span><span class="k">${item.shortcut ? keysMarkup(item.shortcut, 'compact') : ''}</span>`
+      if (index < first || index > last)
+        return `<button type="button" class="it gone" tabindex="-1">${content}</button>`
+      return `<button type="button" class="it${index === selected ? ' on' : ''}" data-item="${index}">${content}</button>`
+    })
+    .join('')
+  if (first === 0 && last === total - 1) return items
+  return `${cueMarkup('before', first, first - 1, t)}${items}${cueMarkup('after', total - 1 - last, last + 1, t)}`
 }
 
 const kbd = (keys: readonly string[]) => keysMarkup(keys.join(' '), 'compact')
@@ -85,7 +102,8 @@ export interface MenuMarkup {
   readonly hint: string
 }
 
-export function wheelMarkup(state: HoldMenuState, t: Translate): MenuMarkup {
+// Shows the selected category's rows inside `shown`, or all of them; the rest sits behind overflow cues
+export function wheelMarkup(state: HoldMenuState, t: Translate, shown?: RowWindow): MenuMarkup {
   const count = state.categories.length
   const category = currentCategory(state)
   const sectors = state.categories
@@ -98,19 +116,10 @@ export function wheelMarkup(state: HoldMenuState, t: Translate): MenuMarkup {
   const hub = category
     ? `<svg x="-9" y="-16" width="18" height="18" ${ICON_ATTRS} style="color:var(--fg)"><path d="${PATHS[category.icon] ?? ''}"/></svg><text class="hubt" y="14">${escapeHtml(t('menu.hub.count', { index: selectedIndex(state) + 1, total: category.items.length }))}</text>`
     : `<svg x="-20" y="-20" width="40" height="40" viewBox="0 0 100 100" aria-hidden="true" style="color:var(--muted)"><path fill="currentColor" fill-rule="evenodd" d="${IDENTITY_PATH}"/><path d="M54 50 59 55.5 54 61M63 61H72" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-  const rows = category?.items.length
-    ? visibleWindow(category.items.length, selectedIndex(state), maxRows(state.category, count))
-        .map((index) => {
-          const item = category.items[index]
-          if (!item) return ''
-          return `<button type="button" class="it${index === selectedIndex(state) ? ' on' : ''}" data-item="${index}"><span class="l">${escapeHtml(item.label)}</span><span class="k">${item.shortcut ? keysMarkup(item.shortcut, 'compact') : ''}</span></button>`
-        })
-        .join('')
-    : `<div class="empty">${escapeHtml(t('menu.empty'))}</div>`
   const list =
     state.category === CENTER
       ? ''
-      : `<div class="list fan" style="${fanStyle(state.category, count)}">${rows}</div>`
+      : `<div class="list fan" style="${fanStyle(state.category, count)}">${category ? listMarkup(category, selectedIndex(state), shown, t) : ''}</div>`
   return {
     mode: 'wheel-mode',
     card: `<svg class="wheel" width="${WHEEL_SIZE}" height="${WHEEL_SIZE}" viewBox="-98 -98 196 196"><circle class="backdrop" r="98"/>${sectors}${hub}</svg>${list}`,
