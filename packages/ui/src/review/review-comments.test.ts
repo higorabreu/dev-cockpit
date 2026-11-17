@@ -355,3 +355,18 @@ describe('review comments', () => {
     )
   })
 })
+
+describe('comment field', () => {
+  it('should use the design system scrollbar when the comment is longer than the field', async () => {
+    // Arrange
+    const { open, key, lines, line, click, field } = setup()
+    await open()
+    click(line(1))
+
+    // Act
+    key(lines(), 'c')
+
+    // Assert
+    expect(field().classList.contains('scroll')).toBe(true)
+  })
+})
