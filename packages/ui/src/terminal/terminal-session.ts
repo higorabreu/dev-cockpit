@@ -53,6 +53,9 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   const { api } = options
   const element = document.createElement('div')
   element.className = 'session'
+  const screenHost = document.createElement('div')
+  screenHost.className = 'session-terminal'
+  element.appendChild(screenHost)
   options.host.appendChild(element)
 
   const terminal = new Terminal({
@@ -66,7 +69,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   })
   const fit = new FitAddon()
   terminal.loadAddon(fit)
-  terminal.open(element)
+  terminal.open(screenHost)
   attachPaths(terminal, {
     ...options.paths,
     resolve: (base, paths) => api.paths.resolve(base, paths),
