@@ -410,15 +410,65 @@ describe('settings view, connections', () => {
     }
   })
 
-  it('should give GitHub the fine-grained read-only permissions in its token hint', async () => {
+  it('should give GitHub a one-line read-only hint and the github.com placeholder', async () => {
     const { body, view } = await connectionsPage(connectionsHost([GITHUB_CONNECTOR]).host)
 
     expect(body.textContent).toContain(
-      'Fine-grained, read only: Pull requests, Commit statuses and Metadata.',
+      'Fine-grained, read only. Kept in the system keyring, never in a file.',
     )
+    expect(body.textContent).not.toContain('An empty address')
     expect(
       body.querySelector<HTMLInputElement>('[data-focus="conn-github-url"]')?.placeholder,
     ).toBe('https://github.com')
+    view.close()
+  })
+
+  it('should fold the GitHub token permissions and unfold them in place when Permissions is pressed', async () => {
+    const { body, control, view } = await connectionsPage(connectionsHost([GITHUB_CONNECTOR]).host)
+    const button = control<HTMLButtonElement>('conn-github-permissions')
+    const list = () => body.querySelector<HTMLElement>('#conn-github-permissions-list')
+    button.focus()
+
+    const before = [button.getAttribute('aria-expanded'), list()?.hidden]
+    button.click()
+
+    expect(before).toEqual(['false', true])
+    expect(button.getAttribute('aria-expanded')).toBe('true')
+    expect(button.getAttribute('aria-controls')).toBe('conn-github-permissions-list')
+    expect(list()?.hidden).toBe(false)
+    expect([...(list()?.querySelectorAll('li') ?? [])].map((item) => item.textContent)).toEqual([
+      'Pull requests: Read',
+      'Commit statuses: Read',
+      'Metadata: Read',
+      'A classic token needs the repo scope for private repositories, and only a classic token reads their checks.',
+    ])
+    expect(document.activeElement).toBe(button)
+    view.close()
+  })
+
+  it('should keep the permissions open across a redraw and fold them again on a second press', async () => {
+    const { body, control, view, emit } = await connectionsPage(
+      connectionsHost([GITHUB_CONNECTOR]).host,
+    )
+    const first = control<HTMLButtonElement>('conn-github-permissions')
+    first.click()
+
+    emit(['theme'])
+    await settle()
+    const reopened = control<HTMLButtonElement>('conn-github-permissions')
+    const stillOpen = reopened.getAttribute('aria-expanded')
+    reopened.click()
+
+    expect(reopened).not.toBe(first)
+    expect(stillOpen).toBe('true')
+    expect(body.querySelector<HTMLElement>('#conn-github-permissions-list')?.hidden).toBe(true)
+    view.close()
+  })
+
+  it('should give the GitLab token no permissions button since it declares none', async () => {
+    const { body, view } = await connectionsPage(connectionsHost([GITLAB_CONNECTOR]).host)
+
+    expect(body.querySelector('.sdisclose')).toBeNull()
     view.close()
   })
 

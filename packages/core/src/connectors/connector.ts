@@ -45,7 +45,12 @@ export const connectorSchema = z.strictObject({
   connection: z.strictObject({
     address: field,
     email: field.optional(),
-    token: z.strictObject({ label: messageKey, hint: messageKey }),
+    // `permissions` lists what the token needs, shown on demand under the hint
+    token: z.strictObject({
+      label: messageKey,
+      hint: messageKey,
+      permissions: z.array(messageKey).min(1).max(6).optional(),
+    }),
   }),
   views: z.array(connectorViewSchema).min(1).max(8),
 })

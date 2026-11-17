@@ -9,7 +9,16 @@ export const GITHUB_CONNECTOR = {
   ciTerm: 'checks',
   connection: {
     address: { placeholder: GITHUB_DOT_COM },
-    token: { label: 'connections.github.token', hint: 'connections.github.token.hint' },
+    token: {
+      label: 'connections.github.token',
+      hint: 'connections.github.token.hint',
+      permissions: [
+        'connections.github.permission.pulls',
+        'connections.github.permission.statuses',
+        'connections.github.permission.metadata',
+        'connections.github.permission.classic',
+      ],
+    },
   },
   views: [
     {

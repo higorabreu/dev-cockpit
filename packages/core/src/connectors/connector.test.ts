@@ -106,6 +106,17 @@ describe('connectors contribution point', () => {
       'a view with no description',
       { ...tracker, views: [{ ...tracker.views[0], description: undefined }] },
     ],
+    [
+      'a token permission that is not a catalog key',
+      {
+        ...tracker,
+        connection: {
+          ...tracker.connection,
+          token: { ...tracker.connection.token, permissions: ['Pull requests: Read'] },
+        },
+      },
+    ],
+    ['a CI word no service uses', { ...tracker, ciTerm: 'builds' }],
   ])('should refuse the declaration when it has %s', (_label, declaration) => {
     expect(connectorSchema.safeParse(declaration).success).toBe(false)
   })

@@ -259,7 +259,13 @@ export const en: Record<MessageKey, string> = {
     'Create it at id.atlassian.com, under Security, API tokens. Kept in the system keyring, never in a file.',
   'connections.github.token': 'Personal access token',
   'connections.github.token.hint':
-    'Fine-grained, read only: Pull requests, Commit statuses and Metadata. A classic token needs the repo scope for private repositories, and only a classic token reads their checks. An empty address is github.com. Kept in the system keyring, never in a file.',
+    'Fine-grained, read only. Kept in the system keyring, never in a file.',
+  'connections.github.permission.pulls': 'Pull requests: Read',
+  'connections.github.permission.statuses': 'Commit statuses: Read',
+  'connections.github.permission.metadata': 'Metadata: Read',
+  'connections.github.permission.classic':
+    'A classic token needs the repo scope for private repositories, and only a classic token reads their checks.',
+  'connections.permissions': 'Permissions',
   'connections.token.placeholder': 'Paste the token to connect',
   'connections.connect': 'Connect',
   'connections.disconnect': 'Disconnect',

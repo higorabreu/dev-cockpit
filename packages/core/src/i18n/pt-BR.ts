@@ -259,7 +259,13 @@ export const ptBR = {
     'Crie em id.atlassian.com, em Segurança, Tokens de API. Fica no cofre do sistema, nunca em arquivo.',
   'connections.github.token': 'Token de acesso pessoal',
   'connections.github.token.hint':
-    'Fine-grained, somente leitura: Pull requests, Commit statuses e Metadata. Um token clássico precisa do escopo repo para repositórios privados, e só um token clássico lê os checks deles. Endereço vazio é o github.com. Fica no cofre do sistema, nunca em arquivo.',
+    'Fine-grained, somente leitura. Fica no cofre do sistema, nunca em arquivo.',
+  'connections.github.permission.pulls': 'Pull requests: somente leitura',
+  'connections.github.permission.statuses': 'Commit statuses: somente leitura',
+  'connections.github.permission.metadata': 'Metadata: somente leitura',
+  'connections.github.permission.classic':
+    'Um token clássico precisa do escopo repo para repositórios privados, e só um token clássico lê os checks deles.',
+  'connections.permissions': 'Permissões',
   'connections.token.placeholder': 'Cole o token para conectar',
   'connections.connect': 'Conectar',
   'connections.disconnect': 'Desconectar',
