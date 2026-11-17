@@ -259,6 +259,24 @@ describe('createReviewPane', () => {
     expect(labels('.rv-row[data-kind="context"]')[0]).toBe('Line 1: text 1')
   })
 
+  it('should keep an expanded gap open when the review reads the same change again', async () => {
+    // Arrange
+    const { pane, reads, labels, key } = setup(repository())
+    pane.open()
+    await flush()
+    pane.element.querySelector<HTMLElement>('.rv-expand')?.click()
+    await flush()
+
+    // Act
+    key(pane.element, 'r', { ctrlKey: true })
+    await flush()
+
+    // Assert
+    expect(labels('.rv-expand')).toEqual(['Expand 8 lines'])
+    expect(labels('.rv-row[data-kind="context"]')[0]).toBe('Line 1: text 1')
+    expect(reads).toEqual(['/home/ana/acme|src/billing/invoice.ts'])
+  })
+
   it('should cross files with n and p and land on file headers with ] and [', async () => {
     const { pane, key } = setup(repository())
     pane.open()
