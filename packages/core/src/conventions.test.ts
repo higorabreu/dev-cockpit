@@ -91,6 +91,16 @@ describe('project conventions', () => {
   })
 
   // Every team names its branches its own way, so no code may treat one name as the base
+  it('should fade nothing with a partial opacity when reading the interface styles', () => {
+    // Text and icons fade with a solid color token (accessibility rule); 0 and 1 only show and hide
+    const styles = join(packagesRoot, 'ui', 'src', 'styles')
+    const partial = readdirSync(styles)
+      .filter((name) => name.endsWith('.css'))
+      .filter((name) => /opacity:\s*0?\.\d/.test(readFileSync(join(styles, name), 'utf8')))
+
+    expect(partial).toEqual([])
+  })
+
   it('should name no branch in the code when listing the sources outside tests and catalogs', () => {
     // Not branch names: the page's `<main>` element and the `main` field of an extension's manifest
     const notBranches: Record<string, string> = {

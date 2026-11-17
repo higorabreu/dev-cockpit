@@ -238,8 +238,10 @@
   gap: 8px;
 }
 
-.srow2[data-locked="true"] .scontrol {
-  opacity: 0.6;
+/* A locked setting's controls are disabled: they read so in solid colors, as the design system's select */
+.scontrol input:disabled {
+  border-style: dashed;
+  color: var(--muted);
 }
 
 .scontrol input[type="text"],
