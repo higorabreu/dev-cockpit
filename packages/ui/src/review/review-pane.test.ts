@@ -74,6 +74,7 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
   let escapes = 0
   let closes = 0
   let layouts = 0
+  const sent: string[] = []
   const memory = { indexHidden: false }
   const bases = new Map<string, string>()
   const api = {
@@ -111,6 +112,10 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
     onToggleLayout: () => {
       layouts += 1
     },
+    send: (text) => {
+      sent.push(text)
+      return true
+    },
   })
   document.body.append(pane.element)
   return {
@@ -120,6 +125,7 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
     escapes: () => escapes,
     closes: () => closes,
     layouts: () => layouts,
+    sent,
     memory,
     bases,
     text: (selector: string) => pane.element.querySelector(selector)?.textContent ?? '',
@@ -425,7 +431,7 @@ describe('createReviewPane', () => {
     const inside = text('.phint')
     outside.focus()
 
-    expect(inside).toBe('↑↓ navigate[ ] filen p hunkv viewedEsc terminalCtrl+R Refresh')
+    expect(inside).toBe('↑↓ navigate[ ] filen p hunkc commentv viewedEsc terminalCtrl+R Refresh')
     expect(text('.phint')).toBe('Ctrl+Shift+D review')
   })
 

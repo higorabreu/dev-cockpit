@@ -18,6 +18,7 @@ function bind(keyboard: Keyboard) {
     closeTab: record('closeTab'),
     toggleReview: record('toggleReview'),
     toggleReviewLayout: record('toggleReviewLayout'),
+    sendReview: record('sendReview'),
     nextTab: record('nextTab'),
     previousTab: record('previousTab'),
     goToTab: record('goToTab'),
@@ -41,6 +42,18 @@ const press = (init: KeyboardEventInit) => {
 }
 
 describe('bindShortcuts', () => {
+  it('should send the review and keep Enter from the shell when Ctrl+Shift+Enter is pressed', () => {
+    // Arrange
+    const ran = bind('pc')
+
+    // Act
+    const event = press({ key: 'Enter', code: 'Enter', ctrlKey: true, shiftKey: true })
+
+    // Assert
+    expect(ran).toEqual(['sendReview'])
+    expect(event.defaultPrevented).toBe(true)
+  })
+
   it('should open a tab and keep the key from the shell when Cmd+T is pressed on a Mac', () => {
     // Arrange
     const ran = bind('mac')

@@ -16,6 +16,8 @@ export interface ReviewTabsDeps {
   chooseBase(root: string, name: string | undefined): Promise<void>
   // The header's layout button: show the review in this orientation from now on
   chooseLayout(orientation: Orientation): void
+  // Types text into the tab's terminal as a paste, without Enter; false when it could not
+  paste(tabId: string, text: string): boolean
 }
 
 const paneId = (tabId: string) => `${tabId}:review`
@@ -41,6 +43,11 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
       onEscape: () => view.focus(tabId),
       onClose: () => close(tabId),
       onToggleLayout: () => toggleLayout(tabId),
+      send(text) {
+        if (!deps.paste(tabId, text)) return false
+        view.focus(tabId)
+        return true
+      },
     })
   }
 
@@ -92,6 +99,10 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
     },
     close,
     toggleLayout,
+    // Ctrl+Shift+Enter: the open review's pending comments go to its agent
+    send(tabId: string): Promise<void> {
+      return panes.get(tabId)?.send() ?? Promise.resolve()
+    },
     arranged(tabId: string, orientation: Orientation | undefined, narrow: boolean) {
       panes.get(tabId)?.setArrangement(orientation, narrow)
     },

@@ -163,5 +163,10 @@
     "category": "not_found",
     "retryable": false,
     "rpc": -32029
+  },
+  "DCK-GIT-006": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32030
   }
 }
