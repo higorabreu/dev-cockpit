@@ -39,7 +39,7 @@ interface Geometry {
 const FULL: Geometry = { size: WHEEL_SIZE, inner: 38, outer: 96, label: 68 }
 const COMPACT: Geometry = { size: COMPACT_WHEEL, inner: 26, outer: 80, label: 52 }
 const GAP = 4
-const CENTERED: WheelLayout = { size: WHEEL_SIZE, top: 0, overlap: 0 }
+const CENTERED: WheelLayout = { size: WHEEL_SIZE, top: 0, left: 0, overlap: 0 }
 
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
 const escapeHtml = (text: string) => text.replace(/[&<>"]/g, (char) => ENTITIES[char] ?? char)

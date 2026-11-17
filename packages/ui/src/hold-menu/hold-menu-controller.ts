@@ -22,8 +22,10 @@ import {
   centeredLayout,
   followSelection,
   listBand,
+  type Pin,
   type Placement,
   placeWheel,
+  type Room,
   type WheelLayout,
 } from './list-fit.ts'
 import { type MenuMarkup, switcherMarkup, wheelMarkup } from './menu-view.ts'
@@ -94,8 +96,8 @@ export function createHoldMenuController(
   const rowsFit = new Map<number, number>()
   const firstRow = new Map<number, number>()
   const layouts = new Map<number, WheelLayout>()
-  // The wheel's top on screen, kept while the pointer moves the selection
-  let shownTop: number | undefined
+  // Where the wheel is on screen, kept while the pointer moves the selection
+  let shown: Pin | undefined
   let wheelTravel = 0
 
   const gesture = createHoldGesture({
@@ -107,7 +109,7 @@ export function createHoldMenuController(
         rowsFit.clear()
         firstRow.clear()
         layouts.clear()
-        shownTop = undefined
+        shown = undefined
         wheelTravel = 0
       }
       pointer.keysTakeOver()
@@ -126,10 +128,13 @@ export function createHoldMenuController(
   }
 
   const band = () => listBand(elements.bar.getBoundingClientRect(), window.innerHeight, EDGE)
+  const room = (): Room => ({ ...band(), left: EDGE, right: window.innerWidth - EDGE })
 
   function place(layout: WheelLayout) {
+    elements.card.style.removeProperty('max-height')
     elements.card.style.setProperty('--wheel', `${layout.size}px`)
     elements.card.style.top = `${layout.top}px`
+    elements.card.style.left = `${layout.left}px`
   }
 
   // The wheel slides between places only once it is on screen, never from where the last opening left it
@@ -144,7 +149,7 @@ export function createHoldMenuController(
     menu: HoldMenuState,
     rows: number,
     total: number,
-    pinned: number | undefined,
+    pinned: Pin | undefined,
   ): Placement | undefined {
     const list = elements.card.querySelector<HTMLElement>('.list')
     const shown = list?.querySelectorAll<HTMLElement>('.it:not(.gone)')
@@ -158,21 +163,24 @@ export function createHoldMenuController(
     if (pitch <= 0) return undefined
     let cues = 0
     for (const cue of list.querySelectorAll<HTMLElement>('.cue')) cues += cue.offsetHeight
-    const measure = { total, rows, height: list.offsetHeight, pitch, cues }
-    return placeWheel(menu.category, menu.categories.length, band(), measure, pinned)
+    const measure = { total, rows, height: list.offsetHeight, pitch, cues, width: list.offsetWidth }
+    return placeWheel(menu.category, menu.categories.length, room(), measure, pinned)
   }
 
   const sameLayout = (a: WheelLayout, b: WheelLayout) =>
-    a.size === b.size && Math.abs(a.top - b.top) < 0.5 && Math.abs(a.overlap - b.overlap) < 0.5
+    a.size === b.size &&
+    Math.abs(a.top - b.top) < 0.5 &&
+    Math.abs(a.left - b.left) < 0.5 &&
+    Math.abs(a.overlap - b.overlap) < 0.5
 
   // `still` keeps the wheel where it is, for a selection the pointer made
   function drawWheel(menu: HoldMenuState, still: boolean) {
     const category = menu.category
     const total = currentCategory(menu)?.items.length ?? 0
-    const pinned = still ? shownTop : undefined
+    const pinned = still ? shown : undefined
     let rows = Math.min(rowsFit.get(category) ?? total, total)
-    const start = layouts.get(category) ?? centeredLayout(band())
-    let layout = pinned === undefined ? start : { ...start, top: pinned }
+    const start = layouts.get(category) ?? centeredLayout(room())
+    let layout = pinned === undefined ? start : { ...start, ...pinned }
     for (let pass = 1; ; pass++) {
       const shown = followSelection(total, selectedIndex(menu), rows, firstRow.get(category))
       paint(wheelMarkup(menu, t, shown, layout))
@@ -187,7 +195,7 @@ export function createHoldMenuController(
     }
     rowsFit.set(category, rows)
     layouts.set(category, layout)
-    shownTop = layout.top
+    shown = { top: layout.top, left: layout.left }
     settle()
   }
 

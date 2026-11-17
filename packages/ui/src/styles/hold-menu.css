@@ -46,7 +46,6 @@
    needs room */
 #menu-card.wheel-mode {
   position: absolute;
-  left: calc(50% - var(--wheel, 196px) / 2);
   width: var(--wheel, 196px);
   height: var(--wheel, 196px);
 }
@@ -55,7 +54,8 @@
   #menu-card.wheel-mode[data-placed] {
     transition:
       transform var(--motion-fast) var(--motion-easing),
-      top var(--motion-normal) var(--motion-easing);
+      top var(--motion-normal) var(--motion-easing),
+      left var(--motion-normal) var(--motion-easing);
   }
 }
 
@@ -124,7 +124,8 @@
   position: absolute;
   width: max-content;
   min-width: 206px;
-  max-width: 340px;
+  /* A window narrower than the list cuts its labels, never the list */
+  max-width: min(340px, calc(100vw - 16px));
   padding: 6px;
   display: flex;
   flex-direction: column;
