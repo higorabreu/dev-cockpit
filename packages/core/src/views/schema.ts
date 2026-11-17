@@ -14,6 +14,7 @@ export const mergeRequestSummarySchema = z.object({
   hasConflicts: z.boolean(),
   openDiscussions: z.boolean(),
   pipeline: z.enum(['success', 'failed', 'running', 'pending', 'canceled', 'none', 'unknown']),
+  referenceMark: z.enum(['!', '#']).optional(),
 })
 
 export const issueSummarySchema = z.object({

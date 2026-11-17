@@ -6,6 +6,7 @@ import {
   type HostApi,
   type MessageKey,
   matchesReference,
+  mergeRequestReference,
   type PluralKey,
   type Translator,
   type ViewItem,
@@ -92,11 +93,14 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const settleCurrent = () => {
     if (currentView() === undefined) current = connectedViews()[0]?.id
   }
+  const badgeViews = () => views.filter((view) => view.badge !== undefined)
+  // The connected views that feed the badge are summed; with two services the text names no kind of item
   const announceCount = () => {
-    const badge = views.find((view) => view.badge !== undefined)
-    const snapshot = badge && snapshotOf(badge.id)
-    const count = snapshot && snapshot.state !== 'unconfigured' ? snapshot.items.length : 0
-    deps.onBadge(count, badge?.badge)
+    const counted = badgeViews().filter((view) => snapshotOf(view.id).state !== 'unconfigured')
+    const count = counted.reduce((total, view) => total + snapshotOf(view.id).items.length, 0)
+    const label: PluralKey | undefined =
+      counted.length > 1 ? 'views.waiting.any' : (counted[0] ?? badgeViews()[0])?.badge
+    deps.onBadge(count, label)
     deps.onItems?.()
   }
 
@@ -265,7 +269,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
         h(
           'span',
           { class: 'vmeta' },
-          h('span', { class: 'vref' }, `${item.project}!${item.number}`),
+          h('span', { class: 'vref' }, mergeRequestReference(item)),
           h('span', { class: 'vbranch' }, item.sourceBranch),
           h('span', {}, `${item.author} · ${elapsedSince(item.updatedAt)}`),
         ),
@@ -700,11 +704,15 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     // Without opening the screen: loads what is stored and refreshes if older than 5 minutes, for the rail badge
     async warm() {
       await loadViews()
-      const badge = views.find((view) => view.badge !== undefined)
-      const snapshot = badge && (await api.views.refresh(badge.id, WARM_STALE_MS))
-      if (badge && snapshot) snapshots.set(badge.id, snapshot)
+      const badges = badgeViews()
+      for (const badge of badges) {
+        const snapshot = await api.views.refresh(badge.id, WARM_STALE_MS)
+        if (snapshot) snapshots.set(badge.id, snapshot)
+      }
       // The tasks the daemon already stored, never fetched for this: the Git section matches its ticket to them
-      for (const view of views.filter((known) => known.kind === 'issue' && known !== badge)) {
+      for (const view of views.filter(
+        (known) => known.kind === 'issue' && !badges.includes(known),
+      )) {
         const stored = await api.views.snapshot(view.id)
         if (stored) snapshots.set(view.id, stored)
       }

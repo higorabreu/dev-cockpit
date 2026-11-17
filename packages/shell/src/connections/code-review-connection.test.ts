@@ -1,7 +1,29 @@
-import { type CodeReviewSource, errorBody, fail, ok, silentLogger } from '@dck/core'
+import {
+  type CodeReviewSource,
+  errorBody,
+  fail,
+  ok,
+  parseGitHubUrl,
+  parseServerUrl,
+  silentLogger,
+} from '@dck/core'
 import { MemorySecretStore } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
-import { createGitLabConnection } from './gitlab-connection.ts'
+import {
+  type CodeReviewConnectionDeps,
+  createCodeReviewConnection,
+} from './code-review-connection.ts'
+
+// GitLab's own rules, as `connector-connections.ts` wires them
+const createGitLabConnection = (
+  deps: Omit<CodeReviewConnectionDeps, 'service' | 'parseAddress' | 'invalidAddress'>,
+) =>
+  createCodeReviewConnection({
+    ...deps,
+    service: 'gitlab',
+    parseAddress: parseServerUrl,
+    invalidAddress: 'DCK-GLB-007',
+  })
 
 const user = { id: '7', username: 'higor', name: 'Higor' }
 
@@ -161,5 +183,67 @@ describe('where the token goes', () => {
 
     expect(logged.length).toBeGreaterThan(0)
     expect(JSON.stringify([logged, saved])).not.toContain('glpat-secret-value')
+  })
+})
+
+describe('a GitHub account', () => {
+  function github() {
+    const secrets = new MemorySecretStore()
+    let url: string | null = null
+    const seen: string[] = []
+    const connection = createCodeReviewConnection({
+      service: 'github',
+      secrets,
+      tokenKey: 'github.token',
+      parseAddress: parseGitHubUrl,
+      invalidAddress: 'DCK-GHB-007',
+      logger: silentLogger,
+      address: {
+        get: () => url,
+        set: async (value) => {
+          url = value
+        },
+      },
+      createSource: (sourceUrl) => {
+        seen.push(sourceUrl)
+        return {
+          currentUser: async () => ok({ id: '7', username: 'ana', name: 'Ana Souza' }),
+          mergeRequests: async () => ok([]),
+        }
+      },
+    })
+    return { connection, secrets, seen, address: () => url }
+  }
+
+  it('should connect to github.com and keep its address when the address is left empty', async () => {
+    const { connection, secrets, address, seen } = github()
+
+    const status = await connection.connect({ url: '' }, 'ghp_x')
+
+    expect(status).toEqual({
+      kind: 'connected',
+      url: 'https://github.com',
+      user: { username: 'ana', name: 'Ana Souza' },
+    })
+    expect(seen).toEqual(['https://github.com'])
+    expect(address()).toBe('https://github.com')
+    expect(await secrets.get('github.token')).toEqual({ ok: true, value: 'ghp_x' })
+  })
+
+  it('should keep only the root of an Enterprise address when a pull request link is pasted', async () => {
+    const { connection, address } = github()
+
+    await connection.connect({ url: 'https://github.example.com/acme/backend/pull/3' }, 'ghp_x')
+
+    expect(address()).toBe('https://github.example.com')
+  })
+
+  it('should refuse the address with its own code without calling GitHub when it is not secure', async () => {
+    const { connection, seen } = github()
+
+    const status = await connection.connect({ url: 'http://github.example.com' }, 'ghp_x')
+
+    expect(status).toEqual({ kind: 'error', url: undefined, code: 'DCK-GHB-007' })
+    expect(seen).toEqual([])
   })
 })

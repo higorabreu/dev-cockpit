@@ -1,13 +1,11 @@
 import { join } from 'node:path'
-import { createGitLabClient } from '@dck/adapter-gitlab'
-import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import {
   type CodeReviewSource,
+  type Connector,
   connectorTokenKey,
   createViewsService,
   errorBody,
   fail,
-  GITLAB_CONNECTOR,
   type Logger,
   type MergeRequestView,
   ok,
@@ -17,15 +15,16 @@ import {
 } from '@dck/core'
 import { createFileViewCache } from './file-view-cache.ts'
 
-const isMergeRequestView = (view: string): view is MergeRequestView =>
-  view === 'review' || view === 'mine'
-
-// Each merge request becomes a view item of its kind
-function mergeRequestViews(client: CodeReviewSource): ViewSource {
+// Each merge request becomes a view item of its kind; `lists` says which list each declared view shows
+export function mergeRequestViews(
+  client: CodeReviewSource,
+  lists: Readonly<Record<string, MergeRequestView>>,
+): ViewSource {
   return {
     async items(view) {
-      if (!isMergeRequestView(view)) return fail(errorBody('DCK-IPC-003', `unknown view ${view}`))
-      const result = await client.mergeRequests(view)
+      const list = Object.hasOwn(lists, view) ? lists[view] : undefined
+      if (list === undefined) return fail(errorBody('DCK-IPC-003', `unknown view ${view}`))
+      const result = await client.mergeRequests(list)
       return result.ok
         ? ok(result.value.map((item) => ({ kind: 'mergeRequest' as const, ...item })))
         : result
@@ -33,31 +32,36 @@ function mergeRequestViews(client: CodeReviewSource): ViewSource {
   }
 }
 
-// The token comes from the keyring on every fetch and is never kept in the process
-export function createGitLabViews(options: {
-  stateDir: string
-  logger: Logger
-  secrets: SecretStore
+export interface CodeReviewViewsOptions {
+  readonly stateDir: string
+  readonly logger: Logger
+  readonly secrets: SecretStore
   // Same profile as the shell, so both read the same keyring key
-  profile?: string
-}): ViewsService {
-  const { stateDir, logger, secrets } = options
-  const tokenKey = connectorTokenKey(GITLAB_CONNECTOR.id, options.profile)
-  const http = createFetchHttpClient()
+  readonly profile?: string
+  readonly connector: Connector
+  readonly lists: Readonly<Record<string, MergeRequestView>>
+  // The file in the state directory that keeps the last lists of this connector
+  readonly cacheFile: string
+  createSource(url: string, token: string): CodeReviewSource
+}
+
+// The token comes from the keyring on every fetch and is never kept in the process
+export function createCodeReviewViews(options: CodeReviewViewsOptions): ViewsService {
+  const { stateDir, logger, secrets, connector } = options
+  const tokenKey = connectorTokenKey(connector.id, options.profile)
   return createViewsService({
-    views: GITLAB_CONNECTOR.views.map((view) => view.id),
+    views: connector.views.map((view) => view.id),
     source: async (account) => {
       const token = await secrets.get(tokenKey)
       if (!token.ok) {
-        logger.warn('could not read the gitlab token', { code: token.error.data?.code })
+        logger.warn(`could not read the ${connector.id} token`, { code: token.error.data?.code })
         return undefined
       }
       return token.value
-        ? mergeRequestViews(createGitLabClient({ http, baseUrl: account.url, token: token.value }))
+        ? mergeRequestViews(options.createSource(account.url, token.value), options.lists)
         : undefined
     },
-    // The name from before connectors, so a stored list still shows on the first open
-    cache: createFileViewCache(join(stateDir, 'views-cache.json'), logger),
+    cache: createFileViewCache(join(stateDir, options.cacheFile), logger),
     clock: { now: Date.now },
     logger,
   })

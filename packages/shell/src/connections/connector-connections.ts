@@ -1,16 +1,20 @@
+import { createGitHubClient } from '@dck/adapter-github'
 import { createGitLabClient } from '@dck/adapter-gitlab'
 import { createJiraClient } from '@dck/adapter-jira'
 import {
   type Connection,
   type ConnectionFields,
   connectorTokenKey,
+  GITHUB_CONNECTOR,
   GITLAB_CONNECTOR,
   type HttpClient,
   JIRA_CONNECTOR,
   type Logger,
+  parseGitHubUrl,
+  parseServerUrl,
   type SecretStore,
 } from '@dck/core'
-import { createGitLabConnection } from './gitlab-connection.ts'
+import { createCodeReviewConnection } from './code-review-connection.ts'
 import { createJiraConnection } from './jira-connection.ts'
 
 export interface ConnectionService extends Connection {
@@ -36,15 +40,32 @@ export function createConnectorConnections(
   deps: ConnectorConnectionsDeps,
 ): ReadonlyMap<string, ConnectionService> {
   const { secrets, http, logger } = deps
-  const gitlabAccount = deps.account(GITLAB_CONNECTOR.id)
-  const gitlab = createGitLabConnection({
+  // A code review account keeps only its address in the settings
+  const address = (id: string) => {
+    const account = deps.account(id)
+    return {
+      get: () => account.get()?.url ?? null,
+      set: (url: string | null) => account.set(url === null ? null : { url }),
+    }
+  }
+  const gitlab = createCodeReviewConnection({
+    service: GITLAB_CONNECTOR.id,
     secrets,
     tokenKey: connectorTokenKey(GITLAB_CONNECTOR.id, deps.profile),
+    parseAddress: parseServerUrl,
+    invalidAddress: 'DCK-GLB-007',
     createSource: (url, token) => createGitLabClient({ http, baseUrl: url, token }),
-    address: {
-      get: () => gitlabAccount.get()?.url ?? null,
-      set: (url) => gitlabAccount.set(url === null ? null : { url }),
-    },
+    address: address(GITLAB_CONNECTOR.id),
+    logger,
+  })
+  const github = createCodeReviewConnection({
+    service: GITHUB_CONNECTOR.id,
+    secrets,
+    tokenKey: connectorTokenKey(GITHUB_CONNECTOR.id, deps.profile),
+    parseAddress: parseGitHubUrl,
+    invalidAddress: 'DCK-GHB-007',
+    createSource: (url, token) => createGitHubClient({ http, baseUrl: url, token }),
+    address: address(GITHUB_CONNECTOR.id),
     logger,
   })
   const jira = createJiraConnection({
@@ -55,6 +76,7 @@ export function createConnectorConnections(
     logger,
   })
   return new Map([
+    [GITHUB_CONNECTOR.id, github],
     [GITLAB_CONNECTOR.id, gitlab],
     [JIRA_CONNECTOR.id, jira],
   ])

@@ -61,6 +61,7 @@ describe('createExtDeps', () => {
     expect(code).toBe(0)
     expect(lines).toEqual([
       'dck.built-in  0.3.0  built-in  active',
+      'dck.github    0.3.0  built-in  active',
       'dck.gitlab    0.3.0  built-in  active',
       'dck.jira      0.3.0  built-in  active',
     ])
@@ -78,6 +79,7 @@ describe('createExtDeps', () => {
 
     expect(lines).toEqual([
       'dck.built-in  0.3.0  built-in   active',
+      'dck.github    0.3.0  built-in   active',
       'dck.gitlab    0.3.0  built-in   active',
       'dck.jira      0.3.0  built-in   active',
       'acme.commits  1.0.0  installed  active',

@@ -167,6 +167,8 @@ export const ptBR = {
   'views.review.description': 'MRs que aguardam a sua review',
   'views.mine': 'Acompanhar',
   'views.mine.description': 'MRs que você abriu',
+  'views.github.review.description': 'PRs que aguardam a sua revisão',
+  'views.github.mine.description': 'PRs que você abriu',
   'views.tasks': 'Tarefas',
   'views.tasks.description': 'Issues do Jira atribuídas a você',
   'views.filter.placeholder': 'Filtrar por título, projeto, autor ou branch',
@@ -177,6 +179,8 @@ export const ptBR = {
   'views.updated': 'Atualizado {ago}',
   'views.empty.review': 'Nenhuma MR esperando a sua review.',
   'views.empty.mine': 'Você não tem MRs abertas.',
+  'views.empty.github.review': 'Nenhum PR esperando a sua revisão.',
+  'views.empty.github.mine': 'Você não tem PRs abertos.',
   'views.empty.tasks': 'Nenhuma tarefa aberta atribuída a você.',
   'views.empty.filtered': 'Nada encontrado.',
   'views.unconfigured.title': 'Conta não conectada',
@@ -202,6 +206,10 @@ export const ptBR = {
   'views.flag.pipeline.canceled': 'Pipeline cancelado',
   'views.waiting.one': '{count} MR esperando a sua review',
   'views.waiting.other': '{count} MRs esperando a sua review',
+  'views.github.waiting.one': '{count} PR esperando a sua revisão',
+  'views.github.waiting.other': '{count} PRs esperando a sua revisão',
+  'views.waiting.any.one': '{count} esperando a sua revisão',
+  'views.waiting.any.other': '{count} esperando a sua revisão',
   'settings.group.appearance': 'Aparência',
   'settings.theme': 'Tema',
   'settings.theme.dark': 'Escuro',
@@ -245,6 +253,9 @@ export const ptBR = {
   'connections.jira.token': 'Token de API',
   'connections.jira.token.hint':
     'Crie em id.atlassian.com, em Segurança, Tokens de API. Fica no cofre do sistema, nunca em arquivo.',
+  'connections.github.token': 'Token de acesso pessoal',
+  'connections.github.token.hint':
+    'Clássico com o escopo repo, ou fine-grained com leitura de pull requests. Endereço vazio é o github.com. Fica no cofre do sistema, nunca em arquivo.',
   'connections.token.placeholder': 'Cole o token para conectar',
   'connections.connect': 'Conectar',
   'connections.disconnect': 'Desconectar',
@@ -274,6 +285,18 @@ export const ptBR = {
   'connections.error.DCK-JRA-007':
     'Endereço inválido. Use o endereço do site, como https://acme.atlassian.net.',
   'connections.error.DCK-JRA-008': 'E-mail inválido. Use o e-mail da sua conta Atlassian.',
+  'connections.error.DCK-GHB-001':
+    'O GitHub recusou o token. Confira se ele não expirou nem foi revogado.',
+  'connections.error.DCK-GHB-002':
+    'O GitHub negou o acesso. Confira se o token lê pull requests e está autorizado na organização.',
+  'connections.error.DCK-GHB-003':
+    'Endereço não encontrado. Confira o endereço do GitHub Enterprise.',
+  'connections.error.DCK-GHB-004':
+    'O GitHub limitou as requisições. Tente de novo em alguns minutos.',
+  'connections.error.DCK-GHB-005': 'O GitHub não está respondendo.',
+  'connections.error.DCK-GHB-006': 'O endereço respondeu, mas não parece ser um GitHub.',
+  'connections.error.DCK-GHB-007':
+    'Endereço inválido. Deixe vazio para o github.com, ou use https:// com o endereço do GitHub Enterprise.',
   'connections.error.DCK-NET-001': 'Sem resposta do servidor. Confira a rede e o endereço.',
   'connections.error.DCK-SEC-001':
     'O cofre de segredos do sistema não está disponível. No Linux, instale libsecret-tools.',
@@ -434,6 +457,13 @@ export const ptBR = {
   'error.DCK-GIT-003': 'As alterações são grandes demais para mostrar',
   'error.DCK-GIT-004': 'O arquivo está fora do repositório',
   'error.DCK-GIT-005': 'O Git não está instalado',
+  'error.DCK-GHB-001': 'O GitHub recusou o token',
+  'error.DCK-GHB-002': 'O GitHub negou o acesso',
+  'error.DCK-GHB-003': 'Endereço do GitHub não encontrado',
+  'error.DCK-GHB-004': 'Limite de requisições do GitHub atingido',
+  'error.DCK-GHB-005': 'O GitHub não está respondendo',
+  'error.DCK-GHB-006': 'Resposta inesperada do GitHub',
+  'error.DCK-GHB-007': 'Endereço do GitHub inválido',
 } as const
 
 export type MessageKey = keyof typeof ptBR

@@ -2,6 +2,7 @@
 import {
   type Connector,
   createTranslator,
+  GITHUB_CONNECTOR,
   GITLAB_CONNECTOR,
   type HostApi,
   JIRA_CONNECTOR,
@@ -257,6 +258,93 @@ describe('views view badge', () => {
     await view.warm()
 
     expect(badges.at(-1)).toEqual({ count: 0, label: 'views.waiting' })
+  })
+})
+
+describe('views view with GitHub', () => {
+  const pullRequest = (number: number): ViewItem => ({
+    ...(mergeRequest(number) as Extract<ViewItem, { kind: 'mergeRequest' }>),
+    id: `acme/backend#${number}`,
+    url: `https://github.example.com/acme/backend/pull/${number}`,
+    referenceMark: '#',
+  })
+  const github = [
+    snapshot('github-review', 'idle', [pullRequest(7)]),
+    snapshot('github-mine', 'idle', [pullRequest(9), pullRequest(8)]),
+  ]
+  const githubOnly = [...github, ...unconnected]
+
+  it('should count the GitHub reviews with their own text when GitHub is the only one connected', async () => {
+    const { view, badges, refreshed } = setup({
+      connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
+      snapshots: githubOnly,
+    })
+
+    await view.warm()
+
+    expect(badges.at(-1)).toEqual({ count: 1, label: 'views.github.waiting' })
+    expect(refreshed).toEqual(['github-review', 'review'])
+  })
+
+  it('should sum the reviews of both services and name no kind when both are connected', async () => {
+    const { view, badges } = setup({
+      connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
+      snapshots: [...github, ...connected],
+    })
+
+    await view.warm()
+
+    expect(badges.at(-1)).toEqual({ count: 3, label: 'views.waiting.any' })
+  })
+
+  it('should keep the GitLab badge text when GitLab is the only one connected', async () => {
+    const { view, badges } = setup({
+      connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
+      snapshots: [
+        snapshot('github-review', 'unconfigured'),
+        snapshot('github-mine', 'unconfigured'),
+        ...connected,
+      ],
+    })
+
+    await view.warm()
+
+    expect(badges.at(-1)).toEqual({ count: 2, label: 'views.waiting' })
+  })
+
+  it('should write the pull request reference with # and open it when Enter is pressed', async () => {
+    const { view, overlay, opened } = setup({
+      connectors: [GITHUB_CONNECTOR],
+      snapshots: github,
+    })
+
+    await view.open()
+    press(overlay.querySelector('.vinput'), 'Enter')
+
+    expect(overlay.querySelector('.vrow .vref')?.textContent).toBe('acme/backend#7')
+    expect(opened).toEqual(['https://github.example.com/acme/backend/pull/7'])
+  })
+
+  it('should group the GitHub tabs under its name and describe them as pull requests', async () => {
+    const { view, overlay } = setup({
+      connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
+      snapshots: [...github, ...connected],
+    })
+
+    await view.open()
+
+    const labels = [...overlay.querySelectorAll('.vtab')].map((tab) =>
+      tab.getAttribute('aria-label'),
+    )
+    expect(labels).toEqual([
+      'GitHub, To review, 1',
+      'GitHub, Follow up, 2',
+      'GitLab, To review, 2',
+      'GitLab, Follow up, 0',
+    ])
+    expect(overlay.querySelector('.vtab')?.getAttribute('data-tip')).toBe(
+      'Pull requests waiting for your review',
+    )
   })
 })
 

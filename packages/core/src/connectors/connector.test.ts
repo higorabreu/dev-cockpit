@@ -6,6 +6,7 @@ import {
 } from '../extensions/built-in.ts'
 import { contributionsFor, type ExtensionCandidate, loadExtensions } from '../extensions/load.ts'
 import { connectorSchema, connectorsPoint } from './connector.ts'
+import { GITHUB_CONNECTOR } from './github.ts'
 import { GITLAB_CONNECTOR } from './gitlab.ts'
 import { JIRA_CONNECTOR } from './jira.ts'
 
@@ -47,18 +48,20 @@ const load = (candidates: readonly ExtensionCandidate[], disabled: string[] = []
   })
 
 describe('connectors contribution point', () => {
-  it('should hand the GitLab connector to the consumer when the built-in extensions load', () => {
+  it('should hand the built-in connectors to the consumer when the built-in extensions load', () => {
     const report = load(builtInExtensions('0.3.0'))
 
     const connectors = contributionsFor(report, connectorsPoint)
 
     expect(report.rejected).toEqual([])
     expect(connectors.map(({ extension }) => extension.manifest.id)).toEqual([
+      'dck.github',
       'dck.gitlab',
       'dck.jira',
     ])
-    expect(connectors[0]?.declaration).toEqual([GITLAB_CONNECTOR])
-    expect(connectors[1]?.declaration).toEqual([JIRA_CONNECTOR])
+    expect(connectors[0]?.declaration).toEqual([GITHUB_CONNECTOR])
+    expect(connectors[1]?.declaration).toEqual([GITLAB_CONNECTOR])
+    expect(connectors[2]?.declaration).toEqual([JIRA_CONNECTOR])
   })
 
   it.each([
@@ -136,7 +139,7 @@ describe('connectors with clashing ids', () => {
 
     expect(
       contributionsFor(report, connectorsPoint).map(({ extension }) => extension.manifest.id),
-    ).toEqual(['dck.gitlab', 'dck.jira'])
+    ).toEqual(['dck.github', 'dck.gitlab', 'dck.jira'])
     expect(report.rejected.map(({ error }) => [error.data?.code, error.message])).toEqual([
       [
         'DCK-EXT-001',

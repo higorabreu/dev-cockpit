@@ -17,6 +17,9 @@ export type PipelineState =
   | 'none'
   | 'unknown'
 
+// What separates the project from the number in a reference: GitLab's `acme/backend!12`, GitHub's `#12`
+export type ReferenceMark = '!' | '#'
+
 export interface MergeRequestSummary {
   readonly id: string
   readonly number: number
@@ -31,6 +34,8 @@ export interface MergeRequestSummary {
   readonly hasConflicts: boolean
   readonly openDiscussions: boolean
   readonly pipeline: PipelineState
+  // `!` when absent, so GitLab items and the caches written before GitHub keep their reference
+  readonly referenceMark?: ReferenceMark
 }
 
 // `review`: waiting for my review. `mine`: opened by me

@@ -167,6 +167,8 @@ export const en: Record<MessageKey, string> = {
   'views.review.description': 'Merge requests waiting for your review',
   'views.mine': 'Follow up',
   'views.mine.description': 'Merge requests you opened',
+  'views.github.review.description': 'Pull requests waiting for your review',
+  'views.github.mine.description': 'Pull requests you opened',
   'views.tasks': 'Tasks',
   'views.tasks.description': 'Jira issues assigned to you',
   'views.filter.placeholder': 'Filter by title, project, author or branch',
@@ -177,6 +179,8 @@ export const en: Record<MessageKey, string> = {
   'views.updated': 'Updated {ago}',
   'views.empty.review': 'No merge requests waiting for your review.',
   'views.empty.mine': 'You have no open merge requests.',
+  'views.empty.github.review': 'No pull requests waiting for your review.',
+  'views.empty.github.mine': 'You have no open pull requests.',
   'views.empty.tasks': 'No open tasks assigned to you.',
   'views.empty.filtered': 'Nothing found.',
   'views.unconfigured.title': 'Account not connected',
@@ -202,6 +206,10 @@ export const en: Record<MessageKey, string> = {
   'views.flag.pipeline.canceled': 'Pipeline canceled',
   'views.waiting.one': '{count} merge request waiting for your review',
   'views.waiting.other': '{count} merge requests waiting for your review',
+  'views.github.waiting.one': '{count} pull request waiting for your review',
+  'views.github.waiting.other': '{count} pull requests waiting for your review',
+  'views.waiting.any.one': '{count} waiting for your review',
+  'views.waiting.any.other': '{count} waiting for your review',
   'settings.group.appearance': 'Appearance',
   'settings.theme': 'Theme',
   'settings.theme.dark': 'Dark',
@@ -245,6 +253,9 @@ export const en: Record<MessageKey, string> = {
   'connections.jira.token': 'API token',
   'connections.jira.token.hint':
     'Create it at id.atlassian.com, under Security, API tokens. Kept in the system keyring, never in a file.',
+  'connections.github.token': 'Personal access token',
+  'connections.github.token.hint':
+    'Classic with the repo scope, or fine-grained with read access to pull requests. An empty address is github.com. Kept in the system keyring, never in a file.',
   'connections.token.placeholder': 'Paste the token to connect',
   'connections.connect': 'Connect',
   'connections.disconnect': 'Disconnect',
@@ -274,6 +285,16 @@ export const en: Record<MessageKey, string> = {
   'connections.error.DCK-JRA-007':
     'Invalid address. Use the site address, such as https://acme.atlassian.net.',
   'connections.error.DCK-JRA-008': 'Invalid email. Use the email of your Atlassian account.',
+  'connections.error.DCK-GHB-001':
+    'GitHub refused the token. Check that it has not expired or been revoked.',
+  'connections.error.DCK-GHB-002':
+    'GitHub denied access. Check that the token can read pull requests and is authorized for the organization.',
+  'connections.error.DCK-GHB-003': 'Address not found. Check the GitHub Enterprise address.',
+  'connections.error.DCK-GHB-004': 'GitHub rate limited the requests. Try again in a few minutes.',
+  'connections.error.DCK-GHB-005': 'GitHub is not responding.',
+  'connections.error.DCK-GHB-006': 'The address answered, but it does not look like GitHub.',
+  'connections.error.DCK-GHB-007':
+    'Invalid address. Leave it empty for github.com, or use https:// with the GitHub Enterprise address.',
   'connections.error.DCK-NET-001':
     'No response from the server. Check the network and the address.',
   'connections.error.DCK-SEC-001':
@@ -435,4 +456,11 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-GIT-003': 'The changes are too large to show',
   'error.DCK-GIT-004': 'The file is outside the repository',
   'error.DCK-GIT-005': 'Git is not installed',
+  'error.DCK-GHB-001': 'GitHub rejected the token',
+  'error.DCK-GHB-002': 'GitHub denied access',
+  'error.DCK-GHB-003': 'GitHub address not found',
+  'error.DCK-GHB-004': 'GitHub rate limit reached',
+  'error.DCK-GHB-005': 'GitHub is not responding',
+  'error.DCK-GHB-006': 'Unexpected GitHub response',
+  'error.DCK-GHB-007': 'Invalid GitHub address',
 }
