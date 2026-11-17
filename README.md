@@ -64,7 +64,7 @@ what exists today. The clips show example data.
 
 ## Install
 
-Requirements: Ubuntu or Debian on x86-64 or arm64, on X11 or Wayland, and `libsecret-tools` for the system keyring
+Requirements: Ubuntu 22.04 or Debian 12 or newer, on x86-64 or arm64, on X11 or Wayland, and `libsecret-tools` for the system keyring
 (the package declares it). macOS builds from source with `pnpm package:mac` and is being tested; it is
 not in the releases yet.
 

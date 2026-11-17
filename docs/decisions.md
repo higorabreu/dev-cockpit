@@ -795,3 +795,13 @@ a Portuguese translation.
 people who find the project, and `dck` answered in the terminal's language even when the window had
 another one chosen.
 **How to revert:** return `'pt-BR'` from the end of `pickLocale`.
+## D54. The .deb runs on Ubuntu 22.04 and Debian 12, and says what glibc it needs
+
+**Decision:** the `.deb` is built on a pinned runner (`ubuntu-24.04` for both processors), never on
+`ubuntu-latest`. `package-deb.mjs` reads the newest glibc the packaged node-pty asks for and declares it
+as `libc6 (>= x)` in `Depends`, and in CI it stops when that is newer than 2.35, the glibc of Ubuntu
+22.04 (Debian 12 has 2.36). Electron itself needs 2.25.
+**Reason:** node-pty is compiled on the build machine. Since `ubuntu-latest` moved to a newer image the
+amd64 packages asked for glibc 2.42 (0.5.0 to 0.7.0): they installed on Ubuntu 24.04 and Debian 12 and
+opened a window whose terminal never started. The arm64 runner was already pinned and asked for 2.34.
+**How to revert:** drop the glibc block from `package-deb.mjs` and let the runners float.
