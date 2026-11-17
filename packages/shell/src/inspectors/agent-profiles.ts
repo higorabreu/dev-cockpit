@@ -15,4 +15,11 @@ export const agentProfiles: readonly AgentProfile[] = [
       inAgent: `!${claudeCodeInstall}`,
     },
   },
+  {
+    id: 'codex',
+    name: 'Codex',
+    // The npm launcher hands its process to the native `codex` binary with execve, so this is the name
+    processes: ['codex'],
+    // Nothing to connect: its TUI reports its own state to the terminal (OSC 7501) since 0.163.0
+  },
 ]
