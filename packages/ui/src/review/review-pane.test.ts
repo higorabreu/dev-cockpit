@@ -160,6 +160,35 @@ describe('createReviewPane', () => {
     expect(text('.rv-head .select-value [data-current]')).toBe('Uncommitted')
   })
 
+  it('should tell the state of each file with a VS Code letter and name it in the tooltip', async () => {
+    // Arrange
+    const answer = repository()
+    if (answer.ok && answer.value.kind === 'ok') {
+      const [lock, invoice] = answer.value.diff.files
+      if (lock && invoice) {
+        Object.assign(answer.value.diff, {
+          files: [lock, { ...invoice, status: 'added', untracked: true }],
+        })
+      }
+    }
+    const { pane } = setup(answer)
+
+    // Act
+    pane.open()
+    await flush()
+
+    // Assert
+    const letters = [...pane.element.querySelectorAll('.rv-files .rv-letter')].map((letter) => [
+      letter.textContent,
+      letter.getAttribute('data-tip'),
+    ])
+    expect(letters).toEqual([
+      ['M', 'modified'],
+      ['U', 'untracked'],
+    ])
+    expect(pane.element.querySelector('.rv-fhead .rv-letter')?.textContent).toBe('M')
+  })
+
   it('should show every file in one scroll with its header and keep a generated file collapsed until asked', async () => {
     const { pane, labels } = setup(repository())
     pane.open()

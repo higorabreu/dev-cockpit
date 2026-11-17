@@ -189,25 +189,30 @@
   margin-left: auto;
 }
 
-.rv-glyph {
+/* The state letter, in the ink of the counts; on the selected row it turns to the row's text, the letter
+   alone telling the state there */
+.rv-letter {
   flex: none;
-  display: grid;
+  width: 12px;
+  color: var(--muted);
+  font: 600 11.5px / 1 var(--font-mono);
+  text-align: center;
 }
 
-.rv-glyph[data-state="added"] {
-  color: var(--success);
+.rv-letter[data-state="added"] {
+  color: var(--diff-add-ink);
 }
 
-.rv-glyph[data-state="deleted"] {
-  color: var(--critical);
+.rv-letter[data-state="deleted"] {
+  color: var(--diff-remove-ink);
 }
 
-.rv-glyph[data-state="modified"] {
+.rv-letter[data-state="modified"] {
   color: var(--warning);
 }
 
-.rv-glyph[data-state="renamed"] {
-  color: var(--muted);
+.rv-file[aria-selected="true"] .rv-letter {
+  color: var(--fg);
 }
 
 /* The folders give way first, so a long path keeps its file name whole */
