@@ -30,3 +30,9 @@ hook and the signal of the review loop were still bets.
 A graph of people and blockers, automatic context resumption, a "what if" simulation of deadlines, day
 planning against the calendar, project actions for ops, Codex support, Windows packaging. The macOS
 port has a plan in [plans/macos.md](../plans/macos.md).
+
+**Editing files** (asked by the maintainer, 2026-11-17): find a file of the project the way VS Code's quick
+open and the cockpit's project search do, and edit it in place. To weigh before a plan: the editor (CodeMirror
+6 is light and reads the language and `.editorconfig` to keep the indentation; Monaco is VS Code's own but
+costs tens of MB against the idle budget; or the user's terminal editor in a tab), and saving safely while
+an agent may be changing the same file.
