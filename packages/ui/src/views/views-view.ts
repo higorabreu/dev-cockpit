@@ -1,4 +1,5 @@
 import {
+  type CiTerm,
   type ConnectorView,
   connectionErrorKey,
   filterViewItems,
@@ -45,6 +46,30 @@ const GLYPHS = {
   ring: '<circle cx="12" cy="12" r="5.5"/>',
 } as const
 
+type CiState = 'failed' | 'running' | 'pending' | 'canceled'
+// Each service's own word for the CI state, chosen by the connector the open tab comes from
+const CI_FLAGS: Readonly<Record<CiTerm, Readonly<Record<CiState, MessageKey>>>> = {
+  pipeline: {
+    failed: 'views.flag.pipeline.failed',
+    running: 'views.flag.pipeline.running',
+    pending: 'views.flag.pipeline.pending',
+    canceled: 'views.flag.pipeline.canceled',
+  },
+  checks: {
+    failed: 'views.flag.checks.failed',
+    running: 'views.flag.checks.running',
+    pending: 'views.flag.checks.pending',
+    canceled: 'views.flag.checks.canceled',
+  },
+}
+// How each CI state is drawn, the same for every service
+const CI_CHIPS: Readonly<Record<CiState, readonly [string, keyof typeof GLYPHS]>> = {
+  failed: ['critical', 'cross'],
+  running: ['warning', 'dot'],
+  pending: ['warning', 'ring'],
+  canceled: ['muted', 'ring'],
+}
+
 export interface ViewsViewDeps {
   readonly api: HostApi
   readonly i18n: Translator
@@ -75,6 +100,8 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   let serviceOf: ReadonlyMap<string, string> = new Map()
   // The id of the connector each view comes from
   let connectorOf: ReadonlyMap<string, string> = new Map()
+  // The word the connector of each view uses for its CI state
+  let ciTermOf: ReadonlyMap<string, CiTerm> = new Map()
   let current: string | undefined
   let query = ''
   let onlyPending = false
@@ -244,15 +271,11 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     if (item.draft) out.push(chip('muted', 'ring', t('views.flag.draft')))
     if (item.hasConflicts) out.push(chip('critical', 'cross', t('views.flag.conflict')))
     if (item.openDiscussions) out.push(chip('warning', 'dot', t('views.flag.discussions')))
-    const pipeline = {
-      failed: ['critical', 'cross', 'views.flag.pipeline.failed'],
-      running: ['warning', 'dot', 'views.flag.pipeline.running'],
-      pending: ['warning', 'ring', 'views.flag.pipeline.pending'],
-      canceled: ['muted', 'ring', 'views.flag.pipeline.canceled'],
-    } as const
-    if (item.pipeline in pipeline) {
-      const [kind, glyph, key] = pipeline[item.pipeline as keyof typeof pipeline]
-      out.push(chip(kind, glyph, t(key)))
+    if (Object.hasOwn(CI_CHIPS, item.pipeline)) {
+      const state = item.pipeline as CiState
+      const [kind, glyph] = CI_CHIPS[state]
+      const term = (current === undefined ? undefined : ciTermOf.get(current)) ?? 'pipeline'
+      out.push(chip(kind, glyph, t(CI_FLAGS[term][state])))
     }
     return out
   }
@@ -587,6 +610,11 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     )
     connectorOf = new Map(
       connectors.flatMap((connector) => connector.views.map((view) => [view.id, connector.id])),
+    )
+    ciTermOf = new Map(
+      connectors.flatMap((connector) =>
+        connector.views.map((view) => [view.id, connector.ciTerm ?? 'pipeline'] as const),
+      ),
     )
     for (const view of snapshots.keys())
       if (!views.some((known) => known.id === view)) snapshots.delete(view)

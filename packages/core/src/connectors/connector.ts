@@ -31,10 +31,16 @@ export const connectorViewSchema = z.strictObject({
   badge: pluralKey.optional(),
 })
 
+// The service's own word for the CI state of a merge request: GitLab's pipeline, GitHub's checks
+export const CI_TERMS = ['pipeline', 'checks'] as const
+export type CiTerm = (typeof CI_TERMS)[number]
+
 export const connectorSchema = z.strictObject({
   id: z.string().regex(CONNECTOR_ID_PATTERN, 'must be a short lowercase id'),
   // A product name, the same in every language
   name: z.string().min(1).max(60),
+  // `pipeline` when absent
+  ciTerm: z.enum(CI_TERMS).optional(),
   // What the user fills in to connect; an absent field is not asked for
   connection: z.strictObject({
     address: field,

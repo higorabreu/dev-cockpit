@@ -7,6 +7,7 @@ describe('GITHUB_CONNECTOR', () => {
     const parsed = connectorSchema.parse(GITHUB_CONNECTOR)
 
     expect(parsed.connection.email).toBeUndefined()
+    expect(parsed.ciTerm).toBe('checks')
     expect(parsed.views.map((view) => [view.id, view.kind, view.badge])).toEqual([
       ['github-review', 'mergeRequest', 'views.github.waiting'],
       ['github-mine', 'mergeRequest', undefined],

@@ -325,6 +325,79 @@ describe('views view with GitHub', () => {
     expect(opened).toEqual(['https://github.example.com/acme/backend/pull/7'])
   })
 
+  it('should say checks on a GitHub row and pipeline on a GitLab row when the CI is not green', async () => {
+    const ci = (item: ViewItem, pipeline: 'failed' | 'running' | 'pending' | 'canceled') =>
+      ({ ...item, pipeline }) as ViewItem
+    const states = ['failed', 'running', 'pending', 'canceled'] as const
+    const { view, overlay } = setup({
+      connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
+      snapshots: [
+        snapshot(
+          'github-review',
+          'idle',
+          states.map((state, index) => ci(pullRequest(index + 1), state)),
+        ),
+        snapshot('github-mine', 'idle', []),
+        snapshot(
+          'review',
+          'idle',
+          states.map((state, index) => ci(mergeRequest(index + 1), state)),
+        ),
+        snapshot('mine', 'idle', []),
+      ],
+    })
+    const flags = () =>
+      [...overlay.querySelectorAll('.vrow .vflag-text')].map((flag) => flag.textContent)
+
+    await view.open()
+    const github = flags()
+    press(overlay.querySelector('.vinput'), 'ArrowRight')
+    press(overlay.querySelector('.vinput'), 'ArrowRight')
+    const gitlab = flags()
+
+    expect(github).toEqual(['Checks failed', 'Checks running', 'Checks queued', 'Checks canceled'])
+    expect(gitlab).toEqual([
+      'Pipeline failed',
+      'Pipeline running',
+      'Pipeline queued',
+      'Pipeline canceled',
+    ])
+    expect(overlay.querySelector('.vrow')?.textContent).toContain('Pipeline failed')
+  })
+
+  it('should say checks in Portuguese on a GitHub row when the language is pt-BR', async () => {
+    const failing = { ...(pullRequest(3) as object), pipeline: 'failed' } as ViewItem
+    const { view, overlay } = setup({
+      connectors: [GITHUB_CONNECTOR],
+      snapshots: [
+        snapshot('github-review', 'idle', [failing]),
+        snapshot('github-mine', 'idle', []),
+      ],
+      language: 'pt-BR',
+    })
+
+    await view.open()
+
+    expect(overlay.querySelector('.vrow .vflag-text')?.textContent).toBe('Checks com falha')
+  })
+
+  it('should show only the connected GitLab tabs when GitHub is not connected', async () => {
+    const { view, overlay } = setup({
+      connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
+      snapshots: [
+        snapshot('github-review', 'unconfigured'),
+        snapshot('github-mine', 'unconfigured'),
+        ...connected,
+      ],
+    })
+
+    await view.open()
+
+    expect(
+      [...overlay.querySelectorAll('.vgroup, .vtab')].map((element) => element.textContent),
+    ).toEqual(['GitLab', 'To review2', 'Follow up0'])
+  })
+
   it('should group the GitHub tabs under its name and describe them as pull requests', async () => {
     const { view, overlay } = setup({
       connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],

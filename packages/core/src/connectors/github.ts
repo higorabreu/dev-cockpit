@@ -6,6 +6,7 @@ export const GITHUB_DOT_COM = 'https://github.com'
 export const GITHUB_CONNECTOR = {
   id: 'github',
   name: 'GitHub',
+  ciTerm: 'checks',
   connection: {
     address: { placeholder: GITHUB_DOT_COM },
     token: { label: 'connections.github.token', hint: 'connections.github.token.hint' },
