@@ -66,7 +66,7 @@ export interface ListMeasure {
   readonly cues: number
 }
 
-// Every row when they all fit, otherwise as many as fit beside the cues, and at least one. Without cues on
+// Every row when they all fit, otherwise as many as fit between the cues, and at least one. Without cues on
 // screen their height is unknown, so the answer can still overflow by that much; measuring again settles it
 export function fitRows(measure: ListMeasure, limit: number): number {
   const { total, rows, height, pitch, cues } = measure

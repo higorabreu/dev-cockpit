@@ -92,27 +92,27 @@ describe('fitRows', () => {
   })
 
   it('should leave room for the cues when the list is windowed', () => {
-    expect(fitRows(measure(4, 7, 28), 14 + 5 * 33)).toBe(4)
+    expect(fitRows(measure(3, 7, 48), 14 + 5 * 33)).toBe(3)
   })
 
   it('should grow back to every row when the room comes back', () => {
-    expect(fitRows(measure(3, 7, 28), 400)).toBe(7)
+    expect(fitRows(measure(3, 7, 48), 400)).toBe(7)
   })
 
   it('should keep one row when not even one fits', () => {
-    expect(fitRows(measure(1, 7, 28), 20)).toBe(1)
+    expect(fitRows(measure(1, 7, 48), 20)).toBe(1)
   })
 
-  it('should settle beside the cues when it is measured again', () => {
+  it('should settle between the cues when it is measured again', () => {
     // Arrange
     const limit = 14 + 5 * 33
     const first = fitRows(measure(7, 7), limit)
 
     // Act
-    const second = fitRows(measure(first, 7, 28), limit)
+    const second = fitRows(measure(first, 7, 48), limit)
 
     // Assert
     expect(first).toBe(5)
-    expect(second).toBe(4)
+    expect(second).toBe(3)
   })
 })

@@ -82,7 +82,7 @@ export function createHoldMenuController(
 ) {
   let mode: Mode = { kind: 'closed' }
   const pointer = createPointerIntent()
-  // Per category: how many rows fit beside the wheel, and the first one on screen
+  // Per category: how many rows fit on its side of the wheel, and the first one on screen
   const rowsFit = new Map<number, number>()
   const firstRow = new Map<number, number>()
   let wheelTravel = 0

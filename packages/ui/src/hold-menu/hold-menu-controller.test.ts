@@ -10,9 +10,9 @@ function fakeLayout() {
   const visibleRows = (list: Element) => list.querySelectorAll('.it:not(.gone)').length
   const height = (element: HTMLElement) => {
     if (element.classList.contains('it')) return element.classList.contains('gone') ? 0 : PITCH - 1
-    if (element.classList.contains('cue')) return 14
+    if (element.classList.contains('cue')) return 24
     if (element.classList.contains('list'))
-      return 12 + visibleRows(element) * PITCH + element.querySelectorAll('.cue').length * 14
+      return 12 + visibleRows(element) * PITCH + element.querySelectorAll('.cue').length * 24
     return 0
   }
   const top = (element: HTMLElement) => {
