@@ -36,6 +36,7 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     ['selected sector icon', fg, sectorSelected, GRAPHIC],
     ['selected sector outline', rgb(color.muted), surface, GRAPHIC],
     ['selected list item', fg, listSelected, TEXT],
+    ['hold menu overflow cue', rgb(color.muted), surface, GRAPHIC],
     // Inputs fill with the window color inside the surface, so their edge meets both
     ['control border on the surface', rgb(color.controlLine), surface, GRAPHIC],
     ['control border on the window', rgb(color.controlLine), rgb(color.bg), GRAPHIC],

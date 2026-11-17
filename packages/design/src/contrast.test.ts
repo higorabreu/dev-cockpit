@@ -51,6 +51,17 @@ describe('contrastChecks', () => {
     }
   })
 
+  it('should check the hold menu overflow cue as a graphic when checking each theme', () => {
+    for (const theme of themeNames) {
+      const cue = contrastChecks(tokens, theme).find(
+        (check) => check.name === 'hold menu overflow cue',
+      )
+
+      expect(cue?.minimum).toBe(3)
+      expect(cue?.passes).toBe(true)
+    }
+  })
+
   it('should check the code on every tint of a line selected for a comment when checking each theme', () => {
     for (const theme of themeNames) {
       const names = contrastChecks(tokens, theme).map((check) => check.name)
