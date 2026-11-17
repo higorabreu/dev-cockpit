@@ -124,9 +124,15 @@ shortcut if the global key is refused.
 
 ## Settings
 
-`Ctrl+,` opens the screen: language, theme, opacity, font, window height, global key, hold menu key,
+`Ctrl+,` opens the screen: language, theme, opacity, the interface and code fonts, the terminal's font,
+size and cursor (block, bar or underline, blinking or not), window height, global key, hold menu key,
 projects folder, start with the system, the threshold to notify a long command, the review layout and
-the GitLab and Jira connections. Everything applies at once. Settings live in a `settings.json` that can also be edited by
+the GitLab and Jira connections. Everything applies at once.
+
+The interface draws with Inter and JetBrains Mono, which ship with the cockpit. The terminal draws, by
+default, with the font of your own terminal (the GNOME Terminal or Ptyxis profile, else the system's
+monospace font), so a prompt made for it looks the same; its Powerline and Nerd Font symbols come from a
+font installed for them, such as Symbols Nerd Font or a patched font like MesloLGS NF. Settings live in a `settings.json` that can also be edited by
 hand; an invalid field goes back to its default. The `DCK_KEY`, `DCK_HEIGHT` and `DCK_PROJECTS_ROOT`
 variables win over the file.
 

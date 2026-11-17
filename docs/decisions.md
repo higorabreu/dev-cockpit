@@ -1013,3 +1013,27 @@ on by default.
 **How to revert:** drop `core/src/tabs/saved-tabs.ts`, the `tabs` part of the host API and its channels,
 `shell/src/tabs/saved-tabs-file.ts`, the `window.restoreTabs` setting and `restoreTabs` and
 `saveTabsSoon` in `ui/src/app.ts`, and open one tab on start again.
+
+## D66. The terminal draws with the user's terminal font; the interface keeps the cockpit's, shipped
+
+**Decision:** Inter and JetBrains Mono ship with the interface (`@fontsource-variable`, OFL) and the
+tokens name them first, so the cockpit looks the same on every machine. The terminal's font is, by
+default, the one the user's own terminal draws with: the GNOME Terminal default profile's, then Ptyxis's,
+when it does not follow the system's; else the system's monospace font (GNOME, then fontconfig); else
+JetBrains Mono. A port `SystemFonts` reads it, with the installed families and the fonts that draw
+Powerline's arrow (U+E0B0); macOS and Windows answer nothing for now. The terminal's font list is the
+chosen font, the user's terminal's, the system's, JetBrains Mono, then up to three of those symbol fonts
+(a symbols-only font first, then monospace ones; proportional and emoji fonts are left out). Settings
+`appearance.fontFamily` and `appearance.codeFontFamily` (null is the cockpit's), `terminal.fontFamily`
+(null is the system's), `terminal.cursorStyle` (block, bar, underline) and `terminal.cursorBlink`; a font
+name must be letters, digits, spaces and `. _ -`, so it cannot break out of a CSS list. Every change
+applies at once to every tab, after the new font has loaded.
+**Reason:** a colleague's zsh prompt showed boxes (2026-11-17). Chromium never looks through the system's
+fonts for a private use character, so a Powerline glyph draws only from a font the page names; checked in
+the real app with Symbols Nerd Font installed: boxes before, arrows once it is in the list. The maintainer
+chose to keep the cockpit's fonts for the interface, ship them, follow the font of the terminal the person
+uses, and offer the cursor shape some people prefer.
+**How to revert:** drop `core/src/fonts`, the `SystemFonts` port and `shell/src/platform/linux/
+system-fonts.ts`, the `fonts` part of the host API, the `appearance` and `terminal` settings and their
+rows, `ui/src/platform/appearance.ts`, and the `@fontsource-variable` imports; the tokens go back to the
+system's Inter and JetBrains Mono.

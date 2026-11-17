@@ -17,18 +17,19 @@ Decided with the maintainer:
 
 ## Front A: fonts and the Appearance and Terminal groups (lead)
 
-- [ ] A1. Ship Inter and JetBrains Mono (woff2, OFL) with the interface; the tokens name them first.
-- [ ] A2. Port `SystemFonts` (the user's terminal font, the system's monospace font, the installed
-  monospace families) with a Linux implementation (GNOME Terminal and Ptyxis profiles, the GNOME
-  interface setting, fontconfig) and plain fallbacks on macOS and Windows.
-- [ ] A3. Settings: `appearance.fontFamily`, `appearance.codeFontFamily` (null is the cockpit's),
+- [x] A1. Ship Inter and JetBrains Mono (woff2, OFL) with the interface; the tokens name them first.
+- [x] A2. Port `SystemFonts` (the user's terminal font, the system's monospace font, the installed
+  monospace families, the fonts that draw the prompt symbols) with a Linux implementation (GNOME
+  Terminal and Ptyxis profiles, the GNOME interface setting, fontconfig) and plain fallbacks on macOS
+  and Windows.
+- [x] A3. Settings: `appearance.fontFamily`, `appearance.codeFontFamily` (null is the cockpit's),
   `terminal.fontFamily` (null is the system's), `terminal.cursorStyle` (block, bar, underline),
   `terminal.cursorBlink`; the terminal's size moves to the Terminal group on screen.
-- [ ] A4. The settings screen's Appearance and Terminal groups, with the system font named and the
+- [x] A4. The settings screen's Appearance and Terminal groups, with the system font named and the
   installed families offered; texts in both catalogs.
-- [ ] A5. The terminal applies font, fallbacks and cursor at once, to every tab, waiting for the font to
+- [x] A5. The terminal applies font, fallbacks and cursor at once, to every tab, waiting for the font to
   load before it measures; the interface applies its fonts.
-- [ ] A6. Decision, README, screenshots in both themes and languages, a Powerline prompt drawn right.
+- [x] A6. Decision, README, screenshots in both themes and languages, a Powerline prompt drawn right.
 
 ## Front B: the settings file (delegated, branch `feat/settings-file`)
 
