@@ -861,3 +861,27 @@ Code and sits beside Ctrl+Enter.
 deps of the diff view and the send button of the pane, the `reviewSend` key, `paste` of the terminal
 session, the `review:notes` channel and `createGitReviewNotes`; drop `comments` from `FileOpening` and the
 `comment` and `gone` rows from `changeRows`.
+
+## D59. Codex marks its tab through the terminal's program status report, with nothing installed
+
+**Decision:** every cockpit terminal reads OSC 7501, the draft
+[Program Status Protocol](https://www.superlogical.com/rex/docs/build/program-status), from whatever program
+writes it, and feeds it to the attention tracker beside `dck agent signal`: `working` is working, `blocked`
+needs you, `done` and `error` your turn, `idle` ends a turn in progress silently (the protocol's report for
+a cancelled program, so Esc ends Codex's turn at once instead of after 5 s of quiet), `clear` ended. Only
+the terminal's own record counts; a report with an `id` is ignored, and a query gets `?` back. The core
+reads the report (`attention/program-status.ts`) and knows no program; the window attaches the reader to
+each xterm (`ui/src/terminal/program-status.ts`). Codex's TUI writes these reports since 0.163.0
+(`codex-rs/tui/src/terminal_program_status.rs`), so Codex needs no plugin, hook or `config.toml` change, and
+its profile (`codex`, the native binary's process name, since the npm launcher hands its process to it with
+`execve`) has no connect command and shows no hint.
+**Reason:** the maintainer asked for Codex as a second agent (2026-11-17). Codex also has a `notify`
+program and lifecycle hooks, but in 0.169.0 it runs every session's turns in a shared background server by
+default, and the hooks and `notify` run there with the environment of the terminal that started it: in a
+run with two tabs, a prompt in the second signalled the first. `notify` also fires when Codex's title
+generator finishes, while the real turn is still waiting for an approval, and hooks run only after the user
+trusts them in `/hooks`. The terminal report comes from the tab itself, needs no setup and is a generic
+protocol (OpenTUI writes it too), so it adds no coupling to Codex (D24, D37).
+**How to revert:** drop `attachProgramStatus` from `terminal-session.ts` and `onProgramStatus` from
+`app.ts`, then `program-status.ts` in `core/src/attention` and `ui/src/terminal`, and the tracker's `rest`;
+the Codex profile can stay, and Codex tabs then show only their process activity.

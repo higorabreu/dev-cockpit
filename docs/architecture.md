@@ -20,8 +20,9 @@ code.
 4. **An MCP server** (planned) for the Claude CLI to query the app: next task, briefing, project scope.
 
 Out of scope for now: team use, accounts and permissions; being an IDE (the code reader is read-only
-and prioritizes the diff of what the agent changed); Codex support (an agent is wired by configuration
-through the neutral `dck agent signal`, D37); a security model against prompt injection (postponed; the minimal rule is that
+and prioritizes the diff of what the agent changed); code specific to one agent (an agent is wired by
+configuration through the neutral `dck agent signal`, D37, or reports its state to the terminal, as Codex
+does, D59); a security model against prompt injection (postponed; the minimal rule is that
 external writes need approval); environment ops actions.
 
 ## Premises
@@ -59,7 +60,8 @@ packages/
 - **The UI is plain TypeScript on the DOM.** It talks only to the shell, through a typed host API exposed
   by the preload script; the shell talks to the daemon and validates what comes back.
 - **Agents are wired by configuration.** An agent's own hooks call `dck agent signal <state>`; the daemon
-  relays it to the window, which marks the tab that needs the user. Nothing in the code knows which agent
+  relays it to the window, which marks the tab that needs the user. A program can also report its state
+  to its own terminal (OSC 7501), which each terminal reads (D59). Nothing in the code knows which agent
   sent it (D37).
 - **Design tokens** in `packages/design/tokens.json` generate the CSS variables and the terminal theme,
   so the terminal and the panel share one palette.
@@ -86,6 +88,7 @@ A folder holds at most 12 source files and file names are lowercase kebab case; 
 - [docs/decisions.md](decisions.md): the decisions that shaped the project, with the reasons.
 - [docs/roadmap.md](roadmap.md): milestones and what is next.
 - [docs/extensions.md](extensions.md): the extension manifest, contribution points, sources and `dck ext list`.
-- [docs/agents.md](agents.md): the agent attention marks, the Claude Code plugin and wiring another agent.
+- [docs/agents.md](agents.md): the agent attention marks, the Claude Code plugin, Codex and wiring another
+  agent.
 - [AGENTS.md](../AGENTS.md): coding standards, tests, design system and process.
 - [CONTRIBUTING.md](../CONTRIBUTING.md): how to set up, test and send a change.

@@ -37,7 +37,8 @@ changed, and your merge requests and tasks.
   pull and push and the submodules, and the containers of the project's Compose file.
 - **Coding agents.** A tab running an agent is marked when the agent needs you, with a notification when
   the tab is out of sight, so you can keep working in another tab. Claude Code connects with its plugin
-  in two commands, and any agent that runs a command on its own events can send the same signals
+  in two commands, Codex (0.163 or newer) needs nothing because it reports its state to the terminal, and
+  any agent that runs a command on its own events can send the same signals
   ([docs/agents.md](docs/agents.md)).
 - **Review.** `Ctrl+Shift+D` shows what changed in the tab's repository beside or below its terminal, in
   one scroll: uncommitted changes, everything since the branch it came from, or the commits not pushed

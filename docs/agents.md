@@ -1,8 +1,9 @@
 # Agents
 
-How a coding agent running in a tab tells the cockpit that it needs you. The cockpit knows three states
-and one command; it does not know which agent sent them. The design is in
-[plans/agent-attention.md](../plans/agent-attention.md).
+How a coding agent running in a tab tells the cockpit that it needs you. The cockpit knows three states,
+one command and one terminal report; it does not know which agent sent them. The design is in
+[plans/agent-attention.md](../plans/agent-attention.md) and, for the terminal report,
+[plans/codex.md](../plans/codex.md).
 
 ## The marks
 
@@ -72,6 +73,48 @@ Every hook runs `[ -n "$DCK_PTY_ID" ] && command -v dck >/dev/null 2>&1 && dck a
 quiet for 5 s goes back to "your turn": while Claude Code works it redraws its spinner several times a
 second, and when it waits it writes nothing. This is silent, with no mark and no notification, because the
 user who pressed Esc is looking and a quiet agent may still be working.
+
+## Codex
+
+Codex 0.163 or newer needs nothing installed. Its interactive TUI writes its state to its own terminal as
+an OSC 7501 report (the draft [Program Status Protocol](https://www.superlogical.com/rex/docs/build/program-status),
+written in Codex by `codex-rs/tui/src/terminal_program_status.rs`), and each cockpit terminal reads it.
+The report comes from the tab's own terminal, so it always marks the right tab, also while Codex runs its
+sessions in its shared background server. Nothing is written to `~/.codex`.
+
+| OSC 7501 report from Codex | State |
+| --- | --- |
+| `working` | working |
+| `blocked` (`kind` `permission`, `question` or `auth`) | needs-you |
+| `done`, `error` | your-turn |
+| `idle` after a turn, as after Esc | the turn ends with no mark and no notification |
+| `clear`, written on `/exit` | ended |
+
+Verified with Codex 0.169.0 against a local stand-in for the model API: a prompt, an approval, an answer,
+Esc and `/exit`, with the shared server on and off. Sessions shows `codex` in the foreground as Codex.
+
+What the cockpit cannot know:
+
+- Codex before 0.163 writes no report: its tab shows only that a program runs, as any command.
+- Inside tmux or screen the multiplexer drops the report.
+- Only the thread on screen reports: not another thread in Codex's agents view, `codex exec`, the desktop
+  app or an IDE.
+- A report with an `id` (a child record such as a subagent) is ignored; only the terminal's own record
+  counts.
+- Started by Node older than 22.15, Codex runs under a `node` process, so Sessions shows `node`; the marks
+  still work.
+
+Codex's `notify` setting and its lifecycle hooks are not used. Both run inside the shared background
+server with the environment of the terminal that started it, so every session would signal that first
+tab, and `notify` also fires when Codex's title generator finishes, before the real answer.
+
+## A program that reports its own state
+
+Any program can mark its tab the way Codex does, with no `dck` in its path, by writing an OSC 7501 report
+to its terminal: `ESC ] 7501 ; state=<state> ESC \` (or ending in BEL), with `idle`, `working`,
+`blocked`, `done`, `error` or `clear` mapped as in the table above. Other keys (`app`, `kind`, `msg`,
+`progress`) are read and ignored; a report with an `id` is ignored. A program that asks with
+`ESC ] 7501 ; ? ESC \` gets the same `?` back.
 
 ## Another agent
 
