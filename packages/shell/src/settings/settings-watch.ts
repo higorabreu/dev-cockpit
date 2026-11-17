@@ -32,7 +32,7 @@ export function watchSettingsFile(deps: SettingsWatchDeps): () => void {
     })
   } catch (error) {
     deps.logger.warn(
-      'cannot watch the settings file, changes from the CLI apply at the next start',
+      'cannot watch the settings file, edits made outside the window apply at the next start',
       {
         file: deps.file,
         error: String(error),

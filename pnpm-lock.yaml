@@ -206,6 +206,9 @@ importers:
       '@dck/adapter-jira':
         specifier: workspace:^
         version: link:../adapters/jira
+      '@dck/adapter-jsonc':
+        specifier: workspace:^
+        version: link:../adapters/jsonc
       '@dck/adapter-linux-proc':
         specifier: workspace:^
         version: link:../adapters/linux-proc

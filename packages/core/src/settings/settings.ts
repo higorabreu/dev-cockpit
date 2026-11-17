@@ -5,6 +5,7 @@ import { isBaseRef } from '../diff/base.ts'
 import { EXTENSION_ID_MAX, EXTENSION_ID_PATTERN } from '../extensions/manifest.ts'
 import { PANE_RATIO, SPLIT_PREFERENCES } from '../panes/panes.ts'
 import type { ConnectionFields } from '../ports/connections.ts'
+import type { SettingsFileState } from './settings-file.ts'
 
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
 export const THEMES = ['dark', 'light', 'system'] as const
@@ -235,6 +236,8 @@ export interface SettingsView {
   readonly locked: readonly string[]
   // There was no file: first run, when it is worth importing the old preferences
   readonly fresh: boolean
+  // Whether the file could be read and which of its values were not used as written
+  readonly file: SettingsFileState
 }
 
 export interface SettingsUpdate extends SettingsView {

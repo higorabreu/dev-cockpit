@@ -10,6 +10,7 @@ import {
   ok,
   reviewDiff,
   type SavedTabs,
+  settingsFileOk,
   type TabNotification,
 } from '@dck/core'
 import { FakePtyHost, MemoryClipboard } from '@dck/core/testing'
@@ -123,11 +124,12 @@ function setup(picked: string | undefined = undefined) {
       },
     },
     settings: {
-      get: () => ({ settings: defaultSettings, locked: [], fresh: true }),
+      get: () => ({ settings: defaultSettings, locked: [], fresh: true, file: settingsFileOk }),
       update: async (patch) => ({
         settings: { ...defaultSettings, theme: (patch as { theme?: 'light' }).theme ?? 'dark' },
         locked: [],
         fresh: false,
+        file: settingsFileOk,
         rejected: [],
       }),
     },

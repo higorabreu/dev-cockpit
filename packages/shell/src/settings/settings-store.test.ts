@@ -1,7 +1,8 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { defaultSettings, silentLogger } from '@dck/core'
+import { createJsoncSettingsText } from '@dck/adapter-jsonc'
+import { defaultSettings, type SettingsFileState, silentLogger } from '@dck/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createSettingsStore } from './settings-store.ts'
 
@@ -15,10 +16,20 @@ beforeEach(async () => {
 
 afterEach(() => rm(directory, { recursive: true, force: true }))
 
+const folders = new Set(['/home/ana/code'])
+
 const make = (
   env: Record<string, string> = {},
   veto?: Parameters<typeof createSettingsStore>[0]['veto'],
-) => createSettingsStore({ file, logger: silentLogger, env, ...(veto ? { veto } : {}) })
+) =>
+  createSettingsStore({
+    file,
+    logger: silentLogger,
+    env,
+    text: createJsoncSettingsText(),
+    isFolder: async (path) => folders.has(path),
+    ...(veto ? { veto } : {}),
+  })
 
 describe('createSettingsStore load', () => {
   it('should start with the defaults and say it is fresh when there is no file', async () => {
@@ -105,16 +116,56 @@ describe('createSettingsStore update', () => {
     })
   })
 
-  it('should keep what it had in memory when the file became invalid before an update', async () => {
+  it('should keep the settings and leave the file untouched when it became invalid before an update', async () => {
     const store = make()
     await store.load()
     await store.update({ fontSize: 20 })
-    await writeFile(file, '{ broken')
+    await writeFile(file, '{\n  "fontSize": 20\n  "theme": "light"\n}\n')
 
-    const result = await store.update({ theme: 'light' })
+    const result = await store.update({ opacity: 0.5 })
 
     expect(result.settings.fontSize).toBe(20)
-    expect(JSON.parse(await readFile(file, 'utf8'))).toMatchObject({ theme: 'light', fontSize: 20 })
+    expect(result.settings.opacity).toBe(0.92)
+    expect(result.rejected).toEqual(['opacity'])
+    expect(result.file).toEqual({ kind: 'invalid', line: 3, column: 3 })
+    expect(await readFile(file, 'utf8')).toBe('{\n  "fontSize": 20\n  "theme": "light"\n}\n')
+  })
+
+  it('should keep the comments, order and layout of the file when the screen changes a value', async () => {
+    const original =
+      '{\n  // Dark at night\n  "theme": "dark", /* mine */\n  "fontSize": 14,\n  "system": { "notifyAfterSeconds": 60 },\n}\n'
+    await writeFile(join(directory, 'settings.json'), original)
+    file = join(directory, 'settings.json')
+    const store = make()
+    await store.load()
+
+    await store.update({ fontSize: 18, window: { heightRatio: 0.6 } })
+
+    expect(await readFile(file, 'utf8')).toBe(
+      '{\n  // Dark at night\n  "theme": "dark", /* mine */\n  "fontSize": 18,\n  "system": { "notifyAfterSeconds": 60 },\n  "window": {\n    "heightRatio": 0.6\n  },\n}\n',
+    )
+  })
+
+  it('should write every value as plain json when there was no file', async () => {
+    const store = make()
+    await store.load()
+
+    await store.update({ theme: 'light' })
+
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({ ...defaultSettings, theme: 'light' })
+  })
+
+  it('should report a projects folder that does not exist when the screen saves it', async () => {
+    const store = make()
+    await store.load()
+
+    const result = await store.update({ projects: { root: '/home/ana/gone' } })
+
+    expect(result.settings.projects.root).toBe('/home/ana/gone')
+    expect(result.file).toEqual({
+      kind: 'ok',
+      issues: [{ key: 'projects.root', kind: 'missingFolder', found: '"/home/ana/gone"' }],
+    })
   })
 
   it('should tell the listeners what changed when a value changes', async () => {
@@ -177,50 +228,135 @@ describe('createSettingsStore update', () => {
   })
 })
 
-describe('createSettingsStore reloadExtensions', () => {
+describe('createSettingsStore reload', () => {
   const editFile = async (change: Record<string, unknown>) => {
     const current = JSON.parse(await readFile(file, 'utf8'))
     await writeFile(file, JSON.stringify({ ...current, ...change }))
   }
 
-  it('should apply the disabled extensions the CLI wrote and tell the listeners when the file changed', async () => {
-    const store = make()
+  const started = async (...args: Parameters<typeof make>) => {
+    const store = make(...args)
     await store.load()
     await store.update({ fontSize: 20 })
     const seen: (readonly string[])[] = []
+    const states: SettingsFileState[] = []
     store.onChange((_settings, changed) => seen.push(changed))
+    store.onFile((state) => states.push(state))
+    return { store, seen, states }
+  }
+
+  it('should apply any field edited by hand and tell the listeners when the file changed', async () => {
+    const { store, seen } = await started()
+    await editFile({ theme: 'light', language: 'en', fontSize: 12 })
+
+    await store.reload()
+
+    expect(store.get().settings).toMatchObject({ theme: 'light', language: 'en', fontSize: 12 })
+    expect(seen).toEqual([['language', 'theme', 'fontSize']])
+  })
+
+  it('should apply the disabled extensions the CLI wrote when the file changed', async () => {
+    const { store, seen } = await started()
     await editFile({ extensions: { disabled: ['dck.gitlab'] } })
 
-    await store.reloadExtensions()
+    await store.reload()
 
     expect(store.get().settings.extensions.disabled).toEqual(['dck.gitlab'])
     expect(seen).toEqual([['extensions.disabled']])
   })
 
-  it('should leave every other field as it is in memory when the file changed it too', async () => {
-    const store = make()
-    await store.load()
-    await store.update({ fontSize: 20 })
-    await editFile({ fontSize: 12, extensions: { disabled: ['dck.gitlab'] } })
+  it('should tell nobody when the file holds what the window itself saved', async () => {
+    const { store, seen, states } = await started()
+    await store.update({ theme: 'light' })
+    seen.length = 0
 
-    await store.reloadExtensions()
+    await store.reload()
 
-    expect(store.get().settings.fontSize).toBe(20)
+    expect(seen).toEqual([])
+    expect(states).toEqual([])
   })
 
-  it('should keep what it had and tell nobody when the file is not valid json', async () => {
-    const store = make()
-    await store.load()
-    await store.update({ extensions: { disabled: ['dck.gitlab'] } })
-    let calls = 0
-    store.onChange(() => {
-      calls += 1
+  it('should keep the settings, say where the file broke and not rewrite it when it is not valid', async () => {
+    const { store, seen, states } = await started()
+    await writeFile(file, '{\n  "theme": "light",\n  oops\n}\n')
+
+    await store.reload()
+
+    expect(store.get().settings.fontSize).toBe(20)
+    expect(seen).toEqual([])
+    expect(states).toEqual([{ kind: 'invalid', line: 3, column: 3 }])
+    expect(await readFile(file, 'utf8')).toBe('{\n  "theme": "light",\n  oops\n}\n')
+  })
+
+  it('should apply the file and clear the error when the user fixes it', async () => {
+    const { store, seen, states } = await started()
+    await writeFile(file, '{ "theme": "light", oops }')
+    await store.reload()
+
+    await writeFile(file, '{ "theme": "light", // fixed\n}')
+    await store.reload()
+
+    expect(store.get().settings.theme).toBe('light')
+    expect(seen).toEqual([['theme', 'fontSize']])
+    expect(states.at(-1)).toEqual({ kind: 'ok', issues: [] })
+  })
+
+  it('should list the values it did not use as written when the file has them', async () => {
+    const { store } = await started()
+    await editFile({ theme: 'purple', system: { notifyAfterSeconds: 2 } })
+
+    await store.reload()
+
+    expect(store.get().file).toEqual({
+      kind: 'ok',
+      issues: [
+        { key: 'theme', kind: 'ignored', found: '"purple"', used: '"dark"' },
+        { key: 'system.notifyAfterSeconds', kind: 'adjusted', found: '2', used: '5' },
+      ],
     })
-    await writeFile(file, '{ broken')
+  })
 
-    await store.reloadExtensions()
+  it('should keep the previous shortcut and report it without rewriting the file when the system refuses the new one', async () => {
+    const { store, seen } = await started({}, (_next, changed) =>
+      changed.includes('shortcuts.toggleWindow') ? ['shortcuts.toggleWindow'] : [],
+    )
+    await editFile({ shortcuts: { toggleWindow: 'F5' }, theme: 'light' })
 
-    expect(store.get().settings.extensions.disabled).toEqual(['dck.gitlab'])
-    expect(calls).toBe(0)
+    await store.reload()
+
+    expect(store.get().settings.shortcuts.toggleWindow).toBe('F12')
+    expect(store.get().settings.theme).toBe('light')
+    expect(seen).toEqual([['theme']])
+    expect(store.get().file).toEqual({
+      kind: 'ok',
+      issues: [{ key: 'shortcuts.toggleWindow', kind: 'refused', found: '"F5"', used: '"F12"' }],
+    })
+    expect(JSON.parse(await readFile(file, 'utf8')).shortcuts.toggleWindow).toBe('F5')
+  })
+
+  it('should take the shortcut and stop reporting it when the system accepts it on a later save', async () => {
+    let free = false
+    const { store } = await started({}, (_next, changed) =>
+      changed.includes('shortcuts.toggleWindow') && !free ? ['shortcuts.toggleWindow'] : [],
+    )
+    await editFile({ shortcuts: { toggleWindow: 'F5' } })
+    await store.reload()
+    free = true
+
+    await editFile({ theme: 'light' })
+    await store.reload()
+
+    expect(store.get().settings.shortcuts.toggleWindow).toBe('F5')
+    expect(store.get().file).toEqual({ kind: 'ok', issues: [] })
+  })
+
+  it('should go back to the defaults when the file is deleted', async () => {
+    const { store, seen } = await started()
+    await rm(file)
+
+    await store.reload()
+
+    expect(store.get().settings).toEqual(defaultSettings)
+    expect(seen).toEqual([['fontSize']])
   })
 })
