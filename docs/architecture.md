@@ -41,7 +41,7 @@ packages/
   cli/        the dck command (toggle, ping, daemon, agent signal, ext)
   shell/      Electron: window, global shortcut, PTY host
   adapters/   node-pty, node-git, node-net, node-fetch, github, gitlab, jira, docker-cli, secret-tool,
-              gnome-shortcuts, linux-proc, extension-files
+              gnome-shortcuts, linux-proc, extension-files, jsonc
 ```
 
 ## How the pieces fit

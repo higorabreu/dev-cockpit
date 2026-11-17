@@ -73,6 +73,15 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
+  packages/adapters/jsonc:
+    dependencies:
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../../core
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
+
   packages/adapters/linux-proc:
     dependencies:
       '@dck/core':
@@ -129,6 +138,9 @@ importers:
       '@dck/adapter-extension-files':
         specifier: workspace:^
         version: link:../adapters/extension-files
+      '@dck/adapter-jsonc':
+        specifier: workspace:^
+        version: link:../adapters/jsonc
       '@dck/adapter-node-net':
         specifier: workspace:^
         version: link:../adapters/node-net
@@ -898,6 +910,9 @@ packages:
   isexe@4.0.0:
     resolution: {integrity: sha512-FFUtZMpoZ8RqHS3XeXEmHWLA4thH+ZxCv2lOiPIn1Xc7CxrqhWzNSDzD+/chS/zbYezmiwWLdQC09JdQKmthOw==}
     engines: {node: '>=20'}
+
+  jsonc-parser@3.3.1:
+    resolution: {integrity: sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==}
 
   lightningcss-android-arm64@1.33.0:
     resolution: {integrity: sha512-gEpRTalKdosp4Bb8qWtc2iOgE5SeIHlpS1up9bFq2wAyYhl1UdTObYiHe98zEM9SQvSoqQZ1IQD0JNpg3Ml5pg==}
@@ -1678,6 +1693,8 @@ snapshots:
   isexe@2.0.0: {}
 
   isexe@4.0.0: {}
+
+  jsonc-parser@3.3.1: {}
 
   lightningcss-android-arm64@1.33.0:
     optional: true

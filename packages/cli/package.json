@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@dck/adapter-extension-files": "workspace:^",
+    "@dck/adapter-jsonc": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
     "@dck/core": "workspace:^",
     "@dck/daemon": "workspace:^"
