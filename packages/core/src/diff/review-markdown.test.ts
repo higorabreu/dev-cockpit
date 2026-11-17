@@ -61,6 +61,14 @@ describe('reviewMarkdown', () => {
         '',
         '## src/billing/invoice.ts',
         '',
+        '### Removed line 10',
+        '',
+        '```diff',
+        '-  retry(3)',
+        '```',
+        '',
+        'Keep the retry, the gateway drops requests.',
+        '',
         '### Lines 9-10',
         '',
         '```diff',
@@ -69,14 +77,6 @@ describe('reviewMarkdown', () => {
         '```',
         '',
         'Use the constant from config.',
-        '',
-        '### Removed line 10',
-        '',
-        '```diff',
-        '-  retry(3)',
-        '```',
-        '',
-        'Keep the retry, the gateway drops requests.',
         '',
       ].join('\n'),
     )
@@ -97,6 +97,18 @@ describe('reviewMarkdown', () => {
       '### Line 10 (outdated: the lines changed after this comment)',
     ])
     expect(markdown).toContain('2 comments on 2 files.')
+  })
+
+  it('should keep the order the diff shows when a removed line has a higher old number than a later added one', () => {
+    // Arrange: removed line 10 (old numbers) sits above added line 9 (new numbers) in the hunk
+    const removed = comment(2, 2, 'Why drop the retry?')
+    const added = comment(3, 3, 'Make it a setting.')
+
+    // Act
+    const text = reviewMarkdown([added, removed], createTranslator('en'))
+
+    // Assert
+    expect(text.indexOf('### Removed line 10')).toBeLessThan(text.indexOf('### Line 9'))
   })
 
   it('should quote 40 lines and say how many more there are when a comment covers more', () => {

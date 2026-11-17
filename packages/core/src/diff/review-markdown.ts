@@ -41,6 +41,15 @@ function quote(lines: readonly DiffLine[], words: Words): string[] {
 
 const firstOf = (comment: ReviewComment) => commentSpan(comment.lines).from
 
+// The order the diff shows them, by hunk and line: their numbers mix the old file's (a comment on removed
+// lines only) with the new one's. An outdated comment has no place and comes after them, by its numbers
+function inDiffOrder(a: ReviewComment, b: ReviewComment): number {
+  if (a.place && b.place) return a.place.hunk - b.place.hunk || a.place.start - b.place.start
+  if (a.place) return -1
+  if (b.place) return 1
+  return firstOf(a) - firstOf(b)
+}
+
 // Every pending comment as a Markdown file for the agent: a title, how many comments on how many files
 // and which numbers they use, then one section per file by path and one per comment by line, each with
 // its lines quoted as a diff and the comment as written
@@ -55,9 +64,7 @@ export function reviewMarkdown(comments: readonly ReviewComment[], words: Words)
   const out = [`# ${words.t('review.notes.title')}`, '', summary]
   for (const path of paths) {
     out.push('', `## ${path}`)
-    const ofPath = comments
-      .filter((comment) => comment.path === path)
-      .sort((a, b) => firstOf(a) - firstOf(b))
+    const ofPath = comments.filter((comment) => comment.path === path).sort(inDiffOrder)
     for (const comment of ofPath) {
       out.push('', `### ${heading(comment, words)}`, '', ...quote(comment.lines, words))
       out.push('', comment.body.trim())
