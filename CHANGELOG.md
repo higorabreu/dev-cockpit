@@ -3,6 +3,19 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.8.0](https://github.com/higorabreu/dev-cockpit/compare/v0.7.1...v0.8.0) (2026-11-17)
+
+
+### Features
+
+* keep the review up with the agent, mark files viewed and show states as letters ([c61d670](https://github.com/higorabreu/dev-cockpit/commit/c61d6701e2fcee889b7c279b09a94cb47b3c0341))
+* type the paths of files dropped on or pasted into a terminal ([cc24406](https://github.com/higorabreu/dev-cockpit/commit/cc2440600a1abad5ffc6567ba503d84aa60dbe7a))
+
+
+### Bug Fixes
+
+* let the arrow keys steer the wheel while the pointer rests on it ([0f4be72](https://github.com/higorabreu/dev-cockpit/commit/0f4be72cca1d89449454be8c25d9489c13a576ef))
+
 ## [0.7.1](https://github.com/higorabreu/dev-cockpit/compare/v0.7.0...v0.7.1) (2026-11-17)
 
 
