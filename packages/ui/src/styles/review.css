@@ -752,7 +752,7 @@
   text-align: center;
 }
 
-/* Nothing can go now (a program runs, no agent to start): it stays focusable for its tooltip, and the
+/* Nothing can go now (no agent runs in the tab): it stays focusable for its tooltip, and the
    count loses its fill so the state is not told by the text color alone */
 .vbtn.rv-send[aria-disabled="true"] {
   color: var(--muted);

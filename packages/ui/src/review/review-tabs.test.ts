@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
 import {
-  type AgentProfile,
   type AgentState,
   createTranslator,
   type HostApi,
@@ -15,17 +14,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createTabView } from '../panes/tab-view.ts'
 import { createKeymap } from '../platform/keymap.ts'
 import { AGENT_SETTLE_MS } from './review-refresh.ts'
-import type { AgentChoice } from './review-send.ts'
 import { createReviewTabs } from './review-tabs.ts'
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
-
-const claude: AgentProfile = {
-  id: 'claude-code',
-  name: 'Claude Code',
-  processes: ['claude'],
-  launch: 'claude',
-}
 
 const at = (activity: SessionActivityInfo['activity'], process: string) => ({
   cwd: '/home/ana/acme',
@@ -52,8 +43,6 @@ function setup(width = 1201, height = 700, diffText = '', accepts = true) {
   let agent: AgentState | undefined
   // What runs in the tab's terminal, for the watcher and for a fresh read alike
   let running: SessionActivityInfo | undefined
-  let installed: readonly AgentProfile[] = [claude]
-  const menus: { choices: readonly AgentChoice[]; focusAt: number }[] = []
   const api = {
     review: {
       diff: async () => {
@@ -108,9 +97,6 @@ function setup(width = 1201, height = 700, diffText = '', accepts = true) {
     },
     watched: () => running,
     activity: async () => running,
-    launchable: async () => installed,
-    profiles: () => [claude],
-    menu: (_anchor, choices, focusAt) => void menus.push({ choices, focusAt }),
   })
   return {
     reviews,
@@ -125,10 +111,6 @@ function setup(width = 1201, height = 700, diffText = '', accepts = true) {
     setRunning: (info: SessionActivityInfo | undefined) => {
       running = info
     },
-    setInstalled: (agents: readonly AgentProfile[]) => {
-      installed = agents
-    },
-    menus,
   }
 }
 
@@ -225,9 +207,9 @@ describe('createReviewTabs send', () => {
     expect(pasted).toEqual([])
   })
 
-  it('should type the command that starts the agent with the review when the shortcut is pressed at a shell prompt', async () => {
+  it('should type nothing, keep the comments and ask for an agent when the shortcut is pressed at a shell prompt', async () => {
     // Arrange
-    const { reviews, terminal, pasted, setRunning } = setup(1201, 700, invoice)
+    const { reviews, pasted, setRunning } = setup(1201, 700, invoice)
     setRunning(at('idle', 'bash'))
     await comment(reviews)
 
@@ -235,11 +217,9 @@ describe('createReviewTabs send', () => {
     await reviews.send('tab-1')
 
     // Assert
-    expect(pasted).toEqual([
-      "tab-1|claude 'Address the review comments in .git/dck/review-20261117-143000.md'",
-    ])
-    expect(document.activeElement).toBe(terminal)
-    expect(document.querySelector('.rv-send')?.hasAttribute('hidden')).toBe(true)
+    expect(pasted).toEqual([])
+    expect(document.querySelector('.rv-send-count')?.textContent).toBe('1')
+    expect(document.querySelector('.rv-status')?.textContent).toBe('No agent in this tab')
   })
 
   it('should say a program runs and keep the comments when the shortcut is pressed while it runs', async () => {
@@ -254,15 +234,13 @@ describe('createReviewTabs send', () => {
     // Assert
     expect(pasted).toEqual([])
     expect(document.querySelector('.rv-send-count')?.textContent).toBe('1')
-    expect(document.querySelector('.rv-status')?.textContent).toBe(
-      'vim is running in the terminal. The comments stay pending until it ends',
-    )
+    expect(document.querySelector('.rv-status')?.textContent).toBe('vim is running in this tab')
   })
 
   it('should keep the send button in step with the terminal when the watcher reads the tab again', async () => {
     // Arrange
     const { reviews, setRunning } = setup(1201, 700, invoice)
-    setRunning({ ...at('agent', 'claude'), agent: claude })
+    setRunning(at('agent', 'claude'))
     await comment(reviews)
     const button = document.querySelector('.rv-send') as HTMLElement
     const seen = () => `${button.textContent}|${button.getAttribute('aria-disabled') ?? ''}`
@@ -274,33 +252,12 @@ describe('createReviewTabs send', () => {
     const busy = seen()
     setRunning(at('idle', 'bash'))
     reviews.syncAgents()
-    await flush()
     const atPrompt = seen()
 
     // Assert
     expect(withAgent).toBe('Send to agent1|')
     expect(busy).toBe('Send to agent1|true')
-    expect(atPrompt).toBe('Start Claude Code with the review1|')
-  })
-
-  it('should open the agent choice from the shortcut when two agents can start', async () => {
-    // Arrange
-    const { reviews, pasted, setRunning, setInstalled, menus } = setup(1201, 700, invoice)
-    const acme = { id: 'acme', name: 'Acme Agent', processes: ['acme'], launch: 'acme' }
-    setRunning(at('idle', 'bash'))
-    setInstalled([claude, acme])
-    await comment(reviews)
-
-    // Act
-    await reviews.send('tab-1')
-    menus[0]?.choices[1]?.run()
-    await flush()
-
-    // Assert
-    expect(menus[0]?.choices.map((choice) => choice.label)).toEqual(['Claude Code', 'Acme Agent'])
-    expect(pasted).toEqual([
-      "tab-1|acme 'Address the review comments in .git/dck/review-20261117-143000.md'",
-    ])
+    expect(atPrompt).toBe('Send to agent1|true')
   })
 })
 

@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
 import {
-  type AgentProfile,
   createTranslator,
   type HostApi,
   type Locale,
@@ -13,7 +12,6 @@ import {
 import { afterEach, describe, expect, it } from 'vitest'
 import { createKeymap } from '../platform/keymap.ts'
 import { createReviewPane } from './review-pane.ts'
-import type { AgentChoice } from './review-send.ts'
 
 const invoice = [
   'diff --git a/src/billing/invoice.ts b/src/billing/invoice.ts',
@@ -26,34 +24,20 @@ const invoice = [
   '',
 ].join('\n')
 
-const claude: AgentProfile = {
-  id: 'claude-code',
-  name: 'Claude Code',
-  processes: ['claude'],
-  launch: 'claude',
-}
-const acme: AgentProfile = {
-  id: 'acme',
-  name: 'Acme Agent',
-  processes: ['acme'],
-  launch: 'acme run',
-}
-
 const at = (activity: SessionActivityInfo['activity'], process: string): SessionActivityInfo => ({
   cwd: '/home/ana/acme',
   process,
   activity,
-  ...(activity === 'agent' ? { agent: claude } : {}),
 })
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 const LINE = 'Address the review comments in .git/dck/review-20261117-143000.md'
+const OPEN_AGENT = 'No agent in this tab'
 
 interface Options {
   // What runs in the terminal, for the watcher and for the fresh read at sending
   readonly running?: SessionActivityInfo
-  readonly installed?: readonly AgentProfile[]
   readonly locale?: Locale
 }
 
@@ -61,8 +45,6 @@ function setup(options: Options = {}) {
   let running = options.running
   const sent: string[] = []
   const notes: string[] = []
-  const menus: { choices: readonly AgentChoice[]; focusAt: number }[] = []
-  let launchChecks = 0
   const api = {
     review: {
       diff: async () =>
@@ -101,12 +83,6 @@ function setup(options: Options = {}) {
       return true
     },
     activity: async () => running,
-    launchable: async () => {
-      launchChecks += 1
-      return options.installed ?? [claude]
-    },
-    profiles: () => [claude, acme],
-    chooseAgent: (_anchor, choices, focusAt) => void menus.push({ choices, focusAt }),
   })
   document.body.append(pane.element)
   const button = () => pane.element.querySelector('.rv-send') as HTMLButtonElement
@@ -133,11 +109,9 @@ function setup(options: Options = {}) {
     pane,
     sent,
     notes,
-    menus,
     button,
     status,
     open,
-    launchChecks: () => launchChecks,
     // The terminal moved on: a fresh read sees it, the watcher only on its next round
     run: (info: SessionActivityInfo | undefined) => {
       running = info
@@ -159,59 +133,22 @@ describe('review send', () => {
     const { open, click, sent, button } = setup({ running: at('agent', 'claude') })
     await open()
     const label = button().textContent
+    const disabled = button().getAttribute('aria-disabled')
 
     // Act
     await click()
 
     // Assert
     expect(label).toBe('Send to agent1')
+    expect(disabled).toBeNull()
     expect(sent).toEqual([LINE])
     expect(button().hidden).toBe(true)
   })
 
-  it('should start the one installed agent with the review when the terminal waits at a shell prompt', async () => {
-    // Arrange
-    const { open, click, sent, button, notes } = setup({ running: at('idle', 'bash') })
-    await open()
-    const label = button().textContent
-    const name = button().getAttribute('aria-label')
-    const tip = button().dataset.tip
-
-    // Act
-    await click()
-
-    // Assert
-    expect(label).toBe('Start Claude Code with the review1')
-    expect(name).toBe('Start Claude Code with 1 comment')
-    expect(tip).toBe(
-      'Writes the comments to a file and types claude with its path at the terminal prompt, without Enter',
-    )
-    expect(notes).toHaveLength(1)
-    expect(sent).toEqual([`claude '${LINE}'`])
-    expect(button().hidden).toBe(true)
-  })
-
-  it('should name the agent to start in Portuguese when the interface is in Portuguese', async () => {
-    // Arrange
-    const { open, click, sent, button } = setup({ running: at('idle', 'bash'), locale: 'pt-BR' })
-    await open()
-    const label = button().textContent
-
-    // Act
-    await click()
-
-    // Assert
-    expect(label).toBe('Iniciar Claude Code com a revisão1')
-    expect(sent).toEqual([
-      "claude 'Resolva os comentários da revisão em .git/dck/review-20261117-143000.md'",
-    ])
-  })
-
-  it('should disable the button, say none was found and keep the comments when no agent is installed', async () => {
+  it('should disable the button, ask for an agent and keep the comments when a shell waits at its prompt', async () => {
     // Arrange
     const { open, click, pane, sent, notes, button, status } = setup({
       running: at('idle', 'bash'),
-      installed: [],
     })
     await open()
 
@@ -221,41 +158,14 @@ describe('review send', () => {
     await pane.send()
 
     // Assert
-    const reason =
-      'No agent is running in the terminal and none was found on its PATH to start (claude, acme). The comments stay pending'
+    expect(button().textContent).toBe('Send to agent1')
     expect(button().getAttribute('aria-disabled')).toBe('true')
-    expect(button().dataset.tip).toBe(reason)
+    expect(button().dataset.tip).toBe(OPEN_AGENT)
     expect(afterClick).toBe('')
-    expect(status()).toBe(reason)
+    expect(status()).toBe(OPEN_AGENT)
     expect(notes).toEqual([])
     expect(sent).toEqual([])
     expect(button().hidden).toBe(false)
-  })
-
-  it('should let the user pick the agent and remember the choice when two agents can start', async () => {
-    // Arrange
-    const { open, click, menus, sent, button } = setup({
-      running: at('idle', 'bash'),
-      installed: [claude, acme],
-    })
-    await open()
-    const label = button().textContent
-    const popup = button().getAttribute('aria-haspopup')
-
-    // Act
-    await click()
-    menus[0]?.choices[1]?.run()
-    await flush()
-    await open()
-    await click()
-
-    // Assert
-    expect(label).toBe('Start an agent with the review1')
-    expect(popup).toBe('menu')
-    expect(menus[0]?.choices.map((choice) => choice.label)).toEqual(['Claude Code', 'Acme Agent'])
-    expect(menus[0]?.focusAt).toBe(0)
-    expect(sent).toEqual([`acme run '${LINE}'`])
-    expect(menus[1]?.focusAt).toBe(1)
   })
 
   it('should disable the button with the running program in its tooltip and keep the comments while it runs', async () => {
@@ -268,7 +178,7 @@ describe('review send', () => {
     await pane.send()
 
     // Assert
-    const reason = 'vim is running in the terminal. The comments stay pending until it ends'
+    const reason = `vim is running in this tab`
     expect(button().textContent).toBe('Send to agent1')
     expect(button().getAttribute('aria-disabled')).toBe('true')
     expect(button().dataset.tip).toBe(reason)
@@ -285,9 +195,19 @@ describe('review send', () => {
     await open()
 
     // Assert
-    expect(button().dataset.tip).toBe(
-      'A program is running in the terminal. The comments stay pending until it ends',
-    )
+    expect(button().dataset.tip).toBe(`A program is running in this tab`)
+  })
+
+  it('should give the reason in Portuguese with the same label when the interface is in Portuguese', async () => {
+    // Arrange
+    const { open, button } = setup({ running: at('idle', 'bash'), locale: 'pt-BR' })
+
+    // Act
+    await open()
+
+    // Assert
+    expect(button().textContent).toBe('Enviar ao agente1')
+    expect(button().dataset.tip).toBe('Nenhum agente nesta aba')
   })
 
   it('should decide by a fresh read of the terminal when the watcher has not seen the change yet', async () => {
@@ -301,26 +221,40 @@ describe('review send', () => {
 
     // Assert
     expect(sent).toEqual([])
-    expect(status()).toBe(
-      'less is running in the terminal. The comments stay pending until it ends',
-    )
+    expect(status()).toBe(`less is running in this tab`)
     expect(button().getAttribute('aria-disabled')).toBe('true')
   })
 
-  it('should ask which agents can start only when the terminal comes to a prompt', async () => {
+  it('should drop the told reason from the header when the watcher sees an agent come to the tab', async () => {
     // Arrange
-    const { open, pane, launchChecks } = setup({ running: at('idle', 'bash') })
+    const { open, pane, status } = setup({ running: at('busy', 'vim') })
     await open()
-    const opened = launchChecks()
+    await pane.send()
+    pane.activity(at('busy', 'vim'))
+    const same = status()
 
     // Act
-    pane.activity(at('idle', 'bash'))
-    pane.activity(at('busy', 'make'))
-    pane.activity(at('idle', 'bash'))
-    await flush()
+    pane.activity(at('agent', 'claude'))
 
     // Assert
-    expect(opened).toBe(1)
-    expect(launchChecks()).toBe(2)
+    expect(same).toBe(`vim is running in this tab`)
+    expect(status()).toBe('')
+  })
+
+  it('should send and drop the earlier reason when a fresh read finds an agent the watcher has not seen yet', async () => {
+    // Arrange
+    const { open, pane, run, sent, status } = setup({ running: at('idle', 'bash') })
+    await open()
+    await pane.send()
+    const before = status()
+    run(at('agent', 'codex'))
+
+    // Act
+    await pane.send()
+
+    // Assert
+    expect(before).toBe(OPEN_AGENT)
+    expect(sent).toEqual([LINE])
+    expect(status()).toBe('')
   })
 })

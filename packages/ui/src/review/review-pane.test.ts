@@ -117,9 +117,6 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
       return true
     },
     activity: async () => undefined,
-    launchable: async () => [],
-    profiles: () => [],
-    chooseAgent: () => undefined,
   })
   document.body.append(pane.element)
   return {

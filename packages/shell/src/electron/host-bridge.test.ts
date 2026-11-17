@@ -80,11 +80,6 @@ function setup(picked: string | undefined = undefined) {
       }),
     },
     agents: [{ id: 'acme', name: 'Acme Agent', processes: ['acme'] }],
-    launchers: {
-      launchable: async () => [
-        { id: 'acme', name: 'Acme Agent', processes: ['acme'], launch: 'acme' },
-      ],
-    },
     environment: {
       status: async (pid: number) => ({ kind: 'ok' as const, project: `p${pid}`, containers: [] }),
     },
@@ -362,34 +357,6 @@ describe('registerHostBridge clipboard and window', () => {
     expect(await call(hostChannels.agentProfiles)).toEqual([
       { id: 'acme', name: 'Acme Agent', processes: ['acme'] },
     ])
-  })
-
-  it('should answer the agents that can start when the tab exists', async () => {
-    // Arrange
-    const { call } = setup()
-    const id = await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
-
-    // Act
-    const launchable = await call(hostChannels.agentLaunchable, id)
-
-    // Assert
-    expect(launchable).toEqual([
-      { id: 'acme', name: 'Acme Agent', processes: ['acme'], launch: 'acme' },
-    ])
-  })
-
-  it('should answer no agent to start when the tab is unknown or the id is not a tab id', async () => {
-    // Arrange
-    const { call } = setup()
-    await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
-
-    // Act
-    const answers = await Promise.all(
-      [99, '1', 1.5, -1, undefined].map((id) => call(hostChannels.agentLaunchable, id)),
-    )
-
-    // Assert
-    expect(answers).toEqual([[], [], [], [], []])
   })
 
   it('should return nothing when the session does not exist', async () => {

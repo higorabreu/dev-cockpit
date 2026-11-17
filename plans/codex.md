@@ -67,8 +67,8 @@ in daemon mode too, and nothing is installed.
 - No `integrations/codex/`, no `notify` bridge and no `config.toml` snippet: they would mark the wrong tab.
 - Starting Codex with a first prompt: `codex "<prompt>"` opens the interactive TUI and sends the prompt as
   its first turn (`codex --help`: `Usage: codex [OPTIONS] [PROMPT]`, "Optional user prompt to start the
-  session"; seen in a run, where `UserPromptSubmit` carried the argument). So the profile's launch command,
-  added by the review work after both branches merge, is `codex`.
+  session"; seen in a run, where `UserPromptSubmit` carried the argument). Not used: the review's start of
+  an agent with a first prompt was dropped (D56, 2026-11-17), so profiles carry no launch command.
 
 ## Acceptance criteria
 
