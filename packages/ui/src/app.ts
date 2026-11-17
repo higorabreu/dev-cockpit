@@ -228,7 +228,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     chooseLayout: (orientation) => split.setPreference(orientation),
     baseFor: (cwd) => reviewBaseFor(settings.current(), cwd),
     chooseBase: (root, name) => settings.update(reviewBasePatch(root, name)).then(() => undefined),
-    paste: (tabId, text) => sessions.get(tabId)?.paste(text),
+    paste: (tabId, text) => sessions.get(tabId)?.paste(text) ?? false,
   })
 
   let activeSnapshot: SessionSnapshot | undefined

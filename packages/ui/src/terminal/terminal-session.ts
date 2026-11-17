@@ -16,8 +16,9 @@ export interface TerminalSession {
   lastOutputAt(): number
   focus(): void
   write(data: string): void
-  // Types text as a paste: bracketed when the program asked for it, so a TUI reads one block
-  paste(text: string): void
+  // Types text as a paste; false when it has several lines and the program did not ask for bracketed
+  // paste, where each line break would press Enter, so nothing is typed
+  paste(text: string): boolean
   fit(): void
   // The real cell size of the font and the padding around the cells, while the terminal is on screen
   grid(): PaneGrid | undefined
@@ -140,7 +141,11 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     lastOutputAt: () => lastOutputAt,
     focus: () => terminal.focus(),
     write: (data) => api.pty.write(id, data),
-    paste: (text) => terminal.paste(text),
+    paste(text) {
+      if (text.includes('\n') && !terminal.modes.bracketedPasteMode) return false
+      terminal.paste(text)
+      return true
+    },
     fit: () => fit.fit(),
     setFontSize: (size) => {
       terminal.options.fontSize = size

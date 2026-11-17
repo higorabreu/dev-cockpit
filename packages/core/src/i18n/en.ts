@@ -412,6 +412,8 @@ export const en: Record<MessageKey, string> = {
   'review.comments.other': '{count} comments',
   'review.send': 'Send to agent',
   'review.send.tip': 'Types the comments at the terminal prompt, without Enter',
+  'review.send.refused':
+    'The program in this terminal does not accept a multi-line paste, so the comments stay pending',
   'review.send.a11y.one': 'Send {count} comment to the agent',
   'review.send.a11y.other': 'Send {count} comments to the agent',
   'review.hint.comment': 'comment',

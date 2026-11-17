@@ -411,6 +411,8 @@ export const ptBR = {
   'review.comments.other': '{count} comentários',
   'review.send': 'Enviar ao agente',
   'review.send.tip': 'Digita os comentários no prompt do terminal, sem Enter',
+  'review.send.refused':
+    'O programa deste terminal não aceita colar várias linhas, então os comentários continuam pendentes',
   'review.send.a11y.one': 'Enviar {count} comentário ao agente',
   'review.send.a11y.other': 'Enviar {count} comentários ao agente',
   'review.hint.comment': 'comentar',

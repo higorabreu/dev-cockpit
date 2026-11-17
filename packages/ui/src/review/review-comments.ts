@@ -169,14 +169,17 @@ export function createReviewComments(deps: ReviewCommentsDeps) {
       const comment = comments.find((found) => found.id === id)
       return comment ? cardEstimate(comment) : 0
     },
-    // Every pending comment as the text for the agent, a field with text included; then none is left
-    take(): string {
+    // Every pending comment as the text for the agent, a field with text saved first
+    text(): string {
       settle()
-      const text = reviewText(comments)
+      changed()
+      return reviewText(comments)
+    },
+    // Once the text reached the terminal, nothing is left pending
+    clear() {
       comments = []
       draft = undefined
       changed()
-      return text
     },
   }
 }

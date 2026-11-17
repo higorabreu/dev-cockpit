@@ -114,6 +114,7 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
     },
     send: (text) => {
       sent.push(text)
+      return true
     },
   })
   document.body.append(pane.element)

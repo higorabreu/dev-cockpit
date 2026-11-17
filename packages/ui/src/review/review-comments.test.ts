@@ -67,6 +67,7 @@ function setup(first = invoice()) {
     onToggleLayout: () => undefined,
     send: (typed) => {
       sent.push(typed)
+      return true
     },
   })
   document.body.append(pane.element)

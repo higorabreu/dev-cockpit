@@ -29,7 +29,7 @@ const invoice = [
   '',
 ].join('\n')
 
-function setup(width = 1201, height = 700, diffText = '') {
+function setup(width = 1201, height = 700, diffText = '', accepts = true) {
   const layouts: Orientation[] = []
   const pasted: string[] = []
   let reads = 0
@@ -80,7 +80,11 @@ function setup(width = 1201, height = 700, diffText = '') {
     chooseLayout: (orientation) => layouts.push(orientation),
     baseFor: () => undefined,
     chooseBase: async () => undefined,
-    paste: (tabId, text) => pasted.push(`${tabId}|${text}`),
+    paste: (tabId, text) => {
+      if (!accepts) return false
+      pasted.push(`${tabId}|${text}`)
+      return true
+    },
   })
   return {
     reviews,
@@ -127,6 +131,36 @@ describe('createReviewTabs send', () => {
     ])
     expect(document.activeElement).toBe(terminal)
     expect(document.querySelector('.rv-send')?.hasAttribute('hidden')).toBe(true)
+  })
+
+  it('should keep the comments pending and say why when the terminal refuses a multi-line paste', async () => {
+    // Arrange
+    const { reviews, terminal, pasted } = setup(1201, 700, invoice, false)
+    reviews.toggle('tab-1')
+    await flush()
+    const lines = document.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+    const press = (target: Element, key: string, init: KeyboardEventInit = {}) =>
+      target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...init }))
+    press(lines, 'n')
+    press(lines, 'ArrowDown')
+    press(lines, 'ArrowDown')
+    press(lines, 'ArrowDown')
+    press(lines, 'c')
+    const field = document.querySelector('.rv-field') as HTMLTextAreaElement
+    field.value = 'use the constant from config'
+    press(field, 'Enter', { ctrlKey: true })
+
+    // Act
+    reviews.send('tab-1')
+
+    // Assert
+    expect(pasted).toEqual([])
+    expect(document.activeElement).not.toBe(terminal)
+    expect(document.querySelector('.rv-send-count')?.textContent).toBe('1')
+    expect(document.querySelector('.rv-status')?.textContent).toBe(
+      'The program in this terminal does not accept a multi-line paste, so the comments stay pending',
+    )
   })
 
   it('should paste nothing when no comment is pending', async () => {

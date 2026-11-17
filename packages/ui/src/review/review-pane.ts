@@ -30,6 +30,8 @@ import { createReviewRefresh } from './review-refresh.ts'
 
 // Loads this fast never show "Reading the changes", so the pane does not flash
 const LOADING_TEXT_MS = 200
+// How long a notice in the header stays
+const NOTICE_MS = 8000
 
 const ICONS = {
   whitespace:
@@ -79,8 +81,9 @@ export interface ReviewPaneDeps {
   onClose(): void
   // The header's layout button: the other orientation, as the user's choice
   onToggleLayout(): void
-  // Types the pending comments at the tab's terminal prompt, without Enter, and gives it the keys
-  send(text: string): void
+  // Types the pending comments at the tab's terminal prompt, without Enter, and gives it the keys; false
+  // when the terminal could not take them
+  send(text: string): boolean
 }
 
 let measured: number | undefined
@@ -103,6 +106,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   let ignoreWhitespace = false
   let state: PaneState = { kind: 'loading' }
   let busy = false
+  // A short sentence beside the totals, such as why the comments were not sent
+  let notice = ''
+  let noticeTimer: ReturnType<typeof setTimeout> | undefined
   let showLoading = false
   // What the base and unpushed scopes compare with, from the last read of a repository, and that one
   let branch: BranchInfo | undefined
@@ -312,11 +318,24 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     })
   }
 
-  // Every pending comment typed at the prompt at once; the keys go to the terminal to add a word and send
+  // Every pending comment typed at the prompt at once; the keys go to the terminal to add a word and send.
+  // A program that would run each line keeps them pending and the header says why
   function sendComments() {
     if (comments.count() === 0 && comments.editor() === undefined) return
-    const text = comments.take()
-    if (text !== '') deps.send(text)
+    const text = comments.text()
+    if (text === '') return
+    if (deps.send(text)) comments.clear()
+    else showNotice(t('review.send.refused'))
+  }
+
+  function showNotice(text: string) {
+    notice = text
+    drawStatus()
+    if (noticeTimer) clearTimeout(noticeTimer)
+    noticeTimer = setTimeout(() => {
+      notice = ''
+      drawStatus()
+    }, NOTICE_MS)
   }
 
   function drawSend() {
@@ -481,7 +500,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   }
 
   function drawStatus() {
-    status.textContent = busy && state.kind === 'ok' ? t('review.refreshing') : ''
+    status.textContent = notice || (busy && state.kind === 'ok' ? t('review.refreshing') : '')
   }
 
   function drawTotals() {
