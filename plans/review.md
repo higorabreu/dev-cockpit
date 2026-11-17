@@ -164,15 +164,15 @@ and a long change has no memory of where the reading stopped.
 | R14 | `v` and the checkbox mark a file viewed, fold it and move to the next unviewed one; the count follows; a later change to that file clears the mark and says so | Tests |
 | R15 | Every state has its letter in both places, in both themes, with 3:1 contrast and the name in the tooltip and the accessible name | Tests, contrast check, screenshots |
 
-- [ ] RV-T10. `core`: the change fingerprint and the patch key of a file (a small hash of its hunks), pure
+- [x] RV-T10. `core`: the change fingerprint and the patch key of a file (a small hash of its hunks), pure
   and tested; the `DiffSource` port and the `node-git` adapter answer the fingerprint. (R12, R14)
-- [ ] RV-T11. Host API and refresh: the fingerprint channel, the 2 s check with its back-off, paused when
+- [x] RV-T11. Host API and refresh: the fingerprint channel, the 2 s check with its back-off, paused when
   closed or hidden, and a refresh that keeps the reader's place. (R12, R13)
-- [ ] RV-T12. Viewed: the checkbox, `v`, the fold, the jump to the next unviewed file, the index check, the
+- [x] RV-T12. Viewed: the checkbox, `v`, the fold, the jump to the next unviewed file, the index check, the
   count and "Changed since viewed", in both catalogs. (R14)
-- [ ] RV-T13. Status letters in the index and the headers, tokens and contrast checks, screenshots in both
+- [x] RV-T13. Status letters in the index and the headers, tokens and contrast checks, screenshots in both
   themes and languages. (R15)
-- [ ] RV-T14. Docs: the README's key table (`v`), a decision record, the roadmap.
+- [x] RV-T14. Docs: the README's key table (`v`), a decision record, the roadmap.
 
 ## Phase 2: comments back to the agent
 
