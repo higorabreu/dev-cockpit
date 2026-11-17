@@ -6,6 +6,8 @@ export interface AgentProfile {
   readonly processes: readonly string[]
   // How to wire the agent's own events to `dck agent signal`, when the agent has a way to
   readonly connect?: AgentConnect
+  // The command that starts the agent in a terminal with a first prompt as its one argument
+  readonly launch?: string
 }
 
 // Text typed into the terminal without Enter, so the user reads what will run and confirms it

@@ -86,6 +86,10 @@ function setup(first = invoice(), options: Options = {}) {
       sent.push(typed)
       return true
     },
+    activity: async () => undefined,
+    launchable: async () => [],
+    profiles: () => [],
+    chooseAgent: () => undefined,
   })
   document.body.append(pane.element)
   const find = <T extends Element = HTMLElement>(selector: string) =>
@@ -353,5 +357,20 @@ describe('review comments', () => {
     expect(notes[0]?.markdown).toContain(
       '## src/billing/invoice.ts\n\n### Line 12 (outdated: the lines changed after this comment)',
     )
+  })
+})
+
+describe('comment field', () => {
+  it('should use the design system scrollbar when the comment is longer than the field', async () => {
+    // Arrange
+    const { open, key, lines, line, click, field } = setup()
+    await open()
+    click(line(1))
+
+    // Act
+    key(lines(), 'c')
+
+    // Assert
+    expect(field().classList.contains('scroll')).toBe(true)
   })
 })

@@ -62,6 +62,8 @@ export function createTabMenu(element: HTMLElement) {
       y: number,
       above: boolean,
       onClose?: () => void,
+      // The enabled item that takes the focus, such as the one picked last time
+      focusAt = 0,
     ) {
       element.replaceChildren(
         ...actions.map((action) => {
@@ -83,7 +85,8 @@ export function createTabMenu(element: HTMLElement) {
       const fitsBelow = y + 6 + height <= window.innerHeight - 4
       element.style.left = `${Math.max(4, Math.min(x, window.innerWidth - width - 4))}px`
       element.style.top = `${Math.max(4, above || !fitsBelow ? y - height - 6 : y + 6)}px`
-      items()[0]?.focus()
+      const enabled = items()
+      ;(enabled[focusAt] ?? enabled[0])?.focus()
     },
   }
 }

@@ -17,6 +17,12 @@ describe('agentProfiles', () => {
     expect(claude?.processes).toEqual(['claude'])
   })
 
+  it('should start Claude Code with a first prompt as the argument of claude when launched', () => {
+    const claude = agentProfiles.find((profile) => profile.id === 'claude-code')
+
+    expect(claude?.launch).toBe('claude')
+  })
+
   it('should connect Claude Code with the documented commands and no Enter when typed', () => {
     const connect = agentProfiles.find((profile) => profile.id === 'claude-code')?.connect
 

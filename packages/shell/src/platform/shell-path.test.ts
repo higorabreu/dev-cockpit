@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process'
 import type { Logger } from '@dck/core'
 import { describe, expect, it } from 'vitest'
-import { type LoginPathDeps, readLoginPath, runLoginShell, type ShellRun } from './login-path.ts'
+import { readShellPath, runShell, type ShellPathDeps, type ShellRun } from './shell-path.ts'
 
-function deps(run: NonNullable<LoginPathDeps['run']>) {
+function deps(run: NonNullable<ShellPathDeps['run']>) {
   const warnings: string[] = []
   const contexts: unknown[] = []
   const logger: Logger = {
@@ -14,12 +14,12 @@ function deps(run: NonNullable<LoginPathDeps['run']>) {
     },
     error() {},
   }
-  return { warnings, contexts, deps: { shell: '/bin/zsh', run, logger } }
+  return { warnings, contexts, deps: { shell: '/bin/zsh', flags: ['-i', '-l'], run, logger } }
 }
 
 const printed = (output: string): ShellRun => ({ kind: 'output', output })
 
-describe('readLoginPath', () => {
+describe('readShellPath', () => {
   it('should ask an interactive login shell for its PATH with a timeout when it reads', async () => {
     // Arrange
     const calls: unknown[] = []
@@ -29,11 +29,11 @@ describe('readLoginPath', () => {
     })
 
     // Act
-    await readLoginPath(options)
+    await readShellPath(options)
 
     // Assert
     expect(calls).toEqual([
-      ['/bin/zsh', ['-ilc', `printf '__DCK_PATH__%s__DCK_PATH__' "$PATH"`], 2000],
+      ['/bin/zsh', ['-i', '-l', '-c', `printf '__DCK_PATH__%s__DCK_PATH__' "$PATH"`], 2000],
     ])
   })
 
@@ -44,7 +44,7 @@ describe('readLoginPath', () => {
     )
 
     // Act
-    const path = await readLoginPath(options)
+    const path = await readShellPath(options)
 
     // Assert
     expect(path).toBe('/opt/homebrew/bin:/usr/bin')
@@ -65,11 +65,11 @@ describe('readLoginPath', () => {
     }))
 
     // Act
-    const path = await readLoginPath(options)
+    const path = await readShellPath(options)
 
     // Assert
     expect(path).toBeUndefined()
-    expect(warnings).toEqual(['login shell PATH not read, keeping the inherited one'])
+    expect(warnings).toEqual(['shell PATH not read, keeping the inherited one'])
     expect(contexts).toEqual([{ shell: '/bin/zsh', code: null, signal: 'SIGKILL', timedOut: true }])
   })
 
@@ -99,11 +99,11 @@ describe('readLoginPath', () => {
       const { deps: options, warnings, contexts } = deps(async () => printed(output))
 
       // Act
-      const result = await readLoginPath(options)
+      const result = await readShellPath(options)
 
       // Assert
       expect(result).toBe(path)
-      expect(warnings).toEqual(['login shell PATH entries dropped'])
+      expect(warnings).toEqual(['shell PATH entries dropped'])
       expect(contexts).toEqual([{ shell: '/bin/zsh', dropped }])
     },
   )
@@ -117,17 +117,17 @@ describe('readLoginPath', () => {
     const { deps: options, warnings, contexts } = deps(async () => printed(output))
 
     // Act
-    const path = await readLoginPath(options)
+    const path = await readShellPath(options)
 
     // Assert
     expect(path).toBeUndefined()
-    expect(warnings).toEqual(['login shell PATH has no valid entry, keeping the inherited one'])
+    expect(warnings).toEqual(['shell PATH has no valid entry, keeping the inherited one'])
     expect(contexts).toEqual([{ shell: '/bin/zsh', dropped }])
   })
 })
 
 // Real processes: what matters here is how the operating system stops a shell that will not end
-describe('runLoginShell', () => {
+describe('runShell', () => {
   const running = (command: string) =>
     execFileSync('ps', ['-eo', 'args'], { encoding: 'utf8' })
       .split('\n')
@@ -143,7 +143,7 @@ describe('runLoginShell', () => {
     const started = Date.now()
 
     // Act
-    const result = await runLoginShell('/bin/sh', ['-c', "trap '' TERM; sleep 7.31; :"], 200)
+    const result = await runShell('/bin/sh', ['-c', "trap '' TERM; sleep 7.31; :"], 200)
 
     // Assert
     expect(result).toEqual({ kind: 'failed', code: null, signal: 'SIGKILL', timedOut: true })
@@ -156,7 +156,7 @@ describe('runLoginShell', () => {
     const started = Date.now()
 
     // Act
-    const result = await runLoginShell(
+    const result = await runShell(
       '/bin/sh',
       ['-c', "printf 'hi __DCK_PATH__/usr/bin__DCK_PATH__'; sleep 7.32; :"],
       5000,
@@ -173,7 +173,7 @@ describe('runLoginShell', () => {
     const script = "read answer; printf '__DCK_PATH__/bin__DCK_PATH__'"
 
     // Act
-    const result = await runLoginShell('/bin/sh', ['-c', script], 1000)
+    const result = await runShell('/bin/sh', ['-c', script], 1000)
 
     // Assert
     expect(result).toEqual(printed('__DCK_PATH__/bin__DCK_PATH__'))
@@ -184,7 +184,7 @@ describe('runLoginShell', () => {
     const started = Date.now()
 
     // Act
-    const result = await runLoginShell('/bin/sh', ['-c', 'yes; :'], 5000)
+    const result = await runShell('/bin/sh', ['-c', 'yes; :'], 5000)
 
     // Assert
     expect(result.kind === 'output' && result.output.length).toBe(64 * 1024)
@@ -196,7 +196,7 @@ describe('runLoginShell', () => {
     const script = 'echo token=SECRET123 >&2; exit 3'
 
     // Act
-    const result = await runLoginShell('/bin/sh', ['-c', script], 1000)
+    const result = await runShell('/bin/sh', ['-c', script], 1000)
 
     // Assert
     expect(result).toEqual({ kind: 'failed', code: 3, signal: null, timedOut: false })
@@ -204,7 +204,7 @@ describe('runLoginShell', () => {
 
   it('should report the system error code when the shell does not exist', async () => {
     // Act
-    const result = await runLoginShell('/nonexistent/shell', ['-c', ':'], 1000)
+    const result = await runShell('/nonexistent/shell', ['-c', ':'], 1000)
 
     // Assert
     expect(result).toEqual({ kind: 'failed', code: 'ENOENT', signal: null, timedOut: false })
