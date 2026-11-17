@@ -51,12 +51,15 @@ export function reviewPrompt(t: Translate, path: string): string {
 }
 
 // Why the line cannot go to the tab now, or undefined when an agent runs there: at a shell prompt it would
-// land in the shell, and another program would read it as its own input. With no read of the tab yet it goes
+// land in the shell, and another program would read it as its own input. With no read of the tab yet it goes.
+// A program that reports its state (`reporting`) is an agent whatever its name, as its tab's marks say
 export function reviewSendBlock(
   t: Translate,
   activity: SessionActivityInfo | undefined,
+  reporting = false,
 ): string | undefined {
   if (activity === undefined || activity.activity === 'agent') return undefined
+  if (reporting && activity.activity === 'busy') return undefined
   if (activity.activity === 'idle') return t('review.send.idle')
   return activity.process
     ? t('review.send.busy', { process: activity.process })

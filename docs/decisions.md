@@ -835,7 +835,8 @@ delete (Delete) buttons, and its file's header counts it. "Send to agent" in the
 count, and Ctrl+Shift+Enter (⇧⌘Enter), from the review or the tab's terminal, write every pending comment to
 a Markdown file and type one line at the tab's prompt, "Address the review comments in <path>" in the
 interface language, with no Enter and no line break; the keys go to the terminal. They type only while an
-agent runs in the tab, read fresh at the moment of sending; at a shell prompt or under another program the
+agent runs in the tab (a known agent by its process, or any program that reports its state, as its marks
+say), read fresh at the moment of sending; at a shell prompt or under another program the
 button is disabled (`aria-disabled`, so its tooltip shows) with the reason, "No agent in this tab" or
 "{process} is running in this tab",
 the key shows it in the header and the comments stay; the button's state follows the tab watcher's reads

@@ -122,6 +122,8 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   let cwd: string | undefined
   let orientation: Orientation | undefined
   let focusInside = false
+  // The tab's program reported its state: the marks and the send agree it is an agent
+  let reporting = false
   // The next drawing starts the diff at the top: a new scope or whitespace setting is a new reading
   let resetReading = true
   // Per file path: the gaps the user opened, the text that fills them and the collapse they lifted
@@ -803,9 +805,12 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     },
     hasFocus: () => element.contains(document.activeElement),
     send: () => sender.send(),
-    agentState: (agent: AgentState | undefined) => refresh.agentState(agent),
+    agentState(agent: AgentState | undefined) {
+      reporting = agent !== undefined
+      refresh.agentState(agent)
+    },
     // The watcher's read of the tab: the send button follows what runs in its terminal
-    activity: (info: SessionActivityInfo | undefined) => sender.sync(info),
+    activity: (info: SessionActivityInfo | undefined) => sender.sync(info, reporting),
     // How the tab shows the review: beside or below the terminal, or alone in a narrow tab
     setArrangement(next: Orientation | undefined, narrow: boolean) {
       orientation = next
