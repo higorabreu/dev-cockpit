@@ -44,7 +44,8 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: ubuntu-latest
+            # Pinned, like arm64: node-pty is compiled here and needs the runner's glibc
+            runner: ubuntu-24.04
           - arch: arm64
             runner: ubuntu-24.04-arm
     steps:
