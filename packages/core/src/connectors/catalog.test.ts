@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { connectorCatalog, connectorOfView } from './catalog.ts'
+import { connectedFirst, connectorCatalog, connectorOfView } from './catalog.ts'
 import { GITHUB_CONNECTOR } from './github.ts'
 import { GITLAB_CONNECTOR } from './gitlab.ts'
 import { JIRA_CONNECTOR } from './jira.ts'
@@ -82,5 +82,28 @@ describe('connectorOfView', () => {
 
     expect(connectorOfView(listed, 'github-review')?.id).toBe('github')
     expect(connectorOfView(listed, 'review')?.id).toBe('gitlab')
+  })
+})
+
+describe('connectedFirst', () => {
+  const ids = (list: readonly { id: string }[]) => list.map((connector) => connector.id)
+  const all = [GITHUB_CONNECTOR, GITLAB_CONNECTOR, JIRA_CONNECTOR]
+
+  it('should put GitLab above GitHub when only GitLab has an account', () => {
+    expect(ids(connectedFirst(all, (id) => id === 'gitlab'))).toEqual(['gitlab', 'github', 'jira'])
+  })
+
+  it('should keep the given order inside each group when several have an account', () => {
+    const connected = new Set(['jira', 'github'])
+
+    expect(ids(connectedFirst(all, (id) => connected.has(id)))).toEqual([
+      'github',
+      'jira',
+      'gitlab',
+    ])
+  })
+
+  it('should keep the given order when none has an account', () => {
+    expect(ids(connectedFirst(all, () => false))).toEqual(['github', 'gitlab', 'jira'])
   })
 })

@@ -375,6 +375,41 @@ describe('settings view, connections', () => {
     view.close()
   })
 
+  it('should put the connected GitLab above the GitHub section that is not connected', async () => {
+    const initial = {
+      ...defaultSettings,
+      connections: { gitlab: { url: 'https://gitlab.example.com' } },
+    }
+
+    const { sections, view } = await connectionsPage(
+      connectionsHost([GITHUB_CONNECTOR, GITLAB_CONNECTOR]).host,
+      initial,
+    )
+
+    expect(sections().map((rows) => rows[0])).toEqual(['GitLab', 'GitHub'])
+    view.close()
+  })
+
+  it('should keep the declared order when both accounts are connected or neither is', async () => {
+    const both = {
+      ...defaultSettings,
+      connections: {
+        gitlab: { url: 'https://gitlab.example.com' },
+        github: { url: 'https://github.com' },
+      },
+    }
+
+    for (const initial of [both, defaultSettings]) {
+      const { sections, view } = await connectionsPage(
+        connectionsHost([GITHUB_CONNECTOR, GITLAB_CONNECTOR]).host,
+        initial,
+      )
+
+      expect(sections().map((rows) => rows[0])).toEqual(['GitHub', 'GitLab'])
+      view.close()
+    }
+  })
+
   it('should give GitHub the fine-grained read-only permissions in its token hint', async () => {
     const { body, view } = await connectionsPage(connectionsHost([GITHUB_CONNECTOR]).host)
 

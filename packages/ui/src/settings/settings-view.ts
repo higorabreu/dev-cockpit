@@ -2,6 +2,7 @@ import {
   acceleratorFromEvent,
   type ConnectionStatus,
   type Connector,
+  connectedFirst,
   connectionErrorKey,
   type DisabledConnector,
   defaultSettings,
@@ -365,7 +366,8 @@ export function createSettingsView(
       api.connections.list(),
       api.connections.disabled(),
     ])
-    connectors = enabled
+    // Ordered once per opening, so a section does not jump while the user connects or disconnects it
+    connectors = connectedFirst(enabled, (id) => Boolean(storedAccount(id)?.url))
     disabledConnectors = disabled
     listed = true
     for (const { id } of connectors) statuses.set(id, 'checking')
