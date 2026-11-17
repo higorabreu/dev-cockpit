@@ -105,17 +105,21 @@
   outline-offset: -2px;
 }
 
+/* A count on a rail button, at its lower right as in VS Code's activity bar: a ring in the window color
+   cuts it out of the icon, so both stay readable where they meet */
 .badge {
   position: absolute;
-  top: 1px;
-  right: 0;
-  min-width: 14px;
-  height: 14px;
+  right: 1px;
+  bottom: 1px;
+  min-width: 13px;
+  height: 13px;
   padding: 0 3px;
+  box-sizing: border-box;
   border-radius: 7px;
   background: var(--fg);
+  box-shadow: 0 0 0 2px var(--bg);
   color: var(--bg);
-  font: 600 9.5px / 14px var(--font-sans);
+  font: 600 9px / 13px var(--font-sans);
   text-align: center;
 }
 
