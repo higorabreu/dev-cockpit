@@ -93,12 +93,6 @@ export const ptBR = {
   'menu.hint.navigate': 'navegar',
   'menu.hint.release': 'soltar executa',
   'menu.hint.cancel': 'cancela',
-  'menu.switcher.title': 'Abas, mais recente primeiro',
-  'menu.switcher.next': 'próxima',
-  'menu.switcher.previous': 'anterior',
-  'menu.switcher.release': 'soltar troca',
-  'menu.switcher.current': 'atual',
-  'menu.key.space': 'Espaço',
 
   'notice.copied': 'Copiado',
   'notice.chars.one': '{count} caractere',

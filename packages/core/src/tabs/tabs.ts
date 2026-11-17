@@ -67,13 +67,6 @@ export function reorderTabs(state: TabsState, ids: readonly string[]): TabsState
   return { ...state, tabs }
 }
 
-// Most recent to oldest, with never-used tabs at the end
-export function recentTabs(state: TabsState): readonly TabInfo[] {
-  const byId = new Map(state.tabs.map((tab) => [tab.id, tab]))
-  const used = state.recent.flatMap((id) => byId.get(id) ?? [])
-  return [...used, ...state.tabs.filter((tab) => !state.recent.includes(tab.id))]
-}
-
 // A duplicate keeps the name and gets the lowest free index: dev-cockpit(2), dev-cockpit(3)
 export function duplicateLabel(labels: readonly string[], label: string): string {
   const base = label.replace(/\(\d+\)$/, '')

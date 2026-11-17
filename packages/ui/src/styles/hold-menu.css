@@ -67,16 +67,6 @@
   }
 }
 
-#menu-card.switch-mode {
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-large);
-}
-
 #menu-card svg.wheel {
   display: block;
 }
@@ -238,44 +228,4 @@ button.cue:hover {
   color: var(--muted);
   font-size: 11px;
   white-space: nowrap;
-}
-
-.strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: center;
-}
-
-.chip {
-  min-width: 116px;
-  padding: 8px 11px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-large);
-  background: var(--sector-idle);
-}
-
-.chip b {
-  font: 500 12px var(--font-mono);
-}
-
-.chip small {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.chip.on {
-  background: var(--list-selected);
-  border-color: var(--muted);
-}
-
-.ttl {
-  color: var(--muted);
-  font-size: 10.5px;
-  letter-spacing: 0.07em;
-  text-align: center;
-  text-transform: uppercase;
 }

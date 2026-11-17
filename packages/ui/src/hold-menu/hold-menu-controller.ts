@@ -1,5 +1,4 @@
 import {
-  commitSwitcher,
   createHoldGesture,
   createHoldMenu,
   currentCategory,
@@ -8,13 +7,10 @@ import {
   type MenuCategory,
   type MenuItem,
   navigate,
-  openSwitcher,
   release,
   type Scheduler,
-  type SwitcherState,
   select,
   selectedIndex,
-  stepSwitcher,
   type Translate,
 } from '@dck/core'
 import { inputGate } from '../platform/input-gate.ts'
@@ -28,7 +24,7 @@ import {
   type Room,
   type WheelLayout,
 } from './list-fit.ts'
-import { type MenuMarkup, switcherMarkup, wheelMarkup } from './menu-view.ts'
+import { type MenuMarkup, wheelMarkup } from './menu-view.ts'
 import { createPointerIntent } from './pointer-intent.ts'
 
 // Space the list keeps from the window's top edge and from the tab bar, in CSS pixels
@@ -39,18 +35,9 @@ const FIT_PASSES = 4
 // several, so the selection stays precise; a touchpad's small deltas add up to it
 const WHEEL_STEP = 40
 
-export interface MenuTab {
-  readonly id: string
-  readonly label: string
-  readonly current: boolean
-}
-
 export interface HoldMenuActions {
   categories(): readonly MenuCategory[]
-  // Most recent to oldest
-  tabs(): readonly MenuTab[]
   run(categoryId: string, item: MenuItem): void
-  switchTo(tabId: string): void
   // Key that opens the menu while held; comes from settings and can change while the app is open
   triggerCode(): string
 }
@@ -69,14 +56,7 @@ const ARROWS: Record<string, Direction> = {
   ArrowLeft: 'left',
 }
 
-type Mode =
-  | { kind: 'closed' }
-  | { kind: 'wheel'; menu: HoldMenuState }
-  | {
-      kind: 'switcher'
-      switcher: SwitcherState
-      tabs: readonly MenuTab[]
-    }
+type Mode = { kind: 'closed' } | { kind: 'wheel'; menu: HoldMenuState }
 
 const consume = (event: Event) => {
   event.preventDefault()
@@ -201,15 +181,6 @@ export function createHoldMenuController(
 
   function draw(still = false) {
     if (mode.kind === 'wheel') drawWheel(mode.menu, still)
-    if (mode.kind === 'switcher') {
-      elements.card.style.removeProperty('top')
-      const { switcher, tabs } = mode
-      const chips = switcher.order.map((id) => {
-        const tab = tabs.find((entry) => entry.id === id)
-        return { label: tab?.label ?? id, note: tab?.current ? t('menu.switcher.current') : '' }
-      })
-      paint(switcherMarkup(chips, switcher.index, t))
-    }
   }
 
   function close() {
@@ -218,26 +189,12 @@ export function createHoldMenuController(
     delete elements.card.dataset.placed
   }
 
-  function stepTabs(direction: 1 | -1) {
-    if (mode.kind !== 'switcher') {
-      const tabs = actions.tabs()
-      if (tabs.length === 0) return
-      mode = { kind: 'switcher', tabs, switcher: openSwitcher(tabs.map((tab) => tab.id)) }
-    } else {
-      mode = { ...mode, switcher: stepSwitcher(mode.switcher, direction) }
-    }
-    draw()
-  }
-
   function commit() {
     const current = mode
     close()
-    if (current.kind === 'switcher') {
-      actions.switchTo(commitSwitcher(current.switcher))
-    } else if (current.kind === 'wheel') {
-      const result = release(current.menu)
-      if (result.type === 'execute') actions.run(result.categoryId, result.item)
-    }
+    if (current.kind !== 'wheel') return
+    const result = release(current.menu)
+    if (result.type === 'execute') actions.run(result.categoryId, result.item)
   }
 
   function onKeyDown(event: KeyboardEvent) {
@@ -253,18 +210,11 @@ export function createHoldMenuController(
       close()
       return
     }
-    if (event.code === 'Space') {
-      consume(event)
-      stepTabs(event.shiftKey ? -1 : 1)
-      gesture.openNow()
-      return
-    }
     const direction = ARROWS[event.key]
     if (direction) {
       if (!gesture.arrow()) return
       consume(event)
-      if (mode.kind === 'switcher') stepTabs(direction === 'left' || direction === 'up' ? -1 : 1)
-      else if (mode.kind === 'wheel') {
+      if (mode.kind === 'wheel') {
         mode = { ...mode, menu: navigate(mode.menu, direction) }
         pointer.keysTakeOver()
         draw()

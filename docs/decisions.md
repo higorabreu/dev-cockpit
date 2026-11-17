@@ -983,3 +983,15 @@ of a 768 pixel screen the Tabs and Agent lists show one row and cover the top or
 **How to revert:** drop `placeWheel`, `wheelSize` and the overlap from `ui/src/hold-menu/list-fit.ts`,
 the compact geometry from `menu-view.ts`, the placement in the controller and the `--wheel` and `top` rules
 in `styles/hold-menu.css`, and set the card back to `position: relative` in the centered flex scrim.
+
+## D63. The hold menu has no tab switcher
+
+**Decision:** the tab switcher of D12 (Space with the trigger held, a card of tabs by most recent use) is
+gone. The tab bar is where tabs are picked; the hold menu's Tabs list keeps next, previous and next
+waiting for you, and Ctrl+Tab and Alt+digit stay.
+**Reason:** the maintainer found the switcher ugly and had never come across it (2026-11-17): it showed
+nowhere in the interface or the shortcut table, and with many tabs its card ran edge to edge, over the
+side panel, and out of a short window. The tab bar already does the job.
+**How to revert:** bring back `core/src/tab-switcher/`, `recentTabs` in `core/src/tabs/tabs.ts`, the
+switcher mode of `ui/src/hold-menu/hold-menu-controller.ts` with its Space key, `switcherMarkup` in
+`menu-view.ts`, its styles in `hold-menu.css` and the `menu.switcher.*` texts.

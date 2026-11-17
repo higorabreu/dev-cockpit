@@ -94,12 +94,6 @@ export const en: Record<MessageKey, string> = {
   'menu.hint.navigate': 'navigate',
   'menu.hint.release': 'release to run',
   'menu.hint.cancel': 'cancel',
-  'menu.switcher.title': 'Tabs, most recent first',
-  'menu.switcher.next': 'next',
-  'menu.switcher.previous': 'previous',
-  'menu.switcher.release': 'release to switch',
-  'menu.switcher.current': 'current',
-  'menu.key.space': 'Space',
 
   'notice.copied': 'Copied',
   'notice.chars.one': '{count} character',

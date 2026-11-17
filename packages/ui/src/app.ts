@@ -23,7 +23,6 @@ import {
   type PluralKey,
   type ProgramStatus,
   type Project,
-  recentTabs,
   reorderTabs,
   reviewBaseFor,
   reviewBasePatch,
@@ -829,17 +828,10 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         void refreshProjects()
         return categories()
       },
-      tabs: () =>
-        recentTabs(state).map((tab) => ({
-          id: tab.id,
-          label: tab.label,
-          current: tab.id === state.activeId,
-        })),
       run(_categoryId, item) {
         if (item.id.startsWith(PROJECT_PREFIX)) openProject(item.id.slice(PROJECT_PREFIX.length))
         else commands[item.id]?.()
       },
-      switchTo: (id) => update(activateTab(state, id)),
       triggerCode: () => settings.current().shortcuts.holdTrigger ?? keymap.holdTrigger,
     },
     {

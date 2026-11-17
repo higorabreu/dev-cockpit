@@ -7,7 +7,6 @@ import {
   duplicateLabel,
   emptyTabs,
   openTab,
-  recentTabs,
   reorderTabs,
   stepTab,
 } from './tabs.ts'
@@ -133,20 +132,6 @@ describe('reorderTabs', () => {
     const state = withTabs('a', 'b', 'c')
 
     expect(reorderTabs(state, ['c', 'b', 'a']).activeId).toBe('c')
-  })
-})
-
-describe('recentTabs', () => {
-  it('should list the most recently used tab first when listing recent tabs', () => {
-    const state = activateTab(activateTab(withTabs('a', 'b', 'c'), 'a'), 'b')
-
-    expect(recentTabs(state).map((entry) => entry.id)).toEqual(['b', 'a', 'c'])
-  })
-
-  it('should put tabs that were never used at the end when listing recent tabs', () => {
-    const state = closeOtherTabs(withTabs('a', 'b', 'c'), 'b')
-
-    expect(recentTabs(state).map((entry) => entry.id)).toEqual(['b'])
   })
 })
 

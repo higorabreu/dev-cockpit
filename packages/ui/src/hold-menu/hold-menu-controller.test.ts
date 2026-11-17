@@ -55,9 +55,7 @@ function setup(windowHeight = 340) {
     { scrim, card, hint, bar },
     {
       categories: () => [TABS],
-      tabs: () => [],
       run: (_category, item) => runs.push(item),
-      switchTo: () => undefined,
       triggerCode: () => 'ControlRight',
     },
     {
