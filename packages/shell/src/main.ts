@@ -62,6 +62,7 @@ import { createAgentLaunchers } from './inspectors/agent-launchers.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
+import { createTabPath } from './inspectors/tab-path.ts'
 import {
   boundedScreen,
   readWaylandBounds,
@@ -70,6 +71,7 @@ import {
 } from './platform/linux/wayland-bounds.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
 import { nativeWayland, selectPlatform, usesGpu } from './platform/select-platform.ts'
+import { readShellPath } from './platform/shell-path.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
@@ -78,6 +80,8 @@ import { watchSettingsFile } from './settings/settings-watch.ts'
 
 // The compositor answers in a few milliseconds; past this the window opens with the last size it knew
 const WAYLAND_BOUNDS_MS = 150
+// A shell whose startup files take longer is left behind, and its tabs' PATH is this process's
+const TAB_SHELL_PATH_MS = 3000
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
@@ -267,6 +271,21 @@ app.whenReady().then(async () => {
     for (const id of implementations.keys()) void views.configure(id, accountOf(settings, id))
   }
 
+  // Asked once, the first time an agent's command is looked up: the tabs' own shell, with the flags they
+  // start it with plus `-i`, so `.bashrc` runs as in a tab
+  const tabPath = createTabPath({
+    platform: process.platform,
+    inherited: () => process.env.PATH,
+    read: () =>
+      readShellPath({
+        shell: platform.terminal.file,
+        flags: [...platform.terminal.args, '-i'],
+        logger,
+        timeoutMs: TAB_SHELL_PATH_MS,
+      }),
+    logger,
+    now: () => performance.now(),
+  })
   const bridge = registerHostBridge({
     ipcMain: createElectronIpc(ipcMain),
     ptyHost: createNodePtyHost(),
@@ -317,10 +336,9 @@ app.whenReady().then(async () => {
       agents: agentProfiles,
     }),
     agents: agentProfiles,
-    // The PTY host gives every tab this process's environment, so its PATH is the one the tabs start with
     launchers: createAgentLaunchers({
       agents: agentProfiles,
-      path: () => process.env.PATH,
+      path: () => tabPath.path(),
       platform: process.platform,
       stat: (path) => stat(path),
       ...(process.env.PATHEXT ? { pathext: process.env.PATHEXT } : {}),

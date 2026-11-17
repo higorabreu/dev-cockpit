@@ -43,7 +43,7 @@ describe('createAgentLaunchers', () => {
     })
     const launchers = createAgentLaunchers({
       agents: [claude, acme, watcherOnly],
-      path: () => '/usr/local/bin:/home/ana/.local/bin:/usr/bin',
+      path: async () => '/usr/local/bin:/home/ana/.local/bin:/usr/bin',
       platform: 'linux',
       stat: disk.stat,
     })
@@ -63,7 +63,7 @@ describe('createAgentLaunchers', () => {
     })
     const launchers = createAgentLaunchers({
       agents: [claude, acme],
-      path: () => '/usr/local/bin:/usr/bin',
+      path: async () => '/usr/local/bin:/usr/bin',
       platform: 'linux',
       stat: disk.stat,
     })
@@ -80,13 +80,13 @@ describe('createAgentLaunchers', () => {
     const disk = fakeDisk({ 'bin/claude': executable, claude: executable })
     const relative = createAgentLaunchers({
       agents: [claude],
-      path: () => ':bin:.',
+      path: async () => ':bin:.',
       platform: 'linux',
       stat: disk.stat,
     })
     const missing = createAgentLaunchers({
       agents: [claude],
-      path: () => undefined,
+      path: async () => undefined,
       platform: 'linux',
       stat: disk.stat,
     })
@@ -105,7 +105,7 @@ describe('createAgentLaunchers', () => {
     const pinned = { ...acme, launch: '/opt/acme/bin/acme --interactive' }
     const launchers = createAgentLaunchers({
       agents: [pinned],
-      path: () => '/usr/bin',
+      path: async () => '/usr/bin',
       platform: 'linux',
       stat: disk.stat,
     })
@@ -125,7 +125,7 @@ describe('createAgentLaunchers', () => {
     })
     const launchers = createAgentLaunchers({
       agents: [claude, acme],
-      path: () => 'C:\\Windows\\System32;C:\\Users\\ana\\AppData\\Roaming\\npm',
+      path: async () => 'C:\\Windows\\System32;C:\\Users\\ana\\AppData\\Roaming\\npm',
       platform: 'win32',
       pathext: '.EXE;.CMD',
       stat: disk.stat,

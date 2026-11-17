@@ -256,10 +256,23 @@ every 2 s while the review is open, with no poll of its own:
   `AgentProfile.launch`, the command that takes a first prompt as its one argument (`claude`); the text is
   built in `core` (`launchText`), quoted with `shellQuote`.
   - **Only installed agents.** The host answers which profiles' `launch` command is an executable file in
-    a folder of the PATH the tabs start with (the PTY host gives every tab the main process's environment),
-    the way a shell looks it up, with no shell and no `which` (`agent:launchable`, the tab's id validated
-    with zod, none for an unknown tab). On Windows the PATHEXT extensions count and there is no execute
-    bit. It is asked when the tab comes to a prompt, when the review opens and at every send.
+    a folder of the tabs' PATH, the way a shell looks it up, with no `which` (`agent:launchable`, the tab's
+    id validated with zod, none for an unknown tab). On Windows the PATHEXT extensions count and there is
+    no execute bit. It is asked when the tab comes to a prompt, when the review opens and at every send.
+  - **The tabs' PATH, as their shell has it** (asked by the maintainer's review: an agent installed under
+    nvm or in a folder `.bashrc` adds read as "none found" when dck starts from the desktop menu, whose
+    process never ran `.bashrc`). Like VS Code resolving the shell environment, the first launch check runs
+    the tabs' own shell (`$SHELL`, else the tabs' default) with the flags the tabs start it with plus `-i`
+    (`bash -i` on Linux, so `.bashrc` runs as in a tab; `zsh -l -i` on the Mac) and `-c` printing PATH
+    between marks, so a banner or `motd` around it is ignored. No stdin, its own process group, a 3 s
+    timeout and a SIGKILL to the group (an interactive shell ignores SIGTERM, so `execFile`'s timeout would
+    leave it running), and the main process's environment as its base. The folders it adds join the main
+    process's PATH, each once, and the answer is kept for the app's life. On a failure or timeout the main
+    process's PATH stays and one `warn` says how the shell ended (code, signal, timed out), never its output
+    or the PATH. Windows runs no shell. The reader is the Mac's boot PATH reader, moved from
+    `platform/darwin/login-path.ts` to `platform/shell-path.ts` with the flags as a parameter; the cache and
+    the merge are `inspectors/tab-path.ts`. Measured under Xvfb: 9 ms for the test home's `.bashrc`, 14 ms
+    for a 100-line `.bashrc`, once per app; a `.bashrc` that sources `nvm.sh` costs what nvm costs, once.
   - **None installed:** the button is disabled (`aria-disabled`, still focusable for its tooltip) and its
     tooltip says no agent runs and none was found on the PATH, naming the commands looked for; the
     comments stay.
@@ -270,8 +283,9 @@ every 2 s while the review is open, with no poll of its own:
   same sentence in the header for 8 s. The comments stay.
 - **The key follows the same rules,** and the comments are cleared only when something was typed. With no
   read of the tab yet, the line is typed as before.
-- **Known limit:** the PATH checked is the one the tab started with; a folder a shell's startup file adds
-  (nvm, a `~/.bashrc` export) is not seen until the cockpit itself starts with it.
+- **Known limit:** the shell's PATH is read once; a folder added to the startup files later, or a PATH
+  changed by hand in one tab, is seen after a restart. A shell whose startup files take over 3 s keeps the
+  main process's PATH.
 
 | Id | Criterion | Verification |
 | --- | --- | --- |
@@ -281,7 +295,7 @@ every 2 s while the review is open, with no poll of its own:
 | R19 | The file follows the rules above (sections, headings, the diff quote and its cap, a safe fence, both languages); it sits in the git folder of a usual clone, out of `git status`, private, at most 5 kept, and in the temporary folder for a linked worktree | Tests in `core` and against real repositories |
 | R20 | A refresh moves a comment with its lines, marks it outdated when they are gone and current again when they come back; outdated comments show under their file or at the end and are still sent | Tests in `core` and `ui` |
 | R21 | Both themes, both languages, contrast checks for the selected lines, screen reader names for comments and selection | Tests, contrast check, screenshots |
-| R22 | The button and Ctrl+Shift+Enter type the line to a running agent; at a shell prompt they type the start command of the one installed agent, or offer a choice of several and remember it per tab; with none installed, or while another program runs, the button is disabled with the reason in its tooltip, the key says it in the header and the comments stay; the label follows the tab's activity; both languages | Tests, a real-app run |
+| R22 | The button and Ctrl+Shift+Enter type the line to a running agent; at a shell prompt they type the start command of the one installed agent, or offer a choice of several and remember it per tab; with none installed, or while another program runs, the button is disabled with the reason in its tooltip, the key says it in the header and the comments stay; the label follows the tab's activity; an agent on a folder only the shell's startup files add counts as installed; both languages | Tests, a real-app run |
 
 - [x] RV-T15. `core`: the comment model, the lines a comment names and finding a comment's lines after a
   read, pure and tested. (R20)
@@ -318,6 +332,11 @@ every 2 s while the review is open, with no poll of its own:
   `claude '…'` with nothing run; with `claude` in the foreground it types the line into it; with `sleep`
   running it is disabled and the key says why; with the stand-in moved off the PATH it is disabled with
   "none was found". The choice between two agents is covered by tests only, since one profile ships.
+- [x] RV-T25. The tabs' PATH from their own shell, cached, with the fallback; tested with a fake executor
+  (marks with noise, timeout, a non-zero exit, no marks, one run for several checks, Windows). (R22)
+  Checked in the real app under Xvfb in both themes and languages with the stand-in `claude` in a folder
+  only the test home's `.bashrc` adds, and the app started without it on its PATH: the button reads "Start
+  Claude Code with the review" and types `claude '…'`, and the log shows one "tab shell PATH read" (9 ms).
 
 ## Acceptance criteria
 

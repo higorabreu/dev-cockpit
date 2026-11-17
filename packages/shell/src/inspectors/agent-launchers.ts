@@ -8,8 +8,8 @@ export interface LauncherStats {
 
 export interface AgentLaunchersDeps {
   readonly agents: readonly AgentProfile[]
-  // The PATH the tabs' shells start with
-  path(): string | undefined
+  // The PATH a command typed in a tab is looked up in
+  path(): Promise<string | undefined>
   readonly platform: NodeJS.Platform
   // Follows links, like `fs.promises.stat`; rejects when the path does not exist
   stat(path: string): Promise<LauncherStats>
@@ -53,7 +53,7 @@ export function createAgentLaunchers(deps: AgentLaunchersDeps) {
 
   return {
     async launchable(): Promise<readonly AgentProfile[]> {
-      const folders = (deps.path() ?? '').split(paths.delimiter)
+      const folders = ((await deps.path()) ?? '').split(paths.delimiter)
       const answers = await Promise.all(
         deps.agents.map((agent) =>
           agent.launch ? found(launchCommand(agent.launch), folders) : false,

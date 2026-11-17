@@ -840,10 +840,16 @@ the tab watcher's reads while the review is open: with an agent running the line
 prompt an installed agent starts with the review, "Start Claude Code with the review" typing
 `claude '<the line>'` without Enter (`AgentProfile.launch` is the command that takes a first prompt, the
 text is quoted with `shellQuote` in `core`, and the host's `agent:launchable` answers which profiles'
-command is an executable file on the tabs' PATH, with no shell), a small menu picks one of several and
+command is an executable file on the tabs' PATH, with no `which`), a small menu picks one of several and
 the tab remembers it, and with none installed the button is disabled with the commands looked for in its
 tooltip; while another program runs the button is disabled with "{process} is running in the terminal"
-and the key says the same in the header. The comments are cleared only when something was typed. The file goes to
+and the key says the same in the header. The comments are cleared only when something was typed. The tabs'
+PATH is the one their shell has, as VS Code resolves the shell environment: the first check runs the tabs'
+shell with their flags plus `-i` (`bash -i`, so `.bashrc` runs; `zsh -l -i` on the Mac) printing PATH
+between marks, with no stdin, a 3 s timeout and a SIGKILL to its process group, and adds its folders to the
+main process's PATH, kept for the app's life; on a failure the main process's PATH stays with one `warn`,
+and Windows runs no shell. An app opened from a desktop menu never ran `.bashrc`, so an agent under nvm
+would otherwise read as not installed. The file goes to
 `<git dir>/dck/review-<YYYYMMDD-HHMMSS>.md` when the git folder is inside the repository (an agent reads it
 without a permission prompt and git never lists it), else, in a linked worktree or a submodule, to the
 system's temporary folder as `dck-review-<stamp>.md`; folder 0700, file 0600, written to a temporary name
@@ -868,7 +874,8 @@ reads and one line that names it, which works with any agent. Ctrl+Shift+Enter i
 Code and sits beside Ctrl+Enter. The send by activity is the maintainer's (2026-11-17): at a bare shell
 prompt the line landed in bash and the review left the pane.
 **How to revert:** for the send by activity alone, drop `review-send.ts` from `ui/src/review` and
-`core/src/diff`, `launch` from the profile and the `agent:launchable` channel with `agent-launchers.ts`.
+`core/src/diff`, `launch` from the profile and the `agent:launchable` channel with `agent-launchers.ts`
+and `tab-path.ts`.
 For the whole of it, drop `review-comments.ts` and `comment-card.ts` from `ui/src/review`, the `comments`
 deps of the diff view and the send button of the pane, the `reviewSend` key, `paste` of the terminal
 session, the `review:notes` channel and `createGitReviewNotes`; drop `comments` from `FileOpening` and the
