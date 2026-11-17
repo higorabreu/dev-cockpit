@@ -208,13 +208,24 @@ button.cue:hover {
   color: var(--muted);
 }
 
+/* On the tab bar's row, on a surface of its own: the tab names under it would read through the scrim */
 #menu-hint {
   position: fixed;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
+  max-width: calc(100% - 16px);
   display: flex;
+  align-items: center;
   gap: 14px;
+  /* As tall as a tab, so no tab shows above or below it */
+  min-height: 32px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-medium);
+  background: var(--surface);
   color: var(--muted);
   font-size: 11px;
   white-space: nowrap;
