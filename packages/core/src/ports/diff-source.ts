@@ -24,4 +24,8 @@ export interface DiffSource {
   diff(request: DiffRequest): Promise<Result<DiffOutcome, ErrorBody>>
   // The working tree text of a file of the repository, by line, to show the lines a diff left out
   fileLines(root: string, path: string): Promise<Result<readonly string[], ErrorBody>>
+  // A short text that changes when anything a diff of the folder's repository shows may have changed
+  // (HEAD, the status, the size or time of a changed file), far cheaper than the diff; undefined when it
+  // cannot be read, so the caller keeps what it has
+  fingerprint(cwd: string): Promise<string | undefined>
 }

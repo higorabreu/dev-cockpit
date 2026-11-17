@@ -289,6 +289,12 @@ export function registerHostBridge(options: BridgeOptions) {
     }
     return options.review.fileLines(parsed.data.root, parsed.data.path)
   })
+  // Asked every few seconds while a review is open: a refused folder answers nothing, without a log line
+  ipcMain.handle(hostChannels.reviewFingerprint, async (_event, cwd: unknown) => {
+    const parsed = absolutePathSchema.safeParse(cwd)
+    if (!parsed.success || !(await isFolder(parsed.data))) return undefined
+    return options.review.fingerprint(parsed.data)
+  })
   ipcMain.handle(hostChannels.autostartGet, () => options.autostart.isEnabled())
   ipcMain.handle(hostChannels.autostartSet, async (_event, enabled: unknown) => {
     await options.autostart.setEnabled(enabled === true)
