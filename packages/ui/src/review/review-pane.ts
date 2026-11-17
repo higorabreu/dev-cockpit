@@ -2,6 +2,7 @@ import {
   type AgentState,
   type BranchInfo,
   branchName,
+  carryGaps,
   changeRows,
   type DiffFile,
   type DiffGap,
@@ -126,8 +127,8 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const expanded = new Map<string, Set<number>>()
   const texts = new Map<string, readonly string[]>()
   const shownAnyway = new Set<string>()
-  // A file whose hunks moved since the last read loses its open gaps, which named the old hunks
-  const shapes = new Map<string, string>()
+  // Each file as last read: a file whose hunks moved finds its open gaps again by their old lines
+  const lastRead = new Map<string, DiffFile>()
   // Files marked viewed in this tab, per scope and whitespace setting, each tied to the change it had;
   // a mark that went away because the file changed again is remembered to say so
   const viewedMarks = new Map<string, string>()
@@ -302,22 +303,41 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       if (root !== state.diff.root) {
         texts.clear()
         expanded.clear()
-        shapes.clear()
+        lastRead.clear()
       }
-      root = state.diff.root
+      const repository = state.diff.root
+      root = repository
       branch = state.diff.branch
+      const reread: DiffFile[] = []
       for (const file of state.diff.files) {
-        const shape = file.hunks.map((hunk) => `${hunk.newStart},${hunk.newCount}`).join(' ')
-        if (shapes.get(file.path) !== shape) {
-          expanded.delete(file.path)
-          texts.delete(file.path)
-        }
-        shapes.set(file.path, shape)
+        const before = lastRead.get(file.path)
+        const opened = expanded.get(file.path)
+        lastRead.set(file.path, file)
+        if (!before || sameShape(before, file)) continue
+        texts.delete(file.path)
+        if (!opened || opened.size === 0) continue
+        expanded.set(file.path, new Set(carryGaps(before, file, opened)))
+        reread.push(file)
       }
+      // The moved file's text is read again before the draw, so its open gaps never flash shut
+      await Promise.all(reread.map((file) => readText(repository, file)))
       reconcileMarks(state.diff.files)
       comments.relocate(state.diff.files)
     }
     draw()
+  }
+
+  const shapeOf = (file: DiffFile) =>
+    file.hunks.map((hunk) => `${hunk.newStart},${hunk.newCount}`).join(' ')
+  const sameShape = (a: DiffFile, b: DiffFile) => shapeOf(a) === shapeOf(b)
+
+  // The working tree's text of a file, which every opened gap of it shows; false when it cannot be read
+  async function readText(repository: string, file: DiffFile): Promise<boolean> {
+    if (texts.has(file.path)) return true
+    const lines = await api.review.fileLines(repository, file.path)
+    if (!lines.ok) return false
+    texts.set(file.path, lines.value)
+    return true
   }
 
   // The field for the selected lines, or the cursor's line, of a file of the change
@@ -347,13 +367,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     const opened = expanded.get(file.path) ?? new Set<number>()
     opened.add(gap.id)
     expanded.set(file.path, opened)
-    if (!texts.has(file.path)) {
-      const lines = await api.review.fileLines(state.diff.root, file.path)
-      if (!lines.ok) {
-        opened.delete(gap.id)
-        return
-      }
-      texts.set(file.path, lines.value)
+    if (!(await readText(state.diff.root, file))) {
+      opened.delete(gap.id)
+      return
     }
     drawDiff()
   }

@@ -284,6 +284,31 @@ describe('createReviewPane', () => {
     expect(reads).toEqual(['/home/ana/acme|src/billing/invoice.ts'])
   })
 
+  it('should keep an expanded gap open and read its text again when an edit elsewhere moves the hunks', async () => {
+    // Arrange: the agent then changes line 15 too, which adds a hunk after the gap that is open
+    let edited = false
+    const moved = diffText(3000, 5000).replace(
+      ' return base\n',
+      [' return base', '@@ -15,1 +15,2 @@', '-x', '+y', '+z', ''].join('\n'),
+    )
+    const { pane, reads, labels, key } = setup(() =>
+      edited ? repository(moved + lockText) : repository(),
+    )
+    pane.open()
+    await flush()
+    pane.element.querySelector<HTMLElement>('.rv-expand')?.click()
+    await flush()
+
+    // Act
+    edited = true
+    key(pane.element, 'r', { ctrlKey: true })
+    await flush()
+
+    // Assert: the gap above line 10 is still open, from a fresh read of the file
+    expect(labels('.rv-row[data-kind="context"]')[0]).toBe('Line 1: text 1')
+    expect(reads).toHaveLength(2)
+  })
+
   it('should cross files with n and p and land on file headers with ] and [', async () => {
     const { pane, key } = setup(repository())
     pane.open()
