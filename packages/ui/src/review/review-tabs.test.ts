@@ -219,9 +219,7 @@ describe('createReviewTabs send', () => {
     // Assert
     expect(pasted).toEqual([])
     expect(document.querySelector('.rv-send-count')?.textContent).toBe('1')
-    expect(document.querySelector('.rv-status')?.textContent).toBe(
-      'Open an agent in this tab to send the review',
-    )
+    expect(document.querySelector('.rv-status')?.textContent).toBe('No agent in this tab')
   })
 
   it('should say a program runs and keep the comments when the shortcut is pressed while it runs', async () => {
@@ -236,9 +234,7 @@ describe('createReviewTabs send', () => {
     // Assert
     expect(pasted).toEqual([])
     expect(document.querySelector('.rv-send-count')?.textContent).toBe('1')
-    expect(document.querySelector('.rv-status')?.textContent).toBe(
-      'vim is running in the terminal. Open an agent in this tab to send the review',
-    )
+    expect(document.querySelector('.rv-status')?.textContent).toBe('vim is running in this tab')
   })
 
   it('should keep the send button in step with the terminal when the watcher reads the tab again', async () => {

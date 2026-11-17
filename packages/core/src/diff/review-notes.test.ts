@@ -112,7 +112,7 @@ describe('reviewSendBlock', () => {
     const reason = reviewSendBlock(en, at('idle', 'bash'))
 
     // Assert
-    expect(reason).toBe('Open an agent in this tab to send the review')
+    expect(reason).toBe('No agent in this tab')
   })
 
   it('should name the program and ask for an agent when another program runs', () => {
@@ -121,12 +121,8 @@ describe('reviewSendBlock', () => {
     const unnamed = reviewSendBlock(en, at('busy', ''))
 
     // Assert
-    expect(named).toBe(
-      'vim is running in the terminal. Open an agent in this tab to send the review',
-    )
-    expect(unnamed).toBe(
-      'A program is running in the terminal. Open an agent in this tab to send the review',
-    )
+    expect(named).toBe('vim is running in this tab')
+    expect(unnamed).toBe('A program is running in this tab')
   })
 
   it('should give the reasons in Portuguese when the interface is in Portuguese', () => {
@@ -140,9 +136,6 @@ describe('reviewSendBlock', () => {
     ]
 
     // Assert
-    expect(reasons).toEqual([
-      'Abra um agente nesta aba para enviar a revisão',
-      'vim está em execução no terminal. Abra um agente nesta aba para enviar a revisão',
-    ])
+    expect(reasons).toEqual(['Nenhum agente nesta aba', 'vim em execução nesta aba'])
   })
 })

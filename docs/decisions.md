@@ -836,8 +836,8 @@ count, and Ctrl+Shift+Enter (⇧⌘Enter), from the review or the tab's terminal
 a Markdown file and type one line at the tab's prompt, "Address the review comments in <path>" in the
 interface language, with no Enter and no line break; the keys go to the terminal. They type only while an
 agent runs in the tab, read fresh at the moment of sending; at a shell prompt or under another program the
-button is disabled (`aria-disabled`, so its tooltip shows) with the reason, "Open an agent in this tab to
-send the review" or "{process} is running in the terminal. Open an agent in this tab to send the review",
+button is disabled (`aria-disabled`, so its tooltip shows) with the reason, "No agent in this tab" or
+"{process} is running in this tab",
 the key shows it in the header and the comments stay; the button's state follows the tab watcher's reads
 while the review is open. The file goes to
 `<git dir>/dck/review-<YYYYMMDD-HHMMSS>.md` when the git folder is inside the repository (an agent reads it

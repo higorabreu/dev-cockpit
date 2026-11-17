@@ -247,10 +247,9 @@ while the review is open, with no poll of its own. The label stays "Send to agen
 
 - **An agent runs** (`agent`): as before, the line is typed and the comments are cleared.
 - **Anything else** (`idle`, a shell at its prompt; `busy`, vim or a test run): the button is disabled
-  (`aria-disabled`, still focusable so its tooltip shows) and its tooltip says why, naming no agent: "Open
-  an agent in this tab to send the review" at a prompt, "{process} is running in the terminal. Open an
-  agent in this tab to send the review" under another program ("A program", when its name cannot be
-  read). The key shows the same sentence in the header for 8 s. The comments stay.
+  (`aria-disabled`, still focusable so its tooltip shows) and its tooltip says why, naming no agent: "No
+  agent in this tab" at a prompt, "{process} is running in this tab" under another program ("A program",
+  when its name cannot be read). The key shows the same sentence in the header for 8 s. The comments stay.
 - **The key follows the same rules,** and the comments are cleared only when the line was typed. With no
   read of the tab yet, the line is typed as before. The reason is `reviewSendBlock` in
   `core/src/diff/review-notes.ts`, pure and tested.
@@ -302,7 +301,7 @@ while the review is open, with no poll of its own. The label stays "Send to agen
   header from the key), the fresh read at sending, the watcher keeping it in step, both catalogs; D56 and
   the README. (R22) The agent menu and the remembered choice of #72 were dropped with RV-T23. Checked in
   the real app under Xvfb in both themes and languages: at the bash prompt the button is disabled with
-  "Open an agent in this tab to send the review" and the comments stay; with a stand-in `claude` in the
+  "No agent in this tab" and the comments stay; with a stand-in `claude` in the
   foreground the line is typed into it; with `sleep 60` it is disabled with "sleep is running in the
   terminal".
 - [x] RV-T25. Dropped with RV-T23: the tabs' PATH read from their own shell existed only to find an agent

@@ -455,11 +455,9 @@ export const ptBR = {
   'review.notes.prompt': 'Resolva os comentários da revisão em {path}',
   'review.send.a11y.one': 'Enviar {count} comentário ao agente',
   'review.send.a11y.other': 'Enviar {count} comentários ao agente',
-  'review.send.idle': 'Abra um agente nesta aba para enviar a revisão',
-  'review.send.busy':
-    '{process} está em execução no terminal. Abra um agente nesta aba para enviar a revisão',
-  'review.send.busyUnknown':
-    'Um programa está em execução no terminal. Abra um agente nesta aba para enviar a revisão',
+  'review.send.idle': 'Nenhum agente nesta aba',
+  'review.send.busy': '{process} em execução nesta aba',
+  'review.send.busyUnknown': 'Um programa em execução nesta aba',
   'review.hint.comment': 'comentar',
   'review.a11y.comment': '{lines}, comentário: {text}',
   'review.a11y.outdatedComment': '{lines}, comentário desatualizado: {text}',

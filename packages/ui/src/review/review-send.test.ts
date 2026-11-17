@@ -33,7 +33,7 @@ const at = (activity: SessionActivityInfo['activity'], process: string): Session
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 const LINE = 'Address the review comments in .git/dck/review-20261117-143000.md'
-const OPEN_AGENT = 'Open an agent in this tab to send the review'
+const OPEN_AGENT = 'No agent in this tab'
 
 interface Options {
   // What runs in the terminal, for the watcher and for the fresh read at sending
@@ -178,7 +178,7 @@ describe('review send', () => {
     await pane.send()
 
     // Assert
-    const reason = `vim is running in the terminal. ${OPEN_AGENT}`
+    const reason = `vim is running in this tab`
     expect(button().textContent).toBe('Send to agent1')
     expect(button().getAttribute('aria-disabled')).toBe('true')
     expect(button().dataset.tip).toBe(reason)
@@ -195,7 +195,7 @@ describe('review send', () => {
     await open()
 
     // Assert
-    expect(button().dataset.tip).toBe(`A program is running in the terminal. ${OPEN_AGENT}`)
+    expect(button().dataset.tip).toBe(`A program is running in this tab`)
   })
 
   it('should give the reason in Portuguese with the same label when the interface is in Portuguese', async () => {
@@ -207,7 +207,7 @@ describe('review send', () => {
 
     // Assert
     expect(button().textContent).toBe('Enviar ao agente1')
-    expect(button().dataset.tip).toBe('Abra um agente nesta aba para enviar a revisão')
+    expect(button().dataset.tip).toBe('Nenhum agente nesta aba')
   })
 
   it('should decide by a fresh read of the terminal when the watcher has not seen the change yet', async () => {
@@ -221,7 +221,7 @@ describe('review send', () => {
 
     // Assert
     expect(sent).toEqual([])
-    expect(status()).toBe(`less is running in the terminal. ${OPEN_AGENT}`)
+    expect(status()).toBe(`less is running in this tab`)
     expect(button().getAttribute('aria-disabled')).toBe('true')
   })
 
@@ -237,7 +237,7 @@ describe('review send', () => {
     pane.activity(at('agent', 'claude'))
 
     // Assert
-    expect(same).toBe(`vim is running in the terminal. ${OPEN_AGENT}`)
+    expect(same).toBe(`vim is running in this tab`)
     expect(status()).toBe('')
   })
 

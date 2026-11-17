@@ -454,11 +454,9 @@ export const en: Record<MessageKey, string> = {
   'review.notes.prompt': 'Address the review comments in {path}',
   'review.send.a11y.one': 'Send {count} comment to the agent',
   'review.send.a11y.other': 'Send {count} comments to the agent',
-  'review.send.idle': 'Open an agent in this tab to send the review',
-  'review.send.busy':
-    '{process} is running in the terminal. Open an agent in this tab to send the review',
-  'review.send.busyUnknown':
-    'A program is running in the terminal. Open an agent in this tab to send the review',
+  'review.send.idle': 'No agent in this tab',
+  'review.send.busy': '{process} is running in this tab',
+  'review.send.busyUnknown': 'A program is running in this tab',
   'review.hint.comment': 'comment',
   'review.a11y.comment': '{lines}, comment: {text}',
   'review.a11y.outdatedComment': '{lines}, outdated comment: {text}',
