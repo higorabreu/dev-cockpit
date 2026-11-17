@@ -845,11 +845,16 @@ badge; with one service it keeps that service's text, with two it says "{count} 
 A connector may declare `ciTerm`, the service's own word for the CI state: GitHub's rows say "Checks
 failed" and GitLab's keep "Pipeline failed", chosen by the connector of the open tab. Settings,
 Connections lists the connectors with an account first (`connectedFirst`), each group in the declared
-order, so a user with only GitLab sees it above GitHub. The token hint asks for a fine-grained token with
-Pull requests, Commit statuses and Metadata read only, and names the classic `repo` scope only for private
+order, so a user with only GitLab sees it above GitHub. The token hint is one line, "Fine-grained, read
+only", and a quiet "Permissions" disclosure under it (`connection.token.permissions`, closed by default)
+lists Pull requests, Commit statuses and Metadata read only, and the classic `repo` scope only for private
 repositories; a fine-grained token cannot read check runs (GitHub gives that to App tokens alone), so on a
-private repository its rows show the commit statuses or no CI state. Open discussions are always false for GitHub: only the GraphQL API knows whether a review thread is
-resolved, and the HTTP port only sends `GET`.
+private repository its rows show the commit statuses or no CI state. With three services the Work header
+must not break: the update time moves to the hint bar beside Refresh, the service names hide when the tabs
+do not fit (measured with a `ResizeObserver`, the line between groups stays and each tab's tooltip names
+its service), and past that the strip scrolls sideways with the active tab kept in view. Open discussions
+are always false for GitHub: only the GraphQL API knows whether a review thread is resolved, and the HTTP
+port only sends `GET`.
 **Reason:** GitHub is where most developers outside GitLab shops review code; it fitted the connector
 contract of D41 with no change to it. The search endpoint answers both lists with one query each, and its
 own limit (30 requests a minute) is why the pages are capped and the gate exists.

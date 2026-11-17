@@ -64,9 +64,10 @@ with `dck ext disable dck.github`. The connector contract of `plans/connectors.m
 
   Metadata: Read is the repository permission every fine-grained token carries with the others. With a
   fine-grained token on a private repository the check runs answer 403, so a row shows the state of its
-  commit statuses when there are any, and no CI chip otherwise; the list still loads. The hint says:
-  "Fine-grained, read only: Pull requests, Commit statuses and Metadata. A classic token needs the repo
-  scope for private repositories, and only a classic token reads their checks." Sources:
+  commit statuses when there are any, and no CI chip otherwise; the list still loads. The hint is one
+  line, "Fine-grained, read only. Kept in the system keyring, never in a file.", and a "Permissions"
+  disclosure under it lists Pull requests, Commit statuses and Metadata read only, then the classic `repo`
+  scope for private repositories, the only kind that reads their checks. Sources:
   - https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens
   - https://docs.github.com/en/rest/search/search#search-issues-and-pull-requests
   - https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request
@@ -74,6 +75,13 @@ with `dck ext disable dck.github`. The connector contract of `plans/connectors.m
   - https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git-reference
   - https://docs.github.com/en/rest/users/users#get-the-authenticated-user
   - https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
+- **Work header with three services.** The header holds only the tabs and the close button: the update
+  time moves to the hint bar beside Refresh. When the tabs do not fit, measured on the real width with a
+  `ResizeObserver`, the service names hide, the line between groups stays and each tab's tooltip says
+  "GitHub · Pull requests waiting for your review" (its accessible name already starts with the service).
+  Past that the strip scrolls sideways (the `scroll` class, the wheel turns it, the edge with tabs out of
+  sight fades as on the terminal's tab bar) and keeps the active tab in view. The hint bar keeps one line the same way: navigate, then switch view, then open, then copy key
+  give way; the update time and Refresh stay.
 - **Errors.** Domain `GHB`, `DCK-GHB-001` to `007`, as GitLab's: refused token, no permission, not
   found, rate limited, not responding, not GitHub, invalid address. No network stays `DCK-NET-001`.
 - **Secrets.** The token lives only in the system keyring as `github.token` (`dev:github.token` in
@@ -92,6 +100,8 @@ with `dck ext disable dck.github`. The connector contract of `plans/connectors.m
 | G7 | Settings and the Work screen follow the design system in both themes and both languages | Screenshots |
 | G8 | GitHub rows say checks and GitLab rows say pipeline, in both languages | Tests, screenshots |
 | G9 | In Settings, Connections, a connector with an account comes before one without, each group in the declared order | Tests, screenshots |
+| G10 | With GitHub, GitLab and Jira connected, the Work header and hint bar stay on one line from 1400 to 520 px wide, with no clipped text | Tests, screenshots |
+| G11 | The GitHub token hint is one line, and its permissions unfold in place under a "Permissions" button operable by keyboard | Tests, screenshots |
 
 ## Tasks
 
@@ -116,5 +126,9 @@ with `dck ext disable dck.github`. The connector contract of `plans/connectors.m
   read-only fine-grained token, and Connections lists GitLab above GitHub for a user with only GitLab
   (GitHub, GitLab, Jira with both connected). Checked with GitLab and GitHub fake servers together in both
   themes and languages.
+- After the maintainer looked at the screens: with the three fakes together, the header kept its height
+  from 1400 to 520 px in both languages; the service names hid at 640 px and the strip scrolled at 520 px,
+  bringing Tasks into view by keyboard and the first tab back by mouse; the Permissions button opened by
+  Enter and kept the focus.
 - Not verified against the real github.com or a real Enterprise server; older Enterprise servers that do not
   know `X-GitHub-Api-Version` or the `Bearer` scheme for a classic token are the open risk.

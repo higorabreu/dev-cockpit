@@ -124,7 +124,7 @@ second and third connectors, Jira and GitHub, fitted it without a change.
 | `ciTerm` | Optional: the service's word for the CI state of a merge request, `pipeline` (the default) or `checks`; the Work rows say "Pipeline failed" or "Checks failed" |
 | `connection.address` | Always asked; `placeholder` is shown in the empty field |
 | `connection.email` | Optional; when present the account e-mail is asked too, with its `placeholder` |
-| `connection.token` | Always asked; `label` and `hint` are keys of the text catalogs |
+| `connection.token` | Always asked; `label` and `hint` are keys of the text catalogs; `permissions`, optional, is a list of 1 to 6 keys shown under a "Permissions" disclosure below the hint |
 | `views` | 1 to 8 views. `id` is unique across connectors; `kind` is `mergeRequest` or `issue`; `title`, `description` and `empty` are catalog keys (the tab's name, its tooltip saying what the list holds, and the text of an empty list); `badge` is an optional plural catalog key, and the item count of that view becomes the rail badge |
 
 Jira declares the e-mail too, and a view of the other kind:
@@ -160,7 +160,16 @@ across the product. Its address may be left empty, which means github.com:
   "ciTerm": "checks",
   "connection": {
     "address": { "placeholder": "https://github.com" },
-    "token": { "label": "connections.github.token", "hint": "connections.github.token.hint" }
+    "token": {
+      "label": "connections.github.token",
+      "hint": "connections.github.token.hint",
+      "permissions": [
+        "connections.github.permission.pulls",
+        "connections.github.permission.statuses",
+        "connections.github.permission.metadata",
+        "connections.github.permission.classic"
+      ]
+    }
   },
   "views": [
     {
