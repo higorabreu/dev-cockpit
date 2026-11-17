@@ -542,12 +542,14 @@ reads as merge requests), view items as a union by `kind`, and daemon protocol 5
 draws one section per enabled connector from its declaration, and the Work screen shows only the tabs of
 connected accounts, with the "Account not connected" notice and an "Open Connections" button when there is
 none. `dck ext enable` and `dck ext disable` manage `extensions.disabled`; the window watches the settings
-file and applies that list at once, and a disabled connector keeps its address and token. Connections lists
+file and applies that list at once (since D65, with every other field of the file), and a disabled
+connector keeps its address and token. Connections lists
 the disabled built-in connectors with an Enable button; disabling stays in the CLI. A connector or view id
 already used by an extension loaded before refuses the later one.
 **Reason:** not every company uses GitLab, and Jira is next (D5): two real connectors before an external
 contract. Keeping the contract internal and the code built in avoids designing the host before it is needed.
-**Accepted cost:** the CLI now writes `settings.json` (only `extensions.disabled`, in the window's format);
+**Accepted cost:** the CLI now writes `settings.json` (only `extensions.disabled`, keeping the rest of the
+text as written since D65);
 a request for an id that is not an enabled connector is refused with `DCK-IPC-003` instead of GitLab's
 address error.
 **How to revert:** revert the commits of phase A; the settings file and the keyring key did not change, so
@@ -1013,3 +1015,40 @@ on by default.
 **How to revert:** drop `core/src/tabs/saved-tabs.ts`, the `tabs` part of the host API and its channels,
 `shell/src/tabs/saved-tabs-file.ts`, the `window.restoreTabs` setting and `restoreTabs` and
 `saveTabsSoon` in `ui/src/app.ts`, and open one tab on start again.
+
+## D65. settings.json works like VS Code's settings file
+
+**Decision:** `settings.json` takes comments (`//`, `/* */`) and trailing commas. When the settings screen
+or `dck ext` changes a value, only that value's text changes: the user's comments, key order, layout and
+every other value stay as written (Microsoft's `jsonc-parser` behind the `SettingsText` port, adapter
+`@dck/adapter-jsonc`); a new key goes on its own line, so a comment beside the last value stays there. A
+file that does not exist yet is still written as plain pretty JSON with every value, and writes stay
+atomic. The window watches the file and applies any field saved by hand at once, through the same change
+path as the screen, so theme, language, opacity, shortcuts and the rest need no restart; a save of the
+window's own reads back the same text and applies nothing twice. A global shortcut written by hand goes
+through the same veto as the screen: a key the system refuses keeps the previous one, the file keeps what
+the user wrote, and the screen says so. A file that is not valid JSON with comments (or whose top is not
+an object) keeps the settings in use, is never written over, refuses the screen's changes until it is
+fixed, and the screen says the line and column of the first error. A notice at the top of the settings
+screen lists every value of the file the model did not use as written (went back to its default, clamped
+or corrected, left out of a list or map, not a setting at all, refused by the system, a projects folder
+that does not exist), each with its key, the value found and what is used instead, five at most with the
+rest counted. A number typed on the screen out of range says beside its field what it became, and the
+projects folder field says when its folder does not exist. "Open the settings file", a button in the
+screen's header and an item in the hold menu's System list, opens the file in the system's default editor
+through the host (`settings:open-file`, which takes no path), writing it first when there is none. D41's
+`dck ext` keeps working on a commented file and keeps its comments.
+**Reason:** the maintainer wants the user to shape the cockpit by hand like in VS Code: it applies as soon
+as it is saved, takes comments, has a button that opens it and says which field it ignored (2026-11-17,
+`plans/personalization.md`, front B). QA also found "Notify a long command after" typed as 2 silently
+became 5, and a projects folder that does not exist was saved with no word.
+**Accepted cost:** a new adapter package for a parser; a value the model corrected stays as written in the
+file until the user or the screen changes it, so the notice keeps listing it; while the file is broken the
+screen, the theme shortcut and the opacity keys change nothing; a key inserted into a group the user wrote
+on one line breaks that group into lines. Removing a connector's address by hand forgets its token, as
+the screen's Disconnect does.
+**How to revert:** drop `packages/adapters/jsonc`, the `SettingsText` port, `core/src/settings/settings-file.ts`,
+`reload`, `ensureFile`, `onFile` and the edits in `shell/src/settings/settings-store.ts`, the
+`settings:file` and `settings:open-file` channels, the notice, button and notes in
+`ui/src/settings/settings-view.ts` and the hold menu item, and go back to `JSON.parse` and whole-file writes
+with `reloadExtensions` for D41.

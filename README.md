@@ -127,8 +127,12 @@ shortcut if the global key is refused.
 `Ctrl+,` opens the screen: language, theme, opacity, font, window height, global key, hold menu key,
 projects folder, start with the system, the threshold to notify a long command, the review layout and
 the GitLab and Jira connections. Everything applies at once. Settings live in a `settings.json` that can also be edited by
-hand; an invalid field goes back to its default. The `DCK_KEY`, `DCK_HEIGHT` and `DCK_PROJECTS_ROOT`
-variables win over the file.
+hand, like VS Code's: the button beside the screen's close (or Open the settings file in the hold menu's
+System list) opens it in your editor, it takes comments and trailing commas, and whatever you save
+applies at once while the screen's own changes keep your comments and layout. A value it cannot use goes
+back to its default or to the nearest limit, and the top of the screen lists each one with what is used
+instead; a file that is not valid JSON keeps the last good settings and the screen says the line and
+column to fix. The `DCK_KEY`, `DCK_HEIGHT` and `DCK_PROJECTS_ROOT` variables win over the file.
 
 ## Develop without disturbing the installed one
 

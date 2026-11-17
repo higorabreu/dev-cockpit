@@ -266,11 +266,12 @@ dropped when the settings are read, and the list holds up to 200 ids.
 { "extensions": { "disabled": ["dck.gitlab"] } }
 ```
 
-`dck ext disable <id>` adds an id to the list and `dck ext enable <id>` takes it out. Both write
-`settings.json` in the window's own format and change nothing else in it; the id must be one `dck ext list`
+`dck ext disable <id>` adds an id to the list and `dck ext enable <id>` takes it out. Both change only
+that list in `settings.json` and keep the rest of its text, comments included; the id must be one `dck ext list`
 shows, or one already in the list (so an extension that was removed can still be enabled). A file that is
-not valid JSON is left as it is and the command fails with 1. A running window watches the file and applies
-the new list at once; any other field edited by hand still applies at the next start.
+not valid JSON (comments and trailing commas are fine) is left as it is and the command fails with 1. A
+running window watches the file and applies the new list at once, as it does with any field saved by hand
+(D65).
 
 Disabling a connector hides its section in Connections and its tabs in the Work screen, and stops its views
 in the daemon. Its address and its token stay where they are, so enabling it again finds the account still
