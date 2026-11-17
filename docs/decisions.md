@@ -842,14 +842,20 @@ Error codes `DCK-GHB-001` to `007`. GitLab and GitHub share the window's connect
 address rules, error code and cache file. A merge request item carries its reference mark, `#` for GitHub,
 and an item without one reads as GitLab's `!`. The rail badge sums the connected views that declare a
 badge; with one service it keeps that service's text, with two it says "{count} waiting for your review".
-Open discussions are always false for GitHub: only the GraphQL API knows whether a review thread is
+A connector may declare `ciTerm`, the service's own word for the CI state: GitHub's rows say "Checks
+failed" and GitLab's keep "Pipeline failed", chosen by the connector of the open tab. Settings,
+Connections lists the connectors with an account first (`connectedFirst`), each group in the declared
+order, so a user with only GitLab sees it above GitHub. The token hint asks for a fine-grained token with
+Pull requests, Commit statuses and Metadata read only, and names the classic `repo` scope only for private
+repositories; a fine-grained token cannot read check runs (GitHub gives that to App tokens alone), so on a
+private repository its rows show the commit statuses or no CI state. Open discussions are always false for GitHub: only the GraphQL API knows whether a review thread is
 resolved, and the HTTP port only sends `GET`.
 **Reason:** GitHub is where most developers outside GitLab shops review code; it fitted the connector
 contract of D41 with no change to it. The search endpoint answers both lists with one query each, and its
 own limit (30 requests a minute) is why the pages are capped and the gate exists.
 **Accepted cost:** about three requests per pull request on every refresh; a review request disappears once
-the user submits a review, which is how GitHub records it; the CI chip still says "Pipeline", GitLab's
-word.
+the user submits a review, which is how GitHub records it; with a fine-grained token the checks of
+private repositories do not show.
 **How to revert:** drop the `dck.github` candidate from `core/src/extensions/built-in.ts`, the adapter and
 the two entries in `shell/src/connections/connector-connections.ts` and `daemon/src/connector-views.ts`;
 the shared connection and views files keep working for GitLab alone.

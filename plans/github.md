@@ -43,9 +43,37 @@ with `dck ext disable dck.github`. The connector contract of `plans/connectors.m
 - **Rail badge.** It counts the connected views that declare a badge. With one connected it keeps that
   view's text (GitLab alone is unchanged); with GitLab and GitHub both connected it sums them and says
   "waiting for your review" without naming the kind.
-- **Order.** Built-in extensions load by id, so `dck.github` comes before `dck.gitlab`: GitHub is the
-  first section in Connections and its tabs come first in the Work screen. A user with only GitLab sees
-  the GitHub section above it, not connected, and nothing else changes.
+- **Order.** Built-in extensions load by id, so `dck.github` comes before `dck.gitlab`. Settings,
+  Connections lists the connectors with an account (an address in the settings, connected or failing)
+  first and then the others, each group in that order (`connectedFirst` in `core`), decided when the
+  page loads so a section does not jump while it is connected. The Work screen only draws connected
+  services, in the same order. A user with only GitLab sees GitLab first and GitHub below it.
+- **CI words.** Each service's own term: a connector may declare `ciTerm` (`pipeline` when absent), and
+  GitHub declares `checks`, so its rows say "Checks failed", "Checks running", "Checks queued" and
+  "Checks canceled" ("Checks com falha", "Checks em execução", "Checks na fila", "Checks cancelados")
+  while GitLab's keep "Pipeline". The term comes from the connector of the open tab, not from the item.
+- **Token.** Fine-grained first, read only. What each call needs, from GitHub's REST reference:
+
+  | Call | Fine-grained token | Classic token |
+  | --- | --- | --- |
+  | `GET /user` | No permission | No scope |
+  | `GET /search/issues` | No permission; it lists only what the token can read | No scope; `repo` to see private repositories |
+  | `GET /repos/{r}/pulls/{n}` | Pull requests: Read (or Contents: Read) | `repo` on a private repository |
+  | `GET /repos/{r}/commits/{sha}/status` | Commit statuses: Read | `repo` on a private repository |
+  | `GET /repos/{r}/commits/{sha}/check-runs` | Not available: only GitHub App tokens read check runs (Checks: Read), and a fine-grained token reads them only on public repositories | `repo` on a private repository |
+
+  Metadata: Read is the repository permission every fine-grained token carries with the others. With a
+  fine-grained token on a private repository the check runs answer 403, so a row shows the state of its
+  commit statuses when there are any, and no CI chip otherwise; the list still loads. The hint says:
+  "Fine-grained, read only: Pull requests, Commit statuses and Metadata. A classic token needs the repo
+  scope for private repositories, and only a classic token reads their checks." Sources:
+  - https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens
+  - https://docs.github.com/en/rest/search/search#search-issues-and-pull-requests
+  - https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request
+  - https://docs.github.com/en/rest/commits/statuses#get-the-combined-status-for-a-specific-reference
+  - https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git-reference
+  - https://docs.github.com/en/rest/users/users#get-the-authenticated-user
+  - https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
 - **Errors.** Domain `GHB`, `DCK-GHB-001` to `007`, as GitLab's: refused token, no permission, not
   found, rate limited, not responding, not GitHub, invalid address. No network stays `DCK-NET-001`.
 - **Secrets.** The token lives only in the system keyring as `github.token` (`dev:github.token` in
@@ -62,6 +90,8 @@ with `dck ext disable dck.github`. The connector contract of `plans/connectors.m
 | G5 | GitLab alone looks and behaves as before, the rail badge included | Existing tests |
 | G6 | `dck ext list` shows `dck.github`; disabling it hides its section and tabs | Tests |
 | G7 | Settings and the Work screen follow the design system in both themes and both languages | Screenshots |
+| G8 | GitHub rows say checks and GitLab rows say pipeline, in both languages | Tests, screenshots |
+| G9 | In Settings, Connections, a connector with an account comes before one without, each group in the declared order | Tests, screenshots |
 
 ## Tasks
 
@@ -82,5 +112,9 @@ with `dck ext disable dck.github`. The connector contract of `plans/connectors.m
   CI states, the rail badge text, and a rate limited search showing "GitHub rate limited the requests".
 - Every request carried the bearer token, the API version and `application/vnd.github+json`; the per-row
   lookups ran 5 at a time.
+- After review (2026-11-17): GitHub rows say checks and GitLab rows pipeline, the hint asks for a
+  read-only fine-grained token, and Connections lists GitLab above GitHub for a user with only GitLab
+  (GitHub, GitLab, Jira with both connected). Checked with GitLab and GitHub fake servers together in both
+  themes and languages.
 - Not verified against the real github.com or a real Enterprise server; older Enterprise servers that do not
   know `X-GitHub-Api-Version` or the `Bearer` scheme for a classic token are the open risk.

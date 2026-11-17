@@ -121,6 +121,7 @@ second and third connectors, Jira and GitHub, fitted it without a change.
 | --- | --- |
 | `id` | A lowercase letter, then up to 31 lowercase letters, digits or hyphens. It names the settings entry `connections.<id>` and the keyring key `<id>.token` |
 | `name` | The product name, 1 to 60 characters, the same in every language |
+| `ciTerm` | Optional: the service's word for the CI state of a merge request, `pipeline` (the default) or `checks`; the Work rows say "Pipeline failed" or "Checks failed" |
 | `connection.address` | Always asked; `placeholder` is shown in the empty field |
 | `connection.email` | Optional; when present the account e-mail is asked too, with its `placeholder` |
 | `connection.token` | Always asked; `label` and `hint` are keys of the text catalogs |
@@ -156,6 +157,7 @@ across the product. Its address may be left empty, which means github.com:
 {
   "id": "github",
   "name": "GitHub",
+  "ciTerm": "checks",
   "connection": {
     "address": { "placeholder": "https://github.com" },
     "token": { "label": "connections.github.token", "hint": "connections.github.token.hint" }
@@ -196,7 +198,7 @@ product:
 
 | Where | What |
 | --- | --- |
-| Settings, Connections | One section per enabled connector, with the fields it declares |
+| Settings, Connections | One section per enabled connector, with the fields it declares; the ones with an account come first |
 | `settings.json` | `connections.<id>` with `url` and, when declared, `email` (the token never) |
 | System keyring | `<id>.token`, prefixed with the profile in development (`dev:gitlab.token`) |
 | Daemon | One views service and one cache file per connector |
