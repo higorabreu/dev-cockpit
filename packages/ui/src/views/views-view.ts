@@ -22,6 +22,8 @@ import { type LaidSection, layOutList, ROW_HEIGHT, rowSpan } from './list-layout
 import { createProjectSelect } from './project-select.ts'
 
 const OVERSCAN = 4
+// Room kept beside the active tab when the strip scrolls it into view: the width of the faded edge
+const TAB_EDGE_PX = 24
 // How long the header says what was copied before it goes back to the update time
 const COPIED_MS = 2000
 // Data older than this is fetched again on open
@@ -142,8 +144,9 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     'aria-label': t('views.filter.placeholder'),
     placeholder: t('views.filter.placeholder'),
   })
+  // Scrolls sideways when even without the service names the tabs do not fit
   const tabs = h('div', {
-    class: 'vtabs',
+    class: 'vtabs scroll',
     role: 'tablist',
     'aria-label': t('views.title'),
   })
@@ -175,7 +178,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   const box = h(
     'div',
     { id: 'views-box' },
-    h('div', { class: 'vhead' }, tabs, heading, status, closeButton(t, close)),
+    h('div', { class: 'vhead' }, tabs, heading, closeButton(t, close)),
     bar,
     notice,
     list,
@@ -212,15 +215,36 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     input.setAttribute('aria-label', placeholder)
     hint.replaceChildren(
       ...[
-        keyHint('↑↓', t('views.hint.navigate')),
-        keyHint('Enter', t('views.hint.open')),
+        yieldable(keyHint('↑↓', t('views.hint.navigate')), 1),
+        yieldable(keyHint('Enter', t('views.hint.open')), 3),
         kind === 'issue'
-          ? keyHint(deps.keymap.commandLabel('c'), t('views.hint.copyKey'))
+          ? yieldable(keyHint(deps.keymap.commandLabel('c'), t('views.hint.copyKey')), 4)
           : undefined,
-        switchable ? keyHint('←→', t('views.hint.switch')) : undefined,
+        switchable ? yieldable(keyHint('←→', t('views.hint.switch')), 2) : undefined,
+        // When the list was fetched sits by the refresh it is about
+        status,
         refreshButton(),
       ].filter((element) => element !== undefined),
     )
+    fitHints()
+  }
+
+  // A hint that gives way when the bar is too narrow, in this order: the keys a user learns first go first
+  const yieldable = (element: HTMLElement, order: number) => {
+    element.dataset.yield = String(order)
+    return element
+  }
+
+  // The bar keeps one line on the real width: hints give way one by one, never the update time or Refresh
+  function fitHints() {
+    const hints = [...hint.querySelectorAll<HTMLElement>('[data-yield]')].sort(
+      (a, b) => Number(a.dataset.yield) - Number(b.dataset.yield),
+    )
+    for (const element of hints) element.hidden = false
+    for (const element of hints) {
+      if (hint.scrollWidth <= hint.clientWidth + 1) return
+      element.hidden = true
+    }
   }
 
   // A tablist may own only tabs, so the service's name is a visual label hidden from assistive technology and
@@ -232,7 +256,13 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       const service = serviceOf.get(view.id) ?? ''
       if (service !== group) {
         group = service
-        children.push(h('span', { class: 'vgroup', 'aria-hidden': 'true' }, service))
+        children.push(
+          h(
+            'span',
+            { class: 'vgroup', 'aria-hidden': 'true', 'data-tip': service },
+            h('span', { class: 'vgroup-name' }, service),
+          ),
+        )
       }
       const title = t(view.title)
       const count = String(snapshotOf(view.id).items.length)
@@ -248,6 +278,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
           // The tooltip describes the list only under the mouse; this says it to a screen reader too
           'aria-description': description,
           'data-tip': description,
+          'data-service': service,
           tabindex: '-1',
         },
         title,
@@ -257,6 +288,42 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       children.push(tab)
     }
     tabs.replaceChildren(...children)
+    fitTabs()
+  }
+
+  // The service names go first when the tabs do not fit, measured on the real width; each tab then names
+  // its service in its tooltip, as its accessible name already does. Past that the strip scrolls
+  function fitTabs() {
+    tabs.removeAttribute('data-compact')
+    const compact = tabs.scrollWidth > tabs.clientWidth + 1
+    tabs.toggleAttribute('data-compact', compact)
+    for (const tab of tabs.querySelectorAll<HTMLElement>('.vtab')) {
+      const description = tab.getAttribute('aria-description') ?? ''
+      tab.dataset.tip = compact ? `${tab.dataset.service} · ${description}` : description
+    }
+    tabs.toggleAttribute('data-scrolls', tabs.scrollWidth > tabs.clientWidth + 1)
+    keepActiveTabInView()
+    fadeTabEdges()
+  }
+
+  // The side with more tabs out of sight fades, so a tab cut by the edge reads as scrolled, not clipped
+  function fadeTabEdges() {
+    const start = tabs.scrollLeft > 1
+    const end = tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 1
+    if (start && end) tabs.dataset.fade = 'both'
+    else if (start) tabs.dataset.fade = 'start'
+    else if (end) tabs.dataset.fade = 'end'
+    else delete tabs.dataset.fade
+  }
+
+  function keepActiveTabInView() {
+    const active = tabs.querySelector<HTMLElement>('.vtab[aria-selected="true"]')
+    if (!active) return
+    const start = active.offsetLeft
+    const end = start + active.offsetWidth
+    if (start - TAB_EDGE_PX < tabs.scrollLeft) tabs.scrollLeft = Math.max(0, start - TAB_EDGE_PX)
+    else if (end + TAB_EDGE_PX > tabs.scrollLeft + tabs.clientWidth)
+      tabs.scrollLeft = end + TAB_EDGE_PX - tabs.clientWidth
   }
 
   function flags(item: MergeRequestItem): HTMLElement[] {
@@ -469,17 +536,18 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
   let copiedTimer: ReturnType<typeof setTimeout> | undefined
 
   function drawStatus() {
-    if (copiedKey !== undefined) {
-      status.textContent = t('views.copied', { key: copiedKey })
-      return
-    }
+    status.textContent = statusText()
+    fitHints()
+  }
+
+  function statusText(): string {
+    if (copiedKey !== undefined) return t('views.copied', { key: copiedKey })
     const snapshot = current === undefined ? undefined : snapshotOf(current)
-    if (snapshot?.state === 'refreshing') status.textContent = t('views.refreshing')
-    else if (snapshot?.updatedAt === undefined) status.textContent = ''
-    else
-      status.textContent = t('views.updated', {
-        ago: agoText(i18n, Date.now() / 1000, snapshot.updatedAt / 1000),
-      })
+    if (snapshot?.state === 'refreshing') return t('views.refreshing')
+    if (snapshot?.updatedAt === undefined) return ''
+    return t('views.updated', {
+      ago: agoText(i18n, Date.now() / 1000, snapshot.updatedAt / 1000),
+    })
   }
 
   function refilter(keepId?: string) {
@@ -675,6 +743,23 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     event.stopPropagation()
   })
   list.addEventListener('scroll', schedule, { passive: true })
+  new ResizeObserver(() => {
+    if (!tabs.hidden) fitTabs()
+  }).observe(tabs)
+  new ResizeObserver(() => {
+    if (!hint.hidden) fitHints()
+  }).observe(hint)
+  tabs.addEventListener('scroll', fadeTabEdges, { passive: true })
+  // The vertical wheel scrolls the strip sideways, as on the terminal's tab bar
+  tabs.addEventListener(
+    'wheel',
+    (event) => {
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return
+      tabs.scrollLeft += event.deltaY
+      event.preventDefault()
+    },
+    { passive: false },
+  )
   pendingButton.addEventListener('click', () => {
     onlyPending = !onlyPending
     refilter()

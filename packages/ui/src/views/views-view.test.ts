@@ -1135,3 +1135,150 @@ describe('work list search', () => {
     expect(titles()).toEqual(['Merge request 41'])
   })
 })
+
+describe('views view header with three services', () => {
+  const three = [
+    snapshot('github-review', 'idle', [mergeRequest(7)]),
+    snapshot('github-mine', 'idle', []),
+    ...connected,
+    snapshot('tasks', 'idle', [task('ACME-1')]),
+  ]
+  const connectors = [GITHUB_CONNECTOR, GITLAB_CONNECTOR, JIRA_CONNECTOR]
+  const TAB_WIDTH = 90
+  const TAB_STEP = 100
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // The strip is `width` wide; its content is `full` wide with the service names and `compact` without
+  function sizeStrip(overlay: HTMLElement, width: number, full: number, compact: number) {
+    const strip = overlay.querySelector<HTMLElement>('.vtabs')
+    if (!strip) throw new Error('invariant: the strip exists')
+    Object.defineProperty(strip, 'clientWidth', { configurable: true, get: () => width })
+    Object.defineProperty(strip, 'scrollWidth', {
+      configurable: true,
+      get: () => (strip.hasAttribute('data-compact') ? compact : full),
+    })
+    // Each tab is laid out one step after the other inside the strip
+    vi.spyOn(HTMLElement.prototype, 'offsetLeft', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return [...strip.querySelectorAll('.vtab')].indexOf(this) * TAB_STEP
+    })
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(TAB_WIDTH)
+    return strip
+  }
+
+  it('should keep the service names when the tabs fit', async () => {
+    const { view, overlay } = setup({ connectors, snapshots: three })
+    const strip = sizeStrip(overlay, 900, 700, 560)
+
+    await view.open()
+
+    expect(strip.hasAttribute('data-compact')).toBe(false)
+    expect(strip.hasAttribute('data-scrolls')).toBe(false)
+    expect(overlay.querySelector('.vtab')?.getAttribute('data-tip')).toBe(
+      'Pull requests waiting for your review',
+    )
+  })
+
+  it('should hide the service names and name the service in each tab tooltip when the tabs do not fit', async () => {
+    const { view, overlay } = setup({ connectors, snapshots: three })
+    const strip = sizeStrip(overlay, 600, 700, 560)
+
+    await view.open()
+
+    const tabs = [...overlay.querySelectorAll('.vtab')]
+    expect(strip.hasAttribute('data-compact')).toBe(true)
+    expect(strip.hasAttribute('data-scrolls')).toBe(false)
+    expect(tabs[0]?.getAttribute('data-tip')).toBe('GitHub · Pull requests waiting for your review')
+    expect(tabs.at(-1)?.getAttribute('data-tip')).toBe('Jira · Jira issues assigned to you')
+    expect(tabs[0]?.getAttribute('aria-label')).toBe('GitHub, To review, 1')
+    expect(overlay.querySelectorAll('.vgroup')).toHaveLength(3)
+  })
+
+  it('should scroll the strip when even without the names the tabs do not fit', async () => {
+    const { view, overlay } = setup({ connectors, snapshots: three })
+    const strip = sizeStrip(overlay, 250, 700, 560)
+
+    await view.open()
+
+    expect(strip.hasAttribute('data-compact')).toBe(true)
+    expect(strip.hasAttribute('data-scrolls')).toBe(true)
+    expect(strip.classList.contains('scroll')).toBe(true)
+  })
+
+  it('should keep the active tab in view when it changes by keyboard and by mouse', async () => {
+    const { view, overlay } = setup({ connectors, snapshots: three })
+    const strip = sizeStrip(overlay, 250, 700, 560)
+    await view.open()
+    const input = overlay.querySelector('.vinput')
+
+    for (let step = 0; step < 4; step++) press(input, 'ArrowRight')
+    const byKeyboard = strip.scrollLeft
+    overlay.querySelector<HTMLElement>('.vtab')?.click()
+    const byMouse = strip.scrollLeft
+
+    // The fifth tab ends at 490; with the 24px faded edge beside it the strip shows up to 514
+    expect(byKeyboard).toBe(4 * TAB_STEP + TAB_WIDTH + 24 - 250)
+    expect(byMouse).toBe(0)
+    expect(strip.dataset.fade).toBe('end')
+  })
+
+  it('should show when the list was updated in the hint bar beside Refresh, not in the header', async () => {
+    const { view, overlay } = setup({ connectors, snapshots: three })
+
+    await view.open()
+
+    const status = overlay.querySelector('.vstatus')
+    expect(overlay.querySelector('.vhead .vstatus')).toBeNull()
+    expect(status?.parentElement?.classList.contains('phint')).toBe(true)
+    expect(status?.nextElementSibling?.classList.contains('pact')).toBe(true)
+  })
+
+  it('should scroll the strip sideways when the wheel turns over it', async () => {
+    const { view, overlay } = setup({ connectors, snapshots: three })
+    const strip = sizeStrip(overlay, 250, 700, 560)
+    await view.open()
+    strip.scrollLeft = 0
+
+    strip.dispatchEvent(new WheelEvent('wheel', { deltaY: 60, bubbles: true, cancelable: true }))
+
+    expect(strip.scrollLeft).toBe(60)
+  })
+})
+
+describe('views view hint bar', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('should hide navigate and then switch view, and keep the update time and Refresh, when the bar is too narrow', async () => {
+    const { view, overlay } = setup({
+      connectors: [GITLAB_CONNECTOR, JIRA_CONNECTOR],
+      snapshots: [...connected, snapshot('tasks', 'idle', [task('ACME-1')])],
+    })
+    const bar = overlay.querySelector<HTMLElement>('.phint')
+    if (!bar) throw new Error('invariant: the hint bar exists')
+    // Every part shown takes 100px of a 400px bar
+    Object.defineProperty(bar, 'clientWidth', { configurable: true, get: () => 400 })
+    Object.defineProperty(bar, 'scrollWidth', {
+      configurable: true,
+      get: () => [...bar.children].filter((child) => !(child as HTMLElement).hidden).length * 100,
+    })
+    await view.open()
+    press(overlay.querySelector('.vinput'), 'ArrowLeft')
+
+    const shown = [...bar.children]
+      .filter((child) => !(child as HTMLElement).hidden)
+      .map((child) => child.textContent)
+
+    expect(shown).toEqual([
+      'Enter open in browser',
+      'Ctrl+C copy key',
+      expect.stringMatching(/^Updated /),
+      'Ctrl+R Refresh',
+    ])
+  })
+})
