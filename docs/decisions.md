@@ -823,3 +823,31 @@ with `node_modules` it can run out of the system's inotify watches. Marks that s
 using the review shows they are missed.
 **How to revert:** drop `fingerprint` from `DiffSource` and the watch from `review/review-refresh.ts` (the
 review then reads on open, Ctrl+R and the agent's state, as in D47); drop `viewed` from `FileOpening`.
+
+## D56. Review comments go back to the agent as typed text, batched like a GitHub review
+
+**Decision:** the review takes comments on lines of the change, as GitHub does: a click selects a line,
+Shift+click or Shift+↑↓ stretches the selection inside the same hunk, and `c` or the gutter's "+" (with `c`
+in its tooltip) opens a comment field under the last selected line (or the cursor's line). Lines opened from
+a collapsed gap take no comment, as on GitHub. Ctrl+Enter saves (⌘Enter on the Mac), Esc cancels, an empty
+comment cannot be saved; a saved comment stays pending as a card under its lines, with edit (Enter) and
+delete (Delete) buttons, and its file's header counts it. "Send to agent" in the review header, with the
+count, and Ctrl+Shift+Enter (⇧⌘Enter), from the review or the tab's terminal, type every pending comment at
+the tab's prompt through xterm's paste (bracketed when the program asked for it) and clear them; the text
+has no final newline, so nothing runs until the developer presses Enter, and the keys go to the terminal.
+The text is one line per comment, `path:lines: comment`, ordered by path and line
+(`core/src/diff/review-text.ts`): the new file's numbers of the selected lines that exist in it, or the
+old numbers and ` (removed)` when every line was removed; the comment's other lines indented by two
+spaces; up to 3 lines of code quoted below as `  > ` with the diff sign, cut at 120 characters; tabs as
+spaces and control characters dropped, so nothing ends the paste early. After every read a comment looks
+for its lines (same kinds and texts, in one hunk, nearest its old numbers) and moves with them; when they
+are gone it keeps its numbers, says "Outdated", quotes its code and is sent with ` (outdated)`; a comment
+on a file that left the change sits at the end of the diff. The comments live with the tab's review, across
+scopes, and not across a restart. The selected lines take the new `mix.lineSelected` tint over their own, a
+bar at the gutter and the primary text for their numbers, with contrast checks.
+**Reason:** reading the agent's change and telling it what to fix belong in the same place; a batch reads
+as one instruction, and plain typed text works with any agent or shell (the maintainer, 2026-11-17,
+`plans/review.md` phase 2). Ctrl+Shift+Enter is free in D13 and in Claude Code and sits beside Ctrl+Enter.
+**How to revert:** drop `review-comments.ts` and `comment-card.ts` from `ui/src/review`, the `comments`
+deps of the diff view and the send button of the pane, the `reviewSend` key and `paste` of the terminal
+session; drop `comments` from `FileOpening` and the `comment` and `gone` rows from `changeRows`.

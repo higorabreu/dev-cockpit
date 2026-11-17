@@ -216,7 +216,8 @@ Rules decided here:
   outdated comment that finds its lines again is current again. An outdated comment sits under its file's
   header with its quoted lines and an "Outdated" label; one whose file left the change sits at the end of
   the diff under "Outdated comments". Outdated comments are still sent, marked ` (outdated)`, since they
-  are the developer's words. A file folded as viewed or collapsed shows its comment count in its header.
+  are the developer's words. Each file header counts its pending comments, so a file folded as viewed or
+  collapsed still says it has some.
 - **The send key.** Ctrl+Shift+Enter (⇧⌘Enter on the Mac): free in D13 and in Claude Code, and next to
   Ctrl+Enter, which saves one comment. It works from the review and from the tab's terminal, and does
   nothing when no comment is pending. A comment still open in its field is saved first when it has text.
@@ -231,17 +232,23 @@ Rules decided here:
 | R20 | A refresh moves a comment with its lines, marks it outdated when they are gone and current again when they come back; outdated comments show under their file or at the end and are still sent | Tests in `core` and `ui` |
 | R21 | Both themes, both languages, contrast checks for the selected lines, screen reader names for comments and selection | Tests, contrast check, screenshots |
 
-- [ ] RV-T15. `core`: the comment model, the lines a comment names, the typed text and finding a comment's
+- [x] RV-T15. `core`: the comment model, the lines a comment names, the typed text and finding a comment's
   lines after a read, pure and tested. (R19, R20)
-- [ ] RV-T16. `core`: `changeRows` places comment rows under their last line, outdated ones under the file
+- [x] RV-T16. `core`: `changeRows` places comment rows under their last line, outdated ones under the file
   header and the ones whose file left the change at the end. (R17, R20)
-- [ ] RV-T17. `ui`: the selection (click, Shift+click, Shift+↑↓) inside a hunk, the gutter "+" and `c`, and
-  the selected lines' tint with its contrast checks. (R16, R21)
-- [ ] RV-T18. `ui`: pending comments inline, the comment field (Esc, Ctrl+Enter), edit and delete, both
-  catalogs. (R17, R21)
-- [ ] RV-T19. `ui`: "Send to agent" in the header, Ctrl+Shift+Enter, the terminal's paste, comments kept
-  across refreshes. (R18, R20)
-- [ ] RV-T20. Docs: README's key table, D56, the roadmap; screenshots in both themes and languages.
+- [x] RV-T17. `ui`: the selection (click, Shift+click, Shift+↑↓) inside a hunk, the gutter "+" and `c`, and
+  the selected lines' tint with its contrast checks. (R16, R21) The range rule is pure in
+  `core/src/diff/selection.ts`; the tint is `mix.lineSelected` (12% of the text color over the line's own),
+  with the numbers and signs in the text color, since the line inks fall under 4.5:1 on a tinted line.
+- [x] RV-T18. `ui`: pending comments inline, the comment field (Esc, Ctrl+Enter), edit and delete, both
+  catalogs. (R17, R21) The field floats over its row outside the virtualized rows, so a scroll never
+  takes its focus; a card's height is measured once drawn, as its text wraps. Delete is ⌫ on the Mac.
+- [x] RV-T19. `ui`: "Send to agent" in the header, Ctrl+Shift+Enter, the terminal's paste, comments kept
+  across refreshes. (R18, R20) Checked in the real app under Xvfb in both themes and languages: bash 5.2
+  holds the pasted block highlighted at its prompt and runs nothing, from the button and from
+  Ctrl+Shift+Enter in the terminal; a commented line changed from the terminal turned the comment
+  outdated at the next check.
+- [x] RV-T20. Docs: README's key table, D56, the roadmap; screenshots in both themes and languages.
 
 ## Acceptance criteria
 
