@@ -145,7 +145,7 @@ const portuguese = new RegExp(
       'não|também|para|que|uma|com|dos|das|isso|isto|quando|porque|segredos|de|da|em|um|ou',
       'ao|aos|pelo|pela|por|entre|desde|como|cada|ainda|sempre|nunca|depois|antes|aqui|esse',
       'essa|este|esta|seu|sua|deve|pode|tem|sem|mas|nome|novo|nova|estado|chave|pasta',
-      'projeto|projetos|arquivo|lista|caminho|formato|esperado',
+      'projeto|projetos|arquivo|lista|caminho|formato|esperado|roda|rola|barra|na|nas',
     ].join('|') +
     ')(?![\\p{L}\\p{N}_-])',
   'iu',
