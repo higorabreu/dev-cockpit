@@ -43,7 +43,7 @@ export function createReviewSend(deps: ReviewSendDeps) {
   let told: string | undefined
 
   const count = h('span', { class: 'rv-send-count' })
-  const text = h('span', {})
+  const text = h('span', { class: 'rv-send-text' })
   const button = h(
     'button',
     {

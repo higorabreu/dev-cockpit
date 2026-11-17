@@ -27,6 +27,7 @@ import { displayPath } from '../panel/format.ts'
 import type { Keymap } from '../platform/keymap.ts'
 import { createDiffView, LINE_HEIGHT } from './diff-view.ts'
 import { counts, createFileList } from './file-list.ts'
+import { watchHead } from './head-fit.ts'
 import { createReviewComments } from './review-comments.ts'
 import { createReviewRefresh } from './review-refresh.ts'
 import { createReviewSend } from './review-send.ts'
@@ -215,6 +216,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   })
   // Beside the other header controls, before the index toggle
   head.insertBefore(sender.element, indexToggle)
+  watchHead(head, select.element)
 
   const list = createFileList({
     id: deps.id,
