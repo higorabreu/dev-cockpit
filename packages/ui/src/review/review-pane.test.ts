@@ -309,6 +309,41 @@ describe('createReviewPane', () => {
     expect(reads).toHaveLength(2)
   })
 
+  it('should hand the keys to the diff when the files arrive while the pane itself has the focus', async () => {
+    // Arrange: opened by its key, the pane takes the focus before the change is read
+    const { pane } = setup(repository())
+    pane.open()
+    pane.focus()
+    const before = document.activeElement
+
+    // Act
+    await flush()
+
+    // Assert
+    expect(before).toBe(pane.element)
+    expect(document.activeElement).toBe(pane.element.querySelector('.rv-lines'))
+  })
+
+  it('should leave the focus where it went when a redraw removed the focused element first', async () => {
+    // Arrange: a field of the review lost the focus to nothing, then the terminal took it
+    const { pane } = setup(repository())
+    pane.open()
+    await flush()
+    const field = document.createElement('textarea')
+    pane.element.append(field)
+    field.focus()
+    field.remove()
+    const terminal = document.createElement('textarea')
+    document.body.append(terminal)
+    terminal.focus()
+
+    // Act: any later draw, such as a refresh
+    pane.retranslate()
+
+    // Assert
+    expect(document.activeElement).toBe(terminal)
+  })
+
   it('should cross files with n and p and land on file headers with ] and [', async () => {
     const { pane, key } = setup(repository())
     pane.open()

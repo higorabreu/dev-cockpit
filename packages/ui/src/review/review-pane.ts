@@ -671,8 +671,10 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     indexToggle.hidden = !withFiles
     drawState()
     drawHints()
-    // A focused list or diff that a new state hid would leave the keys on the page's body
-    if (focusInside && !element.contains(document.activeElement)) pane.focus()
+    // A focused list or diff that a new state hid would leave the keys on the page's body, and the pane
+    // itself, focused while it loaded, takes no review key: both hand the keys to the diff or the index
+    const resting = document.activeElement === element && withFiles
+    if (focusInside && (resting || !element.contains(document.activeElement))) pane.focus()
   }
 
   function keyTarget(target: EventTarget | null) {
@@ -706,8 +708,13 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     event.stopPropagation()
   })
   // Where the keys are decides the hints: the review's own, or the way back to it
-  element.addEventListener('focusin', () => {
+  element.addEventListener('focusin', (event) => {
     focusInside = true
+    // A click on a bare part of the pane focuses the pane itself, where the review's keys do nothing
+    if (event.target === element && state.kind === 'ok' && state.diff.files.length > 0) {
+      pane.focus()
+      return
+    }
     drawHints()
   })
   element.addEventListener('focusout', (event) => {
@@ -734,17 +741,26 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   close.addEventListener('click', () => deps.onClose())
 
   const onVisibility = () => refresh.visibility()
+  // A focused child that a redraw removed sends a focusout with no target, so the review cannot tell
+  // the keys left it until the focus arrives somewhere else
+  const onFocusElsewhere = (event: FocusEvent) => {
+    if (!focusInside || (event.target instanceof Node && element.contains(event.target))) return
+    focusInside = false
+    drawHints()
+  }
 
   const pane = {
     element,
     open() {
       document.addEventListener('visibilitychange', onVisibility)
+      document.addEventListener('focusin', onFocusElsewhere)
       refresh.open()
       diff.unpark()
     },
     // The reading stays: reopened in the same tab, the review is where it was left
     close() {
       document.removeEventListener('visibilitychange', onVisibility)
+      document.removeEventListener('focusin', onFocusElsewhere)
       diff.park()
       refresh.close()
     },
