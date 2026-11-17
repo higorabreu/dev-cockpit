@@ -108,6 +108,12 @@
   font-weight: 600;
 }
 
+.shead-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* What settings.json says: one calm strip above the pages, only while there is something to say */
 .snotice {
   flex: none;

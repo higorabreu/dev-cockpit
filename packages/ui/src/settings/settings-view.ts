@@ -101,6 +101,8 @@ export function createSettingsView(
   let recording = false
   let autostart = false
   let confirmingReset = false
+  // The last "Open the settings file" found no app to open it; cleared when the screen opens again
+  let openFailed = false
   let activeTab: TabId = TABS[0].id
   // The enabled connectors, each with its own section on the Connections page
   let connectors: readonly Connector[] = []
@@ -242,6 +244,13 @@ export function createSettingsView(
         warn,
         h('p', { class: 'snotice-text' }, t('settings.file.invalid', file)),
       )
+    if (openFailed)
+      return h(
+        'div',
+        { class: 'snotice', role: 'status' },
+        warn,
+        h('p', { class: 'snotice-text' }, t('settings.file.openFailed')),
+      )
     if (file.issues.length === 0) return false
     const shown = file.issues.slice(0, NOTICE_ROWS)
     const hidden = file.issues.length - shown.length
@@ -270,6 +279,11 @@ export function createSettingsView(
         ),
       ),
     )
+  }
+
+  async function openFile() {
+    openFailed = !(await settings.openFile())
+    if (isOpen()) render()
   }
 
   // `current` stands in for a setting that is null until the user chooses it
@@ -684,12 +698,31 @@ export function createSettingsView(
     return sections
   }
 
+  function fileButton(): HTMLElement {
+    const button = h(
+      'button',
+      {
+        type: 'button',
+        class: 'pclose',
+        'data-focus': 'set-open-file',
+        'data-tip': t('settings.file.open'),
+        'aria-label': t('settings.file.open'),
+      },
+      icon(
+        '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M10 12l-1.5 2.5L10 17M14 12l1.5 2.5L14 17"/>',
+        14,
+      ),
+    )
+    button.addEventListener('click', () => void openFile())
+    return button
+  }
+
   function header(): HTMLElement {
     return h(
       'header',
       { class: 'shead2' },
       h('h1', {}, t('settings.title')),
-      closeButton(t, closeView, 'set-close'),
+      h('div', { class: 'shead-actions' }, fileButton(), closeButton(t, closeView, 'set-close')),
     )
   }
 
@@ -963,6 +996,7 @@ export function createSettingsView(
 
   function open(tab: TabId = TABS[0].id) {
     confirmingReset = false
+    openFailed = false
     activeTab = tab
     errors.clear()
     notes.clear()

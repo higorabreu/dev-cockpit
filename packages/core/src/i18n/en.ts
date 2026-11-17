@@ -150,6 +150,7 @@ export const en: Record<MessageKey, string> = {
   'cli.ext.rejected': 'Rejected:',
 
   'menu.system.settings': 'Settings',
+  'menu.system.settingsFile': 'Open the settings file',
   'tray.settings': 'Settings',
 
   'settings.title': 'Settings',
@@ -328,6 +329,8 @@ export const en: Record<MessageKey, string> = {
   'settings.ref.opacity': 'Opacity',
   'settings.ref.font': 'Font size',
   'settings.ref.settings': 'Settings',
+  'settings.file.open': 'Open the settings file',
+  'settings.file.openFailed': 'No app opened settings.json.',
   'settings.file.invalid':
     'settings.json has an error at line {line}, column {column}. The last valid settings stay in use, and changes here wait until it is fixed.',
   'settings.file.issues.one': '1 value in settings.json is not used as written',

@@ -17,6 +17,7 @@ export interface SettingsClient {
   // Whether settings.json reads and which of its values it did not use as written
   file(): SettingsFileState
   onFile(listener: (file: SettingsFileState) => void): Unsubscribe
+  openFile(): Promise<boolean>
 }
 
 const LEGACY_KEYS = ['dck-theme', 'dck-opacity', 'dck-font-size', 'dck-locale'] as const
@@ -98,5 +99,6 @@ export async function createSettingsClient(api: HostApi): Promise<SettingsClient
       fileListeners.add(listener)
       return () => void fileListeners.delete(listener)
     },
+    openFile: () => api.settings.openFile(),
   }
 }

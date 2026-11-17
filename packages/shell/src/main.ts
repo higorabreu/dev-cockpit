@@ -288,7 +288,17 @@ app.whenReady().then(async () => {
       },
       writeText: async (text) => clipboard.writeText(text),
     },
-    settings: settingsStore,
+    settings: {
+      get: settingsStore.get,
+      update: settingsStore.update,
+      // Only this file: the window asks for it and never names a path
+      async openFile() {
+        if (!(await settingsStore.ensureFile())) return false
+        const error = await electronShell.openPath(settingsFile)
+        if (error) logger.warn('could not open the settings file', { file: settingsFile, error })
+        return error === ''
+      },
+    },
     connections,
     views,
     external: {

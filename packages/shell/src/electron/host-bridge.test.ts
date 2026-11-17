@@ -54,6 +54,7 @@ function setup(picked: string | undefined = undefined) {
   let fullHeightToggles = 0
   const touched: string[] = []
   let autostartOn = false
+  let settingsFileOpens = 0
   const notified: TabNotification[] = []
   const connects: { id: string; fields: ConnectionFields; token: string }[] = []
   let connectors: readonly Connector[] = [GITLAB_CONNECTOR]
@@ -132,6 +133,10 @@ function setup(picked: string | undefined = undefined) {
         file: settingsFileOk,
         rejected: [],
       }),
+      openFile: async () => {
+        settingsFileOpens += 1
+        return true
+      },
     },
     autostart: {
       isEnabled: async () => autostartOn,
@@ -200,6 +205,7 @@ function setup(picked: string | undefined = undefined) {
     ptyHost,
     clipboard,
     sent,
+    settingsFileOpens: () => settingsFileOpens,
     call,
     bridge,
     touched,
@@ -466,6 +472,15 @@ describe('registerHostBridge clipboard and window', () => {
     }
 
     expect(result.settings.theme).toBe('light')
+  })
+
+  it('should open the one settings file whatever the interface passes when it asks to open it', async () => {
+    const { call, settingsFileOpens } = setup()
+
+    const opened = await call(hostChannels.settingsOpenFile, '/etc/passwd')
+
+    expect(opened).toBe(true)
+    expect(settingsFileOpens()).toBe(1)
   })
 
   it('should refuse a patch that is not an object when the interface updates settings', () => {

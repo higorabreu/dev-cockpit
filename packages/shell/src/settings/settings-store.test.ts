@@ -360,3 +360,25 @@ describe('createSettingsStore reload', () => {
     expect(seen).toEqual([['fontSize']])
   })
 })
+
+describe('createSettingsStore ensureFile', () => {
+  it('should write the settings in use when there is no file to open', async () => {
+    const store = make()
+    await store.load()
+
+    expect(await store.ensureFile()).toBe(true)
+
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual(defaultSettings)
+  })
+
+  it('should leave the file as it is when one exists', async () => {
+    await make().update({ theme: 'light' })
+    await writeFile(file, '// mine\n{}')
+    const store = make()
+    await store.load()
+
+    await store.ensureFile()
+
+    expect(await readFile(file, 'utf8')).toBe('// mine\n{}')
+  })
+})

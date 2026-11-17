@@ -231,6 +231,21 @@ export function createSettingsStore(options: SettingsStoreOptions) {
         return { ...view, rejected }
       })
     },
+    // Writes the file when there is none yet, so there is something to open in an editor
+    ensureFile(): Promise<boolean> {
+      return serial(async () => {
+        if ((await readText()) !== undefined) return true
+        const content = pretty(stored)
+        const written = await write(content)
+        if (written) {
+          lastText = content
+          lastRaw = parse(content) ?? lastRaw
+          fresh = false
+          recompute()
+        }
+        return written
+      })
+    },
     onChange(listener: Listener) {
       listeners.add(listener)
       return () => void listeners.delete(listener)

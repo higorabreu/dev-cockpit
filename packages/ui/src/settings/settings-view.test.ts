@@ -26,6 +26,7 @@ function fakeSettings(
 ) {
   let current: Settings = initial
   let file = initialFile
+  let opens = 0
   const patches: SettingsPatch[] = []
   const listeners = new Set<(settings: Settings, changed: readonly string[]) => void>()
   const fileListeners = new Set<(file: SettingsFileState) => void>()
@@ -48,6 +49,10 @@ function fakeSettings(
       fileListeners.add(listener)
       return () => void fileListeners.delete(listener)
     },
+    openFile: async () => {
+      opens += 1
+      return opens < 2
+    },
   }
   const emit = (changed: readonly string[]) => {
     for (const listener of listeners) listener(current, changed)
@@ -56,7 +61,7 @@ function fakeSettings(
     file = next
     for (const listener of fileListeners) listener(next)
   }
-  return { client, patches, emit, emitFile }
+  return { client, patches, emit, emitFile, opens: () => opens }
 }
 
 // Only what opening the screen asks the host for
@@ -109,6 +114,7 @@ function open(
     patches: settings.patches,
     emit: settings.emit,
     emitFile: settings.emitFile,
+    opens: settings.opens,
     isClosed: () => closed,
   }
 }
@@ -726,6 +732,21 @@ describe('settings view, the settings file', () => {
 
     expect(patches).toEqual([{ theme: 'light' }])
     expect(combobox('theme').querySelector('[data-current]')?.textContent).toBe('Dark')
+    view.close()
+  })
+
+  it('should open the file from the header button and say so when no app opened it', async () => {
+    const { body, opens, view } = open()
+    const button = body.querySelector<HTMLButtonElement>('[data-focus="set-open-file"]')
+
+    button?.click()
+    await settle()
+    body.querySelector<HTMLButtonElement>('[data-focus="set-open-file"]')?.click()
+    await settle()
+
+    expect(button?.getAttribute('data-tip')).toBe('Open the settings file')
+    expect(opens()).toBe(2)
+    expect(body.querySelector('.snotice-text')?.textContent).toBe('No app opened settings.json.')
     view.close()
   })
 

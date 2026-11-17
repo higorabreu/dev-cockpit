@@ -61,6 +61,8 @@ export interface HostApi {
     onChange(listener: (settings: Settings, changed: readonly string[]) => void): Unsubscribe
     // Whether settings.json reads and which of its values were not used as written
     onFile(listener: (file: SettingsFileState) => void): Unsubscribe
+    // In the system's default editor, written first when there is none; false when nothing opened it
+    openFile(): Promise<boolean>
   }
   // By connector id; only the enabled connectors this app implements are listed or answered
   readonly connections: {
@@ -155,6 +157,7 @@ export const hostChannels = {
   settingsUpdate: 'settings:update',
   settingsChanged: 'settings:changed',
   settingsFile: 'settings:file',
+  settingsOpenFile: 'settings:open-file',
   connectionsList: 'connections:list',
   connectionsDisabled: 'connections:disabled',
   connectionsStatus: 'connections:status',
