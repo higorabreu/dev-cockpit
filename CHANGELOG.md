@@ -3,6 +3,14 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.7.1](https://github.com/higorabreu/dev-cockpit/compare/v0.7.0...v0.7.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* build the .deb so it runs on Ubuntu 22.04 and Debian 12 ([6eb285f](https://github.com/higorabreu/dev-cockpit/commit/6eb285fb9c5421a1d2a157129e9c6ef775cf0387))
+* speak English when the system language has no catalog ([a5bf114](https://github.com/higorabreu/dev-cockpit/commit/a5bf114cb493661d9972cbf63f3ec9160bd0d5a7))
+
 ## [0.7.0](https://github.com/higorabreu/dev-cockpit/compare/v0.6.1...v0.7.0) (2026-11-16)
 
 
