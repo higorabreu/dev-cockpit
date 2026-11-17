@@ -105,6 +105,30 @@
   outline-offset: -2px;
 }
 
+/* A window under 270 pixels leaves the rail less than its 218: the buttons shrink to the tab bar's 26 so
+   every one still fits, and nothing it holds ever paints over the tab bar */
+@media (max-height: 270px) {
+  #rail {
+    padding: 4px 0;
+    overflow: hidden;
+  }
+
+  #rail-top,
+  #rail-sections,
+  #rail-actions {
+    gap: 2px;
+  }
+
+  #rail-panel {
+    margin-bottom: 2px;
+  }
+
+  #rail button {
+    width: 26px;
+    height: 26px;
+  }
+}
+
 /* A count on a rail button, at its lower right as in VS Code's activity bar: a ring in the window color
    cuts it out of the icon, so both stay readable where they meet */
 .badge {
