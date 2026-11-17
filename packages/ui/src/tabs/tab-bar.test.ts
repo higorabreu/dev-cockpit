@@ -198,3 +198,18 @@ describe('createTabBar rename', () => {
     expect(field(container)?.placeholder).toBe('acme')
   })
 })
+
+describe('createTabBar redraw', () => {
+  it('should keep the focus on the same tab when the bar redraws', () => {
+    // Arrange
+    const { container, bar, state } = setup()
+    bar.render(state)
+    container.querySelector<HTMLElement>('[data-id="tab-1"]')?.focus()
+
+    // Act: a watcher's read redraws every tab
+    bar.render(state)
+
+    // Assert
+    expect((document.activeElement as HTMLElement | null)?.dataset.id).toBe('tab-1')
+  })
+})

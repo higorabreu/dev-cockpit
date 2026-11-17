@@ -85,6 +85,10 @@ export function createTabBar(
     if (editing) return
     // Replacing the children resets the scroll; without saving, the watcher's redraw undoes the user's scroll
     const scrolled = container.scrollLeft
+    // A redraw keeps what the user had: the focus on a tab, and the active tab in view if it was
+    const focused = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('.tab')
+    const focusedId = focused && container.contains(focused) ? focused.dataset.id : undefined
+    const activeWasShown = activeInView()
     container.replaceChildren(
       ...state.tabs.map((tab) => {
         const button = document.createElement('button')
@@ -159,21 +163,36 @@ export function createTabBar(
       }),
     )
     container.scrollLeft = scrolled
-    if (state.activeId !== lastActive) {
+    // A mark that widened a tab before it can push the active one under the fade
+    if (state.activeId !== lastActive || (activeWasShown && !activeInView())) {
       lastActive = state.activeId
       container
         .querySelector('[aria-selected="true"]')
         ?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
     }
+    if (focusedId) tabOf(focusedId)?.focus()
     syncEdges()
+  }
+
+  const tabOf = (id: string) =>
+    [...container.querySelectorAll<HTMLElement>('.tab')].find((tab) => tab.dataset.id === id)
+
+  // Clear of the edges that fade, where the bar's own scroll padding keeps the active tab
+  function activeInView(): boolean {
+    const active = container.querySelector('[aria-selected="true"]')
+    if (!active) return false
+    const fade = container.dataset.fade
+    const start = fade === 'start' || fade === 'both' ? FADE_PX : 0
+    const end = fade === 'end' || fade === 'both' ? FADE_PX : 0
+    const view = container.getBoundingClientRect()
+    const box = active.getBoundingClientRect()
+    return box.left >= view.left + start - 1 && box.right <= view.right - end + 1
   }
 
   // The tab's name turns into a field in place: Enter or a click elsewhere keeps it, Esc leaves it as it was
   function rename(id: string) {
     editing?.finish(true)
-    const button = [...container.querySelectorAll<HTMLElement>('.tab')].find(
-      (tab) => tab.dataset.id === id,
-    )
+    const button = tabOf(id)
     const tab = last[0].tabs.find((entry) => entry.id === id)
     if (!button || !tab) return
     const input = h('input', {
