@@ -86,6 +86,7 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
         reads.push(`${root}|${path}`)
         return ok(Array.from({ length: 20 }, (_, index) => `text ${index + 1}`))
       },
+      fingerprint: async () => undefined,
     },
     paths: { openFile: () => undefined },
   } as unknown as HostApi
@@ -414,6 +415,40 @@ describe('createReviewPane', () => {
 
     expect(before).toBe('review-tab-1-row-1')
     expect(lines.getAttribute('aria-activedescendant')).toBe(before)
+  })
+
+  it('should move the reading to the next file when the file at the cursor is gone after a read', async () => {
+    // Arrange
+    const zeta = [
+      'diff --git a/src/zeta.ts b/src/zeta.ts',
+      'new file mode 100644',
+      '--- /dev/null',
+      '+++ b/src/zeta.ts',
+      '@@ -0,0 +1 @@',
+      '+export const zeta = 1',
+      '',
+    ].join('\n')
+    let answer = repository()
+    const { pane, key } = setup(() => answer)
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+    key(lines, ']')
+    key(lines, 'n')
+    const before = lines.getAttribute('aria-activedescendant')
+    const current = () =>
+      pane.element.querySelector('.rv-file[aria-selected="true"]')?.getAttribute('aria-label')
+
+    // Act
+    answer = repository(lockText + zeta)
+    key(pane.element, 'r', { ctrlKey: true })
+    await flush()
+
+    // Assert
+    expect(before).toBe('review-tab-1-row-3')
+    expect(lines.getAttribute('aria-activedescendant')).toBe('review-tab-1-row-1')
+    expect(current()).toBe('src/zeta.ts, added, 1 added, 0 removed')
   })
 
   it('should give the keys back to the terminal on Esc and read again on Ctrl+R', async () => {

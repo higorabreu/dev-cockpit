@@ -187,18 +187,27 @@ export function createReviewPane(deps: ReviewPaneDeps) {
 
   const refresh = createReviewRefresh({
     load,
+    fingerprint: async () => {
+      const folder = await deps.cwd()
+      return folder ? api.review.fingerprint(folder) : undefined
+    },
+    visible: () => !document.hidden,
+    now: () => performance.now(),
     after(milliseconds, task) {
       const timer = setTimeout(task, milliseconds)
       return () => clearTimeout(timer)
     },
   })
 
-  async function load() {
-    busy = true
-    const loadingTimer = setTimeout(() => {
-      showLoading = true
-      draw()
-    }, LOADING_TEXT_MS)
+  // A quiet read (the change moved, the agent spoke) shows no loading text: the diff just updates
+  async function load(quiet: boolean) {
+    busy = !quiet
+    const loadingTimer = quiet
+      ? undefined
+      : setTimeout(() => {
+          showLoading = true
+          draw()
+        }, LOADING_TEXT_MS)
     drawStatus()
     cwd = await deps.cwd()
     const chosen = cwd ? deps.baseFor(cwd) : undefined
@@ -210,7 +219,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
           ...(chosen === undefined ? {} : { base: chosen }),
         })
       : { ok: true as const, value: undefined }
-    clearTimeout(loadingTimer)
+    if (loadingTimer) clearTimeout(loadingTimer)
     busy = false
     showLoading = false
     if (!result.ok) state = { kind: 'error', error: result.error }
@@ -534,14 +543,18 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   back.addEventListener('click', () => deps.onEscape())
   close.addEventListener('click', () => deps.onClose())
 
+  const onVisibility = () => refresh.visibility()
+
   const pane = {
     element,
     open() {
+      document.addEventListener('visibilitychange', onVisibility)
       refresh.open()
       diff.unpark()
     },
     // The reading stays: reopened in the same tab, the review is where it was left
     close() {
+      document.removeEventListener('visibilitychange', onVisibility)
       diff.park()
       refresh.close()
     },
