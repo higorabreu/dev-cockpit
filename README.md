@@ -46,8 +46,8 @@ changed, and your merge requests and tasks.
   pick another. It follows the agent as it works, keeping your place, and marks files as viewed as on
   GitHub. Comments left on lines, as in a GitHub review, go back to the agent in one go: written to a
   Markdown file in the repository's `.git/dck/`, with one line naming it typed at the tab's prompt,
-  without Enter, for whatever agent is listening. At a bare shell prompt it types the command that starts
-  an installed agent with that line instead (`claude '...'`), and while another program runs it waits.
+  without Enter, for whatever agent is listening. With no agent in the tab, at a shell prompt or under
+  another program, it waits and says so, and the comments stay.
 - **Connectors.** Your GitLab merge requests and Jira tasks in one screen (below).
 - **Terminal.** `Ctrl+click` opens links in the browser and file or folder paths in their default app;
   selecting copies and the right or middle button pastes.
@@ -112,7 +112,7 @@ next launch, `--yes` restarts without asking and `--skip-build` installs the `.d
 | `Ctrl+Shift+B` | Side panel |
 | `Ctrl+Shift+D` | Review what changed in the tab's repository beside or below its terminal; from the terminal it goes back to an open review, from the review it closes it (`Esc` back to the terminal; inside it `↑↓`, `Enter`, `[` `]` file, `n` `p` hunk, `v` viewed, `Shift+↑↓` or `Shift`+click select lines, `c` comment, `Ctrl+Enter` save it, `Ctrl+R` refresh) |
 | `Ctrl+Shift+E` | Switch the review between side by side and stacked (Settings brings back Automatic) |
-| `Ctrl+Shift+Enter` | Write the review's pending comments to a file and type a line naming it at the tab's prompt, without Enter ("Send to agent" in the review header); at a shell prompt, the command that starts an installed agent with it; nothing while another program runs |
+| `Ctrl+Shift+Enter` | Write the review's pending comments to a file and type a line naming it at the tab's prompt, without Enter ("Send to agent" in the review header); only while an agent runs in the tab |
 | `Ctrl+Shift+Up` / `Down` | Opacity |
 | `Ctrl +`, `-`, `0` | Font size |
 | `Ctrl+Shift+L` | Switch between light and dark theme |
