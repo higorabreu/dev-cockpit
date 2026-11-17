@@ -651,6 +651,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
           x,
           y,
           !document.body.classList.contains('full'),
+          // Closed with Esc or a click elsewhere, the keys go back to the terminal
+          () => focusActive(),
         )
       },
     },
