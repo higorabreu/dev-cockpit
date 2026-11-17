@@ -188,10 +188,17 @@ describe('createAttentionTracker with agent signals', () => {
     const { tracker } = setup()
     tracker.signal('a', 'needs-you', false)
 
-    tracker.input('a')
+    const cleared = tracker.input('a')
 
+    expect(cleared).toBe(true)
     expect(tracker.attention('a')).toBeUndefined()
     expect(tracker.hasWorkingAgent()).toBe(true)
+  })
+
+  it('should report nothing to redraw when a key reaches a tab no agent waits in', () => {
+    const { tracker } = setup()
+
+    expect(tracker.input('a')).toBe(false)
   })
 
   it('should clear the needs you mark when a new working signal arrives', () => {

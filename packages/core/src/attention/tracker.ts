@@ -158,12 +158,14 @@ export function createAttentionTracker(options: AttentionOptions) {
       return undefined
     },
     // The user typing into the tab answers the agent, which then goes back to work
-    input(tabId: string) {
+    // True when the key answered an agent that needed the user, so its mark has to go
+    input(tabId: string): boolean {
       const state = tabs.get(tabId)
-      if (state?.agent !== 'needs-you') return
+      if (state?.agent !== 'needs-you') return false
       state.agent = 'working'
       state.workingAt = options.clock.now()
       clearNeedsYou(tabId)
+      return true
     },
     // The agent says it rests with no answer, as after Esc: a turn in progress ends, silently like settle
     rest(tabId: string) {

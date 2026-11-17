@@ -501,7 +501,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       onCopied: (text) => notice.copied(text),
       onExit: () => close(id),
       onInput() {
-        attention.input(id)
+        // Only the key that answers a waiting agent redraws: the rest echo with no extra work
+        if (attention.input(id)) showAttention()
         watchQuiet()
       },
       onProgramStatus: (status) => applyAgentStatus(id, status),
