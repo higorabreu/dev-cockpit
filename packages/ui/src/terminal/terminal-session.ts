@@ -5,6 +5,7 @@ import { Terminal } from '@xterm/xterm'
 import type { Keymap } from '../platform/keymap.ts'
 import { terminalTheme } from '../platform/theme.ts'
 import { attachClipboard } from './clipboard-behavior.ts'
+import { attachCursorBlink } from './cursor-blink.ts'
 import { attachLineEditing } from './line-editing.ts'
 import { attachOptionKeys } from './option-key.ts'
 import { attachProgramStatus } from './program-status.ts'
@@ -98,6 +99,18 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   const fit = new FitAddon()
   terminal.loadAddon(fit)
   terminal.open(screenHost)
+  const blink = terminal.textarea
+    ? attachCursorBlink({
+        element,
+        textarea: terminal.textarea,
+        document,
+        after(milliseconds, task) {
+          const timer = setTimeout(task, milliseconds)
+          return () => clearTimeout(timer)
+        },
+      })
+    : undefined
+  terminal.onCursorMove(() => blink?.restart())
   attachPaths(terminal, {
     ...options.paths,
     resolve: (base, paths) => api.paths.resolve(base, paths),
@@ -131,7 +144,10 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     rows: terminal.rows,
     ...(options.cwd ? { cwd: options.cwd } : {}),
   })
-  terminal.onData((data) => api.pty.write(id, data))
+  terminal.onData((data) => {
+    blink?.restart()
+    api.pty.write(id, data)
+  })
   const programStatus = attachProgramStatus(terminal.parser, {
     reply: (data) => api.pty.write(id, data),
     report: (status) => options.onProgramStatus?.(status),
@@ -226,6 +242,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
       clipboard.dispose()
       drop.dispose()
       programStatus.dispose()
+      blink?.dispose()
       api.pty.kill(id)
       terminal.dispose()
       element.remove()
