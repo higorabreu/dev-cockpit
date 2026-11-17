@@ -12,11 +12,13 @@ import {
   type Scheduler,
   type SwitcherState,
   select,
+  selectedIndex,
   stepSwitcher,
   type Translate,
 } from '@dck/core'
 import { inputGate } from '../platform/input-gate.ts'
 import { type MenuMarkup, switcherMarkup, wheelMarkup } from './menu-view.ts'
+import { createPointerIntent } from './pointer-intent.ts'
 
 export interface MenuTab {
   readonly id: string
@@ -69,12 +71,14 @@ export function createHoldMenuController(
   t: Translate,
 ) {
   let mode: Mode = { kind: 'closed' }
+  const pointer = createPointerIntent()
 
   const gesture = createHoldGesture({
     scheduler,
     onOpen() {
       if (mode.kind === 'closed')
         mode = { kind: 'wheel', menu: createHoldMenu(actions.categories()) }
+      pointer.keysTakeOver()
       draw()
     },
   })
@@ -154,6 +158,7 @@ export function createHoldMenuController(
       if (mode.kind === 'switcher') stepTabs(direction === 'left' || direction === 'up' ? -1 : 1)
       else if (mode.kind === 'wheel') {
         mode = { ...mode, menu: navigate(mode.menu, direction) }
+        pointer.keysTakeOver()
         draw()
       }
       return
@@ -167,16 +172,22 @@ export function createHoldMenuController(
     else close()
   }
 
-  function onPointer(event: Event) {
+  function onPointer(event: MouseEvent) {
     if (mode.kind !== 'wheel' || !(event.target instanceof Element)) return
+    const click = event.type === 'click'
+    if (!click && !pointer.moved(event.clientX, event.clientY)) return
     const sector = event.target.closest<HTMLElement>('[data-category]')
     const row = event.target.closest<HTMLElement>('[data-item]')
-    if (sector) mode = { ...mode, menu: select(mode.menu, Number(sector.dataset.category)) }
-    else if (row) {
-      mode = { ...mode, menu: select(mode.menu, mode.menu.category, Number(row.dataset.item)) }
-    } else return
-    if (event.type === 'click') commit()
-    else draw()
+    const current = mode.menu
+    let next: HoldMenuState
+    if (sector) next = select(current, Number(sector.dataset.category))
+    else if (row) next = select(current, current.category, Number(row.dataset.item))
+    else return
+    mode = { ...mode, menu: next }
+    if (click) commit()
+    // Redrawn only when the selection changes, not on every move inside a sector
+    else if (next.category !== current.category || selectedIndex(next) !== selectedIndex(current))
+      draw()
   }
 
   window.addEventListener('keydown', onKeyDown, true)
@@ -187,6 +198,6 @@ export function createHoldMenuController(
     gesture.cancel()
     close()
   })
-  elements.card.addEventListener('mouseover', onPointer)
+  elements.card.addEventListener('mousemove', onPointer)
   elements.card.addEventListener('click', onPointer)
 }
