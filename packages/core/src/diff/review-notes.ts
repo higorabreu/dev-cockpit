@@ -1,5 +1,6 @@
 import type { Translate } from '../i18n/translator.ts'
 import { shellQuote } from '../paste/paste-paths.ts'
+import type { SessionActivityInfo } from '../ports/session.ts'
 
 // Review files kept in their folder; older ones are deleted when a new one is written
 export const REVIEW_NOTES_KEPT = 5
@@ -47,4 +48,17 @@ export function pathFrom(folder: string, path: string): string {
 // The one line typed at the prompt: what to do and where the comments are, quoted for a shell if needed
 export function reviewPrompt(t: Translate, path: string): string {
   return t('review.notes.prompt', { path: shellQuote(path) })
+}
+
+// Why the line cannot go to the tab now, or undefined when an agent runs there: at a shell prompt it would
+// land in the shell, and another program would read it as its own input. With no read of the tab yet it goes
+export function reviewSendBlock(
+  t: Translate,
+  activity: SessionActivityInfo | undefined,
+): string | undefined {
+  if (activity === undefined || activity.activity === 'agent') return undefined
+  if (activity.activity === 'idle') return t('review.send.idle')
+  return activity.process
+    ? t('review.send.busy', { process: activity.process })
+    : t('review.send.busyUnknown')
 }

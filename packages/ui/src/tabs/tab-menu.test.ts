@@ -42,28 +42,6 @@ describe('createTabMenu', () => {
     expect(focused()).toBe('Open in a new tab')
   })
 
-  it('should focus the asked enabled item when it opens with one', () => {
-    // Arrange
-    const { menu, focused, terminal } = setup()
-    const run = () => undefined
-
-    // Act
-    menu.open(
-      [
-        { label: 'Claude Code', enabled: true, run },
-        { label: 'Acme Agent', enabled: true, run },
-      ],
-      100,
-      100,
-      false,
-      () => terminal.focus(),
-      1,
-    )
-
-    // Assert
-    expect(focused()).toBe('Acme Agent')
-  })
-
   it('should move between the enabled items when the arrows are pressed', () => {
     const { open, focused, press } = setup()
     open()

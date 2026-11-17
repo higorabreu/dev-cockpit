@@ -13,13 +13,10 @@ export type ShellRun =
 
 type Run = (file: string, args: readonly string[], timeoutMs: number) => Promise<ShellRun>
 
-export interface ShellPathDeps {
+export interface LoginPathDeps {
   readonly shell: string
-  // The flags before `-c`: the Mac's login shell `-i -l`, or the tabs' own flags with `-i`
-  readonly flags: readonly string[]
   readonly logger: Logger
   readonly run?: Run
-  readonly timeoutMs?: number
 }
 
 const MARK = '__DCK_PATH__'
@@ -29,7 +26,7 @@ const ABSOLUTE_ENTRY = /^\/[^\n\r]*$/
 
 // An interactive shell ignores SIGTERM and a `read` in its startup files waits on stdin forever, so the
 // shell gets no stdin, its own process group and a SIGKILL to the whole group once it is done or late
-export const runShell: Run = (file, args, timeoutMs) =>
+export const runLoginShell: Run = (file, args, timeoutMs) =>
   new Promise((resolve) => {
     const child = spawn(file, [...args], { detached: true, stdio: ['ignore', 'pipe', 'ignore'] })
     let output = ''
@@ -73,16 +70,14 @@ export const runShell: Run = (file, args, timeoutMs) =>
     )
   })
 
-// The PATH a shell ends up with once its startup files ran: an app opened from Finder, launchd or a desktop
-// menu gets the session's PATH, without what `.zprofile` or `.bashrc` add (nvm, `~/.local/bin`)
-export async function readShellPath(deps: ShellPathDeps): Promise<string | undefined> {
-  const { shell, flags, logger, run = runShell, timeoutMs = TIMEOUT_MS } = deps
+// An app opened from Finder or launchd gets a minimal PATH; the login shell has the one Terminal.app sees
+export async function readLoginPath(deps: LoginPathDeps): Promise<string | undefined> {
+  const { shell, logger, run = runLoginShell } = deps
   // The marks fence the value off from whatever the shell's startup files print
-  const command = `printf '${MARK}%s${MARK}' "$PATH"`
-  const result = await run(shell, [...flags, '-c', command], timeoutMs)
+  const result = await run(shell, ['-ilc', `printf '${MARK}%s${MARK}' "$PATH"`], TIMEOUT_MS)
   if (result.kind === 'failed') {
     const { code, signal, timedOut } = result
-    logger.warn('shell PATH not read, keeping the inherited one', {
+    logger.warn('login shell PATH not read, keeping the inherited one', {
       shell,
       code,
       signal,
@@ -96,12 +91,12 @@ export async function readShellPath(deps: ShellPathDeps): Promise<string | undef
   const valid = entries.filter((entry) => ABSOLUTE_ENTRY.test(entry))
   const dropped = entries.length - valid.length
   if (valid.length === 0) {
-    logger.warn('shell PATH has no valid entry, keeping the inherited one', {
+    logger.warn('login shell PATH has no valid entry, keeping the inherited one', {
       shell,
       dropped,
     })
     return undefined
   }
-  if (dropped > 0) logger.warn('shell PATH entries dropped', { shell, dropped })
+  if (dropped > 0) logger.warn('login shell PATH entries dropped', { shell, dropped })
   return valid.join(':')
 }

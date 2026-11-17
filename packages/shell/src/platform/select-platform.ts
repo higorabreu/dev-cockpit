@@ -13,11 +13,11 @@ import type {
 } from '@dck/core'
 import { systemSecretStore } from '@dck/daemon/secret-store'
 import { createLaunchdAutostart } from './darwin/launchd-autostart.ts'
+import { readLoginPath } from './darwin/login-path.ts'
 import { createPanelWindow, type PanelApp } from './darwin/panel-window.ts'
 import { createRegularWindow } from './linux/regular-window.ts'
 import { createXdgAutostart, defaultAutostartDirectory } from './linux/xdg-autostart.ts'
 import type { PlatformWindow } from './platform-window.ts'
-import { readShellPath } from './shell-path.ts'
 
 export interface PlatformContext {
   readonly platform: NodeJS.Platform
@@ -113,9 +113,7 @@ export function selectPlatform(context: PlatformContext): Platform {
     // The Mac opens a login shell, like Terminal.app, so `.zprofile` runs in every tab
     terminal,
     loginPath: async () =>
-      platform === 'darwin'
-        ? readShellPath({ shell: terminal.file, flags: ['-i', '-l'], logger })
-        : undefined,
+      platform === 'darwin' ? readLoginPath({ shell: terminal.file, logger }) : undefined,
     window: platform === 'darwin' ? createPanelWindow(context.app) : createRegularWindow(),
   }
 }

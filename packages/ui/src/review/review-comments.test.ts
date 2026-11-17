@@ -87,9 +87,6 @@ function setup(first = invoice(), options: Options = {}) {
       return true
     },
     activity: async () => undefined,
-    launchable: async () => [],
-    profiles: () => [],
-    chooseAgent: () => undefined,
   })
   document.body.append(pane.element)
   const find = <T extends Element = HTMLElement>(selector: string) =>

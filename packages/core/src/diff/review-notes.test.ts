@@ -6,6 +6,7 @@ import {
   REVIEW_NOTES_TEMP_PREFIX,
   reviewNoteName,
   reviewPrompt,
+  reviewSendBlock,
   reviewStamp,
   staleReviewNotes,
 } from './review-notes.ts'
@@ -87,5 +88,61 @@ describe('reviewPrompt', () => {
     expect(reviewPrompt(createTranslator('en').t, '/home/ana/my repo/.git/dck/r.md')).toBe(
       "Address the review comments in '/home/ana/my repo/.git/dck/r.md'",
     )
+  })
+})
+
+describe('reviewSendBlock', () => {
+  const en = createTranslator('en').t
+  const at = (activity: 'idle' | 'agent' | 'busy', process: string) => ({
+    cwd: '/home/ana/acme',
+    process,
+    activity,
+  })
+
+  it('should let the line go when an agent runs in the tab or the tab was not read yet', () => {
+    // Act
+    const reasons = [reviewSendBlock(en, at('agent', 'claude')), reviewSendBlock(en, undefined)]
+
+    // Assert
+    expect(reasons).toEqual([undefined, undefined])
+  })
+
+  it('should ask for an agent when a shell waits at its prompt', () => {
+    // Act
+    const reason = reviewSendBlock(en, at('idle', 'bash'))
+
+    // Assert
+    expect(reason).toBe('Open an agent in this tab to send the review')
+  })
+
+  it('should name the program and ask for an agent when another program runs', () => {
+    // Act
+    const named = reviewSendBlock(en, at('busy', 'vim'))
+    const unnamed = reviewSendBlock(en, at('busy', ''))
+
+    // Assert
+    expect(named).toBe(
+      'vim is running in the terminal. Open an agent in this tab to send the review',
+    )
+    expect(unnamed).toBe(
+      'A program is running in the terminal. Open an agent in this tab to send the review',
+    )
+  })
+
+  it('should give the reasons in Portuguese when the interface is in Portuguese', () => {
+    // Arrange
+    const pt = createTranslator('pt-BR').t
+
+    // Act
+    const reasons = [
+      reviewSendBlock(pt, at('idle', 'bash')),
+      reviewSendBlock(pt, at('busy', 'vim')),
+    ]
+
+    // Assert
+    expect(reasons).toEqual([
+      'Abra um agente nesta aba para enviar a revisão',
+      'vim está em execução no terminal. Abra um agente nesta aba para enviar a revisão',
+    ])
   })
 })

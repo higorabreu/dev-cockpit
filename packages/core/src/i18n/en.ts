@@ -454,22 +454,11 @@ export const en: Record<MessageKey, string> = {
   'review.notes.prompt': 'Address the review comments in {path}',
   'review.send.a11y.one': 'Send {count} comment to the agent',
   'review.send.a11y.other': 'Send {count} comments to the agent',
+  'review.send.idle': 'Open an agent in this tab to send the review',
   'review.send.busy':
-    '{process} is running in the terminal. The comments stay pending until it ends',
+    '{process} is running in the terminal. Open an agent in this tab to send the review',
   'review.send.busyUnknown':
-    'A program is running in the terminal. The comments stay pending until it ends',
-  'review.send.noAgent':
-    'No agent is running in the terminal and none was found on its PATH to start ({commands}). The comments stay pending',
-  'review.start': 'Start {agent} with the review',
-  'review.start.tip':
-    'Writes the comments to a file and types {command} with its path at the terminal prompt, without Enter',
-  'review.start.a11y.one': 'Start {agent} with {count} comment',
-  'review.start.a11y.other': 'Start {agent} with {count} comments',
-  'review.startAny': 'Start an agent with the review',
-  'review.startAny.tip':
-    'Choose the agent to start; its command goes to the terminal prompt with the comments, without Enter',
-  'review.startAny.a11y.one': 'Start an agent with {count} comment',
-  'review.startAny.a11y.other': 'Start an agent with {count} comments',
+    'A program is running in the terminal. Open an agent in this tab to send the review',
   'review.hint.comment': 'comment',
   'review.a11y.comment': '{lines}, comment: {text}',
   'review.a11y.outdatedComment': '{lines}, outdated comment: {text}',

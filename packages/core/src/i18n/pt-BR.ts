@@ -455,22 +455,11 @@ export const ptBR = {
   'review.notes.prompt': 'Resolva os comentários da revisão em {path}',
   'review.send.a11y.one': 'Enviar {count} comentário ao agente',
   'review.send.a11y.other': 'Enviar {count} comentários ao agente',
+  'review.send.idle': 'Abra um agente nesta aba para enviar a revisão',
   'review.send.busy':
-    '{process} está em execução no terminal. Os comentários continuam pendentes até que ele termine',
+    '{process} está em execução no terminal. Abra um agente nesta aba para enviar a revisão',
   'review.send.busyUnknown':
-    'Um programa está em execução no terminal. Os comentários continuam pendentes até que ele termine',
-  'review.send.noAgent':
-    'Nenhum agente está em execução no terminal e nenhum foi encontrado no PATH para iniciar ({commands}). Os comentários continuam pendentes',
-  'review.start': 'Iniciar {agent} com a revisão',
-  'review.start.tip':
-    'Grava os comentários em um arquivo e digita {command} com o caminho dele no prompt do terminal, sem Enter',
-  'review.start.a11y.one': 'Iniciar {agent} com {count} comentário',
-  'review.start.a11y.other': 'Iniciar {agent} com {count} comentários',
-  'review.startAny': 'Iniciar um agente com a revisão',
-  'review.startAny.tip':
-    'Escolha o agente a iniciar; o comando dele vai ao prompt do terminal com os comentários, sem Enter',
-  'review.startAny.a11y.one': 'Iniciar um agente com {count} comentário',
-  'review.startAny.a11y.other': 'Iniciar um agente com {count} comentários',
+    'Um programa está em execução no terminal. Abra um agente nesta aba para enviar a revisão',
   'review.hint.comment': 'comentar',
   'review.a11y.comment': '{lines}, comentário: {text}',
   'review.a11y.outdatedComment': '{lines}, comentário desatualizado: {text}',

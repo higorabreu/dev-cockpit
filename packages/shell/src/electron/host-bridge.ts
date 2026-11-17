@@ -120,8 +120,6 @@ const notesSchema = z.object({
   markdown: z.string().max(MAX_NOTES_LENGTH),
 })
 
-const ptyIdSchema = z.number().int().positive()
-
 // The picker's answer becomes `projects.root`, so it must fit the setting and be an absolute folder
 const chosenRootSchema = pathText(LIMITS.projectsRoot.max).refine((text) => isAbsolute(text))
 
@@ -156,8 +154,6 @@ export interface BridgeOptions {
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
   }
   readonly agents: readonly AgentProfile[]
-  // The agents that can start in a terminal: their command is on the tabs' PATH
-  readonly launchers: { launchable(): Promise<readonly AgentProfile[]> }
   readonly shell: Pick<PtyOptions, 'file' | 'args'>
   readonly home: string
   readonly logger: Logger
@@ -341,12 +337,6 @@ export function registerHostBridge(options: BridgeOptions) {
     return session ? options.sessions.snapshot(session.pid) : undefined
   })
   ipcMain.handle(hostChannels.agentProfiles, () => options.agents)
-  // Asked when a review's tab comes to a shell prompt: a refused or unknown tab answers none, without a log line
-  ipcMain.handle(hostChannels.agentLaunchable, (_event, id: unknown) => {
-    const parsed = ptyIdSchema.safeParse(id)
-    if (!parsed.success || !sessions.has(parsed.data)) return []
-    return options.launchers.launchable()
-  })
   ipcMain.handle(hostChannels.projectsList, () => options.projects.list())
   ipcMain.handle(hostChannels.projectsToggleFavorite, (_event, path: string) =>
     options.projects.toggleFavorite(path),

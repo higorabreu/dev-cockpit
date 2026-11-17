@@ -1,5 +1,4 @@
 import {
-  type AgentProfile,
   type AgentState,
   type BranchInfo,
   branchName,
@@ -29,7 +28,7 @@ import { createDiffView, LINE_HEIGHT } from './diff-view.ts'
 import { counts, createFileList } from './file-list.ts'
 import { createReviewComments } from './review-comments.ts'
 import { createReviewRefresh } from './review-refresh.ts'
-import { type AgentChoice, createReviewSend } from './review-send.ts'
+import { createReviewSend } from './review-send.ts'
 
 // Loads this fast never show "Reading the changes", so the pane does not flash
 const LOADING_TEXT_MS = 200
@@ -87,12 +86,8 @@ export interface ReviewPaneDeps {
   // Types a line at the tab's terminal prompt, without Enter, and gives it the keys; false when the
   // terminal could not take it
   send(text: string): boolean
-  // What runs in the tab's terminal, read fresh, and the agents that could start there
+  // What runs in the tab's terminal, read fresh at sending
   activity(): Promise<SessionActivityInfo | undefined>
-  launchable(): Promise<readonly AgentProfile[]>
-  profiles(): readonly AgentProfile[]
-  // The small menu to pick the agent to start, under the send button
-  chooseAgent(anchor: HTMLElement, choices: readonly AgentChoice[], focusAt: number): void
 }
 
 let measured: number | undefined
@@ -214,10 +209,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     root: () => root,
     cwd: deps.cwd,
     activity: deps.activity,
-    launchable: deps.launchable,
-    profiles: deps.profiles,
     type: deps.send,
-    choose: deps.chooseAgent,
     notice: showNotice,
   })
   // Beside the other header controls, before the index toggle
@@ -723,7 +715,6 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     open() {
       document.addEventListener('visibilitychange', onVisibility)
       refresh.open()
-      sender.recheck()
       diff.unpark()
     },
     // The reading stays: reopened in the same tab, the review is where it was left

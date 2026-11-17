@@ -235,33 +235,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       const ptyId = sessions.get(tabId)?.ptyId
       return ptyId === undefined ? undefined : api.session.activity(ptyId)
     },
-    async launchable(tabId) {
-      const ptyId = sessions.get(tabId)?.ptyId
-      return ptyId === undefined ? [] : api.agent.launchable(ptyId)
-    },
-    profiles: () => agentProfiles,
-    menu: (anchor, choices, focusAt) => openMenuUnder(anchor, choices, focusAt),
   })
-
-  // A menu under an element on screen, or high in the window when the element is hidden (a narrow tab
-  // showing its terminal); closed without a choice, the focus goes back where it was
-  function openMenuUnder(
-    anchor: HTMLElement,
-    choices: readonly { label: string; run(): void }[],
-    focusAt: number,
-  ) {
-    const back = document.activeElement
-    const box = anchor.getBoundingClientRect()
-    const shown = box.width > 0
-    menu.open(
-      choices.map((choice) => ({ label: choice.label, enabled: true, run: choice.run })),
-      shown ? box.left : window.innerWidth / 2,
-      shown ? box.bottom : window.innerHeight / 4,
-      false,
-      () => back instanceof HTMLElement && back.focus(),
-      focusAt,
-    )
-  }
 
   let activeSnapshot: SessionSnapshot | undefined
   let environment: ComposeStatus | undefined

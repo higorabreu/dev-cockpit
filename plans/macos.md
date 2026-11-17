@@ -125,10 +125,10 @@ The order is meant to bring the tester in as late as possible and once per batch
   `Info.plist` belongs to the packaging, MAC-T10.
 - [x] MAC-T6. Terminal environment and PATH. Find the login shell (`$SHELL`, otherwise `/bin/zsh`) and open
   it as a login shell on the Mac, like Terminal.app. Read the login shell's PATH once at boot
-  (`$SHELL -i -l -c 'printf %s "$PATH"'`, with a 2 s timeout and path validation) and hand the same PATH to
+  (`$SHELL -ilc 'printf %s "$PATH"'`, with a 2 s timeout and path validation) and hand the same PATH to
   the daemon, to the adapters that call `git`, `docker` and `claude` and to the PTY, so it does not
   depend on the app having been opened from a terminal. A failure falls back to the inherited PATH and logs
-  `warn`. (C9) Done: `shell/src/platform/shell-path.ts` reads it between marks, so startup files
+  `warn`. (C9) Done: `shell/src/platform/darwin/login-path.ts` reads it between marks, so startup files
   that print do not spoil it. `selectPlatform` gives it as `loginPath()` and the terminal (`$SHELL -l` on the
   Mac, unchanged on Linux). `main.ts` sets `process.env.PATH` when it arrives, off the boot path: the tabs are
   login shells and need nothing, the daemon waits for it, and `git` or `docker` get it from then on. Checked on a Mac with the packaged app started with a minimal PATH and no `SHELL`:
