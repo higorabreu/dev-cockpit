@@ -18,14 +18,21 @@ import {
   type Translate,
 } from '@dck/core'
 import { inputGate } from '../platform/input-gate.ts'
-import { fitRows, followSelection, listAnchor, listBand, listLimit } from './list-fit.ts'
+import {
+  centeredLayout,
+  followSelection,
+  listBand,
+  type Placement,
+  placeWheel,
+  type WheelLayout,
+} from './list-fit.ts'
 import { type MenuMarkup, switcherMarkup, wheelMarkup } from './menu-view.ts'
 import { createPointerIntent } from './pointer-intent.ts'
 
 // Space the list keeps from the window's top edge and from the tab bar, in CSS pixels
 const EDGE = 8
-// Measuring settles the rows in two repaints at most; the third pass is a guard
-const FIT_PASSES = 3
+// Measuring settles the wheel and its rows in three repaints at most; the fourth pass is a guard
+const FIT_PASSES = 4
 // Wheel travel that moves the selection one row: a mouse notch (about 100 pixels) moves one row, not
 // several, so the selection stays precise; a touchpad's small deltas add up to it
 const WHEEL_STEP = 40
@@ -82,9 +89,13 @@ export function createHoldMenuController(
 ) {
   let mode: Mode = { kind: 'closed' }
   const pointer = createPointerIntent()
-  // Per category: how many rows fit on its side of the wheel, and the first one on screen
+  // Per category: how many rows fit on its side of the wheel, the first one on screen and where the
+  // wheel sat
   const rowsFit = new Map<number, number>()
   const firstRow = new Map<number, number>()
+  const layouts = new Map<number, WheelLayout>()
+  // The wheel's top on screen, kept while the pointer moves the selection
+  let shownTop: number | undefined
   let wheelTravel = 0
 
   const gesture = createHoldGesture({
@@ -95,6 +106,8 @@ export function createHoldMenuController(
         // The window may have changed size since the last time
         rowsFit.clear()
         firstRow.clear()
+        layouts.clear()
+        shownTop = undefined
         wheelTravel = 0
       }
       pointer.keysTakeOver()
@@ -112,8 +125,27 @@ export function createHoldMenuController(
     elements.hint.style.top = `${Math.round(box.top + (box.height - elements.hint.offsetHeight) / 2)}px`
   }
 
-  // Rows that fit the room on the list's side of the wheel, or undefined when there is nothing to measure
-  function measureFit(menu: HoldMenuState, rows: number, total: number): number | undefined {
+  const band = () => listBand(elements.bar.getBoundingClientRect(), window.innerHeight, EDGE)
+
+  function place(layout: WheelLayout) {
+    elements.card.style.setProperty('--wheel', `${layout.size}px`)
+    elements.card.style.top = `${layout.top}px`
+  }
+
+  // The wheel slides between places only once it is on screen, never from where the last opening left it
+  function settle() {
+    if (elements.card.dataset.placed !== undefined) return
+    void elements.card.offsetTop
+    elements.card.dataset.placed = ''
+  }
+
+  // Where the wheel goes and the rows its list shows, or undefined when there is nothing to measure
+  function measureFit(
+    menu: HoldMenuState,
+    rows: number,
+    total: number,
+    pinned: number | undefined,
+  ): Placement | undefined {
     const list = elements.card.querySelector<HTMLElement>('.list')
     const shown = list?.querySelectorAll<HTMLElement>('.it:not(.gone)')
     const first = shown?.[0]
@@ -126,34 +158,43 @@ export function createHoldMenuController(
     if (pitch <= 0) return undefined
     let cues = 0
     for (const cue of list.querySelectorAll<HTMLElement>('.cue')) cues += cue.offsetHeight
-    const anchor = listAnchor(menu.category, menu.categories.length)
-    // offsetTop ignores the card's opening scale, which would skew a bounding box
-    const anchorY = elements.card.offsetTop + anchor.y
-    const band = listBand(elements.bar.getBoundingClientRect(), window.innerHeight, EDGE)
-    const limit = listLimit(anchor.opening, anchorY, band)
-    return fitRows({ total, rows, height: list.offsetHeight, pitch, cues }, limit)
+    const measure = { total, rows, height: list.offsetHeight, pitch, cues }
+    return placeWheel(menu.category, menu.categories.length, band(), measure, pinned)
   }
 
-  function drawWheel(menu: HoldMenuState) {
+  const sameLayout = (a: WheelLayout, b: WheelLayout) =>
+    a.size === b.size && Math.abs(a.top - b.top) < 0.5 && Math.abs(a.overlap - b.overlap) < 0.5
+
+  // `still` keeps the wheel where it is, for a selection the pointer made
+  function drawWheel(menu: HoldMenuState, still: boolean) {
     const category = menu.category
     const total = currentCategory(menu)?.items.length ?? 0
+    const pinned = still ? shownTop : undefined
     let rows = Math.min(rowsFit.get(category) ?? total, total)
+    const start = layouts.get(category) ?? centeredLayout(band())
+    let layout = pinned === undefined ? start : { ...start, top: pinned }
     for (let pass = 1; ; pass++) {
       const shown = followSelection(total, selectedIndex(menu), rows, firstRow.get(category))
-      paint(wheelMarkup(menu, t, shown))
-      const fit = pass < FIT_PASSES ? measureFit(menu, rows, total) : undefined
-      if (fit === undefined || fit === rows) {
+      paint(wheelMarkup(menu, t, shown, layout))
+      place(layout)
+      const fit = pass < FIT_PASSES ? measureFit(menu, rows, total, pinned) : undefined
+      if (fit === undefined || (fit.rows === rows && sameLayout(fit.layout, layout))) {
         firstRow.set(category, shown.start)
         break
       }
-      rows = fit
+      rows = fit.rows
+      layout = fit.layout
     }
     rowsFit.set(category, rows)
+    layouts.set(category, layout)
+    shownTop = layout.top
+    settle()
   }
 
-  function draw() {
-    if (mode.kind === 'wheel') drawWheel(mode.menu)
+  function draw(still = false) {
+    if (mode.kind === 'wheel') drawWheel(mode.menu, still)
     if (mode.kind === 'switcher') {
+      elements.card.style.removeProperty('top')
       const { switcher, tabs } = mode
       const chips = switcher.order.map((id) => {
         const tab = tabs.find((entry) => entry.id === id)
@@ -166,6 +207,7 @@ export function createHoldMenuController(
   function close() {
     mode = { kind: 'closed' }
     elements.scrim.classList.remove('open')
+    delete elements.card.dataset.placed
   }
 
   function stepTabs(direction: 1 | -1) {
@@ -239,7 +281,7 @@ export function createHoldMenuController(
     if (total === 0 || next === selectedIndex(menu)) return
     mode = { ...mode, menu: select(menu, menu.category, next) }
     pointer.keysTakeOver()
-    draw()
+    draw(true)
   }
 
   function onWheel(event: WheelEvent) {
@@ -274,7 +316,7 @@ export function createHoldMenuController(
     if (click) commit()
     // Redrawn only when the selection changes, not on every move inside a sector
     else if (next.category !== current.category || selectedIndex(next) !== selectedIndex(current))
-      draw()
+      draw(true)
   }
 
   window.addEventListener('keydown', onKeyDown, true)

@@ -1,8 +1,15 @@
 import { sectorAngle } from '@dck/core'
 
 export const WHEEL_SIZE = 196
+// Smallest wheel that keeps its labels at full size; a shorter window scales the whole wheel down
+export const COMPACT_WHEEL = 164
+// A band shorter than this leaves the full wheel's vertical lists too few rows, so the wheel gets compact
+const COMPACT_BELOW = 400
+const MIN_WHEEL = 96
 // Distance from the wheel's edge to the list
 const LIST_GAP = 12
+// Height of an overflow cue, as in hold-menu.css
+const CUE_HEIGHT = 24
 
 export type Opening = 'side' | 'up' | 'down'
 
@@ -15,15 +22,15 @@ export interface ListAnchor {
 
 // The list opens outside the wheel, in the direction of the selected sector; top and bottom sectors have
 // less room, so their list opens vertically
-export function listAnchor(index: number, count: number): ListAnchor {
+export function listAnchor(index: number, count: number, size = WHEEL_SIZE): ListAnchor {
   const angle = sectorAngle(index, count)
   const cx = Math.cos(angle)
   const cy = Math.sin(angle)
-  const reach = WHEEL_SIZE / 2 + LIST_GAP
+  const reach = size / 2 + LIST_GAP
   let opening: Opening = 'down'
   if (Math.abs(cx) > 0.35) opening = 'side'
   else if (cy < 0) opening = 'up'
-  return { opening, x: WHEEL_SIZE / 2 + cx * reach, y: WHEEL_SIZE / 2 + cy * reach }
+  return { opening, x: size / 2 + cx * reach, y: size / 2 + cy * reach }
 }
 
 export interface Band {
@@ -31,7 +38,7 @@ export interface Band {
   readonly bottom: number
 }
 
-// The window's height free for the list: the tab bar sits under the terminal, or on top in full screen
+// The window's height free for the menu: the tab bar sits under the terminal, or on top in full screen
 export function listBand(
   bar: { readonly top: number; readonly bottom: number; readonly height: number },
   windowHeight: number,
@@ -78,12 +85,73 @@ export interface ListMeasure {
   readonly cues: number
 }
 
+// Height of the list with every row on screen
+const fullHeight = ({ total, rows, height, pitch, cues }: ListMeasure) =>
+  height - rows * pitch - cues + total * pitch
+
 // Every row when they all fit, otherwise as many as fit between the cues, and at least one. Without cues on
 // screen their height is unknown, so the answer can still overflow by that much; measuring again settles it
 export function fitRows(measure: ListMeasure, limit: number): number {
   const { total, rows, height, pitch, cues } = measure
+  if (fullHeight(measure) <= limit) return total
   const frame = height - rows * pitch - cues
-  if (frame + total * pitch <= limit) return total
   const fit = Math.floor((limit - frame - cues) / pitch)
   return Math.max(1, Math.min(total - 1, fit))
+}
+
+export interface WheelLayout {
+  readonly size: number
+  // The wheel's top edge, in pixels from the window's top
+  readonly top: number
+  // How far a vertical list moves onto the wheel, in a window too short for one row of it
+  readonly overlap: number
+}
+
+// Full size while the band has room for it and its lists, compact below that, and smaller still only when
+// the compact wheel itself would not fit
+export function wheelSize(band: Band): number {
+  const height = band.bottom - band.top
+  if (height >= COMPACT_BELOW) return WHEEL_SIZE
+  return Math.max(MIN_WHEEL, Math.min(COMPACT_WHEEL, height))
+}
+
+export function centeredLayout(band: Band): WheelLayout {
+  const size = wheelSize(band)
+  return { size, top: (band.top + band.bottom - size) / 2, overlap: 0 }
+}
+
+// Centered on the band, moved away from its list only as far as the list needs, and kept inside the band
+function wheelTop(anchor: ListAnchor, size: number, band: Band, need: number): number {
+  let top = (band.top + band.bottom - size) / 2
+  if (anchor.opening === 'up') top = Math.max(top, band.top + need - anchor.y)
+  if (anchor.opening === 'down') top = Math.min(top, band.bottom - need - anchor.y)
+  return Math.min(Math.max(top, band.top), Math.max(band.top, band.bottom - size))
+}
+
+export interface Placement {
+  readonly layout: WheelLayout
+  readonly rows: number
+}
+
+// Where the wheel goes and how many rows its list shows. A `pinned` top keeps the wheel still, so it never
+// slides out from under the pointer; the list then fits the room it has there
+export function placeWheel(
+  index: number,
+  count: number,
+  band: Band,
+  measure: ListMeasure,
+  pinned?: number,
+): Placement {
+  const size = wheelSize(band)
+  const need = fullHeight(measure)
+  const anchor = listAnchor(index, count, size)
+  const top = pinned ?? wheelTop(anchor, size, band, need)
+  const limit = listLimit(anchor.opening, top + anchor.y, band)
+  const rows = fitRows(measure, limit)
+  // The list stays in its sector's direction and inside the window: with no room for one row between the
+  // cues, it covers part of the wheel instead
+  const { height, pitch, cues } = measure
+  const smallest = Math.min(need, height - measure.rows * pitch - cues + pitch + 2 * CUE_HEIGHT)
+  const overlap = anchor.opening === 'side' ? 0 : Math.max(0, smallest - limit)
+  return { layout: { size, top, overlap }, rows }
 }

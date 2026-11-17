@@ -959,3 +959,26 @@ over the tab bar and its hint.
 **How to revert:** restore the fixed `maxRows` and the centered `visibleWindow` in
 `ui/src/hold-menu/menu-view.ts`, and drop `ui/src/hold-menu/list-fit.ts`, the measuring in the controller
 and the `.cue` styles.
+
+## D61. The hold menu wheel moves away from its list and shrinks in a short window
+
+**Decision:** the wheel is centered over the terminal, between the window's edge and the tab bar, and
+moves away from the open list only as far as the list needs to show every row, never out of that band. In a
+band shorter than 400 pixels it is drawn compact, 164 pixels instead of 196, with the hub and the sectors
+narrower and the labels and icons at full size; only when even the compact wheel would not fit does the
+whole wheel scale down. The list always opens in its sector's direction: in a window too short for one row
+between its cues there, it covers part of the wheel instead of leaving the window. The wheel moves only for
+a selection made with the keys: a selection made with the pointer keeps it still and fits the list to the
+room it has there. A move slides in 170 milliseconds, without motion when the system asks for less, and a
+new opening places the wheel without a slide.
+**Reason:** with the wheel fixed in the middle (D60), at half of a 1080 pixel screen the Tabs list showed 3
+of its 7 rows, and in a 360 pixel window the Agent list ran over the tab bar and the Tabs list off the top.
+Moving the wheel shows the whole Tabs list at half of a 1080 pixel screen and keeps every list inside the
+window at every height. A wheel that moved under a still pointer would slide its sector away and select
+another one, so the pointer never moves it. Opening a cramped list beside the wheel was tried again and
+dropped by the maintainer (2026-11-17): the sector's direction stays, as in D60.
+**Accepted cost:** the wheel changes place as the keys move between sectors in a short window; at a third
+of a 768 pixel screen the Tabs and Agent lists show one row and cover the top or bottom of the wheel.
+**How to revert:** drop `placeWheel`, `wheelSize` and the overlap from `ui/src/hold-menu/list-fit.ts`,
+the compact geometry from `menu-view.ts`, the placement in the controller and the `--wheel` and `top` rules
+in `styles/hold-menu.css`, and set the card back to `position: relative` in the centered flex scrim.

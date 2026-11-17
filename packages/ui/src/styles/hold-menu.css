@@ -37,10 +37,21 @@
   transform: none;
 }
 
+/* The controller sets the size and the top: centered over the terminal, moved away from a list that
+   needs room */
 #menu-card.wheel-mode {
-  position: relative;
-  width: 196px;
-  height: 196px;
+  position: absolute;
+  left: calc(50% - var(--wheel, 196px) / 2);
+  width: var(--wheel, 196px);
+  height: var(--wheel, 196px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #menu-card.wheel-mode[data-placed] {
+    transition:
+      transform var(--motion-fast) var(--motion-easing),
+      top var(--motion-normal) var(--motion-easing);
+  }
 }
 
 #menu-card.switch-mode {
