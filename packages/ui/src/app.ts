@@ -16,6 +16,7 @@ import {
   type HostApi,
   JIRA_CONNECTOR,
   jiraTicketLink,
+  localeFor,
   type MenuCategory,
   openTab,
   type PluralKey,
@@ -44,7 +45,6 @@ import { createSessionsSection } from './panel/sessions-section.ts'
 import { createSplitPreferences } from './panes/split-preferences.ts'
 import { createTabView, type TabView } from './panes/tab-view.ts'
 import { createKeymap, keyboardFor } from './platform/keymap.ts'
-import { localeFor } from './platform/locale.ts'
 import { bindShortcuts } from './platform/shortcuts.ts'
 import { applyTheme, themeFor, watchSystemTheme } from './platform/theme.ts'
 import { createProjectSearch } from './projects/project-search.ts'

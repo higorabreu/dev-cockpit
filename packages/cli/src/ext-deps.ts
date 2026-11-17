@@ -2,6 +2,7 @@ import { join } from 'node:path'
 import { createFileExtensionFinder } from '@dck/adapter-extension-files'
 import { EXTENSION_API_VERSION, type Logger, mergeSettings, parseSettings } from '@dck/core'
 import type { ExtDeps } from './ext-commands.ts'
+import { parseJson, settingsFromText } from './settings-file.ts'
 
 export interface ExtDepsOptions {
   // The window's data folder, where settings.json and the extensions folder live
@@ -13,15 +14,6 @@ export interface ExtDepsOptions {
   readFile(path: string): Promise<string | undefined>
   // Replaces the file as a whole (a temporary file, then a rename); false when it could not
   writeFile(path: string, text: string): Promise<boolean>
-}
-
-// Undefined when the text is not JSON
-function parseJson(text: string): unknown {
-  try {
-    return JSON.parse(text.replace(/^\uFEFF/, ''))
-  } catch {
-    return undefined
-  }
 }
 
 export function createExtDeps(options: ExtDepsOptions): ExtDeps {
@@ -38,9 +30,7 @@ export function createExtDeps(options: ExtDepsOptions): ExtDeps {
       logger,
     }),
     async disabled() {
-      const text = await options.readFile(settingsFile)
-      // A corrupted settings file reads as the defaults, the same way the window treats it
-      return new Set(parseSettings(text === undefined ? {} : parseJson(text)).extensions.disabled)
+      return new Set(settingsFromText(await options.readFile(settingsFile)).extensions.disabled)
     },
     // Written in the window's own format, so the next save there changes nothing else
     async saveDisabled(ids) {

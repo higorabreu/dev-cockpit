@@ -1,5 +1,5 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { dirname, join } from 'node:path'
 import { findRepositoryRoot } from '@dck/adapter-extension-files'
 import {
   connectTo,
@@ -11,7 +11,8 @@ import {
   checkProfile,
   createJsonLogger,
   createTranslator,
-  pickLocale,
+  environmentLanguages,
+  localeFor,
   silentLogger,
 } from '@dck/core'
 import { createConnectorViews, startDaemon } from '@dck/daemon'
@@ -19,6 +20,7 @@ import { systemSecretStore } from '@dck/daemon/secret-store'
 import packageJson from '../package.json' with { type: 'json' }
 import { runCli } from './cli.ts'
 import { createExtDeps } from './ext-deps.ts'
+import { settingsFromText } from './settings-file.ts'
 
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
 const args = process.argv.slice(2)
@@ -54,13 +56,13 @@ if (profile?.kind === 'invalid') {
   process.on('SIGINT', stopDaemon)
   process.on('SIGTERM', stopDaemon)
 } else {
+  const configDir = process.env.DCK_CONFIG_DIR ?? defaultConfigDir()
+  const settingsText = await readFile(join(configDir, 'settings.json'), 'utf8').catch(
+    () => undefined,
+  )
+  // The language chosen in the window's settings, else the terminal's
   const t = createTranslator(
-    pickLocale([
-      process.env.LC_ALL ?? '',
-      process.env.LC_MESSAGES ?? '',
-      process.env.LANG ?? '',
-      process.env.LANGUAGE ?? '',
-    ]),
+    localeFor(settingsFromText(settingsText).language, environmentLanguages(process.env)),
   ).t
   process.exitCode = await runCli(args, {
     endpoint,
@@ -70,7 +72,7 @@ if (profile?.kind === 'invalid') {
     out: (text) => process.stdout.write(text),
     err: (text) => process.stderr.write(text),
     ext: createExtDeps({
-      configDir: process.env.DCK_CONFIG_DIR ?? defaultConfigDir(),
+      configDir,
       repositoryRoot: (await findRepositoryRoot(process.cwd())) ?? process.cwd(),
       appVersion: packageJson.version,
       logger: silentLogger,

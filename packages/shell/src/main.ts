@@ -19,7 +19,7 @@ import {
   errorBody,
   fail,
   hostChannels,
-  pickLocale,
+  localeFor,
   type Settings,
   storedAccount,
   type Translate,
@@ -476,9 +476,7 @@ app.whenReady().then(async () => {
   // Read on every menu build: the language can change in settings while the app is open
   const t = ((key, params) => {
     const { language } = settingsStore.get().settings
-    return createTranslator(
-      language === 'auto' ? pickLocale(app.getPreferredSystemLanguages()) : language,
-    ).t(key, params)
+    return createTranslator(localeFor(language, app.getPreferredSystemLanguages())).t(key, params)
   }) as Translate
   const openSettings = () => {
     dock.show()

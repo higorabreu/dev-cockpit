@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { catalogs, createLiveTranslator, createTranslator, pickLocale } from './translator.ts'
+import {
+  catalogs,
+  createLiveTranslator,
+  createTranslator,
+  environmentLanguages,
+  localeFor,
+  pickLocale,
+} from './translator.ts'
 
 describe('createTranslator', () => {
   it('should return the text of the locale when translating a key', () => {
@@ -62,9 +69,45 @@ describe('pickLocale', () => {
     expect(pickLocale(['de-DE', 'en-GB'])).toBe('en')
   })
 
-  it('should fall back to portuguese when no language is known', () => {
-    expect(pickLocale(['ja-JP'])).toBe('pt-BR')
-    expect(pickLocale([])).toBe('pt-BR')
+  it('should fall back to english when no language has a catalog', () => {
+    expect(pickLocale(['ja-JP'])).toBe('en')
+    expect(pickLocale(['de-DE', 'fr-FR'])).toBe('en')
+    expect(pickLocale([])).toBe('en')
+  })
+})
+
+describe('localeFor', () => {
+  it('should keep the language chosen in settings when it is not automatic', () => {
+    expect(localeFor('pt-BR', ['en-US'])).toBe('pt-BR')
+  })
+
+  it('should follow the system when the setting is automatic', () => {
+    expect(localeFor('auto', ['pt-BR'])).toBe('pt-BR')
+    expect(localeFor('auto', ['de-DE'])).toBe('en')
+  })
+})
+
+describe('environmentLanguages', () => {
+  it('should read the message locale with LC_ALL before LC_MESSAGES and LANG', () => {
+    expect(environmentLanguages({ LC_ALL: 'pt_BR.UTF-8', LANG: 'en_US.UTF-8' })).toEqual([
+      'pt_BR.UTF-8',
+    ])
+    expect(environmentLanguages({ LC_MESSAGES: 'pt_BR.UTF-8', LANG: 'en_US.UTF-8' })).toEqual([
+      'pt_BR.UTF-8',
+    ])
+  })
+
+  it('should put the LANGUAGE list before the locale when the locale is not C', () => {
+    expect(environmentLanguages({ LANGUAGE: 'pt_BR:en', LANG: 'de_DE.UTF-8' })).toEqual([
+      'pt_BR',
+      'en',
+      'de_DE.UTF-8',
+    ])
+  })
+
+  it('should ignore LANGUAGE when the locale is C, as gettext does', () => {
+    expect(environmentLanguages({ LANGUAGE: 'pt_BR', LANG: 'C.UTF-8' })).toEqual(['C.UTF-8'])
+    expect(environmentLanguages({ LANGUAGE: 'pt_BR' })).toEqual([])
   })
 })
 

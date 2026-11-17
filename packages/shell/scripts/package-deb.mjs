@@ -78,7 +78,8 @@ StartupWMClass=${NAME}
 Actions=Toggle;
 
 [Desktop Action Toggle]
-Name=Mostrar ou ocultar
+Name=Show or hide
+Name[pt_BR]=Mostrar ou ocultar
 Exec=/usr/bin/dck toggle
 `,
 )
