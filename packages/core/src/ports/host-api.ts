@@ -1,5 +1,6 @@
 import type { AgentSignal } from '../attention/agent-signal.ts'
 import type { Connector } from '../connectors/connector.ts'
+import type { SystemFontsInfo } from '../fonts/fonts.ts'
 import type { ErrorBody } from '../ipc/protocol.ts'
 import type { Result } from '../result.ts'
 import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
@@ -122,6 +123,10 @@ export interface HostApi {
     // The system folder picker; undefined when the user cancels
     chooseRoot(): Promise<string | undefined>
   }
+  // The user's terminal font, the system's monospace font and the installed families
+  readonly fonts: {
+    system(): Promise<SystemFontsInfo>
+  }
   // The tabs of the last run, kept for the next start
   readonly tabs: {
     saved(): Promise<SavedTabs | undefined>
@@ -178,6 +183,7 @@ export const hostChannels = {
   projectsTouch: 'projects:touch',
   projectsToggleFavorite: 'projects:toggle-favorite',
   projectsChooseRoot: 'projects:choose-root',
+  fontsSystem: 'fonts:system',
   tabsSaved: 'tabs:saved',
   tabsSave: 'tabs:save',
   windowToggleFullHeight: 'window:toggle-full-height',

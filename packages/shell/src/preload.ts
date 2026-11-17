@@ -85,6 +85,9 @@ const api: HostApi = {
     toggleFavorite: (path) => ipcRenderer.invoke(hostChannels.projectsToggleFavorite, path),
     chooseRoot: () => ipcRenderer.invoke(hostChannels.projectsChooseRoot),
   },
+  fonts: {
+    system: () => ipcRenderer.invoke(hostChannels.fontsSystem),
+  },
   tabs: {
     saved: () => ipcRenderer.invoke(hostChannels.tabsSaved),
     save: (tabs) => ipcRenderer.send(hostChannels.tabsSave, tabs),

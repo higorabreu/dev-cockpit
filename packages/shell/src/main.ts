@@ -300,6 +300,7 @@ app.whenReady().then(async () => {
       createRecencyStore(join(app.getPath('userData'), 'recent-projects.json'), logger),
       createFavoritesStore(join(app.getPath('userData'), 'favorite-projects.json'), logger),
     ),
+    fonts: platform.fonts,
     savedTabs: createSavedTabsFile(join(app.getPath('userData'), 'open-tabs.json'), logger),
     // Modal to the window: it stays on top of everything, so a free dialog would open behind it
     async pickFolder() {

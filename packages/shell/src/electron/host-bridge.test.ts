@@ -173,6 +173,14 @@ function setup(picked: string | undefined = undefined) {
       touch: async (path: string) => void touched.push(path),
       toggleFavorite: async (path: string) => !path.endsWith('/pinned'),
     },
+    fonts: {
+      read: async () => ({
+        terminal: 'MesloLGS NF',
+        families: [],
+        monospaceFamilies: [],
+        symbols: [],
+      }),
+    },
     savedTabs: {
       load: async () => savedTabs,
       save: async (tabs) => {

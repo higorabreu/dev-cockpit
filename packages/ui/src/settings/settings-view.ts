@@ -10,9 +10,12 @@ import {
   type HostApi,
   LIMITS,
   type MessageKey,
+  noSystemFonts,
   type Settings,
   type SettingsPatch,
+  type SystemFontsInfo,
   type Translator,
+  terminalFamily,
 } from '@dck/core'
 import { trapFocus } from '../kit/focus-trap.ts'
 import { keys as keyCaps } from '../kit/keys.ts'
@@ -70,6 +73,9 @@ const reference = (keymap: Keymap): ReadonlyArray<readonly [string, string]> => 
   ['settings.ref.settings', keymap.label('settings')],
 ]
 
+// The shipped fonts are registered as variable fonts; the screen names them as the user knows them
+const shownFamily = (family: string) => family.replace(/ Variable$/, '')
+
 const TABS = [
   { id: 'general', label: 'settings.tab.general' },
   { id: 'shortcuts', label: 'settings.group.shortcuts' },
@@ -99,6 +105,8 @@ export function createSettingsView(
   const t = i18n.t
   let recording = false
   let autostart = false
+  // The fonts installed, asked for each time the screen opens so a font installed since then shows up
+  let fonts: SystemFontsInfo = noSystemFonts
   let confirmingReset = false
   let activeTab: TabId = TABS[0].id
   // The enabled connectors, each with its own section on the Connections page
@@ -223,6 +231,27 @@ export function createSettingsView(
   }
 
   // The stored value is a fraction (0.6); the bar and the text show a percentage (60)
+  // A font picker: the first option is the default (null in the file), then the installed families. A name
+  // set by hand that is not installed stays listed, so the control never shows another font than the file's
+  function fontSelect(key: string, families: readonly string[], fallback: string): HTMLElement {
+    const chosen = getPath(settings.current(), key)
+    const current = typeof chosen === 'string' ? chosen : ''
+    const names = current && !families.includes(current) ? [current, ...families] : families
+    const control = createSelect({
+      id: `set-${key.replace(/\./g, '-')}`,
+      options: [
+        { value: '', label: fallback },
+        ...names.map((name) => ({ value: name, label: name })),
+      ],
+      value: current,
+      labelledBy: labelId(key),
+      disabled: disabled(key),
+      onChange: (value) => void commit(patchFor(key, value === '' ? null : value)),
+    })
+    control.button.dataset.focus = `set-${key}`
+    return control.element
+  }
+
   function percent(
     key: string,
     limits: { readonly min: number; readonly max: number },
@@ -741,10 +770,52 @@ export function createSettingsView(
             percent('opacity', LIMITS.opacity, (fraction) => deps.previewOpacity(fraction)),
           ),
           row(
+            'appearance.fontFamily',
+            t('settings.interfaceFont'),
+            fontSelect(
+              'appearance.fontFamily',
+              fonts.families,
+              t('settings.font.cockpit', { font: 'Inter' }),
+            ),
+          ),
+          row(
+            'appearance.codeFontFamily',
+            t('settings.codeFont'),
+            fontSelect(
+              'appearance.codeFontFamily',
+              fonts.monospaceFamilies,
+              t('settings.font.cockpit', { font: 'JetBrains Mono' }),
+            ),
+            t('settings.codeFont.hint'),
+          ),
+        ),
+        group(
+          t('settings.group.terminal'),
+          row(
+            'terminal.fontFamily',
+            t('settings.terminalFont'),
+            fontSelect(
+              'terminal.fontFamily',
+              fonts.monospaceFamilies,
+              t('settings.font.system', { font: shownFamily(terminalFamily(null, fonts)) }),
+            ),
+            t('settings.terminalFont.hint'),
+          ),
+          row(
             'fontSize',
             t('settings.fontSize'),
             number('fontSize', LIMITS.fontSize.min, LIMITS.fontSize.max, 'px'),
           ),
+          row(
+            'terminal.cursorStyle',
+            t('settings.cursorStyle'),
+            select('terminal.cursorStyle', [
+              ['block', t('settings.cursorStyle.block')],
+              ['bar', t('settings.cursorStyle.bar')],
+              ['underline', t('settings.cursorStyle.underline')],
+            ]),
+          ),
+          row('terminal.cursorBlink', t('settings.cursorBlink'), checkbox('terminal.cursorBlink')),
         ),
         group(
           t('settings.group.window'),
@@ -891,6 +962,10 @@ export function createSettingsView(
     render()
     body.querySelector<HTMLElement>('.snav-item[aria-selected="true"]')?.focus()
     void loadConnections()
+    void api.fonts.system().then((found) => {
+      fonts = found
+      if (isOpen()) render()
+    })
     void api.autostart.isEnabled().then((on) => {
       autostart = on
       if (isOpen()) render()

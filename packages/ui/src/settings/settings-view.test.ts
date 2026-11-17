@@ -47,6 +47,15 @@ const api = {
     status: async () => ({ kind: 'none' }),
   },
   autostart: { isEnabled: async () => false },
+  fonts: {
+    system: async () => ({
+      terminal: 'MesloLGS NF',
+      monospace: 'DejaVu Sans Mono',
+      families: ['Cantarell', 'DejaVu Sans Mono', 'MesloLGS NF'],
+      monospaceFamilies: ['DejaVu Sans Mono', 'MesloLGS NF'],
+      symbols: ['MesloLGS NF'],
+    }),
+  },
 } as unknown as HostApi
 
 function open(
@@ -106,7 +115,15 @@ describe('settings view selects', () => {
     body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
 
     expect(body.querySelector('select')).toBeNull()
-    expect(general).toEqual(['set-language', 'set-theme', 'set-review.layout'])
+    expect(general).toEqual([
+      'set-language',
+      'set-theme',
+      'set-appearance.fontFamily',
+      'set-appearance.codeFontFamily',
+      'set-terminal.fontFamily',
+      'set-terminal.cursorStyle',
+      'set-review.layout',
+    ])
     expect(combobox('shortcuts.holdTrigger').getAttribute('role')).toBe('combobox')
     view.close()
   })
@@ -325,6 +342,7 @@ function connectionsHost(
       disconnect: async (): Promise<ConnectionStatus> => ({ kind: 'none' }),
     },
     autostart: { isEnabled: async () => false },
+    fonts: api.fonts,
   } as unknown as HostApi
   return {
     host,
@@ -614,5 +632,91 @@ describe('settings view, focus around a connection', () => {
 
     expect(page.isClosed()).toBe(true)
     fake.answer()
+  })
+})
+
+describe('settings view fonts and cursor', () => {
+  const optionLabels = (control: HTMLElement) =>
+    [...(control.parentElement?.querySelectorAll('.select-label') ?? [])].map(
+      (option) => option.textContent,
+    )
+
+  it('should name the terminal font of the system in the default option when the host found it', async () => {
+    // Arrange
+    const { combobox, view } = open()
+    await settle()
+    const font = combobox('terminal.fontFamily')
+
+    // Act
+    press(font, 'Enter')
+
+    // Assert
+    expect(font.querySelector('[data-current]')?.textContent).toBe('System (MesloLGS NF)')
+    expect(optionLabels(font)).toEqual(['System (MesloLGS NF)', 'DejaVu Sans Mono', 'MesloLGS NF'])
+    view.close()
+  })
+
+  it('should save the picked family and null for the default when picked by keyboard', async () => {
+    // Arrange
+    const { combobox, patches, view } = open()
+    await settle()
+    const font = combobox('appearance.codeFontFamily')
+    font.focus()
+
+    // Act
+    press(font, 'Enter')
+    press(font, 'End')
+    press(font, 'Enter')
+    await settle()
+    press(combobox('appearance.codeFontFamily'), 'Enter')
+    press(combobox('appearance.codeFontFamily'), 'Home')
+    press(combobox('appearance.codeFontFamily'), 'Enter')
+    await settle()
+
+    // Assert
+    expect(patches).toEqual([
+      { appearance: { codeFontFamily: 'MesloLGS NF' } },
+      { appearance: { codeFontFamily: null } },
+    ])
+    view.close()
+  })
+
+  it('should keep a font set by hand listed and chosen when it is not installed', async () => {
+    // Arrange
+    const initial = {
+      ...defaultSettings,
+      terminal: { ...defaultSettings.terminal, fontFamily: 'Hack' },
+    }
+
+    // Act
+    const { combobox, view } = open([], api, initial)
+    await settle()
+
+    // Assert
+    expect(combobox('terminal.fontFamily').querySelector('[data-current]')?.textContent).toBe(
+      'Hack',
+    )
+    view.close()
+  })
+
+  it('should save the bar cursor and its blink from the Terminal group', async () => {
+    // Arrange
+    const { body, combobox, patches, view } = open()
+    const cursor = combobox('terminal.cursorStyle')
+    cursor.focus()
+
+    // Act
+    press(cursor, 'Enter')
+    press(cursor, 'ArrowDown')
+    press(cursor, 'Enter')
+    body.querySelector<HTMLInputElement>('[data-focus="set-terminal.cursorBlink"]')?.click()
+    await settle()
+
+    // Assert
+    expect(patches).toEqual([
+      { terminal: { cursorStyle: 'bar' } },
+      { terminal: { cursorBlink: false } },
+    ])
+    view.close()
   })
 })

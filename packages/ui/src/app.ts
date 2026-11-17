@@ -18,6 +18,7 @@ import {
   jiraTicketLink,
   localeFor,
   type MenuCategory,
+  noSystemFonts,
   openTab,
   type PluralKey,
   type ProgramStatus,
@@ -29,6 +30,7 @@ import {
   reviewBasePatch,
   type SavedTabs,
   type SessionSnapshot,
+  type SystemFontsInfo,
   sameSavedTabs,
   stepFontSize,
   stepOpacity,
@@ -49,6 +51,7 @@ import { createPanel } from './panel/panel.ts'
 import { createSessionsSection } from './panel/sessions-section.ts'
 import { createSplitPreferences } from './panes/split-preferences.ts'
 import { createTabView, type TabView } from './panes/tab-view.ts'
+import { applyAppearance, loadFont, terminalLook } from './platform/appearance.ts'
 import { createKeymap, keyboardFor } from './platform/keymap.ts'
 import { bindShortcuts } from './platform/shortcuts.ts'
 import { applyTheme, themeFor, watchSystemTheme } from './platform/theme.ts'
@@ -452,6 +455,20 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     saveTabsSoon()
   }
 
+  // The fonts the system offers, read once on start and again when the settings open
+  let systemFonts: SystemFontsInfo = noSystemFonts
+
+  // A new font is loaded before any terminal measures it; every tab takes the font and the cursor at once
+  async function applyTerminalLook() {
+    const look = terminalLook(settings.current(), systemFonts)
+    await loadFont(settings.current().fontSize, look.fontFamily)
+    for (const session of sessions.values()) {
+      session.setFontFamily(look.fontFamily)
+      session.setCursor(look.cursorStyle, look.cursorBlink)
+    }
+    for (const view of tabViews.values()) view.relayout()
+  }
+
   // Tabs that opened with a name of their own (a project's), which the next start gives them again
   const namedTabs = new Set<string>()
   // While the last run's tabs open one by one, there is nothing to save yet
@@ -549,6 +566,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       api,
       theme,
       fontSize: settings.current().fontSize,
+      ...terminalLook(settings.current(), systemFonts),
       ...(options.cwd ? { cwd: options.cwd } : {}),
       exitedText: i18n.t('terminal.exited'),
       nativeMiddlePaste,
@@ -675,6 +693,9 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     if (changed.includes('fontSize')) {
       for (const session of sessions.values()) session.setFontSize(next.fontSize)
     }
+    if (changed.some((key) => key.startsWith('appearance.')))
+      applyAppearance(document.documentElement, next.appearance)
+    if (changed.some((key) => key.startsWith('terminal.'))) void applyTerminalLook()
     // The layout or a kept share changed, here or in another window; a new font changes the columns
     if (changed.includes('fontSize') || changed.some((key) => key.startsWith('review.'))) {
       for (const view of tabViews.values()) view.relayout()
@@ -952,6 +973,12 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     document.body.classList.add('enter')
   })
 
-  await refreshProjects()
+  const [, readFonts] = await Promise.all([refreshProjects(), api.fonts.system()])
+  systemFonts = readFonts
+  applyAppearance(document.documentElement, settings.current().appearance)
+  await loadFont(
+    settings.current().fontSize,
+    terminalLook(settings.current(), systemFonts).fontFamily,
+  )
   await restoreTabs()
 }

@@ -26,6 +26,8 @@ describe('parseSettings', () => {
       theme: 'dark',
       opacity: 0.92,
       fontSize: 16,
+      appearance: { fontFamily: null, codeFontFamily: null },
+      terminal: { fontFamily: null, cursorStyle: 'block', cursorBlink: true },
       window: { heightRatio: 0.5, panelOnFullHeight: true, restoreTabs: true },
       shortcuts: { toggleWindow: 'F12', holdTrigger: null },
       projects: { root: null, depth: 2 },
@@ -34,6 +36,26 @@ describe('parseSettings', () => {
       review: { layout: 'auto', sideRatio: 0.5, stackedRatio: 0.5, bases: {} },
       extensions: { disabled: [] },
     })
+  })
+
+  it('should keep a font name and send an unsafe one back to the default', () => {
+    // Act
+    const settings = parseSettings({
+      terminal: { fontFamily: 'MesloLGS NF', cursorStyle: 'bar' },
+      appearance: { fontFamily: "Inter'; } body {", codeFontFamily: 'Fira Code' },
+    })
+
+    // Assert
+    expect(settings.terminal).toEqual({
+      fontFamily: 'MesloLGS NF',
+      cursorStyle: 'bar',
+      cursorBlink: true,
+    })
+    expect(settings.appearance).toEqual({ fontFamily: null, codeFontFamily: 'Fira Code' })
+  })
+
+  it('should send an unknown cursor style back to the block', () => {
+    expect(parseSettings({ terminal: { cursorStyle: 'beam' } }).terminal.cursorStyle).toBe('block')
   })
 
   it('should keep the valid fields and reset only the invalid one when a field has the wrong type', () => {

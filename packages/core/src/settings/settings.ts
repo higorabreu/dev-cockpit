@@ -3,6 +3,7 @@ import { parseServerUrl } from '../connections/url.ts'
 import { CONNECTOR_ID_PATTERN } from '../connectors/connector.ts'
 import { isBaseRef } from '../diff/base.ts'
 import { EXTENSION_ID_MAX, EXTENSION_ID_PATTERN } from '../extensions/manifest.ts'
+import { isFontName } from '../fonts/fonts.ts'
 import { PANE_RATIO, SPLIT_PREFERENCES } from '../panes/panes.ts'
 import type { ConnectionFields } from '../ports/connections.ts'
 
@@ -95,6 +96,12 @@ const reviewBasesSchema = z.preprocess(
   z.record(z.string(), z.string()),
 )
 
+export const CURSOR_STYLES = ['block', 'bar', 'underline'] as const
+export type CursorStyle = (typeof CURSOR_STYLES)[number]
+
+// A family name, or null for the default; anything else goes back to the default
+const fontName = z.string().trim().refine(isFontName).nullable().catch(null)
+
 export const settingsSchema = z.preprocess(
   asObject,
   z.object({
@@ -102,6 +109,17 @@ export const settingsSchema = z.preprocess(
     theme: z.enum(THEMES).catch('dark'),
     opacity: bounded(LIMITS.opacity.min, LIMITS.opacity.max, 0.92),
     fontSize: bounded(LIMITS.fontSize.min, LIMITS.fontSize.max, 16, true),
+    appearance: section({
+      // Null is the cockpit's own: Inter for text, JetBrains Mono for keys, branches and the diff
+      fontFamily: fontName,
+      codeFontFamily: fontName,
+    }),
+    terminal: section({
+      // Null follows the user's own terminal, else the system's monospace font
+      fontFamily: fontName,
+      cursorStyle: z.enum(CURSOR_STYLES).catch('block'),
+      cursorBlink: z.boolean().catch(true),
+    }),
     window: section({
       heightRatio: bounded(LIMITS.heightRatio.min, LIMITS.heightRatio.max, 0.5),
       panelOnFullHeight: z.boolean().catch(true),

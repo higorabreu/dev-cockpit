@@ -27,6 +27,7 @@ import {
   type SettingsPatch,
   type SettingsUpdate,
   type SettingsView,
+  type SystemFonts,
   VIEW_ID_MAX,
 } from '@dck/core'
 import { z } from 'zod'
@@ -135,6 +136,7 @@ export interface BridgeOptions {
   readonly ptyHost: PtyHost
   readonly clipboard: Clipboard
   readonly projects: ProjectCatalog
+  readonly fonts: SystemFonts
   // The tabs of the last run, read on start and written as they change
   readonly savedTabs: {
     load(): Promise<SavedTabs | undefined>
@@ -363,6 +365,7 @@ export function registerHostBridge(options: BridgeOptions) {
     void options.projects.touch(path)
   })
   ipcMain.on(hostChannels.windowToggleFullHeight, () => options.toggleFullHeight())
+  ipcMain.handle(hostChannels.fontsSystem, () => options.fonts.read())
   ipcMain.handle(hostChannels.tabsSaved, () => options.savedTabs.load())
   ipcMain.on(hostChannels.tabsSave, (_event, payload: unknown) => {
     const parsed = savedTabsSchema.safeParse(payload)
