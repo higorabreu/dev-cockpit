@@ -65,6 +65,10 @@ in daemon mode too, and nothing is installed.
   `codex.js` replaces Node with the native `codex` through `process.execve`, so the foreground process is
   `codex`. It has no `connect`: there is nothing to install, so no hint is shown.
 - No `integrations/codex/`, no `notify` bridge and no `config.toml` snippet: they would mark the wrong tab.
+- Starting Codex with a first prompt: `codex "<prompt>"` opens the interactive TUI and sends the prompt as
+  its first turn (`codex --help`: `Usage: codex [OPTIONS] [PROMPT]`, "Optional user prompt to start the
+  session"; seen in a run, where `UserPromptSubmit` carried the argument). So the profile's launch command,
+  added by the review work after both branches merge, is `codex`.
 
 ## Acceptance criteria
 
@@ -80,9 +84,15 @@ in daemon mode too, and nothing is installed.
 
 ## Tasks
 
-- [ ] CX-T1. Core: `readProgramStatus` (OSC 7501 to a cockpit state) and the tracker's silent `rest`. (CX1, CX2)
-- [ ] CX-T2. UI: the OSC 7501 handler on each terminal, feeding the same path as `dck agent signal`, and the
+- [x] CX-T1. Core: `readProgramStatus` (OSC 7501 to a cockpit state) and the tracker's silent `rest`. (CX1, CX2)
+- [x] CX-T2. UI: the OSC 7501 handler on each terminal, feeding the same path as `dck agent signal`, and the
   answer to a query. (CX3, CX6)
-- [ ] CX-T3. Shell: the Codex profile. (CX4)
-- [ ] CX-T4. Docs and D59. (CX7)
-- [ ] CX-T5. A run of the built app with Codex. (CX5)
+- [x] CX-T3. Shell: the Codex profile. (CX4)
+- [x] CX-T4. Docs and D59. (CX7)
+- [x] CX-T5. A run of the built app with Codex. (CX5)
+  Built app under Xvfb, Codex 0.169.0 against a local stand-in for the model API, its shared server on:
+  Sessions showed "Codex running"; a delayed approval in the first tab, while the second (whose Codex
+  joined the server the first started) was on screen, marked only the first; an approval in the second
+  marked it on screen; each answer cleared its mark; Esc in a turn and then hiding the tab left no mark;
+  `/exit` returned to the shell. Screenshots in both themes and both languages. With `--no-daemon`,
+  checked in tmux, Codex writes the same reports.
