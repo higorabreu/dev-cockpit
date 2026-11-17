@@ -1,7 +1,15 @@
-import type { AgentState, HostApi, Orientation, Translator } from '@dck/core'
+import type {
+  AgentProfile,
+  AgentState,
+  HostApi,
+  Orientation,
+  SessionActivityInfo,
+  Translator,
+} from '@dck/core'
 import type { TabView } from '../panes/tab-view.ts'
 import type { Keymap } from '../platform/keymap.ts'
 import { createReviewPane, type ReviewMemory, type ReviewPane } from './review-pane.ts'
+import type { AgentChoice } from './review-send.ts'
 
 export interface ReviewTabsDeps {
   readonly api: HostApi
@@ -18,6 +26,14 @@ export interface ReviewTabsDeps {
   chooseLayout(orientation: Orientation): void
   // Types text into the tab's terminal as a paste, without Enter; false when it could not
   paste(tabId: string, text: string): boolean
+  // What runs in the tab's terminal: the watcher's last read, and a fresh one for sending
+  watched(tabId: string): SessionActivityInfo | undefined
+  activity(tabId: string): Promise<SessionActivityInfo | undefined>
+  // The agents whose launch command is on the tab's PATH, and every known one
+  launchable(tabId: string): Promise<readonly AgentProfile[]>
+  profiles(): readonly AgentProfile[]
+  // A small menu of choices under an element; `focusAt` takes the focus, and the focus comes back on close
+  menu(anchor: HTMLElement, choices: readonly AgentChoice[], focusAt: number): void
 }
 
 const paneId = (tabId: string) => `${tabId}:review`
@@ -48,6 +64,10 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
         view.focus(tabId)
         return true
       },
+      activity: () => deps.activity(tabId),
+      launchable: () => deps.launchable(tabId),
+      profiles: deps.profiles,
+      chooseAgent: deps.menu,
     })
   }
 
@@ -67,6 +87,7 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
     })
     pane.setArrangement(view.orientation(), view.isNarrow())
     pane.open()
+    pane.activity(deps.watched(tabId))
   }
 
   function close(tabId: string) {
@@ -106,9 +127,13 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
     arranged(tabId: string, orientation: Orientation | undefined, narrow: boolean) {
       panes.get(tabId)?.setArrangement(orientation, narrow)
     },
-    // After any agent signal or settle: each open review reads again when its agent's state moved
+    // After any agent signal, settle or watcher read: each open review reads again when its agent's
+    // state moved, and its send button follows what runs in the terminal
     syncAgents() {
-      for (const [tabId, pane] of panes) pane.agentState(deps.agent(tabId))
+      for (const [tabId, pane] of panes) {
+        pane.agentState(deps.agent(tabId))
+        pane.activity(deps.watched(tabId))
+      }
     },
     forget(tabId: string) {
       panes.get(tabId)?.close()

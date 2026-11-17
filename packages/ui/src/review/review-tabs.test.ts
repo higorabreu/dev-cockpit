@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import {
+  type AgentProfile,
   type AgentState,
   createTranslator,
   type HostApi,
@@ -8,14 +9,29 @@ import {
   ok,
   parseUnifiedDiff,
   reviewDiff,
+  type SessionActivityInfo,
 } from '@dck/core'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createTabView } from '../panes/tab-view.ts'
 import { createKeymap } from '../platform/keymap.ts'
 import { AGENT_SETTLE_MS } from './review-refresh.ts'
+import type { AgentChoice } from './review-send.ts'
 import { createReviewTabs } from './review-tabs.ts'
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
+
+const claude: AgentProfile = {
+  id: 'claude-code',
+  name: 'Claude Code',
+  processes: ['claude'],
+  launch: 'claude',
+}
+
+const at = (activity: SessionActivityInfo['activity'], process: string) => ({
+  cwd: '/home/ana/acme',
+  process,
+  activity,
+})
 const settle = () => new Promise((resolve) => setTimeout(resolve, AGENT_SETTLE_MS + 20))
 
 const invoice = [
@@ -34,6 +50,10 @@ function setup(width = 1201, height = 700, diffText = '', accepts = true) {
   const pasted: string[] = []
   let reads = 0
   let agent: AgentState | undefined
+  // What runs in the tab's terminal, for the watcher and for a fresh read alike
+  let running: SessionActivityInfo | undefined
+  let installed: readonly AgentProfile[] = [claude]
+  const menus: { choices: readonly AgentChoice[]; focusAt: number }[] = []
   const api = {
     review: {
       diff: async () => {
@@ -86,6 +106,11 @@ function setup(width = 1201, height = 700, diffText = '', accepts = true) {
       pasted.push(`${tabId}|${text}`)
       return true
     },
+    watched: () => running,
+    activity: async () => running,
+    launchable: async () => installed,
+    profiles: () => [claude],
+    menu: (_anchor, choices, focusAt) => void menus.push({ choices, focusAt }),
   })
   return {
     reviews,
@@ -97,12 +122,38 @@ function setup(width = 1201, height = 700, diffText = '', accepts = true) {
     setAgent: (state: AgentState | undefined) => {
       agent = state
     },
+    setRunning: (info: SessionActivityInfo | undefined) => {
+      running = info
+    },
+    setInstalled: (agents: readonly AgentProfile[]) => {
+      installed = agents
+    },
+    menus,
   }
 }
 
 afterEach(() => {
   document.body.replaceChildren()
 })
+
+// Opens the review and leaves one pending comment on the added line
+async function comment(reviews: ReturnType<typeof setup>['reviews']) {
+  reviews.toggle('tab-1')
+  await flush()
+  const lines = document.querySelector('.rv-lines') as HTMLElement
+  lines.focus()
+  const press = (target: Element, key: string, init: KeyboardEventInit = {}) =>
+    target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...init }))
+  press(lines, 'n')
+  press(lines, 'ArrowDown')
+  press(lines, 'ArrowDown')
+  press(lines, 'ArrowDown')
+  press(lines, 'c')
+  const field = document.querySelector('.rv-field') as HTMLTextAreaElement
+  field.value = 'use the constant from config'
+  press(field, 'Enter', { ctrlKey: true })
+  await flush()
+}
 
 describe('createReviewTabs send', () => {
   it('should type the line naming the comments file into the tab terminal and give it the keys when sent', async () => {
@@ -172,6 +223,84 @@ describe('createReviewTabs send', () => {
     await reviews.send('tab-1')
 
     expect(pasted).toEqual([])
+  })
+
+  it('should type the command that starts the agent with the review when the shortcut is pressed at a shell prompt', async () => {
+    // Arrange
+    const { reviews, terminal, pasted, setRunning } = setup(1201, 700, invoice)
+    setRunning(at('idle', 'bash'))
+    await comment(reviews)
+
+    // Act
+    await reviews.send('tab-1')
+
+    // Assert
+    expect(pasted).toEqual([
+      "tab-1|claude 'Address the review comments in .git/dck/review-20261117-143000.md'",
+    ])
+    expect(document.activeElement).toBe(terminal)
+    expect(document.querySelector('.rv-send')?.hasAttribute('hidden')).toBe(true)
+  })
+
+  it('should say a program runs and keep the comments when the shortcut is pressed while it runs', async () => {
+    // Arrange
+    const { reviews, pasted, setRunning } = setup(1201, 700, invoice)
+    setRunning(at('busy', 'vim'))
+    await comment(reviews)
+
+    // Act
+    await reviews.send('tab-1')
+
+    // Assert
+    expect(pasted).toEqual([])
+    expect(document.querySelector('.rv-send-count')?.textContent).toBe('1')
+    expect(document.querySelector('.rv-status')?.textContent).toBe(
+      'vim is running in the terminal. The comments stay pending until it ends',
+    )
+  })
+
+  it('should keep the send button in step with the terminal when the watcher reads the tab again', async () => {
+    // Arrange
+    const { reviews, setRunning } = setup(1201, 700, invoice)
+    setRunning({ ...at('agent', 'claude'), agent: claude })
+    await comment(reviews)
+    const button = document.querySelector('.rv-send') as HTMLElement
+    const seen = () => `${button.textContent}|${button.getAttribute('aria-disabled') ?? ''}`
+
+    // Act
+    const withAgent = seen()
+    setRunning(at('busy', 'sleep'))
+    reviews.syncAgents()
+    const busy = seen()
+    setRunning(at('idle', 'bash'))
+    reviews.syncAgents()
+    await flush()
+    const atPrompt = seen()
+
+    // Assert
+    expect(withAgent).toBe('Send to agent1|')
+    expect(busy).toBe('Send to agent1|true')
+    expect(atPrompt).toBe('Start Claude Code with the review1|')
+  })
+
+  it('should open the agent choice from the shortcut when two agents can start', async () => {
+    // Arrange
+    const { reviews, pasted, setRunning, setInstalled, menus } = setup(1201, 700, invoice)
+    const acme = { id: 'acme', name: 'Acme Agent', processes: ['acme'], launch: 'acme' }
+    setRunning(at('idle', 'bash'))
+    setInstalled([claude, acme])
+    await comment(reviews)
+
+    // Act
+    await reviews.send('tab-1')
+    menus[0]?.choices[1]?.run()
+    await flush()
+
+    // Assert
+    expect(menus[0]?.choices.map((choice) => choice.label)).toEqual(['Claude Code', 'Acme Agent'])
+    expect(pasted).toEqual([
+      "tab-1|acme 'Address the review comments in .git/dck/review-20261117-143000.md'",
+    ])
   })
 })
 
