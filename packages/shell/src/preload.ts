@@ -1,6 +1,6 @@
 import type { AgentSignal, PtyExit, Settings, ViewSnapshot } from '@dck/core'
 import { type HostApi, hostChannels } from '@dck/core/host-api'
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
 function subscribe<Args extends unknown[]>(channel: string, listener: (...args: Args) => void) {
   const handler = (_event: unknown, ...args: Args) => listener(...args)
@@ -22,6 +22,9 @@ const api: HostApi = {
   clipboard: {
     readText: () => ipcRenderer.invoke(hostChannels.clipboardRead),
     writeText: (text) => ipcRenderer.invoke(hostChannels.clipboardWrite, text),
+  },
+  files: {
+    pathOf: (file) => webUtils.getPathForFile(file as File),
   },
   notifications: {
     show: (notification) => ipcRenderer.send(hostChannels.notificationsShow, notification),

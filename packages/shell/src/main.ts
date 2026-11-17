@@ -20,6 +20,7 @@ import {
   fail,
   hostChannels,
   localeFor,
+  pastedText,
   type Settings,
   storedAccount,
   type Translate,
@@ -265,7 +266,14 @@ app.whenReady().then(async () => {
     ipcMain: createElectronIpc(ipcMain),
     ptyHost: createNodePtyHost(),
     clipboard: {
-      readText: async () => clipboard.readText(),
+      // Files copied in a file manager paste as their paths, as in VTE
+      readText: async () => {
+        const [item] = await clipboard.read()
+        const uriList = item?.types.includes('text/uri-list')
+          ? await (await item.getType('text/uri-list')).text()
+          : ''
+        return pastedText({ uriList, text: await clipboard.readText() })
+      },
       writeText: async (text) => clipboard.writeText(text),
     },
     settings: settingsStore,

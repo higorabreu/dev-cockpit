@@ -29,6 +29,12 @@
   display: none;
 }
 
+/* A file dragged over a terminal: the ring of a focused control, inside the pane, until it drops */
+.session.dropping {
+  outline: 2px solid var(--fg);
+  outline-offset: -2px;
+}
+
 /* 1px of line between the panes; the grip around it is 9px. Under the mouse and while dragging the line
    becomes 2px of muted, like the panel's; only the keyboard focus (`:focus-visible`, never a click or a
    drag) draws it in the foreground, 2px like every other focus ring. A vertical line splits side by side,
