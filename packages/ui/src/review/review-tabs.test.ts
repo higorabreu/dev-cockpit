@@ -350,7 +350,9 @@ describe('createReviewTabs', () => {
     const wide = setup()
     wide.reviews.toggle('tab-1')
     await flush()
-    wide.view.element.querySelector<HTMLButtonElement>('[data-tip-key="Ctrl+Shift+E"]')?.click()
+    wide.view.element
+      .querySelector<HTMLButtonElement>('[data-tip-shortcut="reviewLayout"]')
+      ?.click()
     document.body.replaceChildren()
     const narrow = setup(700)
     narrow.reviews.toggle('tab-1')

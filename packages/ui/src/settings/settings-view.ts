@@ -66,11 +66,10 @@ const reference = (keymap: Keymap): ReadonlyArray<readonly [string, string]> => 
   ['menu.system.panel', keymap.label('panel')],
   ['menu.system.theme', keymap.label('theme')],
   ['menu.system.fullHeight', keymap.label('fullHeight')],
-  ['settings.ref.opacity', `${keymap.label('opacityUp')} ↓`],
-  // The modifier with the three keys after it, which the caps show as one chord and two alternatives
+  ['settings.ref.opacity', `${keymap.label('opacityUp')} ${keymap.label('opacityDown')}`],
   [
     'settings.ref.font',
-    `${keymap.modifiers('fontBigger')}${keymap.keyboard === 'mac' ? '' : '+'}= − 0`,
+    `${keymap.label('fontBigger')} ${keymap.label('fontSmaller')} ${keymap.label('fontReset')}`,
   ],
   ['settings.ref.settings', keymap.label('settings')],
 ]

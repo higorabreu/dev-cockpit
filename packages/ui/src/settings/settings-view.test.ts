@@ -167,7 +167,7 @@ describe('settings view selects', () => {
     const keys = [...body.querySelectorAll('.sref .keys')].map((element) => element.textContent)
     expect(keys).toContain('⌘T')
     expect(keys).toContain('⌃⌘F')
-    expect(keys).toContain('⌘= − 0')
+    expect(keys).toContain('⌘= ⌘- ⌘0')
     view.close()
   })
 

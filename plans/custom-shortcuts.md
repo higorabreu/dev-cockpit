@@ -40,7 +40,7 @@ Decided with the maintainer:
   `shortcuts.keys` setting with zod, warnings through `settingsIssues`, tests.
 - [x] C3. Core: the hold trigger as a key code that does not type or a mouse button, with the reason a key
   is refused, tests; old values stay valid.
-- [ ] C4. Keymap: reads the custom keys live, a custom chord wins over the defaults and the tab digits,
+- [x] C4. Keymap: reads the custom keys live, a custom chord wins over the defaults and the tab digits,
   labels follow; tooltips resolve `data-tip-shortcut` through the keymap (index.html, tab bar, review
   header); the review hints redraw on change. Tests.
 - [ ] C5. Settings: one editable row per action (record, conflict with Swap and Cancel, shell note,

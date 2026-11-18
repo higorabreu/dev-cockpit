@@ -18,7 +18,6 @@ function setup(language: 'en' | 'pt-BR' = 'en') {
       hiddenAttention: (kind) => void hidden.push(kind),
     },
     createTranslator(language).t,
-    'Ctrl+Shift+D',
   )
   const state = openTab(openTab(emptyTabs, { id: 'tab-1', label: 'acme' }), {
     id: 'tab-2',
@@ -41,7 +40,7 @@ describe('createTabBar review mark', () => {
     expect(mark?.getAttribute('role')).toBe('img')
     expect(mark?.getAttribute('aria-label')).toBe('Review open')
     expect(mark?.getAttribute('data-tip')).toBe('Review open')
-    expect(mark?.getAttribute('data-tip-key')).toBe('Ctrl+Shift+D')
+    expect(mark?.getAttribute('data-tip-shortcut')).toBe('review')
     expect(mark?.querySelector('svg')).not.toBeNull()
     expect(container.querySelector('[data-id="tab-2"] .pip')).toBeNull()
   })
