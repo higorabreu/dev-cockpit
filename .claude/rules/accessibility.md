@@ -16,5 +16,5 @@ paths:
 - Every action with a keyboard shortcut can also be done with the mouse (button, menu or click) and the
   shortcut shows in its tooltip (`data-tip-key`). Every list scrolls with the mouse wheel. A new shortcut is
   born with its mouse path.
-- With the transparent window the guarantee holds for the default opacity (0.92); below it the real
+- With the transparent window the guarantee holds at full opacity, the default; below it the real
   desktop background counts.

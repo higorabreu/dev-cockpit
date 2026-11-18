@@ -25,7 +25,7 @@ describe('parseSettings', () => {
     expect(defaultSettings).toEqual({
       language: 'auto',
       theme: 'dark',
-      opacity: 0.92,
+      opacity: 1,
       fontSize: 16,
       appearance: { fontFamily: null, codeFontFamily: null },
       terminal: { fontFamily: null, cursorStyle: 'block', cursorBlink: true },
@@ -62,7 +62,7 @@ describe('parseSettings', () => {
   it('should keep the valid fields and reset only the invalid one when a field has the wrong type', () => {
     const settings = parseSettings({ language: 'en', theme: 42, opacity: 'x', fontSize: 20 })
 
-    expect(settings).toMatchObject({ language: 'en', theme: 'dark', opacity: 0.92, fontSize: 20 })
+    expect(settings).toMatchObject({ language: 'en', theme: 'dark', opacity: 1, fontSize: 20 })
   })
 
   it('should cut numbers at the limits when they are out of range', () => {

@@ -27,7 +27,7 @@ describe('settingsIssues', () => {
 
   it('should report a value of the wrong type as ignored when a number was expected', () => {
     expect(issuesOf({ opacity: 'muito' })).toEqual([
-      { key: 'opacity', kind: 'ignored', found: '"muito"', used: '0.92' },
+      { key: 'opacity', kind: 'ignored', found: '"muito"', used: '1' },
     ])
   })
 

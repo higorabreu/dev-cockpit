@@ -18,7 +18,7 @@ describe('stepOpacity', () => {
     let value: number = OPACITY.initial
     for (let index = 0; index < 3; index++) value = stepOpacity(value, -1)
 
-    expect(value).toBe(0.77)
+    expect(value).toBe(0.85)
   })
 
   it('should stop at the limits when stepping past them', () => {
@@ -50,11 +50,11 @@ describe('readPreference', () => {
   })
 
   it('should return the initial value when the stored text is not a number', () => {
-    expect(readPreference('abc', OPACITY)).toBe(0.92)
+    expect(readPreference('abc', OPACITY)).toBe(1)
   })
 
   it('should return the initial value when the stored number is out of range', () => {
-    expect(readPreference('0.01', OPACITY)).toBe(0.92)
+    expect(readPreference('0.01', OPACITY)).toBe(1)
     expect(readPreference('99', FONT_SIZE)).toBe(16)
   })
 })

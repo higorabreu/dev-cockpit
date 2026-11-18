@@ -64,7 +64,7 @@ describe('createSettingsStore load', () => {
     const view = await make().load()
 
     expect(view.settings.theme).toBe('light')
-    expect(view.settings.opacity).toBe(0.92)
+    expect(view.settings.opacity).toBe(1)
   })
 
   it('should let the environment variables win and lock them when they are set', async () => {
@@ -125,7 +125,7 @@ describe('createSettingsStore update', () => {
     const result = await store.update({ opacity: 0.5 })
 
     expect(result.settings.fontSize).toBe(20)
-    expect(result.settings.opacity).toBe(0.92)
+    expect(result.settings.opacity).toBe(1)
     expect(result.rejected).toEqual(['opacity'])
     expect(result.file).toEqual({ kind: 'invalid', line: 3, column: 3 })
     expect(await readFile(file, 'utf8')).toBe('{\n  "fontSize": 20\n  "theme": "light"\n}\n')

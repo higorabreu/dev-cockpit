@@ -108,7 +108,7 @@ export const settingsSchema = z.preprocess(
   z.object({
     language: z.enum(LANGUAGES).catch('auto'),
     theme: z.enum(THEMES).catch('dark'),
-    opacity: bounded(LIMITS.opacity.min, LIMITS.opacity.max, 0.92),
+    opacity: bounded(LIMITS.opacity.min, LIMITS.opacity.max, 1),
     fontSize: bounded(LIMITS.fontSize.min, LIMITS.fontSize.max, 16, true),
     appearance: section({
       // Null is the cockpit's own: Inter for text, JetBrains Mono for keys, branches and the diff
