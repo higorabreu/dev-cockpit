@@ -116,7 +116,8 @@ describe('git section submodules', () => {
 
     // Assert
     expect(modules).toEqual(['libs/lib'])
-    expect(row?.dataset.tip).toBe('Review changes')
+    // The row shows it opens on hover; a tooltip under it covered the next group's title
+    expect(row?.dataset.tip).toBeUndefined()
     expect(row?.getAttribute('aria-label')).toBe('Review changes in libs/lib, 2 changes')
     expect(row?.dataset.focus).toBe('git-module-libs/lib')
   })
@@ -151,6 +152,7 @@ describe('git section opens the review', () => {
 
     // Assert
     expect(reviews()).toBe(1)
-    expect(branch?.dataset.tip).toBe('Review changes')
+    expect(branch?.dataset.tip).toBeUndefined()
+    expect(branch?.getAttribute('aria-label')).toBe('Review changes in main')
   })
 })

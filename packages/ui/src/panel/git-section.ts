@@ -104,7 +104,6 @@ function submoduleRow(i18n: Translator, module: GitSubmodule, open: (path: strin
       type: 'button',
       class: 'frow frow-open',
       'data-focus': `git-module-${module.path}`,
-      'data-tip': i18n.t('git.moduleReview'),
       'aria-label': `${i18n.t('git.moduleReview.a11y', { path: module.path })}, ${i18n.plural('git.moduleChanges', module.changed)}`,
     },
     h('span', { class: 'fname' }, module.path),
@@ -203,7 +202,9 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
         type: 'button',
         class: 'brow brow-open',
         'data-focus': 'git-branch',
-        'data-tip': i18n.t('git.moduleReview'),
+        'aria-label': i18n.t('git.moduleReview.a11y', {
+          path: git.branch ?? i18n.t('git.detached'),
+        }),
       },
       icon(BRANCH_ICON, 14, 'branch-icon'),
       h('b', { class: 'branch' }, git.branch ?? i18n.t('git.detached')),

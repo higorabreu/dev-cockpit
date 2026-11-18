@@ -34,7 +34,6 @@ export const ptBR = {
   'git.moduleChanges.one': '{count} alteração',
   'git.moduleChanges.other': '{count} alterações',
   'git.modulesClean': '{count} sem alterações',
-  'git.moduleReview': 'Revisar alterações',
   'git.fileReview.a11y': 'Revisar as alterações em {path}',
   'git.moduleReview.a11y': 'Revisar alterações em {path}',
   'git.files': 'arquivos',

@@ -35,7 +35,6 @@ export const en: Record<MessageKey, string> = {
   'git.moduleChanges.one': '{count} change',
   'git.moduleChanges.other': '{count} changes',
   'git.modulesClean': '{count} unchanged',
-  'git.moduleReview': 'Review changes',
   'git.fileReview.a11y': 'Review the changes in {path}',
   'git.moduleReview.a11y': 'Review changes in {path}',
   'git.files': 'files',
