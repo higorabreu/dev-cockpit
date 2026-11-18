@@ -37,6 +37,8 @@ import { createTerminalPaths, type TerminalFiles } from './terminal-paths.ts'
 
 // Each field's value is validated and corrected by the settings model itself
 const patchSchema = z.record(z.string(), z.unknown())
+// A window height in pixels, beyond any screen there is
+const heightSchema = z.number().int().min(1).max(20_000)
 
 const connectorIdSchema = z.string().min(1).max(32)
 
@@ -169,6 +171,8 @@ export interface BridgeOptions {
   readonly logger: Logger
   send(channel: string, ...args: unknown[]): void
   toggleFullHeight(): void
+  resizeWindow(height: number): number | undefined
+  endResizeWindow(keep: boolean): void
 }
 
 // Wires the preload channels to the ports: PTY, clipboard and window
@@ -368,6 +372,13 @@ export function registerHostBridge(options: BridgeOptions) {
     void options.projects.touch(path)
   })
   ipcMain.on(hostChannels.windowToggleFullHeight, () => options.toggleFullHeight())
+  ipcMain.handle(hostChannels.windowResize, (_event, height: unknown) => {
+    const parsed = heightSchema.safeParse(height)
+    return parsed.success ? options.resizeWindow(parsed.data) : undefined
+  })
+  ipcMain.on(hostChannels.windowResizeEnd, (_event, keep: unknown) =>
+    options.endResizeWindow(keep === true),
+  )
   ipcMain.handle(hostChannels.fontsSystem, () => options.fonts.read())
   ipcMain.handle(hostChannels.tabsSaved, () => options.savedTabs.load())
   ipcMain.on(hostChannels.tabsSave, (_event, payload: unknown) => {

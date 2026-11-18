@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Display } from '../ports/index.ts'
 import { FakeClock, FakeDockWindow, FakeScheduler, FakeScreen } from '../testing/index.ts'
-import { createDockController, dockBounds } from './dock-controller.ts'
+import { createDockController, dockBounds, dragRatio } from './dock-controller.ts'
 
 const display = (
   id: string,
@@ -247,5 +247,88 @@ describe('toggleFullHeight', () => {
 
       expect(window.calls).toEqual([])
     })
+  })
+})
+
+describe('dragRatio', () => {
+  it.each([
+    [600, 0.6],
+    [100, 0.3],
+    [1200, 1],
+    [508, 0.5],
+    [990, 1],
+    [737, 0.74],
+  ])(
+    'should take %i pixels of a 1000 pixel work area as %f when the edge is dragged',
+    (height, ratio) => {
+      expect(dragRatio(1000, height, 0.3)).toBe(ratio)
+    },
+  )
+})
+
+describe('resizeTo', () => {
+  it('should follow the dragged edge on the display where the window is and keep its top', () => {
+    // Arrange
+    const { dock, window } = setup({ x: 2220, y: 300 })
+    dock.show()
+
+    // Act
+    const ratio = dock.resizeTo(629)
+
+    // Assert
+    expect(ratio).toBe(0.6)
+    expect(window.bounds()).toEqual({ x: 1920, y: 32, width: 1920, height: 629 })
+  })
+
+  it('should not be pulled back to the old height by the reapply of the last show', () => {
+    // Arrange
+    const { dock, window, scheduler } = setup({ x: 300, y: 300 })
+    dock.show()
+
+    // Act
+    dock.resizeTo(800)
+    scheduler.advance(250)
+
+    // Assert
+    expect(window.bounds().height).toBe(799)
+  })
+
+  it('should leave full height and keep the dragged height when the drag ends', () => {
+    // Arrange
+    const { dock, window } = setup({ x: 300, y: 300 })
+    dock.show()
+    dock.toggleFullHeight()
+
+    // Act
+    dock.resizeTo(700)
+    const saved = dock.endResize(true)
+
+    // Assert
+    expect(saved).toBe(0.65)
+    expect(dock.isFullHeight()).toBe(false)
+    expect(window.bounds().height).toBe(702)
+  })
+
+  it('should go back to full height and save nothing when the drag is dropped', () => {
+    // Arrange
+    const { dock, window } = setup({ x: 300, y: 300 })
+    dock.show()
+    dock.toggleFullHeight()
+
+    // Act
+    dock.resizeTo(500)
+    dock.resizeTo(400)
+    const saved = dock.endResize(false)
+
+    // Assert
+    expect(saved).toBeUndefined()
+    expect(dock.isFullHeight()).toBe(true)
+    expect(window.bounds().height).toBe(1080)
+  })
+
+  it('should end nothing when no drag is going on', () => {
+    const { dock } = setup()
+
+    expect(dock.endResize(true)).toBeUndefined()
   })
 })

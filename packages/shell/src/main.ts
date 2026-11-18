@@ -375,6 +375,14 @@ app.whenReady().then(async () => {
       void dockActions
         .toggleFullHeight()
         .then((fullHeight) => send(hostChannels.windowFullHeight, fullHeight)),
+    // DCK_HEIGHT pins the height, so the edge moves nothing
+    resizeWindow: (height) =>
+      settingsStore.get().locked.includes('window.heightRatio') ? undefined : dock.resizeTo(height),
+    endResizeWindow(keep) {
+      const ratio = dock.endResize(keep)
+      send(hostChannels.windowFullHeight, dock.isFullHeight())
+      if (ratio !== undefined) void settingsStore.update({ window: { heightRatio: ratio } })
+    },
   })
 
   activeKey = loaded.settings.shortcuts.toggleWindow

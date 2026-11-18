@@ -16,6 +16,8 @@ export interface DockOptions {
   readonly heightRatio?: number | (() => number)
   // Without it every toggle request counts; with it a repeat right after one is ignored
   readonly clock?: Clock
+  // The lowest fraction of the work area a drag of the bottom edge can leave
+  readonly minRatio?: number
 }
 
 export interface DockController {
@@ -26,11 +28,27 @@ export interface DockController {
   // Reapplies the current position and size, for example after the height changes in settings
   refresh(): void
   isFullHeight(): boolean
+  // The bottom edge dragged to `height` pixels: the window follows at once and leaves full height. Returns
+  // the fraction of the work area it takes
+  resizeTo(height: number): number
+  // The end of a drag: kept, it returns the fraction to save; dropped, the window goes back to how it was
+  endResize(keep: boolean): number | undefined
 }
 
 const REAPPLY_DELAY_MS = 250
 // A held key or a shortcut delivered twice would hide the window and show it again at once
 const TOGGLE_REPEAT_MS = 300
+
+// Distance in pixels at which a dragged edge settles on half or the whole of the work area
+const SNAP_PX = 12
+const SNAP_RATIOS = [0.5, 1] as const
+
+// The fraction of the work area a dragged edge stands for: within the limits, snapped, in whole percent
+export function dragRatio(workAreaHeight: number, height: number, minRatio: number): number {
+  const clamped = Math.min(Math.max(height, workAreaHeight * minRatio), workAreaHeight)
+  const snap = SNAP_RATIOS.find((ratio) => Math.abs(clamped - workAreaHeight * ratio) <= SNAP_PX)
+  return snap ?? Math.round((clamped / workAreaHeight) * 100) / 100
+}
 
 export function dockBounds(
   workArea: Rectangle,
@@ -47,7 +65,10 @@ export function dockBounds(
 
 export function createDockController(options: DockOptions): DockController {
   const { screen, window, scheduler } = options
+  // While the edge is dragged, the height it is at; the setting changes only when the drag ends
+  let dragged: { ratio: number; wasFullHeight: boolean } | undefined
   const ratio = () => {
+    if (dragged) return dragged.ratio
     const value = options.heightRatio
     return typeof value === 'function' ? value() : (value ?? 0.5)
   }
@@ -73,12 +94,14 @@ export function createDockController(options: DockOptions): DockController {
     cancelReapply = scheduler.after(REAPPLY_DELAY_MS, () => window.setBounds(bounds))
   }
 
+  const here = (): Point => {
+    const current = window.bounds()
+    return anchor ?? { x: current.x + current.width / 2, y: current.y + current.height / 2 }
+  }
+
   function placeInPlace() {
     cancelReapply?.()
-    const current = window.bounds()
-    const bounds = boundsAt(
-      anchor ?? { x: current.x + current.width / 2, y: current.y + current.height / 2 },
-    )
+    const bounds = boundsAt(here())
     window.setBounds(bounds)
     // The window manager may move the window afterwards, such as on show
     cancelReapply = scheduler.after(REAPPLY_DELAY_MS, () => window.setBounds(bounds))
@@ -113,5 +136,24 @@ export function createDockController(options: DockOptions): DockController {
       if (window.isVisible()) placeInPlace()
     },
     isFullHeight: () => fullHeight,
+    resizeTo(height) {
+      // A reapply scheduled by the last show would pull the window back to its old height
+      cancelReapply?.()
+      const { workArea } = screen.displayNearest(here())
+      const next = dragRatio(workArea.height, height, options.minRatio ?? 0.3)
+      dragged = { ratio: next, wasFullHeight: dragged?.wasFullHeight ?? fullHeight }
+      fullHeight = false
+      window.setBounds(dockBounds(workArea, next, false))
+      return next
+    },
+    endResize(keep) {
+      const ended = dragged
+      dragged = undefined
+      if (!ended) return undefined
+      if (keep) return ended.ratio
+      fullHeight = ended.wasFullHeight
+      placeInPlace()
+      return undefined
+    },
   }
 }

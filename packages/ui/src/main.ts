@@ -35,6 +35,8 @@ await startApp(
     settingsButton: element('rail-settings'),
     viewsButton: element('rail-views'),
     split: element('split'),
+    edge: element('edge'),
+    edgeSize: element('edge-size'),
     notice: element('notice'),
     menu: element('tab-menu'),
     search: element('search'),
