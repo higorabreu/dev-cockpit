@@ -82,5 +82,9 @@ panel lists submodules with rows that do nothing. Untracked files past the 300th
   opens the group and those holding it, puts its header at the top of the index with the keys there, and
   takes the diff to its first file. A submodule the panel lists only for its ahead and behind counts has
   nothing in the review; the header then says "No changes in <path> to review" for 8 s.
-- [ ] SM-T7. D70, the README's review section, the roadmap; checked in the real app under Xvfb in both
-  themes, both languages and both layouts. (S8)
+- [x] SM-T7. D70, the README's review section, the roadmap; checked in the real app under Xvfb in both
+  themes, both languages and both layouts. (S8) At 1366x768 with a fixture of a parent file, two
+  submodules (one with 13 new commits holding a nested one) and untracked files in each: the groups,
+  a folded group, the commits tooltip (10 lines and "+ 3 more"), "Not loaded" rows read with Enter, the
+  panel's row and the review it opens, stacked (index beside the diff) and side by side (index above it).
+  A narrow header cut the submodule's box by a fraction of a pixel; the reason now takes the shrink.

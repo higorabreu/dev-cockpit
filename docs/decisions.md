@@ -1155,3 +1155,36 @@ the fn hint need a real Mac.
 `macOptionClickForcesSelection`, the `terminal.macOptionAsMeta` setting and its row, `clearTerminal`
 from the keymap with its action and hold menu item, the `'last'` tab target, `MetaRight` from
 `HOLD_TRIGGERS` (set `HOLD_TRIGGER.mac` back to `AltRight`) and `accelerator` from the keymap.
+
+## D70. The review reads inside submodules and lists every changed file
+
+**Decision:** [plans/submodule-review.md](../plans/submodule-review.md). The review shows the files of each
+changed submodule with real diffs, in every scope and at every nesting level. The `node-git` adapter reads
+a submodule as its own repository: `git diff` from the commit the parent recorded at the scope's start
+(the empty tree for a new submodule) to the submodule's working tree, so its new commits and its edits
+read as one diff, as `git diff --submodule=diff` shows; its untracked files; the subjects (at most 10) and
+count of its commits after the recorded one (`log old..HEAD`); and its own submodules the same way. A
+submodule with only untracked files is not in `git diff`, so the parent's `git status` names it (`S..U`).
+Files keep their paths from the top repository and name the innermost submodule that holds them, so
+comments, Viewed, the keys and "Send to agent" work as on any file. A submodule that cannot be read (not
+checked out, its recorded commit not fetched, deleted) stays the single "Submodule" entry it was. The
+index is a tree: the repository's own files first, then a group per submodule (path, "Submodule" tag, file
+count, up to 3 commit subjects then "+ N commits") that folds with a click, Enter or ←→, its files under
+it with paths inside it and nested submodules nested the same way; the commits' tooltip lists one line
+per commit, cut near 60 characters, at most 10, then "+ N more". A diff header boxes the submodule's
+folder before the rest of the path. The panel's submodule rows are buttons that open the review on their
+group. Every changed file is listed: past 300 untracked files, counted across all repositories in the
+order shown, a file is listed without its content, says "Not loaded" in the index and "Content not
+loaded" in its header, and is read on a click or Enter through `review:untracked` (a known root and a
+path inside it); the 1 MB per file limit stays and the 32 MB limit counts every repository's diff
+together. The fingerprint adds the status of each changed submodule, nested ones too, at most 16 read one
+at a time, sharing the 2000 stamped paths, and stamps paths from the repository's top.
+**Reason:** decided with the maintainer (2026-11-18): a changed submodule read as two "Subproject commit"
+lines told nothing, and untracked files past the 300th were dropped with no sign. Reading each submodule
+by itself instead of parsing `--submodule=diff` gives clean paths, the commits for the header, the
+untracked files git leaves out and one code path for every nesting level. "Not loaded" is the index's
+short form: in a 240 pixel index the whole sentence cut the file name.
+**How to revert:** drop `gather`'s submodule branch in `node-git/src/git-diff.ts` (submodules go back to
+single entries), `core/src/diff/modules.ts` and `ui/src/review/module-row.ts`, the file list's groups
+(back to a `listbox` of files), `openModule` in the Git section, the `review:untracked` channel with
+`unloaded` (the untracked list then stops at 300 again) and the submodule statuses in `fingerprint`.
