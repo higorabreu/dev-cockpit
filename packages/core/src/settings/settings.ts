@@ -6,11 +6,13 @@ import { EXTENSION_ID_MAX, EXTENSION_ID_PATTERN } from '../extensions/manifest.t
 import { isFontName } from '../fonts/fonts.ts'
 import { PANE_RATIO, SPLIT_PREFERENCES } from '../panes/panes.ts'
 import type { ConnectionFields } from '../ports/connections.ts'
+import { isHoldTrigger } from './hold-trigger.ts'
 import type { SettingsFileState } from './settings-file.ts'
 import { isShortcutId, parseChord, SHORTCUT_IDS, type ShortcutId } from './shortcut-keys.ts'
 
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
 export const THEMES = ['dark', 'light', 'system'] as const
+// The keys the Settings list offers for the hold menu; the file takes any key or button `isHoldTrigger` allows
 export const HOLD_TRIGGERS = [
   'ControlRight',
   'ControlLeft',
@@ -18,7 +20,6 @@ export const HOLD_TRIGGERS = [
   'AltLeft',
   'MetaRight',
 ] as const
-export type HoldTrigger = (typeof HOLD_TRIGGERS)[number]
 
 export const LIMITS = {
   opacity: { min: 0.3, max: 1 },
@@ -154,7 +155,7 @@ export const settingsSchema = z.preprocess(
     shortcuts: section({
       toggleWindow: z.string().trim().min(1).max(64).catch('F12'),
       // Null until the user chooses one: the window holds its keyboard's own key (D51)
-      holdTrigger: z.enum(HOLD_TRIGGERS).nullable().catch(null),
+      holdTrigger: z.string().refine(isHoldTrigger).nullable().catch(null),
       keys: shortcutKeysSchema,
     }),
     projects: section({

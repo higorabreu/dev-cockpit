@@ -38,7 +38,7 @@ Decided with the maintainer:
 - [x] C1. This plan.
 - [x] C2. Core: chord text (`parseChord`, `formatChord`, `chordFromEvent`, the shell rule) and the
   `shortcuts.keys` setting with zod, warnings through `settingsIssues`, tests.
-- [ ] C3. Core: the hold trigger as a key code that does not type or a mouse button, with the reason a key
+- [x] C3. Core: the hold trigger as a key code that does not type or a mouse button, with the reason a key
   is refused, tests; old values stay valid.
 - [ ] C4. Keymap: reads the custom keys live, a custom chord wins over the defaults and the tab digits,
   labels follow; tooltips resolve `data-tip-shortcut` through the keymap (index.html, tab bar, review

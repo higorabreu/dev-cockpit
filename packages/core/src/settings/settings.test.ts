@@ -136,14 +136,23 @@ describe('parseSettings', () => {
     expect(parseSettings({ surprise: true })).toEqual(defaultSettings)
   })
 
-  it('should accept only the known hold triggers and leave the choice open otherwise when reading', () => {
-    expect(parseSettings({ shortcuts: { holdTrigger: 'AltRight' } }).shortcuts.holdTrigger).toBe(
-      'AltRight',
-    )
-    expect(parseSettings({ shortcuts: { holdTrigger: 'MetaRight' } }).shortcuts.holdTrigger).toBe(
-      'MetaRight',
-    )
-    expect(parseSettings({ shortcuts: { holdTrigger: 'KeyQ' } }).shortcuts.holdTrigger).toBeNull()
+  it('should keep a hold trigger that types nothing or a side mouse button when reading', () => {
+    const trigger = (value: unknown) =>
+      parseSettings({ shortcuts: { holdTrigger: value } }).shortcuts.holdTrigger
+
+    expect(trigger('AltRight')).toBe('AltRight')
+    expect(trigger('MetaRight')).toBe('MetaRight')
+    expect(trigger('F13')).toBe('F13')
+    expect(trigger('Mouse1')).toBe('Mouse1')
+  })
+
+  it('should leave the hold trigger open when the file holds a typing key or a main button', () => {
+    const trigger = (value: unknown) =>
+      parseSettings({ shortcuts: { holdTrigger: value } }).shortcuts.holdTrigger
+
+    expect(trigger('KeyQ')).toBeNull()
+    expect(trigger('Mouse0')).toBeNull()
+    expect(trigger(3)).toBeNull()
   })
 })
 
