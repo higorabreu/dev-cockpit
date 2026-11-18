@@ -42,6 +42,8 @@ export interface SessionOptions {
   readonly api: HostApi
   readonly theme: ThemeName
   readonly fontSize: number
+  // True while the window's edge is dragged: the grid waits, and the caller fits when it settles
+  holdFit?(): boolean
   readonly fontFamily: string
   readonly cursorStyle: CursorStyle
   readonly cursorBlink: boolean
@@ -140,7 +142,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   const observer = new ResizeObserver(() => {
     cancelAnimationFrame(fitFrame)
     fitFrame = requestAnimationFrame(() => {
-      if (element.offsetParent !== null) fit.fit()
+      if (element.offsetParent !== null && !options.holdFit?.()) fit.fit()
     })
   })
   // The pane, not the tab: a split changes the terminal's width while the tab keeps its own
@@ -177,7 +179,10 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
       terminal.paste(text)
       return true
     },
-    fit: () => fit.fit(),
+    // A hidden tab has no size: fitting it would leave it one row high until it shows again
+    fit: () => {
+      if (element.offsetParent !== null) fit.fit()
+    },
     setFontSize: (size) => {
       terminal.options.fontSize = size
       lastGrid = undefined

@@ -69,6 +69,7 @@ import { createTabList } from './tabs/tab-list.ts'
 import { createTabMenu } from './tabs/tab-menu.ts'
 import { createTerminalSession, type TerminalSession } from './terminal/terminal-session.ts'
 import { createViewsView } from './views/views-view.ts'
+import { createResizeEdge } from './window/resize-edge.ts'
 
 export interface AppElements {
   readonly bar: HTMLElement
@@ -85,6 +86,9 @@ export interface AppElements {
   readonly settingsButton: HTMLElement
   readonly viewsButton: HTMLElement
   readonly split: HTMLElement
+  // The window's bottom edge, dragged to change its height, and the percent it shows meanwhile
+  readonly edge: HTMLElement
+  readonly edgeSize: HTMLElement
   readonly notice: HTMLElement
   readonly menu: HTMLElement
   readonly scrim: HTMLElement
@@ -560,6 +564,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       api,
       theme,
       fontSize: settings.current().fontSize,
+      holdFit: () => heldFit,
       ...terminalLook(settings.current(), systemFonts),
       macOptionAsMeta: settings.current().terminal.macOptionAsMeta,
       ...(options.cwd ? { cwd: options.cwd } : {}),
@@ -950,6 +955,25 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     },
     i18n.t,
   )
+
+  // While the edge is dragged the terminals keep their grid: a shell or a TUI redraws once, not every frame
+  let heldFit = false
+  const resizeEdge = createResizeEdge({
+    edge: elements.edge,
+    label: elements.edgeSize,
+    bar,
+    resize: (height) => api.window.resize(height),
+    end: (keep) => api.window.endResize(keep),
+    toggleFullHeight: () => api.window.toggleFullHeight(),
+    hold: (held) => {
+      heldFit = held
+    },
+    settle: () => {
+      for (const session of sessions.values()) session.fit()
+    },
+  })
+  // DCK_HEIGHT pins the height for the whole run, so the edge is offered or not once
+  resizeEdge.setEnabled(!settings.locked().includes('window.heightRatio'))
 
   api.window.onFullHeightChange((full) => {
     setFullHeight(full, [bar, elements.main])
