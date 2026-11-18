@@ -52,8 +52,9 @@ changed, and your merge requests and tasks.
   naming it typed at the tab's prompt, without Enter, for whatever agent is listening. With no agent in
   the tab, at a shell prompt or under another program, it waits and says so, and the comments stay.
 - **Connectors.** Your GitLab merge requests and Jira tasks in one screen (below).
-- **Terminal.** `Ctrl+click` opens links in the browser and file or folder paths in their default app;
-  selecting copies and the right or middle button pastes.
+- **Terminal.** `Ctrl+click` (`⌘`+click on a Mac) opens links in the browser and file or folder paths in
+  their default app; selecting copies and the right or middle button pastes. On a Mac the right click opens
+  a menu with Copy, Paste and Select all, and `⌘Q` asks first while a tab runs a program.
 
 ## Connectors
 

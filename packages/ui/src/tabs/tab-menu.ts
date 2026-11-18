@@ -1,8 +1,11 @@
+import { keys } from '../kit/keys.ts'
 import { h } from '../panel/dom.ts'
 
 export interface MenuAction {
   readonly label: string
   readonly enabled: boolean
+  // The shortcut that does the same, shown beside the label as the hold menu shows it
+  readonly key?: string
   run(): void
 }
 
@@ -11,6 +14,9 @@ export interface MenuOptions {
   readonly align?: 'start' | 'end'
   // A line above the items that says why they are offered; read, never focused
   readonly caption?: string
+  // Opened by a click with the focus in the terminal: the first item takes the focus without its ring, as a
+  // right click on a tab gives it, since a text field's focus would pass its ring on to the item
+  readonly pointer?: boolean
 }
 
 // One opening of the menu: closing it does nothing once the menu has been opened again for another use
@@ -96,7 +102,12 @@ export function createTabMenu(element: HTMLElement) {
           const item = document.createElement('button')
           item.type = 'button'
           item.setAttribute('role', 'menuitem')
-          item.textContent = action.label
+          if (action.key === undefined) item.textContent = action.label
+          else {
+            const label = document.createElement('span')
+            label.textContent = action.label
+            item.append(label, keys(action.key, 'compact'))
+          }
           item.disabled = !action.enabled
           item.addEventListener('click', () => {
             close()
@@ -112,7 +123,8 @@ export function createTabMenu(element: HTMLElement) {
       const left = options.align === 'end' ? x - width : x
       element.style.left = `${Math.max(4, Math.min(left, window.innerWidth - width - 4))}px`
       element.style.top = `${Math.max(4, above || !fitsBelow ? y - height - GAP : y + GAP)}px`
-      items()[0]?.focus()
+      // Otherwise the browser decides, so a menu opened from the keyboard keeps its ring
+      items()[0]?.focus(options.pointer ? { focusVisible: false } : undefined)
       return {
         close: () => {
           if (opening === openings) close()
