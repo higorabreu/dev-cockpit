@@ -145,7 +145,7 @@ describe('shortcuts page, recording an action key', () => {
     press('j', { code: 'KeyJ' })
 
     // Assert
-    expect(row('theme').querySelector('.serror')?.textContent).toBe('Add Ctrl or Alt to that key.')
+    expect(row('theme').querySelector('.serror')?.textContent).toBe('Combine it with Ctrl or Alt.')
     expect(keyButton('theme').dataset.recording).toBe('true')
     expect(patches).toEqual([])
   })
@@ -188,7 +188,7 @@ describe('shortcuts page, recording an action key', () => {
 
     // Assert
     expect(row('renameTab').querySelector('.snote')?.textContent).toBe(
-      'Ctrl+R no longer reaches the terminal.',
+      'The terminal no longer receives Ctrl+R.',
     )
   })
 
@@ -203,7 +203,7 @@ describe('shortcuts page, recording an action key', () => {
 
     // Assert
     expect(row('theme').querySelector('.snote')?.textContent).toBe(
-      '⌃⇧L no longer reaches the terminal.',
+      'The terminal no longer receives ⌃⇧L.',
     )
   })
 })
@@ -218,7 +218,7 @@ describe('shortcuts page, a key another slot holds', () => {
     press('W', { code: 'KeyW', ctrlKey: true, shiftKey: true })
 
     // Assert
-    expect(row('newTab').querySelector('.snote')?.textContent).toBe('Already used by Close tab')
+    expect(row('newTab').querySelector('.snote')?.textContent).toBe('Already assigned to Close tab')
     expect(find('[data-focus="set-key-swap"]').textContent).toBe('Swap')
     expect(document.activeElement).toBe(find('[data-focus="set-key-swap"]'))
     expect(patches).toEqual([])
@@ -266,7 +266,7 @@ describe('shortcuts page, a key another slot holds', () => {
 
     // Assert
     expect(row('fullHeight').querySelector('.snote')?.textContent).toBe(
-      'Already used by Show and hide the window',
+      'Already assigned to Show and hide the window',
     )
   })
 })
@@ -320,7 +320,7 @@ describe('shortcuts page, defaults and the file', () => {
 
     // Assert
     expect(row('theme').querySelector('.snote')?.textContent).toBe(
-      'In settings.json: "Ctrl+". Not valid, left out.',
+      'In settings.json: "Ctrl+". Not valid; ignored.',
     )
     expect(find('.sreset[data-key="shortcuts.keys.theme"]').hidden).toBe(false)
     expect(find('#settings-tab-shortcuts .snav-mark')).not.toBeNull()
@@ -437,7 +437,7 @@ describe('shortcuts page, the hold menu trigger', () => {
     await settle()
 
     // Assert
-    expect(note).toBe('Already used by Full height')
+    expect(note).toBe('Already assigned to Full height')
     expect(current().shortcuts).toMatchObject({ holdTrigger: 'F11', keys: { fullHeight: 'F13' } })
   })
 })

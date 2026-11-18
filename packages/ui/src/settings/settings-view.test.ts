@@ -743,8 +743,8 @@ describe('settings view, the settings file', () => {
 
     // Assert
     expect(general).toEqual([
-      'In settings.json: "purple". Not valid, uses the default.',
-      'In settings.json: "Nope;}". Not valid, uses the default.',
+      'In settings.json: "purple". Not valid; using the default.',
+      'In settings.json: "Nope;}". Not valid; using the default.',
     ])
     expect(noteOf(body, 'system.notifyAfterSeconds')).toBe('In settings.json: 2. Adjusted to 5.')
     view.close()
@@ -827,7 +827,7 @@ describe('settings view, the settings file', () => {
 
     // Assert
     expect(body.querySelector('[data-focus="set-open-file"] .sfile-dot')).not.toBeNull()
-    expect(noteOf(body, 'theme')).toBe('In settings.json: "purple". Not valid, uses the default.')
+    expect(noteOf(body, 'theme')).toBe('In settings.json: "purple". Not valid; using the default.')
     view.close()
   })
 

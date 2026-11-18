@@ -22,7 +22,7 @@ Decided with the maintainer:
   "Already used by {action}" with Swap and Cancel; Swap gives the other one this row's previous key. No
   modal.
 - A chord the shell uses (PC: Ctrl and a letter or symbol without Shift or Alt; Mac: any Control chord) is
-  allowed, with a note under the row: "{key} no longer reaches the terminal."
+  allowed, with a note under the row: "The terminal no longer receives {key}."
 - Labels follow the custom keys everywhere at once: reference rows, tooltips (the static ones in
   index.html come from the keymap), hold menu rows, the review header hints.
 - Hold menu trigger: a recorder like the global key. One key that does not type (modifiers, F keys, Caps
