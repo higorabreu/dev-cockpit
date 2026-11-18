@@ -441,7 +441,7 @@ describe('settings view, connections', () => {
     expect(
       body.querySelector<HTMLInputElement>('[data-focus="conn-gitlab-url"]')?.placeholder,
     ).toBe('https://gitlab.example.com')
-    expect(body.textContent).toContain('read_api scope. Stored in the system keyring.')
+    expect(body.textContent).toContain('read_api scope.')
     view.close()
   })
 
@@ -483,11 +483,23 @@ describe('settings view, connections', () => {
   it('should give GitHub a one-line read-only hint and the github.com placeholder', async () => {
     const { body, view } = await connectionsPage(connectionsHost([GITHUB_CONNECTOR]).host)
 
-    expect(body.textContent).toContain('Fine-grained, read-only. Stored in the system keyring.')
+    expect(body.textContent).toContain('Fine-grained, read-only.')
     expect(body.textContent).not.toContain('An empty address')
     expect(
       body.querySelector<HTMLInputElement>('[data-focus="conn-github-url"]')?.placeholder,
     ).toBe('https://github.com')
+    view.close()
+  })
+
+  it('should say once under the accounts that the tokens stay in the system keyring', async () => {
+    // Arrange, Act
+    const { body, view } = await connectionsPage(
+      connectionsHost([GITHUB_CONNECTOR, GITLAB_CONNECTOR]).host,
+    )
+
+    // Assert
+    const notes = [...body.querySelectorAll('.spanel .sfoot')].map((note) => note.textContent)
+    expect(notes).toEqual(['Tokens are stored in the system keyring, never in a file.'])
     view.close()
   })
 

@@ -651,6 +651,8 @@ export function createSettingsView(
           h('div', { class: 'srow2' }, h('span', { class: 'shint' }, t('connections.empty'))),
         ),
       )
+    // Said once for every account instead of under each token
+    else sections.push(h('p', { class: 'shint sfoot' }, t('connections.keyring')))
     return sections
   }
 
