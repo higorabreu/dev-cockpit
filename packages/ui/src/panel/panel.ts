@@ -1,5 +1,5 @@
-import { clampPanelWidth, PANEL_WIDTH, readPreference, type Translate } from '@dck/core'
-import { type RailBadge, showBadge } from '../kit/badge.ts'
+import { clampPanelWidth, PANEL_WIDTH, readPreference, type Translator } from '@dck/core'
+import { showRailDot } from '../kit/rail-dot.ts'
 import { h, icon } from './dom.ts'
 
 export interface PanelSection {
@@ -10,8 +10,8 @@ export interface PanelSection {
   readonly expandedByDefault: boolean
   // Short text to the right of the title, visible even with the section collapsed
   summary(): string
-  // Rail badge, only when something needs attention
-  badge(): RailBadge | undefined
+  // How many things wait for the user; above zero the rail button gets a dot
+  waiting(): number
   body(): HTMLElement
 }
 
@@ -27,7 +27,7 @@ export interface PanelOptions {
   readonly elements: PanelElements
   readonly sections: readonly PanelSection[]
   title(): string
-  t: Translate
+  i18n: Translator
   // Called after a mouse click, so the terminal receives keys again
   afterPointer?(): void
   // Loads the data of the open sections; only runs with the panel visible
@@ -100,7 +100,7 @@ export function createPanel(options: PanelOptions) {
     const signature = JSON.stringify(
       options.sections.map((section) => [
         section.id,
-        section.badge() ?? null,
+        section.waiting(),
         state.open && state.sections[section.id] === true,
       ]),
     )
@@ -118,7 +118,7 @@ export function createPanel(options: PanelOptions) {
           },
           icon(section.icon),
         )
-        showBadge(button, options.t, section.label, section.badge())
+        showRailDot(button, options.i18n, section.label, section.waiting())
         return button
       }),
     )

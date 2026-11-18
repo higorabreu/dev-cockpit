@@ -127,32 +127,24 @@
     width: 26px;
     height: 26px;
   }
+
+  #rail .rail-dot {
+    top: 1px;
+    right: 1px;
+  }
 }
 
-/* A count on a rail button, at its lower right as in VS Code's activity bar: a ring in the window color
-   cuts it out of the icon, so both stay readable where they meet. One width for every count, the one
-   "9+" needs, so the pill never changes size. Inter's line box sets the digits 0.75px above the middle of
-   13px: one pixel of padding on top centers them to the device pixel at scale 2 */
-.badge {
+/* Something waits behind a rail button: a dot at the icon's upper right, as on the update icon, in the
+   neutral foreground (nothing is wrong), cut out of the icon by a ring in the window color */
+.rail-dot {
   position: absolute;
-  right: 1px;
-  bottom: 1px;
-  width: 16px;
-  height: 13px;
-  padding-top: 1px;
-  box-sizing: border-box;
-  border-radius: 7px;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   background: var(--fg);
-  box-shadow: 0 0 0 2px var(--bg);
-  color: var(--bg);
-  font: 600 9px / 12px var(--font-sans);
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.badge[hidden] {
-  display: none;
+  box-shadow: 0 0 0 1.5px var(--bg);
 }
 
 .pinner {

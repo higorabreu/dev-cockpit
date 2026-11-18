@@ -24,8 +24,8 @@ export const connectorViewSchema = z.strictObject({
   // What the tab's list holds, shown in its tooltip
   description: messageKey,
   empty: messageKey,
-  // What this view adds to the Work badge: `review` every item, `attention` the user's own merge
-  // requests that need them (`needsAttention`)
+  // What this view counts toward the dot on the Work button: `review` every item, `attention` the user's
+  // own merge requests that need them (`needsAttention`)
   badge: z.enum(BADGE_ROLES).optional(),
 })
 

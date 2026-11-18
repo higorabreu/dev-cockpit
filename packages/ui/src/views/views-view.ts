@@ -21,7 +21,6 @@ import type { Keymap } from '../platform/keymap.ts'
 import { type LaidSection, layOutList, ROW_HEIGHT, rowSpan } from './list-layout.ts'
 import { createProjectSelect } from './project-select.ts'
 import type { SeenMarksStore } from './seen-marks.ts'
-import type { WorkCounts } from './work-badge.ts'
 
 const OVERSCAN = 4
 // Room kept beside the active tab when the strip scrolls it into view: the width of the faded edge
@@ -30,7 +29,7 @@ const TAB_EDGE_PX = 24
 const COPIED_MS = 2000
 // Data older than this is fetched again on open
 const STALE_MS = 60_000
-// For the rail badge, which does not need to be as fresh as the open list
+// For the Work dot on the rail, which does not need to be as fresh as the open list
 const WARM_STALE_MS = 5 * 60_000
 
 type MergeRequestItem = Extract<ViewItem, { kind: 'mergeRequest' }>
@@ -79,8 +78,8 @@ export interface ViewsViewDeps {
   readonly i18n: Translator
   onClose(): void
   openSettings(): void
-  // What the views the connectors marked for the Work badge add up to
-  onBadge(counts: WorkCounts): void
+  // How many items of the views the connectors marked for the Work button wait for the user
+  onWaiting(count: number): void
   // What the user saw of their own merge requests, which the attention count leaves out
   readonly seen: SeenMarksStore
   // Some view's items changed, for what else in the window reads them (the Git section's ticket link)
@@ -127,20 +126,20 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     if (currentView() === undefined) current = connectedViews()[0]?.id
   }
   const badgeViews = () => views.filter((view) => view.badge !== undefined)
-  // The connected views that feed the badge are summed by role; a fetched list of the user's own also
+  // The connected views that feed the Work dot are summed by role; a fetched list of the user's own also
   // drops the seen marks of what left it
   const announceCount = () => {
-    const counts = { review: 0, attention: 0 }
+    let waiting = 0
     for (const view of badgeViews()) {
       const snapshot = snapshotOf(view.id)
       if (snapshot.state === 'unconfigured') continue
-      if (view.badge === 'review') counts.review += snapshot.items.length
+      if (view.badge === 'review') waiting += snapshot.items.length
       else if (view.badge === 'attention') {
         if (snapshot.updatedAt !== undefined) deps.seen.keep(view.id, snapshot.items)
-        counts.attention += attentionCount(snapshot.items, deps.seen.of(view.id))
+        waiting += attentionCount(snapshot.items, deps.seen.of(view.id))
       }
     }
-    deps.onBadge(counts)
+    deps.onWaiting(waiting)
     deps.onItems?.()
   }
 
@@ -688,7 +687,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     })
   }
 
-  // The enabled connectors decide which views exist; a disabled one takes its tabs and its badge away
+  // The enabled connectors decide which views exist; a disabled one takes its tabs and its dot away
   async function loadViews() {
     const connectors = await api.connections.list()
     views = connectors.flatMap((connector) =>
@@ -835,7 +834,7 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
       if (isOpen()) close()
       else void this.open()
     },
-    // Without opening the screen: loads what is stored and refreshes if older than 5 minutes, for the rail badge
+    // Without opening the screen: loads what is stored and refreshes if older than 5 minutes, for the Work dot
     async warm() {
       await loadViews()
       const badges = badgeViews()

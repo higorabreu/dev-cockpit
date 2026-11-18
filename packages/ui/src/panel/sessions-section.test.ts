@@ -54,24 +54,18 @@ function draw(
   return { body, calls, button, section }
 }
 
-describe('sessions section, rail badge', () => {
-  it('should show no badge when nothing waits for the user', () => {
+describe('sessions section, rail dot', () => {
+  it('should count no waiting tab when nothing waits for the user', () => {
     const { section } = draw(undefined)
 
-    expect(section.badge()).toBeUndefined()
+    expect(section.waiting()).toBe(0)
   })
 
-  it.each([
-    { locale: 'en' as const, expected: '12 waiting for you' },
-    { locale: 'pt-BR' as const, expected: '12 aguardando você' },
-  ])(
-    'should give the exact count in $locale when tabs wait for the user',
-    ({ locale, expected }) => {
-      const { section } = draw(undefined, locale, 12)
+  it('should count the tabs that wait for the user when some finished out of sight', () => {
+    const { section } = draw(undefined, 'en', 12)
 
-      expect(section.badge()).toEqual({ count: 12, detail: expected })
-    },
-  )
+    expect(section.waiting()).toBe(12)
+  })
 })
 
 describe('sessions section, connect hint', () => {

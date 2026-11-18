@@ -40,8 +40,8 @@ import {
 } from '@dck/core'
 import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
 import { createHoldMenuController } from './hold-menu/hold-menu-controller.ts'
-import { showBadge } from './kit/badge.ts'
 import { setFullHeight } from './kit/layout-mode.ts'
+import { showRailDot } from './kit/rail-dot.ts'
 import { translateStatic } from './kit/static-text.ts'
 import { setTipRegion } from './kit/tooltip.ts'
 import { createEnvironmentSection } from './panel/environment-section.ts'
@@ -71,7 +71,6 @@ import { createTerminalSession, type TerminalSession } from './terminal/terminal
 import { createUpdateNotice } from './updates/update-notice.ts'
 import { createSeenMarks } from './views/seen-marks.ts'
 import { createViewsView } from './views/views-view.ts'
-import { NO_WORK, type WorkCounts, workBadge } from './views/work-badge.ts'
 import { createResizeEdge } from './window/resize-edge.ts'
 
 export interface AppElements {
@@ -221,17 +220,17 @@ export async function startApp(
     i18n,
     onClose: () => focusActive(),
     openSettings: () => settingsView.open('connections'),
-    onBadge: showWorkBadge,
+    onWaiting: showWorkWaiting,
     seen: createSeenMarks(localStorage),
     // The ticket link in the Git section follows the Jira tasks as they arrive
     onItems: () => panel.render(),
     keymap,
   })
 
-  let workCounts = NO_WORK
-  function showWorkBadge(counts: WorkCounts) {
-    workCounts = counts
-    showBadge(elements.viewsButton, i18n.t, i18n.t('views.title'), workBadge(i18n, counts))
+  let workWaiting = 0
+  function showWorkWaiting(count: number) {
+    workWaiting = count
+    showRailDot(elements.viewsButton, i18n, i18n.t('views.title'), count)
   }
 
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
@@ -440,7 +439,7 @@ export async function startApp(
       createEnvironmentSection({ status: () => environment }, i18n),
     ],
     afterPointer: () => focusActive(),
-    t: i18n.t,
+    i18n,
     title: () => {
       const cwd = state.activeId ? watcher.get(state.activeId)?.cwd : undefined
       return cwd ? displayPath(cwd) : ''
@@ -710,7 +709,7 @@ export async function startApp(
       viewsView.retranslate()
       reviews.retranslate()
       for (const view of tabViews.values()) view.retranslate()
-      showWorkBadge(workCounts)
+      showWorkWaiting(workWaiting)
       updateNotice.retranslate()
       settingsView.rerender()
       renderTabs()
@@ -721,7 +720,7 @@ export async function startApp(
     // The keymap reads the keys by itself; what drew a key's label draws it again
     if (changed.some((key) => key.startsWith('shortcuts.keys'))) reviews.keysChanged()
     if (changed.includes('system.agentConnectHint')) panel.render()
-    // A connector was enabled or disabled: its tabs and the badge follow
+    // A connector was enabled or disabled: its tabs and the Work dot follow
     if (changed.includes('extensions.disabled')) void viewsView.warm()
     if (changed.includes('fontSize')) {
       for (const session of sessions.values()) session.setFontSize(next.fontSize)
@@ -1035,7 +1034,7 @@ export async function startApp(
   })
   elements.settingsButton.addEventListener('click', () => settingsView.toggle())
   elements.viewsButton.addEventListener('click', () => viewsView.toggle())
-  showWorkBadge(NO_WORK)
+  showWorkWaiting(0)
   void viewsView.warm()
   api.window.onShown(() => void viewsView.warm())
   api.window.onOpenSettings(() => settingsView.open())

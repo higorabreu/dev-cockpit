@@ -14,7 +14,6 @@ import { createKeymap } from '../platform/keymap.ts'
 import { HEADER_HEIGHT, ROW_HEIGHT } from './list-layout.ts'
 import { createSeenMarks } from './seen-marks.ts'
 import { createViewsView } from './views-view.ts'
-import type { WorkCounts } from './work-badge.ts'
 
 const mergeRequest = (number: number): ViewItem => ({
   kind: 'mergeRequest',
@@ -69,7 +68,7 @@ function setup(options: {
 }) {
   const stored = new Map(options.snapshots.map((entry) => [entry.view, entry]))
   const opened: string[] = []
-  const badges: WorkCounts[] = []
+  const waiting: number[] = []
   const storedMarks = new Map<string, string>()
   const clipboard: string[] = []
   const refreshed: string[] = []
@@ -100,7 +99,7 @@ function setup(options: {
     openSettings: () => {
       settingsOpened += 1
     },
-    onBadge: (counts) => void badges.push(counts),
+    onWaiting: (count) => void waiting.push(count),
     seen: createSeenMarks({
       getItem: (key) => storedMarks.get(key) ?? null,
       setItem: (key, value) => void storedMarks.set(key, value),
@@ -120,7 +119,7 @@ function setup(options: {
     tabs,
     notice,
     opened,
-    badges,
+    waiting,
     clipboard,
     refreshed,
     itemChanges: () => itemChanges,
@@ -236,17 +235,17 @@ describe('views view tabs', () => {
   })
 })
 
-describe('views view badge', () => {
-  it('should count the items of the view the connector marked for the badge when warming', async () => {
-    const { view, badges } = setup({ connectors: [GITLAB_CONNECTOR], snapshots: connected })
+describe('views view waiting count', () => {
+  it('should count the items of the view the connector marked for the Work dot when warming', async () => {
+    const { view, waiting } = setup({ connectors: [GITLAB_CONNECTOR], snapshots: connected })
 
     await view.warm()
 
-    expect(badges.at(-1)).toEqual({ review: 2, attention: 0 })
+    expect(waiting.at(-1)).toBe(2)
   })
 
-  it('should drop the badge when the connector is disabled and the screen warms again', async () => {
-    const { view, badges, disableAll } = setup({
+  it('should count nothing when the connector is disabled and the screen warms again', async () => {
+    const { view, waiting, disableAll } = setup({
       connectors: [GITLAB_CONNECTOR],
       snapshots: connected,
     })
@@ -255,19 +254,19 @@ describe('views view badge', () => {
 
     await view.warm()
 
-    expect(badges.at(-1)).toEqual({ review: 0, attention: 0 })
+    expect(waiting.at(-1)).toBe(0)
   })
 
   it('should not count a view whose account is not connected', async () => {
-    const { view, badges } = setup({ connectors: [GITLAB_CONNECTOR], snapshots: unconnected })
+    const { view, waiting } = setup({ connectors: [GITLAB_CONNECTOR], snapshots: unconnected })
 
     await view.warm()
 
-    expect(badges.at(-1)).toEqual({ review: 0, attention: 0 })
+    expect(waiting.at(-1)).toBe(0)
   })
   it('should add the user own merge requests whose CI failed when warming', async () => {
     const failed = { ...mergeRequest(7), pipeline: 'failed' } as ViewItem
-    const { view, badges } = setup({
+    const { view, waiting } = setup({
       connectors: [GITLAB_CONNECTOR],
       snapshots: [
         connected[0] as ViewSnapshot,
@@ -277,35 +276,35 @@ describe('views view badge', () => {
 
     await view.warm()
 
-    expect(badges.at(-1)).toEqual({ review: 2, attention: 1 })
+    expect(waiting.at(-1)).toBe(3)
   })
 
   it('should stop counting an open discussion when the user opens the tab that lists it', async () => {
     const discussed = { ...mergeRequest(7), openDiscussions: true } as ViewItem
-    const { view, badges, overlay } = setup({
+    const { view, waiting, overlay } = setup({
       connectors: [GITLAB_CONNECTOR],
       snapshots: [connected[0] as ViewSnapshot, snapshot('mine', 'idle', [discussed])],
     })
     await view.warm()
-    const before = badges.at(-1)
+    const before = waiting.at(-1)
     await view.open()
 
     press(overlay.querySelector('.vinput'), 'ArrowRight')
 
-    expect(before).toEqual({ review: 2, attention: 1 })
-    expect(badges.at(-1)).toEqual({ review: 2, attention: 0 })
+    expect(before).toBe(3)
+    expect(waiting.at(-1)).toBe(2)
   })
 
   it('should not mark the user own merge requests as seen when the review tab is the open one', async () => {
     const discussed = { ...mergeRequest(7), openDiscussions: true } as ViewItem
-    const { view, badges } = setup({
+    const { view, waiting } = setup({
       connectors: [GITLAB_CONNECTOR],
       snapshots: [connected[0] as ViewSnapshot, snapshot('mine', 'idle', [discussed])],
     })
 
     await view.open()
 
-    expect(badges.at(-1)).toEqual({ review: 2, attention: 1 })
+    expect(waiting.at(-1)).toBe(3)
   })
 })
 
@@ -322,31 +321,31 @@ describe('views view with GitHub', () => {
   ]
   const githubOnly = [...github, ...unconnected]
 
-  it('should count the GitHub reviews and refresh both badge views when GitHub is the only one connected', async () => {
-    const { view, badges, refreshed } = setup({
+  it('should count the GitHub reviews and refresh both counted views when GitHub is the only one connected', async () => {
+    const { view, waiting, refreshed } = setup({
       connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
       snapshots: githubOnly,
     })
 
     await view.warm()
 
-    expect(badges.at(-1)).toEqual({ review: 1, attention: 0 })
+    expect(waiting.at(-1)).toBe(1)
     expect(refreshed).toEqual(['github-review', 'github-mine', 'review', 'mine'])
   })
 
   it('should sum the reviews of both services when both are connected', async () => {
-    const { view, badges } = setup({
+    const { view, waiting } = setup({
       connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
       snapshots: [...github, ...connected],
     })
 
     await view.warm()
 
-    expect(badges.at(-1)).toEqual({ review: 3, attention: 0 })
+    expect(waiting.at(-1)).toBe(3)
   })
 
   it('should count only the GitLab reviews when GitLab is the only one connected', async () => {
-    const { view, badges } = setup({
+    const { view, waiting } = setup({
       connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
       snapshots: [
         snapshot('github-review', 'unconfigured'),
@@ -357,7 +356,7 @@ describe('views view with GitHub', () => {
 
     await view.warm()
 
-    expect(badges.at(-1)).toEqual({ review: 2, attention: 0 })
+    expect(waiting.at(-1)).toBe(2)
   })
 
   it('should write the pull request reference with # and open it when Enter is pressed', async () => {
