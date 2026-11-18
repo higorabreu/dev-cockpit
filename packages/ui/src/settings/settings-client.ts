@@ -1,4 +1,12 @@
-import type { HostApi, Settings, SettingsPatch, SettingsUpdate, Unsubscribe } from '@dck/core'
+import {
+  type HostApi,
+  type Settings,
+  type SettingsFileState,
+  type SettingsPatch,
+  type SettingsUpdate,
+  sameFileState,
+  type Unsubscribe,
+} from '@dck/core'
 
 export interface SettingsClient {
   current(): Settings
@@ -6,6 +14,10 @@ export interface SettingsClient {
   locked(): readonly string[]
   update(patch: SettingsPatch): Promise<SettingsUpdate>
   onChange(listener: (settings: Settings, changed: readonly string[]) => void): Unsubscribe
+  // Whether settings.json reads and which of its values it did not use as written
+  file(): SettingsFileState
+  onFile(listener: (file: SettingsFileState) => void): Unsubscribe
+  openFile(): Promise<boolean>
 }
 
 const LEGACY_KEYS = ['dck-theme', 'dck-opacity', 'dck-font-size', 'dck-locale'] as const
@@ -36,9 +48,10 @@ function safeStorage() {
 }
 
 export async function createSettingsClient(api: HostApi): Promise<SettingsClient> {
-  let view = await api.settings.get()
+  const view = await api.settings.get()
   let current = view.settings
   let locked = view.locked
+  let file = view.file
 
   const storage = safeStorage()
   if (view.fresh && storage) {
@@ -47,6 +60,7 @@ export async function createSettingsClient(api: HostApi): Promise<SettingsClient
       const result = await api.settings.update(patch)
       current = result.settings
       locked = result.locked
+      file = result.file
     }
   }
   // After migrating (or if a file already existed) the old keys are no longer needed
@@ -57,7 +71,14 @@ export async function createSettingsClient(api: HostApi): Promise<SettingsClient
     current = settings
     for (const listener of listeners) listener(settings, changed)
   })
-  view = { ...view, settings: current, locked }
+  const fileListeners = new Set<(file: SettingsFileState) => void>()
+  // The host announces a change and the update that caused it returns it too: only the first counts
+  const setFile = (next: SettingsFileState) => {
+    if (sameFileState(file, next)) return
+    file = next
+    for (const listener of fileListeners) listener(next)
+  }
+  api.settings.onFile(setFile)
 
   return {
     current: () => current,
@@ -66,11 +87,18 @@ export async function createSettingsClient(api: HostApi): Promise<SettingsClient
       const result = await api.settings.update(patch)
       current = result.settings
       locked = result.locked
+      setFile(result.file)
       return result
     },
     onChange(listener) {
       listeners.add(listener)
       return () => void listeners.delete(listener)
     },
+    file: () => file,
+    onFile(listener) {
+      fileListeners.add(listener)
+      return () => void fileListeners.delete(listener)
+    },
+    openFile: () => api.settings.openFile(),
   }
 }

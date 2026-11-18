@@ -3,6 +3,7 @@ import { EXTENSION_ID_MAX, parseManifest } from '../extensions/manifest.ts'
 import { acceleratorFromEvent } from './accelerator.ts'
 import {
   changedKeys,
+  changedPaths,
   defaultSettings,
   LIMITS,
   mergeSettings,
@@ -24,8 +25,10 @@ describe('parseSettings', () => {
     expect(defaultSettings).toEqual({
       language: 'auto',
       theme: 'dark',
-      opacity: 0.92,
+      opacity: 1,
       fontSize: 16,
+      appearance: { fontFamily: null, codeFontFamily: null },
+      terminal: { fontFamily: null, cursorStyle: 'block', cursorBlink: true },
       window: { heightRatio: 0.5, panelOnFullHeight: true, restoreTabs: true },
       shortcuts: { toggleWindow: 'F12', holdTrigger: null },
       projects: { root: null, depth: 2 },
@@ -36,10 +39,30 @@ describe('parseSettings', () => {
     })
   })
 
+  it('should keep a font name and send an unsafe one back to the default', () => {
+    // Act
+    const settings = parseSettings({
+      terminal: { fontFamily: 'MesloLGS NF', cursorStyle: 'bar' },
+      appearance: { fontFamily: "Inter'; } body {", codeFontFamily: 'Fira Code' },
+    })
+
+    // Assert
+    expect(settings.terminal).toEqual({
+      fontFamily: 'MesloLGS NF',
+      cursorStyle: 'bar',
+      cursorBlink: true,
+    })
+    expect(settings.appearance).toEqual({ fontFamily: null, codeFontFamily: 'Fira Code' })
+  })
+
+  it('should send an unknown cursor style back to the block', () => {
+    expect(parseSettings({ terminal: { cursorStyle: 'beam' } }).terminal.cursorStyle).toBe('block')
+  })
+
   it('should keep the valid fields and reset only the invalid one when a field has the wrong type', () => {
     const settings = parseSettings({ language: 'en', theme: 42, opacity: 'x', fontSize: 20 })
 
-    expect(settings).toMatchObject({ language: 'en', theme: 'dark', opacity: 0.92, fontSize: 20 })
+    expect(settings).toMatchObject({ language: 'en', theme: 'dark', opacity: 1, fontSize: 20 })
   })
 
   it('should cut numbers at the limits when they are out of range', () => {
@@ -236,6 +259,19 @@ describe('mergeSettings', () => {
     mergeSettings(defaultSettings, { theme: 'light' })
 
     expect(defaultSettings).toEqual(before)
+  })
+})
+
+describe('changedPaths', () => {
+  it('should keep a folder with a dot as one key when a review base changes', () => {
+    const after = mergeSettings(
+      defaultSettings,
+      reviewBasePatch('/home/ana/acme.backend', 'origin/dev'),
+    )
+
+    expect(changedPaths(defaultSettings, after)).toEqual([
+      ['review', 'bases', '/home/ana/acme.backend'],
+    ])
   })
 })
 

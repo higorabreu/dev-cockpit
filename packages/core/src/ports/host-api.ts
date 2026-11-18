@@ -1,8 +1,10 @@
 import type { AgentSignal } from '../attention/agent-signal.ts'
 import type { Connector } from '../connectors/connector.ts'
+import type { SystemFontsInfo } from '../fonts/fonts.ts'
 import type { ErrorBody } from '../ipc/protocol.ts'
 import type { Result } from '../result.ts'
 import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
+import type { SettingsFileState } from '../settings/settings-file.ts'
 import type { SavedTabs } from '../tabs/saved-tabs.ts'
 import type { AgentProfile } from './agent.ts'
 import type { ConnectionFields, ConnectionStatus, DisabledConnector } from './connections.ts'
@@ -59,6 +61,10 @@ export interface HostApi {
     get(): Promise<SettingsView>
     update(patch: SettingsPatch): Promise<SettingsUpdate>
     onChange(listener: (settings: Settings, changed: readonly string[]) => void): Unsubscribe
+    // Whether settings.json reads and which of its values were not used as written
+    onFile(listener: (file: SettingsFileState) => void): Unsubscribe
+    // In the system's default editor, written first when there is none; false when nothing opened it
+    openFile(): Promise<boolean>
   }
   // By connector id; only the enabled connectors this app implements are listed or answered
   readonly connections: {
@@ -123,6 +129,10 @@ export interface HostApi {
     // The system folder picker; undefined when the user cancels
     chooseRoot(): Promise<string | undefined>
   }
+  // The user's terminal font, the system's monospace font and the installed families
+  readonly fonts: {
+    system(): Promise<SystemFontsInfo>
+  }
   // The tabs of the last run, kept for the next start
   readonly tabs: {
     saved(): Promise<SavedTabs | undefined>
@@ -152,6 +162,8 @@ export const hostChannels = {
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
   settingsChanged: 'settings:changed',
+  settingsFile: 'settings:file',
+  settingsOpenFile: 'settings:open-file',
   connectionsList: 'connections:list',
   connectionsDisabled: 'connections:disabled',
   connectionsStatus: 'connections:status',
@@ -179,6 +191,7 @@ export const hostChannels = {
   projectsTouch: 'projects:touch',
   projectsToggleFavorite: 'projects:toggle-favorite',
   projectsChooseRoot: 'projects:choose-root',
+  fontsSystem: 'fonts:system',
   tabsSaved: 'tabs:saved',
   tabsSave: 'tabs:save',
   windowToggleFullHeight: 'window:toggle-full-height',

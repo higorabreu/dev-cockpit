@@ -124,11 +124,22 @@ shortcut if the global key is refused.
 
 ## Settings
 
-`Ctrl+,` opens the screen: language, theme, opacity, font, window height, global key, hold menu key,
+`Ctrl+,` opens the screen: language, theme, opacity, the interface and code fonts, the terminal's font,
+size and cursor (block, bar or underline, blinking or not), window height, global key, hold menu key,
 projects folder, start with the system, the threshold to notify a long command, the review layout and
 the GitLab and Jira connections. Everything applies at once. Settings live in a `settings.json` that can also be edited by
-hand; an invalid field goes back to its default. The `DCK_KEY`, `DCK_HEIGHT` and `DCK_PROJECTS_ROOT`
-variables win over the file.
+hand, like VS Code's: the button beside the screen's close (or Open the settings file in the hold menu's
+System list) opens it in your editor, it takes comments and trailing commas, and whatever you save
+applies at once while the screen's own changes keep your comments and layout. A value it cannot use goes
+back to its default or to the nearest limit: the screen marks the file button (its tooltip counts the
+warnings) and the pages that have one and says under each setting what the file holds and what is used instead, and its
+reset writes the right value back; a file that is not valid JSON keeps the last good settings, the
+controls wait, and a line above the page says the line and column to fix. The `DCK_KEY`, `DCK_HEIGHT` and `DCK_PROJECTS_ROOT` variables win over the file.
+
+The interface draws with Inter and JetBrains Mono, which ship with the cockpit. The terminal draws, by
+default, with the font of your own terminal (the GNOME Terminal or Ptyxis profile, else the system's
+monospace font), so a prompt made for it looks the same; its Powerline and Nerd Font symbols come from a
+font installed for them, such as Symbols Nerd Font or a patched font like MesloLGS NF.
 
 ## Develop without disturbing the installed one
 

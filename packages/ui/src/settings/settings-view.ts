@@ -10,9 +10,13 @@ import {
   type HostApi,
   LIMITS,
   type MessageKey,
+  noSystemFonts,
   type Settings,
+  type SettingsIssue,
   type SettingsPatch,
+  type SystemFontsInfo,
   type Translator,
+  terminalFamily,
 } from '@dck/core'
 import { trapFocus } from '../kit/focus-trap.ts'
 import { keys as keyCaps } from '../kit/keys.ts'
@@ -70,6 +74,11 @@ const reference = (keymap: Keymap): ReadonlyArray<readonly [string, string]> => 
   ['settings.ref.settings', keymap.label('settings')],
 ]
 
+// The shipped fonts are registered as variable fonts; the screen names them as the user knows them
+const shownFamily = (family: string) => family.replace(/ Variable$/, '')
+
+const WARNING = '<path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17.5v.01"/>'
+
 const TABS = [
   { id: 'general', label: 'settings.tab.general' },
   { id: 'shortcuts', label: 'settings.group.shortcuts' },
@@ -99,7 +108,11 @@ export function createSettingsView(
   const t = i18n.t
   let recording = false
   let autostart = false
+  // The fonts installed, asked for each time the screen opens so a font installed since then shows up
+  let fonts: SystemFontsInfo = noSystemFonts
   let confirmingReset = false
+  // The last "Open the settings file" found no app to open it; cleared when the screen opens again
+  let openFailed = false
   let activeTab: TabId = TABS[0].id
   // The enabled connectors, each with its own section on the Connections page
   let connectors: readonly Connector[] = []
@@ -122,6 +135,8 @@ export function createSettingsView(
   }
   // Error message per key, shown beside its control
   const errors = new Map<string, string>()
+  // A calmer word beside a control, such as a typed value that was adjusted to fit
+  const notes = new Map<string, string>()
   // Changes made here need not redraw everything: the control already has the right value
   let local = 0
 
@@ -129,16 +144,20 @@ export function createSettingsView(
 
   async function commit(patch: SettingsPatch, errorKey?: string) {
     local += 1
+    const fileBefore = settings.file()
+    let redraw = errorKey !== undefined
     try {
       const result = await settings.update(patch)
       if (errorKey) {
         if (result.rejected.length > 0) errors.set(errorKey, t('settings.shortcutRefused'))
         else errors.delete(errorKey)
       }
+      // A refused change (the file is broken) puts the controls back to the values in use
+      if (result.rejected.length > 0) redraw = true
       return result
     } finally {
       local -= 1
-      if (errorKey) render()
+      if (redraw || settings.file() !== fileBefore) render()
       else refreshResets()
     }
   }
@@ -155,7 +174,7 @@ export function createSettingsView(
       'aria-label': t('settings.reset'),
     })
     button.textContent = '↺'
-    button.hidden = !differs(key, settings.current()) || settings.locked().includes(key)
+    button.hidden = !resettable(key)
     button.addEventListener('click', () => {
       void commit(
         patchFor(key, getPath(defaultSettings, key)),
@@ -168,10 +187,15 @@ export function createSettingsView(
   // Shows or hides each row's "restore" depending on the current value
   function refreshResets() {
     for (const button of body.querySelectorAll<HTMLElement>('.sreset')) {
-      const key = button.dataset.key ?? ''
-      button.hidden = !differs(key, settings.current()) || settings.locked().includes(key)
+      button.hidden = !resettable(button.dataset.key ?? '')
     }
   }
+
+  // A value the file holds wrongly can be put right by the reset, even when the one in use is the default
+  const resettable = (key: string) =>
+    (differs(key, settings.current()) || issueOf(key) !== undefined) &&
+    !settings.locked().includes(key) &&
+    !fileBroken()
 
   const labelId = (key: string) => `set-label-${key.replace(/\./g, '-')}`
 
@@ -186,9 +210,10 @@ export function createSettingsView(
   ): HTMLElement {
     const locked = settings.locked().includes(key)
     const error = errors.get(key)
+    const note = notes.get(key) ?? fileNote(key)
     return h(
       'div',
-      { class: 'srow2', 'data-locked': locked ? 'true' : undefined },
+      { class: 'srow2', 'data-setting': key, 'data-locked': locked ? 'true' : undefined },
       h(
         'div',
         { class: 'slabel' },
@@ -196,13 +221,67 @@ export function createSettingsView(
         (locked ? t('settings.locked') : hint) &&
           h('span', { class: 'shint' }, locked ? t('settings.locked') : (hint ?? '')),
         error && h('span', { class: 'serror', role: 'alert' }, error),
+        note && h('span', { class: 'snote', role: 'status' }, note),
         more,
       ),
       h('div', { class: 'scontrol' }, control, resettable && resetButton(key)),
     )
   }
 
-  const disabled = (key: string) => settings.locked().includes(key)
+  // While settings.json is broken nothing can be saved, so no control pretends it can
+  const fileBroken = () => settings.file().kind === 'invalid'
+  const disabled = (key: string) => settings.locked().includes(key) || fileBroken()
+
+  // The value of settings.json not used as written for this setting, or one of its entries
+  function issueOf(key: string): SettingsIssue | undefined {
+    const file = settings.file()
+    if (file.kind !== 'ok') return undefined
+    return file.issues.find((issue) => issue.key === key || issue.key.startsWith(`${key}.`))
+  }
+
+  // A value that went back to its default says so: the file's form of it (1 for 100%, null for a font)
+  // reads as a riddle beside the control
+  const issueText = (issue: SettingsIssue) =>
+    issue.kind === 'ignored' && issue.used === JSON.stringify(getPath(defaultSettings, issue.key))
+      ? t('settings.issue.ignoredDefault')
+      : t(`settings.issue.${issue.kind}`, { used: issue.used ?? '' })
+
+  // What the file holds for this setting, told under its name, where it can be put right
+  function fileNote(key: string): string | undefined {
+    const issue = issueOf(key)
+    if (!issue) return undefined
+    if (issue.kind === 'missingFolder') return t('settings.projectsRoot.missing')
+    return t('settings.file.rowNote', { found: issue.found, reason: issueText(issue) })
+  }
+
+  // Only when no app opened the file: the button alone gives no sign that nothing happened
+  const openFailedText = () =>
+    openFailed &&
+    h('span', { class: 'sfile-failed', role: 'status' }, t('settings.file.openFailed'))
+
+  // Above the page, only while the file cannot be read: nothing here saves until it is fixed
+  function brokenStrip(): HTMLElement | false {
+    const file = settings.file()
+    if (file.kind !== 'invalid') return false
+    const open = h(
+      'button',
+      { type: 'button', class: 'sbroken-open', 'data-focus': 'set-broken-open' },
+      t('settings.file.openToFix'),
+    )
+    open.addEventListener('click', () => void openFile())
+    return h(
+      'div',
+      { class: 'sbroken', role: 'status' },
+      icon(WARNING, 14, 'sfile-warn'),
+      h('p', {}, t('settings.file.invalid', file)),
+      open,
+    )
+  }
+
+  async function openFile() {
+    openFailed = !(await settings.openFile())
+    if (isOpen()) render()
+  }
 
   // `current` stands in for a setting that is null until the user chooses it
   function select(
@@ -217,6 +296,27 @@ export function createSettingsView(
       labelledBy: labelId(key),
       disabled: disabled(key),
       onChange: (value) => void commit(patchFor(key, value)),
+    })
+    control.button.dataset.focus = `set-${key}`
+    return control.element
+  }
+
+  // A font picker: the first option is the default (null in the file), then the installed families. A name
+  // set by hand that is not installed stays listed, so the control never shows another font than the file's
+  function fontSelect(key: string, families: readonly string[], fallback: string): HTMLElement {
+    const chosen = getPath(settings.current(), key)
+    const current = typeof chosen === 'string' ? chosen : ''
+    const names = current && !families.includes(current) ? [current, ...families] : families
+    const control = createSelect({
+      id: `set-${key.replace(/\./g, '-')}`,
+      options: [
+        { value: '', label: fallback },
+        ...names.map((name) => ({ value: name, label: name })),
+      ],
+      value: current,
+      labelledBy: labelId(key),
+      disabled: disabled(key),
+      onChange: (value) => void commit(patchFor(key, value === '' ? null : value)),
     })
     control.button.dataset.focus = `set-${key}`
     return control.element
@@ -258,7 +358,15 @@ export function createSettingsView(
     input.value = String(getPath(settings.current(), key))
     input.addEventListener('change', () => {
       const parsed = Number(input.value)
-      if (Number.isFinite(parsed)) void commit(patchFor(key, parsed)).then(render)
+      if (!Number.isFinite(parsed)) return
+      void commit(patchFor(key, parsed)).then((result) => {
+        // A value out of range is clamped: say so beside the field instead of changing it silently
+        const used = getPath(result.settings, key)
+        if (result.rejected.length === 0 && used !== parsed)
+          notes.set(key, t('settings.adjusted', { value: String(used), min, max }))
+        else notes.delete(key)
+        render()
+      })
     })
     return h('span', { class: 'snumber' }, input, unit && h('span', { class: 'sunit' }, unit))
   }
@@ -608,12 +716,43 @@ export function createSettingsView(
     return sections
   }
 
+  // Warnings mark the button with a dot and count in its tooltip; the detail is under each setting
+  function fileButton(): HTMLElement {
+    const file = settings.file()
+    const warnings = file.kind === 'ok' ? file.issues.length : 0
+    const tip =
+      warnings > 0 ? i18n.plural('settings.file.openWarnings', warnings) : t('settings.file.open')
+    const button = h(
+      'button',
+      {
+        type: 'button',
+        class: 'pclose sfile',
+        'data-focus': 'set-open-file',
+        'data-tip': tip,
+        'aria-label': tip,
+      },
+      icon(
+        '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M10 12l-1.5 2.5L10 17M14 12l1.5 2.5L14 17"/>',
+        14,
+      ),
+      warnings > 0 && h('span', { class: 'sfile-dot', 'aria-hidden': 'true' }),
+    )
+    button.addEventListener('click', () => void openFile())
+    return button
+  }
+
   function header(): HTMLElement {
     return h(
       'header',
       { class: 'shead2' },
       h('h1', {}, t('settings.title')),
-      closeButton(t, closeView, 'set-close'),
+      h(
+        'div',
+        { class: 'shead-actions' },
+        openFailedText(),
+        fileButton(),
+        closeButton(t, closeView, 'set-close'),
+      ),
     )
   }
 
@@ -625,7 +764,21 @@ export function createSettingsView(
     if (focus) body.querySelector<HTMLElement>(`#settings-tab-${id}`)?.focus()
   }
 
-  function tabList(): HTMLElement {
+  // The pages holding a setting the file got wrong, marked in the list so the user knows where to look
+  function tabsWithIssues(panels: Record<TabId, Node[]>): ReadonlySet<TabId> {
+    const marked = new Set<TabId>()
+    for (const tab of TABS) {
+      for (const node of panels[tab.id]) {
+        if (!(node instanceof Element)) continue
+        for (const row of node.querySelectorAll<HTMLElement>('[data-setting]')) {
+          if (issueOf(row.dataset.setting ?? '')) marked.add(tab.id)
+        }
+      }
+    }
+    return marked
+  }
+
+  function tabList(marked: ReadonlySet<TabId>): HTMLElement {
     const list = h('div', {
       class: 'snav',
       role: 'tablist',
@@ -645,8 +798,10 @@ export function createSettingsView(
           'aria-controls': 'settings-panel',
           tabindex: selected ? '0' : '-1',
           'data-focus': `set-tab-${tab.id}`,
+          'aria-description': marked.has(tab.id) ? t('settings.file.tabHasIssue') : undefined,
         },
         t(tab.label),
+        marked.has(tab.id) && h('span', { class: 'snav-mark', 'aria-hidden': 'true' }),
       )
       button.addEventListener('click', () => selectTab(tab.id))
       list.append(button)
@@ -741,10 +896,52 @@ export function createSettingsView(
             percent('opacity', LIMITS.opacity, (fraction) => deps.previewOpacity(fraction)),
           ),
           row(
+            'appearance.fontFamily',
+            t('settings.interfaceFont'),
+            fontSelect(
+              'appearance.fontFamily',
+              fonts.families,
+              t('settings.font.cockpit', { font: 'Inter' }),
+            ),
+          ),
+          row(
+            'appearance.codeFontFamily',
+            t('settings.codeFont'),
+            fontSelect(
+              'appearance.codeFontFamily',
+              fonts.monospaceFamilies,
+              t('settings.font.cockpit', { font: 'JetBrains Mono' }),
+            ),
+            t('settings.codeFont.hint'),
+          ),
+        ),
+        group(
+          t('settings.group.terminal'),
+          row(
+            'terminal.fontFamily',
+            t('settings.terminalFont'),
+            fontSelect(
+              'terminal.fontFamily',
+              fonts.monospaceFamilies,
+              t('settings.font.system', { font: shownFamily(terminalFamily(null, fonts)) }),
+            ),
+            t('settings.terminalFont.hint'),
+          ),
+          row(
             'fontSize',
             t('settings.fontSize'),
             number('fontSize', LIMITS.fontSize.min, LIMITS.fontSize.max, 'px'),
           ),
+          row(
+            'terminal.cursorStyle',
+            t('settings.cursorStyle'),
+            select('terminal.cursorStyle', [
+              ['block', t('settings.cursorStyle.block')],
+              ['bar', t('settings.cursorStyle.bar')],
+              ['underline', t('settings.cursorStyle.underline')],
+            ]),
+          ),
+          row('terminal.cursorBlink', t('settings.cursorBlink'), checkbox('terminal.cursorBlink')),
         ),
         group(
           t('settings.group.window'),
@@ -863,16 +1060,21 @@ export function createSettingsView(
       h(
         'div',
         { class: 'sbody' },
-        tabList(),
+        tabList(tabsWithIssues(panels)),
         h(
           'div',
-          {
-            class: 'spanel scroll scroll-edges',
-            role: 'tabpanel',
-            id: 'settings-panel',
-            'aria-labelledby': `settings-tab-${activeTab}`,
-          },
-          ...panels[activeTab],
+          { class: 'smain' },
+          brokenStrip(),
+          h(
+            'div',
+            {
+              class: 'spanel scroll scroll-edges',
+              role: 'tabpanel',
+              id: 'settings-panel',
+              'aria-labelledby': `settings-tab-${activeTab}`,
+            },
+            ...panels[activeTab],
+          ),
         ),
       ),
     )
@@ -885,12 +1087,18 @@ export function createSettingsView(
 
   function open(tab: TabId = TABS[0].id) {
     confirmingReset = false
+    openFailed = false
     activeTab = tab
     errors.clear()
+    notes.clear()
     overlay.classList.add('open')
     render()
     body.querySelector<HTMLElement>('.snav-item[aria-selected="true"]')?.focus()
     void loadConnections()
+    void api.fonts.system().then((found) => {
+      fonts = found
+      if (isOpen()) render()
+    })
     void api.autostart.isEnabled().then((on) => {
       autostart = on
       if (isOpen()) render()
@@ -918,6 +1126,11 @@ export function createSettingsView(
   })
   overlay.addEventListener('mousedown', (event) => {
     if (event.target === overlay) closeView()
+  })
+
+  // The file was saved by hand: its errors and ignored values show at once
+  settings.onFile(() => {
+    if (isOpen() && local === 0) render()
   })
 
   // A change coming from outside (opacity shortcut, elsewhere) updates the open screen

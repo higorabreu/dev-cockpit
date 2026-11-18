@@ -1,4 +1,10 @@
-import { defaultSettings, mergeSettings, type Settings, type SettingsPatch } from '@dck/core'
+import {
+  defaultSettings,
+  mergeSettings,
+  type Settings,
+  type SettingsPatch,
+  settingsFileOk,
+} from '@dck/core'
 import { describe, expect, it } from 'vitest'
 import { createRootChooser } from './root-chooser.ts'
 
@@ -11,7 +17,7 @@ function memorySettings(initial: Settings = defaultSettings) {
     async update(patch: SettingsPatch) {
       patches.push(patch)
       current = mergeSettings(current, patch)
-      return { settings: current, locked: [], fresh: false, rejected: [] }
+      return { settings: current, locked: [], fresh: false, file: settingsFileOk, rejected: [] }
     },
   }
 }

@@ -13,6 +13,7 @@
     "@dck/adapter-github": "workspace:^",
     "@dck/adapter-gitlab": "workspace:^",
     "@dck/adapter-jira": "workspace:^",
+    "@dck/adapter-jsonc": "workspace:^",
     "@dck/adapter-gnome-shortcuts": "workspace:^",
     "@dck/adapter-linux-proc": "workspace:^",
     "@dck/adapter-macos-proc": "workspace:^",

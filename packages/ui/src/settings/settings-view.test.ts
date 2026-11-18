@@ -8,35 +8,60 @@ import {
   GITHUB_CONNECTOR,
   GITLAB_CONNECTOR,
   type HostApi,
+  mergeSettings,
   type Settings,
+  type SettingsFileState,
   type SettingsPatch,
+  settingsFileOk,
 } from '@dck/core'
 import { describe, expect, it } from 'vitest'
 import { createKeymap, type Keyboard } from '../platform/keymap.ts'
 import type { SettingsClient } from './settings-client.ts'
 import { createSettingsView } from './settings-view.ts'
 
-function fakeSettings(locked: readonly string[] = [], initial: Settings = defaultSettings) {
+function fakeSettings(
+  locked: readonly string[] = [],
+  initial: Settings = defaultSettings,
+  initialFile: SettingsFileState = settingsFileOk,
+) {
   let current: Settings = initial
+  let file = initialFile
+  let opens = 0
   const patches: SettingsPatch[] = []
   const listeners = new Set<(settings: Settings, changed: readonly string[]) => void>()
+  const fileListeners = new Set<(file: SettingsFileState) => void>()
   const client: SettingsClient = {
     current: () => current,
     locked: () => locked,
     async update(patch) {
       patches.push(patch)
-      current = { ...current, ...patch } as Settings
-      return { settings: current, locked, fresh: false, rejected: [] }
+      if (file.kind === 'invalid')
+        return { settings: current, locked, fresh: false, file, rejected: Object.keys(patch) }
+      current = mergeSettings(current, patch)
+      return { settings: current, locked, fresh: false, file, rejected: [] }
     },
     onChange: (listener) => {
       listeners.add(listener)
       return () => void listeners.delete(listener)
     },
+    file: () => file,
+    onFile: (listener) => {
+      fileListeners.add(listener)
+      return () => void fileListeners.delete(listener)
+    },
+    openFile: async () => {
+      opens += 1
+      return opens < 2
+    },
   }
   const emit = (changed: readonly string[]) => {
     for (const listener of listeners) listener(current, changed)
   }
-  return { client, patches, emit }
+  const emitFile = (next: SettingsFileState) => {
+    file = next
+    for (const listener of fileListeners) listener(next)
+  }
+  return { client, patches, emit, emitFile, opens: () => opens }
 }
 
 // Only what opening the screen asks the host for
@@ -47,6 +72,15 @@ const api = {
     status: async () => ({ kind: 'none' }),
   },
   autostart: { isEnabled: async () => false },
+  fonts: {
+    system: async () => ({
+      terminal: 'MesloLGS NF',
+      monospace: 'DejaVu Sans Mono',
+      families: ['Cantarell', 'DejaVu Sans Mono', 'MesloLGS NF'],
+      monospaceFamilies: ['DejaVu Sans Mono', 'MesloLGS NF'],
+      symbols: ['MesloLGS NF'],
+    }),
+  },
 } as unknown as HostApi
 
 function open(
@@ -54,13 +88,14 @@ function open(
   host: HostApi = api,
   initial?: Settings,
   keyboard: Keyboard = 'pc',
+  file: SettingsFileState = settingsFileOk,
 ) {
   document.body.replaceChildren()
   const overlay = document.createElement('div')
   const body = document.createElement('div')
   overlay.append(body)
   document.body.append(overlay)
-  const settings = fakeSettings(locked, initial)
+  const settings = fakeSettings(locked, initial, file)
   let closed = false
   const view = createSettingsView(
     { overlay, body },
@@ -87,6 +122,8 @@ function open(
     combobox,
     patches: settings.patches,
     emit: settings.emit,
+    emitFile: settings.emitFile,
+    opens: settings.opens,
     isClosed: () => closed,
   }
 }
@@ -106,7 +143,15 @@ describe('settings view selects', () => {
     body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
 
     expect(body.querySelector('select')).toBeNull()
-    expect(general).toEqual(['set-language', 'set-theme', 'set-review.layout'])
+    expect(general).toEqual([
+      'set-language',
+      'set-theme',
+      'set-appearance.fontFamily',
+      'set-appearance.codeFontFamily',
+      'set-terminal.fontFamily',
+      'set-terminal.cursorStyle',
+      'set-review.layout',
+    ])
     expect(combobox('shortcuts.holdTrigger').getAttribute('role')).toBe('combobox')
     view.close()
   })
@@ -325,6 +370,7 @@ function connectionsHost(
       disconnect: async (): Promise<ConnectionStatus> => ({ kind: 'none' }),
     },
     autostart: { isEnabled: async () => false },
+    fonts: api.fonts,
   } as unknown as HostApi
   return {
     host,
@@ -614,5 +660,287 @@ describe('settings view, focus around a connection', () => {
 
     expect(page.isClosed()).toBe(true)
     fake.answer()
+  })
+})
+
+describe('settings view, the settings file', () => {
+  const withIssues: SettingsFileState = {
+    kind: 'ok',
+    issues: [
+      { key: 'theme', kind: 'ignored', found: '"purple"', used: '"dark"' },
+      { key: 'system.notifyAfterSeconds', kind: 'adjusted', found: '2', used: '5' },
+      { key: 'them', kind: 'unknown', found: '"light"' },
+    ],
+  }
+
+  const noteOf = (body: HTMLElement, key: string) =>
+    body.querySelector(`[data-setting="${key}"] .snote`)?.textContent
+
+  it('should show no word on the file and no strip when the file is used as written', () => {
+    // Arrange, Act
+    const { body, view } = open()
+
+    // Assert
+    expect(body.querySelector('.sfile-dot')).toBeNull()
+    expect(body.querySelector('.sbroken')).toBeNull()
+    expect(body.querySelector('.snav-mark')).toBeNull()
+    view.close()
+  })
+
+  it('should put a dot on the file button and count the warnings in its tooltip when the file has some', () => {
+    // Arrange, Act
+    const { body, view } = open([], api, undefined, 'pc', withIssues)
+    const button = body.querySelector<HTMLButtonElement>('[data-focus="set-open-file"]')
+
+    // Assert
+    expect(button?.querySelector('.sfile-dot')).not.toBeNull()
+    expect(button?.dataset.tip).toBe('Open the settings file: 3 warnings')
+    expect(button?.getAttribute('aria-label')).toBe('Open the settings file: 3 warnings')
+    expect(body.querySelector('.shead-actions')?.textContent).toBe('')
+    view.close()
+  })
+
+  it('should tell under each setting what the file holds and what is used instead', () => {
+    // Arrange
+    const file: SettingsFileState = {
+      kind: 'ok',
+      issues: [
+        ...withIssues.issues,
+        { key: 'terminal.fontFamily', kind: 'ignored', found: '"Nope;}"', used: 'null' },
+      ],
+    }
+
+    // Act
+    const { body, view } = open([], api, undefined, 'pc', file)
+    const general = [noteOf(body, 'theme'), noteOf(body, 'terminal.fontFamily')]
+    body.querySelector<HTMLElement>('#settings-tab-system')?.click()
+
+    // Assert
+    expect(general).toEqual([
+      'In settings.json: "purple". Not valid, uses the default.',
+      'In settings.json: "Nope;}". Not valid, uses the default.',
+    ])
+    expect(noteOf(body, 'system.notifyAfterSeconds')).toBe('In settings.json: 2. Adjusted to 5.')
+    view.close()
+  })
+
+  it('should mark the pages holding a setting the file got wrong and no page for an unknown key', () => {
+    // Arrange, Act
+    const { body, view } = open([], api, undefined, 'pc', withIssues)
+    const marked = [...body.querySelectorAll('.snav-item')]
+      .filter((item) => item.querySelector('.snav-mark'))
+      .map((item) => item.id)
+
+    // Assert
+    expect(marked).toEqual(['settings-tab-general', 'settings-tab-system'])
+    expect(body.querySelector('#settings-tab-general')?.getAttribute('aria-description')).toBe(
+      'Has a setting that settings.json holds wrongly',
+    )
+    view.close()
+  })
+
+  it('should offer the reset on a setting the file holds wrongly even when the default is in use', async () => {
+    // Arrange
+    const { body, patches, view } = open([], api, undefined, 'pc', withIssues)
+    const reset = body.querySelector<HTMLButtonElement>('[data-setting="theme"] .sreset')
+
+    // Act
+    const shown = reset?.hidden === false
+    reset?.click()
+    await settle()
+
+    // Assert
+    expect(shown).toBe(true)
+    expect(patches).toEqual([{ theme: 'dark' }])
+    view.close()
+  })
+
+  it('should say where the file broke above the page and disable the controls when it is not valid', () => {
+    // Arrange, Act
+    const { body, combobox, view } = open([], api, undefined, 'pc', {
+      kind: 'invalid',
+      line: 4,
+      column: 12,
+    })
+    const strip = body.querySelector('.smain > .sbroken')
+
+    // Assert
+    expect(strip?.querySelector('p')?.textContent).toBe(
+      'settings.json has an error at line 4, column 12.',
+    )
+    expect(strip?.nextElementSibling?.id).toBe('settings-panel')
+    expect(combobox('theme').disabled).toBe(true)
+    expect(body.querySelector<HTMLInputElement>('[data-focus="set-fontSize"]')?.disabled).toBe(true)
+    expect(body.querySelector('.sfile-dot')).toBeNull()
+    view.close()
+  })
+
+  it('should open the file from the strip when the file is broken', async () => {
+    // Arrange
+    const { body, opens, view } = open([], api, undefined, 'pc', {
+      kind: 'invalid',
+      line: 1,
+      column: 2,
+    })
+
+    // Act
+    body.querySelector<HTMLButtonElement>('.sbroken-open')?.click()
+    await settle()
+
+    // Assert
+    expect(opens()).toBe(1)
+    view.close()
+  })
+
+  it('should draw the warnings at once when the file is saved by hand while the screen is open', () => {
+    // Arrange
+    const { body, emitFile, view } = open()
+
+    // Act
+    emitFile(withIssues)
+
+    // Assert
+    expect(body.querySelector('[data-focus="set-open-file"] .sfile-dot')).not.toBeNull()
+    expect(noteOf(body, 'theme')).toBe('In settings.json: "purple". Not valid, uses the default.')
+    view.close()
+  })
+
+  it('should open the file from the header button and say so when no app opened it', async () => {
+    // Arrange
+    const { body, opens, view } = open()
+    const button = body.querySelector<HTMLButtonElement>('[data-focus="set-open-file"]')
+
+    // Act: the fake host opens the file the first time only
+    button?.click()
+    await settle()
+    const opened = body.querySelector('.sfile-failed')
+    body.querySelector<HTMLButtonElement>('[data-focus="set-open-file"]')?.click()
+    await settle()
+
+    // Assert
+    expect(button?.getAttribute('data-tip')).toBe('Open the settings file')
+    expect(opened).toBeNull()
+    expect(opens()).toBe(2)
+    expect(body.querySelector('.sfile-failed')?.textContent).toBe('No app opened settings.json.')
+    view.close()
+  })
+
+  it('should say beside the field that a typed number was adjusted when it is out of range', async () => {
+    const { body, view } = open()
+    body.querySelector<HTMLElement>('#settings-tab-system')?.click()
+    const input = body.querySelector<HTMLInputElement>(
+      '[data-focus="set-system.notifyAfterSeconds"]',
+    )
+    if (!input) throw new Error('invariant: the System page has the notify field')
+
+    input.value = '2'
+    input.dispatchEvent(new Event('change'))
+    await settle()
+
+    const field = body.querySelector<HTMLInputElement>(
+      '[data-focus="set-system.notifyAfterSeconds"]',
+    )
+    expect(field?.value).toBe('5')
+    expect(body.querySelector('.snote')?.textContent).toBe('Adjusted to 5: the range is 5 to 600.')
+    view.close()
+  })
+
+  it('should say beside the folder field that the folder does not exist when the file reports it', () => {
+    const missing: SettingsFileState = {
+      kind: 'ok',
+      issues: [{ key: 'projects.root', kind: 'missingFolder', found: '"/home/ana/gone"' }],
+    }
+    const { body, view } = open([], api, undefined, 'pc', missing)
+
+    body.querySelector<HTMLElement>('#settings-tab-projects')?.click()
+
+    expect(body.querySelector('.snote')?.textContent).toBe('This folder does not exist.')
+    view.close()
+  })
+})
+
+describe('settings view fonts and cursor', () => {
+  const optionLabels = (control: HTMLElement) =>
+    [...(control.parentElement?.querySelectorAll('.select-label') ?? [])].map(
+      (option) => option.textContent,
+    )
+
+  it('should name the terminal font of the system in the default option when the host found it', async () => {
+    // Arrange
+    const { combobox, view } = open()
+    await settle()
+    const font = combobox('terminal.fontFamily')
+
+    // Act
+    press(font, 'Enter')
+
+    // Assert
+    expect(font.querySelector('[data-current]')?.textContent).toBe('System (MesloLGS NF)')
+    expect(optionLabels(font)).toEqual(['System (MesloLGS NF)', 'DejaVu Sans Mono', 'MesloLGS NF'])
+    view.close()
+  })
+
+  it('should save the picked family and null for the default when picked by keyboard', async () => {
+    // Arrange
+    const { combobox, patches, view } = open()
+    await settle()
+    const font = combobox('appearance.codeFontFamily')
+    font.focus()
+
+    // Act
+    press(font, 'Enter')
+    press(font, 'End')
+    press(font, 'Enter')
+    await settle()
+    press(combobox('appearance.codeFontFamily'), 'Enter')
+    press(combobox('appearance.codeFontFamily'), 'Home')
+    press(combobox('appearance.codeFontFamily'), 'Enter')
+    await settle()
+
+    // Assert
+    expect(patches).toEqual([
+      { appearance: { codeFontFamily: 'MesloLGS NF' } },
+      { appearance: { codeFontFamily: null } },
+    ])
+    view.close()
+  })
+
+  it('should keep a font set by hand listed and chosen when it is not installed', async () => {
+    // Arrange
+    const initial = {
+      ...defaultSettings,
+      terminal: { ...defaultSettings.terminal, fontFamily: 'Hack' },
+    }
+
+    // Act
+    const { combobox, view } = open([], api, initial)
+    await settle()
+
+    // Assert
+    expect(combobox('terminal.fontFamily').querySelector('[data-current]')?.textContent).toBe(
+      'Hack',
+    )
+    view.close()
+  })
+
+  it('should save the bar cursor and its blink from the Terminal group', async () => {
+    // Arrange
+    const { body, combobox, patches, view } = open()
+    const cursor = combobox('terminal.cursorStyle')
+    cursor.focus()
+
+    // Act
+    press(cursor, 'Enter')
+    press(cursor, 'ArrowDown')
+    press(cursor, 'Enter')
+    body.querySelector<HTMLInputElement>('[data-focus="set-terminal.cursorBlink"]')?.click()
+    await settle()
+
+    // Assert
+    expect(patches).toEqual([
+      { terminal: { cursorStyle: 'bar' } },
+      { terminal: { cursorBlink: false } },
+    ])
+    view.close()
   })
 })

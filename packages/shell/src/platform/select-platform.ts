@@ -2,20 +2,23 @@ import { join } from 'node:path'
 import { createGnomeShortcut } from '@dck/adapter-gnome-shortcuts'
 import * as linuxProc from '@dck/adapter-linux-proc'
 import * as macosProc from '@dck/adapter-macos-proc'
-import type {
-  Autostart,
-  DesktopShortcut,
-  Logger,
-  ProcessInspector,
-  ProcessScanner,
-  PtyOptions,
-  SecretStore,
+import {
+  type Autostart,
+  type DesktopShortcut,
+  type Logger,
+  noSystemFonts,
+  type ProcessInspector,
+  type ProcessScanner,
+  type PtyOptions,
+  type SecretStore,
+  type SystemFonts,
 } from '@dck/core'
 import { systemSecretStore } from '@dck/daemon/secret-store'
 import { createLaunchdAutostart } from './darwin/launchd-autostart.ts'
 import { readLoginPath } from './darwin/login-path.ts'
 import { createPanelWindow, type PanelApp } from './darwin/panel-window.ts'
 import { createRegularWindow } from './linux/regular-window.ts'
+import { createLinuxSystemFonts, runCommand } from './linux/system-fonts.ts'
 import { createXdgAutostart, defaultAutostartDirectory } from './linux/xdg-autostart.ts'
 import type { PlatformWindow } from './platform-window.ts'
 
@@ -42,6 +45,7 @@ export interface Platform {
   // The PATH child processes should get, or undefined to keep the inherited one
   loginPath(): Promise<string | undefined>
   readonly window: PlatformWindow
+  readonly fonts: SystemFonts
 }
 
 // Exported so a test can check which adapter a platform gets without inspecting the system
@@ -115,5 +119,10 @@ export function selectPlatform(context: PlatformContext): Platform {
     loginPath: async () =>
       platform === 'darwin' ? readLoginPath({ shell: terminal.file, logger }) : undefined,
     window: platform === 'darwin' ? createPanelWindow(context.app) : createRegularWindow(),
+    // The Mac names no terminal font yet: the terminal draws with the cockpit's own
+    fonts:
+      platform === 'linux'
+        ? createLinuxSystemFonts(runCommand)
+        : { read: async () => noSystemFonts },
   }
 }

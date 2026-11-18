@@ -28,6 +28,20 @@ const common = {
   sourcemap: true,
   logLevel: 'info',
   external: ['electron', 'node-pty'],
+  // Its UMD build loads its parts with a require the bundler cannot follow; the ESM build bundles whole
+  alias: {
+    'jsonc-parser': join(
+      root,
+      '..',
+      'adapters',
+      'jsonc',
+      'node_modules',
+      'jsonc-parser',
+      'lib',
+      'esm',
+      'main.js',
+    ),
+  },
 }
 await build({
   ...common,

@@ -1,5 +1,5 @@
-import type { HostApi, PaneGrid, ProgramStatus } from '@dck/core'
-import { type ThemeName, tokens } from '@dck/design'
+import type { CursorStyle, HostApi, PaneGrid, ProgramStatus } from '@dck/core'
+import type { ThemeName } from '@dck/design'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import type { Keymap } from '../platform/keymap.ts'
@@ -25,6 +25,9 @@ export interface TerminalSession {
   grid(): PaneGrid | undefined
   setTheme(name: ThemeName): void
   setFontSize(size: number): void
+  // A CSS font-family list, the chosen family first
+  setFontFamily(family: string): void
+  setCursor(style: CursorStyle, blink: boolean): void
   dispose(): void
 }
 
@@ -33,6 +36,9 @@ export interface SessionOptions {
   readonly api: HostApi
   readonly theme: ThemeName
   readonly fontSize: number
+  readonly fontFamily: string
+  readonly cursorStyle: CursorStyle
+  readonly cursorBlink: boolean
   readonly cwd?: string
   readonly exitedText: string
   // How a file or folder path printed in the terminal opens; the host checks it on disk
@@ -56,9 +62,10 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   options.host.appendChild(element)
 
   const terminal = new Terminal({
-    fontFamily: tokens.font.mono,
+    fontFamily: options.fontFamily,
     fontSize: options.fontSize,
-    cursorBlink: true,
+    cursorStyle: options.cursorStyle,
+    cursorBlink: options.cursorBlink,
     allowTransparency: true,
     // Option+B and Option+F move by word as in the shell; xterm reads it only on a Mac
     macOptionIsMeta: true,
@@ -159,6 +166,17 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     },
     setTheme: (name) => {
       terminal.options.theme = terminalTheme(name)
+    },
+    // Another font has other cells: measured again and fitted, as a new size is
+    setFontFamily: (family) => {
+      if (terminal.options.fontFamily === family) return
+      terminal.options.fontFamily = family
+      lastGrid = undefined
+      fit.fit()
+    },
+    setCursor: (style, blink) => {
+      terminal.options.cursorStyle = style
+      terminal.options.cursorBlink = blink
     },
     dispose() {
       stopData()

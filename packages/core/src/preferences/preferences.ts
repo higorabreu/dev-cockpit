@@ -1,4 +1,4 @@
-export const OPACITY = { min: 0.3, max: 1, step: 0.05, initial: 0.92 } as const
+export const OPACITY = { min: 0.3, max: 1, step: 0.05, initial: 1 } as const
 export const PANEL_WIDTH = { min: 220, max: 420, initial: 300 } as const
 export const FONT_SIZE = { min: 10, max: 32, initial: 16 } as const
 

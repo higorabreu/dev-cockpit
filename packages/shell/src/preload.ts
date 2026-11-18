@@ -1,4 +1,4 @@
-import type { AgentSignal, PtyExit, Settings, ViewSnapshot } from '@dck/core'
+import type { AgentSignal, PtyExit, Settings, SettingsFileState, ViewSnapshot } from '@dck/core'
 import { type HostApi, hostChannels } from '@dck/core/host-api'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
@@ -54,6 +54,8 @@ const api: HostApi = {
     update: (patch) => ipcRenderer.invoke(hostChannels.settingsUpdate, patch),
     onChange: (listener) =>
       subscribe<[Settings, readonly string[]]>(hostChannels.settingsChanged, listener),
+    onFile: (listener) => subscribe<[SettingsFileState]>(hostChannels.settingsFile, listener),
+    openFile: () => ipcRenderer.invoke(hostChannels.settingsOpenFile),
   },
   connections: {
     list: () => ipcRenderer.invoke(hostChannels.connectionsList),
@@ -100,6 +102,9 @@ const api: HostApi = {
     touch: (path) => ipcRenderer.send(hostChannels.projectsTouch, path),
     toggleFavorite: (path) => ipcRenderer.invoke(hostChannels.projectsToggleFavorite, path),
     chooseRoot: () => ipcRenderer.invoke(hostChannels.projectsChooseRoot),
+  },
+  fonts: {
+    system: () => ipcRenderer.invoke(hostChannels.fontsSystem),
   },
   tabs: {
     saved: () => ipcRenderer.invoke(hostChannels.tabsSaved),

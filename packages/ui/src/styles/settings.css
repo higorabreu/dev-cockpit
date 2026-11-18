@@ -60,6 +60,10 @@
 }
 
 .snav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 6px 10px;
   border: 0;
   border-radius: var(--radius-medium);
@@ -78,6 +82,14 @@
 .snav-item[aria-selected="true"] {
   background: var(--tab-active);
   color: var(--fg);
+}
+
+.snav-mark {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
 }
 
 .snav-item:focus-visible {
@@ -114,6 +126,83 @@
   margin: 0;
   font-size: 15px;
   font-weight: 600;
+}
+
+.shead-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Warnings in settings.json: a dot on the button that opens it, as the pages with one get in the list */
+.sfile {
+  position: relative;
+}
+
+.sfile-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
+  box-shadow: 0 0 0 1.5px var(--surface);
+}
+
+.sfile-failed {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sfile-warn {
+  flex: none;
+  color: var(--warning);
+}
+
+/* The page and, while settings.json cannot be read, the one line that says so above it */
+.smain {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sbroken {
+  flex: none;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.sbroken p {
+  min-width: 0;
+  flex: 1;
+  margin: 0;
+}
+
+.sbroken-open {
+  flex: none;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.sbroken-open:hover {
+  background: var(--hover);
+}
+
+.sbroken-open:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
 }
 
 .pclose {
@@ -231,17 +320,16 @@
   font-size: 12px;
 }
 
+.snote {
+  color: var(--warning);
+  font-size: 12px;
+}
+
 .scontrol {
   flex: none;
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-/* A locked setting's controls are disabled: they read so in solid colors, as the design system's select */
-.scontrol input:disabled {
-  border-style: dashed;
-  color: var(--muted);
 }
 
 .scontrol input[type="text"],
@@ -253,6 +341,12 @@
   background: var(--bg);
   color: var(--fg);
   font: inherit;
+}
+
+/* A locked setting's controls are disabled: they read so in solid colors, as the design system's select */
+.scontrol input:disabled {
+  border-style: dashed;
+  color: var(--muted);
 }
 
 .scontrol input[type="text"],

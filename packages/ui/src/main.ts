@@ -1,3 +1,6 @@
+// The cockpit's own fonts ship with it (OFL), so it looks the same on every machine
+import '@fontsource-variable/inter/index.css'
+import '@fontsource-variable/jetbrains-mono/index.css'
 import '@xterm/xterm/css/xterm.css'
 import 'virtual:dck-tokens.css'
 import './styles/index.css'
