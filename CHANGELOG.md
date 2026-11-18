@@ -3,6 +3,15 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.10.0](https://github.com/higorabreu/dev-cockpit/compare/v0.9.0...v0.10.0) (2026-11-18)
+
+
+### Features
+
+* customizable shortcuts and hold menu trigger, and a formal pass on the interface texts ([#85](https://github.com/higorabreu/dev-cockpit/issues/85)) ([000056b](https://github.com/higorabreu/dev-cockpit/commit/000056b7ad82c96cdd34184aa4ba9e24f0b986ec))
+* opt-in updates from GitHub releases, and an About page in Settings ([#88](https://github.com/higorabreu/dev-cockpit/issues/88)) ([a0a86d5](https://github.com/higorabreu/dev-cockpit/commit/a0a86d52800355d37785e0b90b8ff157feef6b4d))
+* review the changes inside submodules, and open the review from the panel's Git section ([#87](https://github.com/higorabreu/dev-cockpit/issues/87)) ([5654d0e](https://github.com/higorabreu/dev-cockpit/commit/5654d0e57e5b757ea43a61d2af224f8bf368ed64))
+
 ## [0.9.0](https://github.com/higorabreu/dev-cockpit/compare/v0.8.0...v0.9.0) (2026-11-18)
 
 
