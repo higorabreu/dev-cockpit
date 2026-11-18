@@ -563,4 +563,7 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-GHB-007': 'Invalid GitHub address',
   'error.DCK-UPD-001': 'Could not check for updates',
   'error.DCK-UPD-002': 'Unexpected answer about the releases',
+  'error.DCK-UPD-003': 'No package for this system in the release',
+  'error.DCK-UPD-004': 'The download of the update failed',
+  'error.DCK-UPD-005': 'Checksum mismatch, update refused',
 }

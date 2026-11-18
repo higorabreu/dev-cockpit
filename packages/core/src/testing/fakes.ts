@@ -1,21 +1,28 @@
+import { type ErrorBody, errorBody } from '../ipc/protocol.ts'
 import type {
   Cancel,
   Clipboard,
   Clock,
   Display,
   DockWindow,
+  DownloadedFile,
+  InstallOutcome,
   Point,
   PtyExit,
   PtyHost,
   PtyOptions,
   PtySession,
   Rectangle,
+  Release,
+  ReleaseAsset,
+  ReleaseSource,
   Scheduler,
   Screen,
   SecretStore,
+  UpdateInstaller,
 } from '../ports/index.ts'
 import { silentLogger } from '../ports/logger.ts'
-import { ok } from '../result.ts'
+import { fail, ok, type Result } from '../result.ts'
 import { createViewsService } from '../views/views-service.ts'
 
 export class FakeClock implements Clock {
@@ -206,4 +213,39 @@ export function createFakeViews(views: readonly string[] = ['review', 'mine']) {
     clock: { now: () => 1000 },
     logger: silentLogger,
   })
+}
+
+// Answers each `latest()` with the next reply; the last one repeats
+export class FakeReleaseSource implements ReleaseSource {
+  calls = 0
+  constructor(public replies: Result<Release | undefined, ErrorBody>[] = [ok(undefined)]) {}
+  async latest() {
+    const reply = this.replies[Math.min(this.calls, this.replies.length - 1)] ?? ok(undefined)
+    this.calls += 1
+    return reply
+  }
+}
+
+// Serves files by address and records what it was asked to do; nothing touches the disk
+export class FakeUpdateInstaller implements UpdateInstaller {
+  readonly texts = new Map<string, Result<string, ErrorBody>>()
+  readonly downloads = new Map<string, Result<DownloadedFile, ErrorBody>>()
+  outcome: Result<InstallOutcome, ErrorBody> = ok('installed')
+  readonly installed: string[] = []
+  readonly discarded: string[] = []
+  progress: readonly number[] = []
+  async readText(url: string) {
+    return this.texts.get(url) ?? fail(errorBody('DCK-UPD-004', url))
+  }
+  async download(asset: ReleaseAsset, onProgress: (fraction: number) => void) {
+    for (const fraction of this.progress) onProgress(fraction)
+    return this.downloads.get(asset.url) ?? fail(errorBody('DCK-UPD-004', asset.url))
+  }
+  async install(file: string) {
+    this.installed.push(file)
+    return this.outcome
+  }
+  async discard(file: string) {
+    this.discarded.push(file)
+  }
 }

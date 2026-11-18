@@ -564,6 +564,9 @@ export const ptBR = {
   'error.DCK-GHB-007': 'Endereço do GitHub inválido',
   'error.DCK-UPD-001': 'Não foi possível verificar atualizações',
   'error.DCK-UPD-002': 'Resposta inesperada sobre as versões',
+  'error.DCK-UPD-003': 'A versão não tem pacote para este sistema',
+  'error.DCK-UPD-004': 'O download da atualização falhou',
+  'error.DCK-UPD-005': 'Checksum não confere, atualização recusada',
 } as const
 
 export type MessageKey = keyof typeof ptBR
