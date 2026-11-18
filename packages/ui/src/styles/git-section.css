@@ -65,6 +65,21 @@
   background: var(--hover);
 }
 
+/* A submodule's row is a button that opens the review on its changes */
+.frow-open {
+  width: calc(100% + 12px);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.frow-open:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: -2px;
+}
+
 .frow .pill {
   margin-left: 0;
 }

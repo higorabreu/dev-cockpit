@@ -414,6 +414,9 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
               viewsView.issueProjects(JIRA_CONNECTOR.id),
             ),
           openTicket: (url) => api.external.open(url),
+          openModule(path) {
+            if (state.activeId) reviews.showModule(state.activeId, path)
+          },
         },
         i18n,
       ),

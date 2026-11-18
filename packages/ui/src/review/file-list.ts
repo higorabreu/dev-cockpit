@@ -351,7 +351,9 @@ export function createFileList(deps: FileListDeps) {
       const header = headerOf(path)
       if (header < 0) return false
       cursor = header
-      reveal()
+      // The header goes to the top, so its files show under it
+      element.scrollTop = tops[header] ?? 0
+      draw()
       const first = fileOfRow(rows[header])
       if (first !== undefined) {
         current = first

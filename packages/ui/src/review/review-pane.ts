@@ -141,6 +141,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const keys = new WeakMap<DiffFile, string>()
   // Untracked files past the reading limit the user asked to read; read again after every read
   const wanted = new Set<string>()
+  // A submodule the panel asked for, shown once the read in progress ends
+  let pendingModule: string | undefined
+  let reading = false
   let drawnOptions = ''
 
   const markId = (path: string) => `${scope}|${ignoreWhitespace ? 'w' : ''}|${path}`
@@ -286,6 +289,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
 
   // A quiet read (the change moved, the agent spoke) shows no loading text: the diff just updates
   async function load(quiet: boolean) {
+    reading = true
     busy = !quiet
     const loadingTimer = quiet
       ? undefined
@@ -340,7 +344,24 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       reconcileMarks(state.diff.files)
       comments.relocate(state.diff.files)
     }
+    reading = false
     draw()
+    if (pendingModule !== undefined) showModule(pendingModule)
+  }
+
+  // The index opens on the submodule's group with the diff on its first file; a submodule with no change
+  // in this scope says so in the header
+  function showModule(path: string) {
+    pendingModule = path
+    if (reading) return
+    pendingModule = undefined
+    if (state.kind !== 'ok') return
+    if (state.diff.files.length > 0 && list.showModule(path)) {
+      if (deps.memory.indexHidden) diff.focus()
+      else list.focus()
+      return
+    }
+    showNotice(t('review.module.none', { path }))
   }
 
   // A file read on demand takes the place of its entry; what the listing knew about it stays
@@ -858,6 +879,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       } else element.focus()
     },
     hasFocus: () => element.contains(document.activeElement),
+    showModule,
     send: () => sender.send(),
     agentState(agent: AgentState | undefined) {
       reporting = agent !== undefined

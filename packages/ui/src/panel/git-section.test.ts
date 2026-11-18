@@ -32,6 +32,7 @@ function draw(
   extra: Partial<GitStatus> = {},
 ) {
   const opened: string[] = []
+  const modules: string[] = []
   const snapshot: SessionSnapshot = {
     cwd: '/home/ana/acme',
     process: 'zsh',
@@ -44,12 +45,13 @@ function draw(
       requestRender: () => undefined,
       ticket: (name) => jiraTicketLink(name, jira?.site, new Set(jira?.projects ?? [])),
       openTicket: (url) => void opened.push(url),
+      openModule: (path) => void modules.push(path),
     },
     createTranslator('en'),
   )
   const body = section.body()
   document.body.replaceChildren(body)
-  return { body, opened }
+  return { body, opened, modules }
 }
 
 describe('git section ticket', () => {
@@ -92,5 +94,24 @@ describe('git section remote', () => {
     const head = body.querySelector<HTMLElement>('[data-focus="git-outgoing"]')
 
     expect(head?.dataset.tip).toBe('Local commits not pushed to fork/feature/login yet')
+  })
+})
+
+describe('git section submodules', () => {
+  it('should open the review on a submodule when its row is clicked', () => {
+    // Arrange
+    const { body, modules } = draw('main', undefined, {
+      submodules: [{ path: 'libs/lib', changed: 2, ahead: 1, behind: 0 }],
+    })
+    const row = body.querySelector<HTMLButtonElement>('button.frow-open')
+
+    // Act
+    row?.click()
+
+    // Assert
+    expect(modules).toEqual(['libs/lib'])
+    expect(row?.dataset.tip).toBe('Review changes')
+    expect(row?.getAttribute('aria-label')).toBe('Review changes in libs/lib, 2 changes')
+    expect(row?.dataset.focus).toBe('git-module-libs/lib')
   })
 })

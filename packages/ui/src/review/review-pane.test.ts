@@ -704,6 +704,37 @@ describe('createReviewPane', () => {
     )
   })
 
+  it('should stand on a submodule group when the panel asks for it during the first read', async () => {
+    // Arrange
+    const [invoice, lock] = parseUnifiedDiff(diffText(3000, 5000) + lockText)
+    if (!lock || !invoice) throw new Error('invariant: two files')
+    const inside = { ...invoice, path: 'libs/billing/invoice.ts', module: 'libs/billing' }
+    const answer = ok({
+      kind: 'ok' as const,
+      diff: reviewDiff(
+        '/home/ana/acme',
+        'uncommitted',
+        feature,
+        [lock, inside],
+        [{ path: 'libs/billing', commits: [], commitCount: 0 }],
+      ),
+    })
+    const { pane, text } = setup(answer)
+
+    // Act
+    pane.open()
+    pane.showModule('libs/billing')
+    await flush()
+    const header = pane.element.querySelector('.rv-files [aria-selected="true"]')
+    const focused = document.activeElement
+    pane.showModule('libs/gone')
+
+    // Assert
+    expect(header?.getAttribute('data-module')).toBe('libs/billing')
+    expect(focused).toBe(pane.element.querySelector('.rv-files'))
+    expect(text('.rv-status')).toBe('No changes in libs/gone to review')
+  })
+
   it('should mark and unmark a file with its Viewed checkbox', async () => {
     const { pane } = setup(repository())
     pane.open()

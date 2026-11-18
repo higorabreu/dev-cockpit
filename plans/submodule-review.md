@@ -77,6 +77,10 @@ panel lists submodules with rows that do nothing. Untracked files past the 300th
   submodule the parent's status lists as changed, nested ones too, at most 16 and one at a time, with the
   2000 stamped paths shared. It also stamps paths from the repository's top: the status names them from
   there, so a review opened from a subfolder never saw a second edit of a file.
-- [ ] SM-T6. The panel's submodule rows open the review on their group. (S5)
+- [x] SM-T6. The panel's submodule rows open the review on their group. (S5) The row is a button (Enter
+  and Space come with it) with "Review changes" in its tooltip; the review opens, or takes the keys, then
+  opens the group and those holding it, puts its header at the top of the index with the keys there, and
+  takes the diff to its first file. A submodule the panel lists only for its ahead and behind counts has
+  nothing in the review; the header then says "No changes in <path> to review" for 8 s.
 - [ ] SM-T7. D70, the README's review section, the roadmap; checked in the real app under Xvfb in both
   themes, both languages and both layouts. (S8)

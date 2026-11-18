@@ -104,6 +104,14 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
     },
     close,
     toggleLayout,
+    // The panel's submodule row: the review opens, or takes the keys, on that submodule's group
+    showModule(tabId: string, path: string) {
+      const view = deps.view(tabId)
+      if (!view) return
+      if (!panes.has(tabId)) open(tabId)
+      else view.focus(paneId(tabId))
+      panes.get(tabId)?.showModule(path)
+    },
     // Ctrl+Shift+Enter: the open review's pending comments go to its agent
     send(tabId: string): Promise<void> {
       return panes.get(tabId)?.send() ?? Promise.resolve()
