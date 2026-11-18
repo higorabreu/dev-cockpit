@@ -44,8 +44,9 @@ changed, and your merge requests and tasks.
 - **Review.** `Ctrl+Shift+D` shows what changed in the tab's repository beside or below its terminal, in
   one scroll: uncommitted changes, everything since the branch it came from, or the commits not pushed
   yet. The base branch is read from what git and VS Code recorded, never guessed from a name, and you can
-  pick another. Changes inside submodules show in the same review, nested ones too, each submodule a group
-  with its new commits; its row in the side panel opens the review on it. Every changed file is listed,
+  pick another. Changes inside submodules show in the same review, nested ones too, each submodule reviewed
+  as its own repository in the same scope, a group with the commits its pointer moved through; its row in
+  the side panel opens the review on it. Every changed file is listed,
   and past 300 untracked files the rest load when you open them. It follows the agent as it works, keeping
   your place, and marks files as viewed as on GitHub. Comments left on lines, as in a GitHub review, go
   back to the agent in one go: written to a Markdown file in the repository's `.git/dck/`, with one line

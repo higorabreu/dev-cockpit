@@ -1240,6 +1240,8 @@ short form: in a 240 pixel index the whole sentence cut the file name.
 single entries), `core/src/diff/modules.ts` and `ui/src/review/module-row.ts`, the file list's groups
 (back to a `listbox` of files), `openModule` in the Git section, the `review:untracked` channel with
 `unloaded` (the untracked list then stops at 300 again) and the submodule statuses in `fingerprint`.
+**Partly replaced by D78** (2026-11-18): each submodule is read with the scope applied inside it; the
+commits after the one the parent recorded stay in its header, and their files leave the review.
 
 ## D71. Updates from the project's GitHub releases, off until the user opts in
 
@@ -1291,3 +1293,35 @@ to name no authors.
 `core/src/about/about.ts`, `shell/src/updates/about-bridge.ts` and the `about` host API, and put the
 Updates row back in System.
 
+## D78. Each submodule is reviewed as its own repository, with the same scope inside it
+
+**Decision:** partly replaces D70. Like VS Code, the review reads each submodule as its own repository and
+applies the chosen scope inside it (`gatherModule` and `ownStart` in `node-git/src/git-diff.ts`).
+Uncommitted: its working tree against its own HEAD (staged, unstaged and untracked), none of its commits.
+Unpushed commits: its commits not on its own upstream and its working tree, as the parent's scope compares
+the merge base with its upstream to the working tree; a submodule with no upstream shows its uncommitted
+edits only, never the parent's "No upstream" state. Base: its branch against its own base, found in its
+repository the way the parent's is (D49: VS Code's merge base, the branch's creation, the nearest branch;
+the user's pick names a branch of the parent and does not apply inside). Detached, or with no base found,
+it starts at the commit the parent recorded at the scope's start, as D70 did. The commits between that
+recorded commit and the submodule's HEAD (a pull, a branch switch inside it) stay in the group's header,
+"+ N commits" with at most 5 subjects in the tooltip, but their files are no longer listed. A submodule
+whose pointer alone moved keeps its header with no files; when nothing else changed, the diff's place
+says "No file changes to review" beside the index, which lists the headers. Uncommitted reads the
+submodules the parent's status names (moved pointer, modified content, untracked files); Unpushed and Base
+read every checked out submodule the parent records (`.gitmodules`, confirmed by the index), since one
+can have commits of its own while the parent's pointer stayed, and skip one with nothing to show and no
+moved pointer. Nested submodules follow the same rules inside the one that holds them. The rest of D70
+stays. The fingerprint already reads the status of each submodule the parent's status names, so a move of
+a submodule's HEAD, index or working tree changes it; a push or fetch inside a clean submodule shows on
+the next read (Ctrl+R, the agent, any other change). The base finder keeps 64 findings instead of 16, so
+the submodules of a Base read do not push the parent's out on every refresh.
+**Reason:** the maintainer's decision (2026-11-18), after a real repository showed `backend` with 446
+files and "+169 commits" under Uncommitted: diffing from the recorded commit folded every pulled commit
+into a scope meant for what the user did. A detached HEAD, the usual state of a submodule that
+`git submodule update` checked out, has no branch whose base could be found; starting from the parent's
+recorded commit then shows what the parent's branch moved it through, the nearest meaning of "this
+branch" for it, and it is what the review did before.
+**How to revert:** in `gatherModule`, start the submodule's diff at the recorded commit again (drop
+`ownStart`), stop reading `recordedModules` in `gather`, and drop the pane's `pointersOnly` state and its
+two catalog entries.
