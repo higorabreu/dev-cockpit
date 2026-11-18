@@ -7,11 +7,14 @@ const COPY_DELAY_MS = 150
 export interface ClipboardOptions {
   // On Linux the browser already pastes the primary selection on a middle click; pasting again doubles it
   readonly nativeMiddlePaste: boolean
-  readonly keymap: Pick<Keymap, 'clipboard'>
+  readonly keymap: Pick<Keymap, 'clipboard' | 'keyboard'>
+  // A Mac's secondary click (a two-finger tap or Ctrl+click) opens this menu at the pointer
+  openMenu(x: number, y: number): void
 }
 
-// Selecting copies; right and middle click paste; the keymap's copy and paste keys, Ctrl+Shift+C and V
-// as in other terminals (the Mac's Edit menu gives Cmd+C and V)
+// Selecting copies; right and middle click paste, except a Mac's secondary click, which opens the menu;
+// the keymap's copy and paste keys, Ctrl+Shift+C and V as in other terminals (the Mac's Edit menu gives
+// Cmd+C and V)
 export function attachClipboard(
   terminal: Terminal,
   element: HTMLElement,
@@ -30,7 +33,18 @@ export function attachClipboard(
   let timer: ReturnType<typeof setTimeout> | undefined
   // The window outlives the tab: its listener must go with the terminal, or it keeps the closed tab alive
   const detach = new AbortController()
+  const mac = options.keymap.keyboard === 'mac'
 
+  // Ctrl+click is the Mac's secondary click: xterm would take it as a click, clearing the selection the
+  // menu copies and reporting it to a program that reads the mouse
+  if (mac)
+    element.addEventListener(
+      'mousedown',
+      (event) => {
+        if (event.button === 0 && event.ctrlKey && !event.metaKey) event.stopPropagation()
+      },
+      true,
+    )
   element.addEventListener('mousedown', (event) => {
     if (event.button === 0) pressed = true
   })
@@ -51,7 +65,8 @@ export function attachClipboard(
   })
   element.addEventListener('contextmenu', (event) => {
     event.preventDefault()
-    void paste()
+    if (mac) options.openMenu(event.clientX, event.clientY)
+    else void paste()
   })
   element.addEventListener('auxclick', (event) => {
     if (event.button !== 1 || options.nativeMiddlePaste) return

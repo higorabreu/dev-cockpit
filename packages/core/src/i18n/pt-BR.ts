@@ -123,6 +123,9 @@ export const ptBR = {
   'terminal.openInNewTab': 'Abrir em uma nova aba',
   'terminal.openInFileManager': 'Abrir no gerenciador de arquivos',
   'terminal.clear': 'Limpar terminal',
+  'terminal.copy': 'Copiar',
+  'terminal.paste': 'Colar',
+  'terminal.selectAll': 'Selecionar tudo',
 
   'projects.search': 'Buscar projeto',
   'projects.none': 'Nenhum projeto encontrado',

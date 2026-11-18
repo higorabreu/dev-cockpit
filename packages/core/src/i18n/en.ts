@@ -124,6 +124,9 @@ export const en: Record<MessageKey, string> = {
   'terminal.openInNewTab': 'Open in a new tab',
   'terminal.openInFileManager': 'Open in the file manager',
   'terminal.clear': 'Clear terminal',
+  'terminal.copy': 'Copy',
+  'terminal.paste': 'Paste',
+  'terminal.selectAll': 'Select all',
 
   'projects.search': 'Search project',
   'projects.none': 'No project found',

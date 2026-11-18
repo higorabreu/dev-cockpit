@@ -119,3 +119,11 @@
   color: var(--muted);
   cursor: default;
 }
+
+/* An item with a key: the label on the left and the keycaps on the right, as in the hold menu */
+#tab-menu button:has(.keys) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}

@@ -614,6 +614,7 @@ export async function startApp(
         openFolder: (path, x, y) => openFolderMenu(id, path, x, y),
         tip: setTipRegion,
       },
+      openMenu: (x, y) => openTerminalMenu(id, x, y),
       onCopied: (text) => notice.copied(text),
       onExit: () => close(id),
       onInput() {
@@ -655,6 +656,38 @@ export async function startApp(
       y,
       false,
       () => sessions.get(tabId)?.focus(),
+    )
+  }
+
+  // A Mac's secondary click in a terminal; each item shows the key the Edit menu and xterm give it
+  function openTerminalMenu(tabId: string, x: number, y: number) {
+    const session = sessions.get(tabId)
+    if (!session) return
+    menu.open(
+      [
+        {
+          label: i18n.t('terminal.copy'),
+          enabled: session.hasSelection(),
+          key: keymap.commandLabel('c'),
+          run: () => session.copySelection(),
+        },
+        {
+          label: i18n.t('terminal.paste'),
+          enabled: true,
+          key: keymap.commandLabel('v'),
+          run: () => session.pasteClipboard(),
+        },
+        {
+          label: i18n.t('terminal.selectAll'),
+          enabled: true,
+          key: keymap.commandLabel('a'),
+          run: () => session.selectAll(),
+        },
+      ],
+      x,
+      y,
+      false,
+      () => session.focus(),
     )
   }
 

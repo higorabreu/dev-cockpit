@@ -1,6 +1,10 @@
+import { keys } from '../kit/keys.ts'
+
 export interface MenuAction {
   readonly label: string
   readonly enabled: boolean
+  // The shortcut that does the same, shown beside the label as the hold menu shows it
+  readonly key?: string
   run(): void
 }
 
@@ -68,7 +72,12 @@ export function createTabMenu(element: HTMLElement) {
           const item = document.createElement('button')
           item.type = 'button'
           item.setAttribute('role', 'menuitem')
-          item.textContent = action.label
+          if (action.key === undefined) item.textContent = action.label
+          else {
+            const label = document.createElement('span')
+            label.textContent = action.label
+            item.append(label, keys(action.key, 'compact'))
+          }
           item.disabled = !action.enabled
           item.addEventListener('click', () => {
             close()

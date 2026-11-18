@@ -88,4 +88,27 @@ describe('createTabMenu', () => {
 
     expect(element.hidden).toBe(true)
   })
+
+  it('should show the key as keycaps beside the label when the action has one', () => {
+    const { menu, element } = setup()
+
+    menu.open(
+      [
+        { label: 'Copy', enabled: false, key: '⌘C', run: () => undefined },
+        { label: 'Paste', enabled: true, key: '⌘V', run: () => undefined },
+      ],
+      100,
+      100,
+      false,
+    )
+
+    const [copy, paste] = [...element.querySelectorAll('button')]
+    expect(copy?.querySelector('span')?.textContent).toBe('Copy')
+    expect([...(copy?.querySelectorAll('.key') ?? [])].map((key) => key.textContent)).toEqual([
+      '⌘',
+      'C',
+    ])
+    expect(copy?.disabled).toBe(true)
+    expect(document.activeElement).toBe(paste)
+  })
 })
