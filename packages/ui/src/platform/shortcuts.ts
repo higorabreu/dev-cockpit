@@ -24,35 +24,35 @@ export interface ShortcutActions {
 
 // Listened for in the capture phase: the app's keys never reach the shell
 export function bindShortcuts(actions: ShortcutActions, keymap: Keymap): () => void {
-  const bindings: ReadonlyArray<readonly [ShortcutId, () => void]> = [
-    ['newTab', actions.newTab],
-    ['closeTab', actions.closeTab],
-    ['renameTab', actions.renameTab],
-    ['nextTab', actions.nextTab],
-    ['previousTab', actions.previousTab],
-    ['settings', actions.openSettings],
-    ['review', actions.toggleReview],
-    ['reviewLayout', actions.toggleReviewLayout],
-    ['reviewSend', actions.sendReview],
-    ['theme', actions.toggleTheme],
-    ['projects', actions.searchProjects],
-    ['views', actions.openViews],
-    ['panel', actions.togglePanel],
-    ['fullHeight', actions.toggleFullHeight],
-    ['opacityUp', () => actions.changeOpacity(1)],
-    ['opacityDown', () => actions.changeOpacity(-1)],
-    ['fontBigger', () => actions.changeFontSize(1)],
-    ['fontSmaller', () => actions.changeFontSize(-1)],
-    ['fontReset', () => actions.changeFontSize('reset')],
-    ['clearTerminal', actions.clearTerminal],
-  ]
+  const bindings: Readonly<Record<ShortcutId, () => void>> = {
+    newTab: actions.newTab,
+    closeTab: actions.closeTab,
+    renameTab: actions.renameTab,
+    nextTab: actions.nextTab,
+    previousTab: actions.previousTab,
+    settings: actions.openSettings,
+    review: actions.toggleReview,
+    reviewLayout: actions.toggleReviewLayout,
+    reviewSend: actions.sendReview,
+    theme: actions.toggleTheme,
+    projects: actions.searchProjects,
+    views: actions.openViews,
+    panel: actions.togglePanel,
+    fullHeight: actions.toggleFullHeight,
+    opacityUp: () => actions.changeOpacity(1),
+    opacityDown: () => actions.changeOpacity(-1),
+    fontBigger: () => actions.changeFontSize(1),
+    fontSmaller: () => actions.changeFontSize(-1),
+    fontReset: () => actions.changeFontSize('reset'),
+    clearTerminal: actions.clearTerminal,
+  }
   const handle = (event: KeyboardEvent) => {
     if (inputGate.blocked) return
-    const tab = keymap.tabIndex(event)
+    // A key the user gave an action wins over the tab digits, which no default key shares
+    const id = keymap.action(event)
+    const tab = id === undefined ? keymap.tabIndex(event) : undefined
     const action =
-      tab === undefined
-        ? bindings.find(([id]) => keymap.matches(event, id))?.[1]
-        : () => actions.goToTab(tab)
+      id !== undefined ? bindings[id] : tab === undefined ? undefined : () => actions.goToTab(tab)
     if (!action) return
     action()
     event.preventDefault()

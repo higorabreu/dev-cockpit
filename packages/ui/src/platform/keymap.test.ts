@@ -34,9 +34,48 @@ describe('createKeymap labels', () => {
     expect(mac.label(id)).toBe(onMac)
   })
 
-  it('should give the modifiers alone when a label lists several keys after them', () => {
-    expect(pc.modifiers('fontBigger')).toBe('Ctrl')
-    expect(mac.modifiers('fontBigger')).toBe('⌘')
+  it('should label a custom key as the keyboard writes it when the user changed it', () => {
+    // Arrange
+    const custom = { newTab: 'Ctrl+Alt+N', fullHeight: 'Cmd+Option+Space' }
+
+    // Act
+    const labels = [
+      createKeymap('pc', () => custom).label('newTab'),
+      createKeymap('mac', () => custom).label('fullHeight'),
+    ]
+
+    // Assert
+    expect(labels).toEqual(['Ctrl+Alt+N', '⌥⌘Space'])
+  })
+
+  it('should replace every default chord when the user gives the action one', () => {
+    // Arrange
+    const keymap = createKeymap('pc', () => ({ nextTab: 'F6' }))
+
+    // Act
+    const chords = keymap.chords('nextTab')
+
+    // Assert
+    expect(chords).toEqual([{ key: 'F6' }])
+    expect(keymap.isCustom('nextTab')).toBe(true)
+    expect(keymap.defaults('nextTab')).toHaveLength(2)
+  })
+
+  it('should follow the custom keys at once when they change', () => {
+    // Arrange
+    let custom: Record<string, string> = {}
+    const keymap = createKeymap('pc', () => custom)
+
+    // Act
+    custom = { settings: 'F2' }
+
+    // Assert
+    expect(keymap.label('settings')).toBe('F2')
+  })
+
+  it('should write a chord with the Mac names when the keyboard is a Mac one', () => {
+    expect(mac.chordText({ key: 'k', meta: true, shift: true })).toBe('Shift+Cmd+K')
+    expect(pc.chordText({ key: 'k', meta: true, shift: true })).toBe('Shift+Super+K')
   })
 
   it('should label a panel key with Ctrl on a PC and Cmd on a Mac', () => {

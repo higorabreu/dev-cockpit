@@ -1,13 +1,13 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from 'vitest'
-import { createKeymap, type Keyboard } from './keymap.ts'
+import { type CustomKeys, createKeymap, type Keyboard } from './keymap.ts'
 import { bindShortcuts, type ShortcutActions } from './shortcuts.ts'
 
 let unbind: () => void = () => undefined
 
 afterEach(() => unbind())
 
-function bind(keyboard: Keyboard) {
+function bind(keyboard: Keyboard, custom: CustomKeys = {}) {
   const ran: string[] = []
   const record =
     (name: string) =>
@@ -33,7 +33,10 @@ function bind(keyboard: Keyboard) {
     changeFontSize: record('changeFontSize'),
     clearTerminal: record('clearTerminal'),
   }
-  unbind = bindShortcuts(actions, createKeymap(keyboard))
+  unbind = bindShortcuts(
+    actions,
+    createKeymap(keyboard, () => custom),
+  )
   return ran
 }
 
@@ -44,6 +47,41 @@ const press = (init: KeyboardEventInit) => {
 }
 
 describe('bindShortcuts', () => {
+  it('should run the action on its custom key and no longer on its default when the user changed it', () => {
+    // Arrange
+    const ran = bind('pc', { newTab: 'Ctrl+Alt+N' })
+
+    // Act
+    press({ key: 't', code: 'KeyT', ctrlKey: true, shiftKey: true })
+    press({ key: 'n', code: 'KeyN', ctrlKey: true, altKey: true })
+
+    // Assert
+    expect(ran).toEqual(['newTab'])
+  })
+
+  it('should run the custom action before a tab digit when the user gave it Alt and a digit', () => {
+    // Arrange
+    const ran = bind('pc', { theme: 'Alt+2' })
+
+    // Act
+    press({ key: '2', code: 'Digit2', altKey: true })
+    press({ key: '3', code: 'Digit3', altKey: true })
+
+    // Assert
+    expect(ran).toEqual(['toggleTheme', 'goToTab 2'])
+  })
+
+  it('should run the action that took a default key of another when both match', () => {
+    // Arrange
+    const ran = bind('pc', { theme: 'Ctrl+Shift+T' })
+
+    // Act
+    press({ key: 'T', code: 'KeyT', ctrlKey: true, shiftKey: true })
+
+    // Assert
+    expect(ran).toEqual(['toggleTheme'])
+  })
+
   it('should send the review and keep Enter from the shell when Ctrl+Shift+Enter is pressed', () => {
     // Arrange
     const ran = bind('pc')

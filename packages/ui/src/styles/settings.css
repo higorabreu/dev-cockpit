@@ -112,6 +112,12 @@
   border-bottom: 0;
 }
 
+/* A line under the last group that speaks for all of them, such as where the tokens are kept */
+.spanel .sfoot {
+  margin: 0;
+  padding: 12px calc(16px - var(--size-scrollbar)) 16px;
+}
+
 .shead2 {
   flex: none;
   display: flex;
@@ -476,13 +482,73 @@
   display: none;
 }
 
-.sref {
+/* On the Shortcuts page the reset keeps its place while hidden, so a key saved or reset moves nothing */
+.skeys .sreset[hidden] {
+  display: inline-block;
+  visibility: hidden;
+}
+
+/* The actions' rows: denser than a setting with a hint. A note under the name fits in the row's own
+   height, so a key held back or a note that comes and goes moves no other row */
+.skeys-list .srow2 {
+  min-height: 32px;
   padding: 2px 0;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+}
+
+.skeys .slabel {
+  line-height: 16px;
+}
+
+/* A refusal or a note stays on one line under the name, so no state of a row moves the rows below it;
+   a longer one, such as a conflict with a long action name, ends in an ellipsis and its tooltip shows it */
+.skeys .serror,
+.skeys .snote {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* An action's keycaps are its button. Recording shows the prompt in the same box, framed like the
+   global key's Change while it waits, so the row keeps its height */
+.skey {
+  box-sizing: border-box;
+  height: 32px;
+  /* The caps end where the Change buttons above end; the frame a hover shows reaches into the gap */
+  margin-right: -7px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+}
+
+.skey:hover {
+  border-color: var(--control-line);
+  background: var(--hover);
+}
+
+.skey:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
+.skey[data-recording="true"] {
+  margin-right: 0;
+  padding: 0 10px;
+  border-color: var(--control-line);
+}
+
+.skey:disabled {
+  border-color: transparent;
+  background: none;
   color: var(--muted);
-  font-size: 12px;
+}
+
+.skey-wait {
+  white-space: nowrap;
 }
 
 /* A checked box uses the design system's accent, not the browser's blue */

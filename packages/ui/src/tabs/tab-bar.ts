@@ -17,13 +17,7 @@ const FADE_PX = 24
 const DOUBLE_CLICK_MS = 500
 const SPLIT_GLYPH = '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M12 5v14"/>'
 
-// reviewKey is the label of the key that opens and closes the review, for the review mark's tooltip
-export function createTabBar(
-  container: HTMLElement,
-  callbacks: TabBarCallbacks,
-  t: Translate,
-  reviewKey: string,
-) {
+export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks, t: Translate) {
   let dragging: HTMLElement | undefined
   let lastActive: string | undefined
   let hiddenAttention: AttentionKind | undefined
@@ -123,7 +117,8 @@ export function createTabBar(
                 role: 'img',
                 'aria-label': mark.label,
                 'data-tip': mark.label,
-                'data-tip-key': reviewKey,
+                // The key that opens and closes the review, asked of the keymap when the tooltip shows
+                'data-tip-shortcut': 'review',
               },
               icon(SPLIT_GLYPH, 12),
             ),
