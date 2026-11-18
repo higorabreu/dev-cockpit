@@ -917,6 +917,7 @@ private repositories do not show.
 **How to revert:** drop the `dck.github` candidate from `core/src/extensions/built-in.ts`, the adapter and
 the two entries in `shell/src/connections/connector-connections.ts` and `daemon/src/connector-views.ts`;
 the shared connection and views files keep working for GitLab alone.
+**Partly replaced by D73** (2026-11-18): the rail badge's text no longer names the service.
 
 
 ## D59. Codex marks its tab through the terminal's program status report, with nothing installed
@@ -1284,3 +1285,27 @@ to name no authors.
 `core/src/about/about.ts`, `shell/src/updates/about-bridge.ts` and the `about` host API, and put the
 Updates row back in System.
 
+## D73. Rail badges cap at "9+", and the Work button shows what waits for the user
+
+**Decision:** [plans/rail-badges.md](../plans/rail-badges.md). A rail badge reads 1 to 9 and then `9+`
+(`formatBadge`, `core/src/attention/badge.ts`) in a pill of one size, 16 by 13 pixels, wide enough for
+`9+` at 9px weight 600; the digits are tabular and a pixel of top padding puts them in the middle at scale
+2. The exact count is in the button's tooltip and label, one line: "Sessions · 12 waiting for you",
+"Sessões · 12 aguardando você"; with no badge only the title. One helper, `ui/src/kit/badge.ts`, draws the
+pill and writes the line for the panel sections and for the Work button, which now shows its count too.
+A connector view's `badge` is a role instead of a plural text key: `review` counts every item (GitLab
+`review`, GitHub `github-review`) and `attention` the user's own merge requests that need them (`mine`,
+`github-mine`). A merge request needs the user while its CI failed, or when it has an open discussion and
+its `updatedAt` is newer than the version last seen (`needsAttention`, `core/src/views/attention.ts`).
+Showing an `attention` tab in the Work screen with the window visible marks what it lists as seen; the
+marks (view id, item id, `updatedAt`) live per machine in the window's `localStorage` (`dck-seen-v1`), and
+a fetched list drops the marks of items that left it. The tooltip gives the breakdown with no kind of
+item: "Work · 3 to review, 1 of yours needs attention", "Trabalho · 3 para revisar, 1 seu requer
+atenção". Warming refreshes the `attention` views as well as the `review` ones.
+**Reason:** decided with the maintainer (2026-11-18): twelve finished tabs grew the pill past the icon,
+and the Work button only spoke to the screen reader. "Needs attention" rather than "has news" because a
+failed CI counts for as long as it fails. Generic texts keep the line short with one service or two, which
+replaces the per-service text of D57.
+**How to revert:** put `badge` back as a plural catalog key in `core/src/connectors/connector.ts` with the
+`views.waiting` texts, drop `kit/badge.ts`, `views/seen-marks.ts`, `views/work-badge.ts`,
+`core/src/views/attention.ts` and `formatBadge`, and give the pill back its `min-width` and padding.

@@ -1,4 +1,5 @@
 import { clampPanelWidth, PANEL_WIDTH, readPreference, type Translate } from '@dck/core'
+import { type RailBadge, showBadge } from '../kit/badge.ts'
 import { h, icon } from './dom.ts'
 
 export interface PanelSection {
@@ -10,7 +11,7 @@ export interface PanelSection {
   // Short text to the right of the title, visible even with the section collapsed
   summary(): string
   // Rail badge, only when something needs attention
-  badge(): string | undefined
+  badge(): RailBadge | undefined
   body(): HTMLElement
 }
 
@@ -99,7 +100,7 @@ export function createPanel(options: PanelOptions) {
     const signature = JSON.stringify(
       options.sections.map((section) => [
         section.id,
-        section.badge() ?? '',
+        section.badge() ?? null,
         state.open && state.sections[section.id] === true,
       ]),
     )
@@ -107,20 +108,18 @@ export function createPanel(options: PanelOptions) {
     railSignature = signature
     rail.replaceChildren(
       ...options.sections.map((section) => {
-        const badge = section.badge()
-        return h(
+        const button = h(
           'button',
           {
             type: 'button',
             'data-section': section.id,
             'data-focus': `rail-${section.id}`,
-            'aria-label': section.label,
-            'data-tip': section.label,
             'aria-expanded': String(state.open && state.sections[section.id] === true),
           },
           icon(section.icon),
-          badge && h('span', { class: 'badge' }, badge),
         )
+        showBadge(button, options.t, section.label, section.badge())
+        return button
       }),
     )
   }

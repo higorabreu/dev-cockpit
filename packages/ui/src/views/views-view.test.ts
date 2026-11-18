@@ -6,14 +6,15 @@ import {
   GITLAB_CONNECTOR,
   type HostApi,
   JIRA_CONNECTOR,
-  type PluralKey,
   type ViewItem,
   type ViewSnapshot,
 } from '@dck/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createKeymap } from '../platform/keymap.ts'
 import { HEADER_HEIGHT, ROW_HEIGHT } from './list-layout.ts'
+import { createSeenMarks } from './seen-marks.ts'
 import { createViewsView } from './views-view.ts'
+import type { WorkCounts } from './work-badge.ts'
 
 const mergeRequest = (number: number): ViewItem => ({
   kind: 'mergeRequest',
@@ -68,7 +69,8 @@ function setup(options: {
 }) {
   const stored = new Map(options.snapshots.map((entry) => [entry.view, entry]))
   const opened: string[] = []
-  const badges: { count: number; label: PluralKey | undefined }[] = []
+  const badges: WorkCounts[] = []
+  const storedMarks = new Map<string, string>()
   const clipboard: string[] = []
   const refreshed: string[] = []
   let itemChanges = 0
@@ -98,7 +100,11 @@ function setup(options: {
     openSettings: () => {
       settingsOpened += 1
     },
-    onBadge: (count, label) => void badges.push({ count, label }),
+    onBadge: (counts) => void badges.push(counts),
+    seen: createSeenMarks({
+      getItem: (key) => storedMarks.get(key) ?? null,
+      setItem: (key, value) => void storedMarks.set(key, value),
+    }),
     onItems: () => {
       itemChanges += 1
     },
@@ -236,7 +242,7 @@ describe('views view badge', () => {
 
     await view.warm()
 
-    expect(badges.at(-1)).toEqual({ count: 2, label: 'views.waiting' })
+    expect(badges.at(-1)).toEqual({ review: 2, attention: 0 })
   })
 
   it('should drop the badge when the connector is disabled and the screen warms again', async () => {
@@ -249,7 +255,7 @@ describe('views view badge', () => {
 
     await view.warm()
 
-    expect(badges.at(-1)).toEqual({ count: 0, label: undefined })
+    expect(badges.at(-1)).toEqual({ review: 0, attention: 0 })
   })
 
   it('should not count a view whose account is not connected', async () => {
@@ -257,7 +263,49 @@ describe('views view badge', () => {
 
     await view.warm()
 
-    expect(badges.at(-1)).toEqual({ count: 0, label: 'views.waiting' })
+    expect(badges.at(-1)).toEqual({ review: 0, attention: 0 })
+  })
+  it('should add the user own merge requests whose CI failed when warming', async () => {
+    const failed = { ...mergeRequest(7), pipeline: 'failed' } as ViewItem
+    const { view, badges } = setup({
+      connectors: [GITLAB_CONNECTOR],
+      snapshots: [
+        connected[0] as ViewSnapshot,
+        snapshot('mine', 'idle', [failed, mergeRequest(8)]),
+      ],
+    })
+
+    await view.warm()
+
+    expect(badges.at(-1)).toEqual({ review: 2, attention: 1 })
+  })
+
+  it('should stop counting an open discussion when the user opens the tab that lists it', async () => {
+    const discussed = { ...mergeRequest(7), openDiscussions: true } as ViewItem
+    const { view, badges, overlay } = setup({
+      connectors: [GITLAB_CONNECTOR],
+      snapshots: [connected[0] as ViewSnapshot, snapshot('mine', 'idle', [discussed])],
+    })
+    await view.warm()
+    const before = badges.at(-1)
+    await view.open()
+
+    press(overlay.querySelector('.vinput'), 'ArrowRight')
+
+    expect(before).toEqual({ review: 2, attention: 1 })
+    expect(badges.at(-1)).toEqual({ review: 2, attention: 0 })
+  })
+
+  it('should not mark the user own merge requests as seen when the review tab is the open one', async () => {
+    const discussed = { ...mergeRequest(7), openDiscussions: true } as ViewItem
+    const { view, badges } = setup({
+      connectors: [GITLAB_CONNECTOR],
+      snapshots: [connected[0] as ViewSnapshot, snapshot('mine', 'idle', [discussed])],
+    })
+
+    await view.open()
+
+    expect(badges.at(-1)).toEqual({ review: 2, attention: 1 })
   })
 })
 
@@ -274,7 +322,7 @@ describe('views view with GitHub', () => {
   ]
   const githubOnly = [...github, ...unconnected]
 
-  it('should count the GitHub reviews with their own text when GitHub is the only one connected', async () => {
+  it('should count the GitHub reviews and refresh both badge views when GitHub is the only one connected', async () => {
     const { view, badges, refreshed } = setup({
       connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
       snapshots: githubOnly,
@@ -282,11 +330,11 @@ describe('views view with GitHub', () => {
 
     await view.warm()
 
-    expect(badges.at(-1)).toEqual({ count: 1, label: 'views.github.waiting' })
-    expect(refreshed).toEqual(['github-review', 'review'])
+    expect(badges.at(-1)).toEqual({ review: 1, attention: 0 })
+    expect(refreshed).toEqual(['github-review', 'github-mine', 'review', 'mine'])
   })
 
-  it('should sum the reviews of both services and name no kind when both are connected', async () => {
+  it('should sum the reviews of both services when both are connected', async () => {
     const { view, badges } = setup({
       connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
       snapshots: [...github, ...connected],
@@ -294,10 +342,10 @@ describe('views view with GitHub', () => {
 
     await view.warm()
 
-    expect(badges.at(-1)).toEqual({ count: 3, label: 'views.waiting.any' })
+    expect(badges.at(-1)).toEqual({ review: 3, attention: 0 })
   })
 
-  it('should keep the GitLab badge text when GitLab is the only one connected', async () => {
+  it('should count only the GitLab reviews when GitLab is the only one connected', async () => {
     const { view, badges } = setup({
       connectors: [GITHUB_CONNECTOR, GITLAB_CONNECTOR],
       snapshots: [
@@ -309,7 +357,7 @@ describe('views view with GitHub', () => {
 
     await view.warm()
 
-    expect(badges.at(-1)).toEqual({ count: 2, label: 'views.waiting' })
+    expect(badges.at(-1)).toEqual({ review: 2, attention: 0 })
   })
 
   it('should write the pull request reference with # and open it when Enter is pressed', async () => {
@@ -433,7 +481,7 @@ describe('views view issue projects', () => {
     await view.warm()
 
     expect([...view.issueProjects('jira')]).toEqual(['ACME', 'OPS'])
-    expect(refreshed).toEqual(['review'])
+    expect(refreshed).toEqual(['review', 'mine'])
     expect(itemChanges()).toBeGreaterThan(0)
   })
 

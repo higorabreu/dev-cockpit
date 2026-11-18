@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { defineContributionPoint } from '../extensions/contribution-points.ts'
 import { type MessageKey, ptBR } from '../i18n/pt-BR.ts'
-import type { PluralKey } from '../i18n/translator.ts'
 import { VIEW_ID_MAX } from '../views/schema.ts'
 
 // The id names the settings entry (`connections.<id>`) and the keyring key (`<id>.token`)
@@ -13,12 +12,10 @@ const messageKey = z.custom<MessageKey>(
   (value) => typeof value === 'string' && Object.hasOwn(ptBR, value),
   'must be a key of the text catalogs',
 )
-const pluralKey = z.custom<PluralKey>(
-  (value) => typeof value === 'string' && Object.hasOwn(ptBR, `${value}.other`),
-  'must be a plural key of the text catalogs',
-)
 
 const field = z.strictObject({ placeholder: z.string().max(200) })
+
+export const BADGE_ROLES = ['review', 'attention'] as const
 
 export const connectorViewSchema = z.strictObject({
   id: z.string().regex(VIEW_ID_PATTERN, 'must be a short lowercase id'),
@@ -27,9 +24,12 @@ export const connectorViewSchema = z.strictObject({
   // What the tab's list holds, shown in its tooltip
   description: messageKey,
   empty: messageKey,
-  // The rail badge counts this view's items; the text says what they are, for the screen reader
-  badge: pluralKey.optional(),
+  // What this view adds to the Work badge: `review` every item, `attention` the user's own merge
+  // requests that need them (`needsAttention`)
+  badge: z.enum(BADGE_ROLES).optional(),
 })
+
+export type BadgeRole = (typeof BADGE_ROLES)[number]
 
 // The service's own word for the CI state of a merge request: GitLab's pipeline, GitHub's checks
 export const CI_TERMS = ['pipeline', 'checks'] as const

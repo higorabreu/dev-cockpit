@@ -14,7 +14,7 @@ export const GITLAB_CONNECTOR = {
       title: 'views.review',
       description: 'views.review.description',
       empty: 'views.empty.review',
-      badge: 'views.waiting',
+      badge: 'review',
     },
     {
       id: 'mine',
@@ -22,6 +22,7 @@ export const GITLAB_CONNECTOR = {
       title: 'views.mine',
       description: 'views.mine.description',
       empty: 'views.empty.mine',
+      badge: 'attention',
     },
   ],
 } as const satisfies Connector

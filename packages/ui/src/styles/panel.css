@@ -130,21 +130,25 @@
 }
 
 /* A count on a rail button, at its lower right as in VS Code's activity bar: a ring in the window color
-   cuts it out of the icon, so both stay readable where they meet */
+   cuts it out of the icon, so both stay readable where they meet. One width for every count, the one
+   "9+" needs, so the pill never changes size. Inter's line box sets the digits 0.75px above the middle of
+   13px: one pixel of padding on top centers them to the device pixel at scale 2 */
 .badge {
   position: absolute;
   right: 1px;
   bottom: 1px;
-  min-width: 13px;
+  width: 16px;
   height: 13px;
-  padding: 0 3px;
+  padding-top: 1px;
   box-sizing: border-box;
   border-radius: 7px;
   background: var(--fg);
   box-shadow: 0 0 0 2px var(--bg);
   color: var(--bg);
-  font: 600 9px / 13px var(--font-sans);
+  font: 600 9px / 12px var(--font-sans);
+  font-variant-numeric: tabular-nums;
   text-align: center;
+  white-space: nowrap;
 }
 
 .badge[hidden] {

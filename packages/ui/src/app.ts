@@ -21,7 +21,6 @@ import {
   noSystemFonts,
   notificationText,
   openTab,
-  type PluralKey,
   type ProgramStatus,
   type Project,
   renameTab,
@@ -41,6 +40,7 @@ import {
 } from '@dck/core'
 import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
 import { createHoldMenuController } from './hold-menu/hold-menu-controller.ts'
+import { showBadge } from './kit/badge.ts'
 import { setFullHeight } from './kit/layout-mode.ts'
 import { translateStatic } from './kit/static-text.ts'
 import { setTipRegion } from './kit/tooltip.ts'
@@ -69,7 +69,9 @@ import { createTabList } from './tabs/tab-list.ts'
 import { createTabMenu } from './tabs/tab-menu.ts'
 import { createTerminalSession, type TerminalSession } from './terminal/terminal-session.ts'
 import { createUpdateNotice } from './updates/update-notice.ts'
+import { createSeenMarks } from './views/seen-marks.ts'
 import { createViewsView } from './views/views-view.ts'
+import { NO_WORK, type WorkCounts, workBadge } from './views/work-badge.ts'
 import { createResizeEdge } from './window/resize-edge.ts'
 
 export interface AppElements {
@@ -219,21 +221,17 @@ export async function startApp(
     i18n,
     onClose: () => focusActive(),
     openSettings: () => settingsView.open('connections'),
-    onBadge: showBadge,
+    onBadge: showWorkBadge,
+    seen: createSeenMarks(localStorage),
     // The ticket link in the Git section follows the Jira tasks as they arrive
     onItems: () => panel.render(),
     keymap,
   })
 
-  let badge: { count: number; label: PluralKey | undefined } = { count: 0, label: undefined }
-  function showBadge(count: number, label: PluralKey | undefined) {
-    badge = { count, label }
-    elements.viewsButton.setAttribute(
-      'aria-label',
-      count === 0 || label === undefined
-        ? i18n.t('views.title')
-        : `${i18n.t('views.title')}. ${i18n.plural(label, count)}`,
-    )
+  let workCounts = NO_WORK
+  function showWorkBadge(counts: WorkCounts) {
+    workCounts = counts
+    showBadge(elements.viewsButton, i18n.t, i18n.t('views.title'), workBadge(i18n, counts))
   }
 
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
@@ -712,7 +710,7 @@ export async function startApp(
       viewsView.retranslate()
       reviews.retranslate()
       for (const view of tabViews.values()) view.retranslate()
-      showBadge(badge.count, badge.label)
+      showWorkBadge(workCounts)
       updateNotice.retranslate()
       settingsView.rerender()
       renderTabs()
@@ -1037,7 +1035,7 @@ export async function startApp(
   })
   elements.settingsButton.addEventListener('click', () => settingsView.toggle())
   elements.viewsButton.addEventListener('click', () => viewsView.toggle())
-  showBadge(0, undefined)
+  showWorkBadge(NO_WORK)
   void viewsView.warm()
   api.window.onShown(() => void viewsView.warm())
   api.window.onOpenSettings(() => settingsView.open())

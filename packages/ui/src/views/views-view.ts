@@ -1,4 +1,5 @@
 import {
+  attentionCount,
   type CiTerm,
   type ConnectorView,
   connectionErrorKey,
@@ -8,7 +9,6 @@ import {
   type MessageKey,
   matchesReference,
   mergeRequestReference,
-  type PluralKey,
   type Translator,
   type ViewItem,
   type ViewSnapshot,
@@ -20,6 +20,8 @@ import { agoText } from '../panel/format.ts'
 import type { Keymap } from '../platform/keymap.ts'
 import { type LaidSection, layOutList, ROW_HEIGHT, rowSpan } from './list-layout.ts'
 import { createProjectSelect } from './project-select.ts'
+import type { SeenMarksStore } from './seen-marks.ts'
+import type { WorkCounts } from './work-badge.ts'
 
 const OVERSCAN = 4
 // Room kept beside the active tab when the strip scrolls it into view: the width of the faded edge
@@ -77,8 +79,10 @@ export interface ViewsViewDeps {
   readonly i18n: Translator
   onClose(): void
   openSettings(): void
-  // The item count of the view a connector marked for the rail badge, with the text that says what they are
-  onBadge(count: number, label: PluralKey | undefined): void
+  // What the views the connectors marked for the Work badge add up to
+  onBadge(counts: WorkCounts): void
+  // What the user saw of their own merge requests, which the attention count leaves out
+  readonly seen: SeenMarksStore
   // Some view's items changed, for what else in the window reads them (the Git section's ticket link)
   onItems?(): void
   readonly keymap: Keymap
@@ -123,13 +127,20 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     if (currentView() === undefined) current = connectedViews()[0]?.id
   }
   const badgeViews = () => views.filter((view) => view.badge !== undefined)
-  // The connected views that feed the badge are summed; with two services the text names no kind of item
+  // The connected views that feed the badge are summed by role; a fetched list of the user's own also
+  // drops the seen marks of what left it
   const announceCount = () => {
-    const counted = badgeViews().filter((view) => snapshotOf(view.id).state !== 'unconfigured')
-    const count = counted.reduce((total, view) => total + snapshotOf(view.id).items.length, 0)
-    const label: PluralKey | undefined =
-      counted.length > 1 ? 'views.waiting.any' : (counted[0] ?? badgeViews()[0])?.badge
-    deps.onBadge(count, label)
+    const counts = { review: 0, attention: 0 }
+    for (const view of badgeViews()) {
+      const snapshot = snapshotOf(view.id)
+      if (snapshot.state === 'unconfigured') continue
+      if (view.badge === 'review') counts.review += snapshot.items.length
+      else if (view.badge === 'attention') {
+        if (snapshot.updatedAt !== undefined) deps.seen.keep(view.id, snapshot.items)
+        counts.attention += attentionCount(snapshot.items, deps.seen.of(view.id))
+      }
+    }
+    deps.onBadge(counts)
     deps.onItems?.()
   }
 
@@ -570,6 +581,16 @@ export function createViewsView(overlay: HTMLElement, deps: ViewsViewDeps) {
     selected = Math.max(0, index)
     redraw()
     if (keepId === undefined) reveal()
+    noteSeen()
+  }
+
+  // The tab of the user's own merge requests is in front of them: what it lists is seen at this version
+  function noteSeen() {
+    const view = currentView()
+    if (!isOpen() || document.hidden || view?.badge !== 'attention') return
+    const snapshot = snapshotOf(view.id)
+    if (snapshot.updatedAt === undefined) return
+    if (deps.seen.see(view.id, snapshot.items)) announceCount()
   }
 
   function redraw() {
