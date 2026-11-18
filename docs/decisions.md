@@ -1171,7 +1171,7 @@ checked out, its recorded commit not fetched, deleted) stays the single "Submodu
 index is a tree: the repository's own files first, then a group per submodule (path, "Submodule" tag, file
 count, up to 3 commit subjects then "+ N commits") that folds with a click, Enter or ←→, its files under
 it with paths inside it and nested submodules nested the same way; the commits' tooltip lists one line
-per commit, cut near 60 characters, at most 10, then "+ N more". A diff header boxes the submodule's
+per commit, cut near 60 characters, at most 5 (the maintainer found 10 too tall), then "+ N more". A diff header boxes the submodule's
 folder before the rest of the path. The panel's submodule rows are buttons that open the review on their
 group. Every changed file is listed: past 300 untracked files, counted across all repositories in the
 order shown, a file is listed without its content, says "Not loaded" in the index and "Content not

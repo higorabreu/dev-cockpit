@@ -7,7 +7,7 @@ export const COMMITS_LINE = 20
 // The subjects shown in the header; the rest is a count
 export const INLINE_SUBJECTS = 3
 // The tooltip stays compact: this many commits, each cut near this many characters
-export const TIP_COMMITS = 10
+export const TIP_COMMITS = 5
 export const TIP_CHARACTERS = 60
 const CHEVRON = '<path d="M9 6l6 6-6 6"/>'
 

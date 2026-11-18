@@ -180,7 +180,7 @@ describe('createFileList', () => {
 })
 
 describe('commitsTip', () => {
-  it('should list one cut line per commit, at most ten, then how many more', () => {
+  it('should list one cut line per commit, at most five, then how many more', () => {
     // Arrange
     const long = 'Move the cache warm-up behind a flag so cold starts stay under two seconds'
     const module: DiffModule = {
@@ -193,10 +193,10 @@ describe('commitsTip', () => {
     const lines = commitsTip(module, createTranslator('en')).split('\n')
 
     // Assert
-    expect(lines).toHaveLength(11)
+    expect(lines).toHaveLength(6)
     expect(lines[0]).toBe('Move the cache warm-up behind a flag so cold starts stay…')
     expect(lines[0]?.length).toBeLessThanOrEqual(60)
-    expect(lines[10]).toBe('+ 4 more')
+    expect(lines[5]).toBe('+ 9 more')
   })
 
   it('should keep a short subject whole', () => {
