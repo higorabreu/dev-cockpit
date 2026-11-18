@@ -193,7 +193,7 @@ describe('createReviewTabs send', () => {
     expect(document.activeElement).not.toBe(terminal)
     expect(document.querySelector('.rv-send-count')?.textContent).toBe('1')
     expect(document.querySelector('.rv-status')?.textContent).toBe(
-      'The terminal did not take the line, so the comments stay pending',
+      'The terminal refused the line; the comments are still pending.',
     )
   })
 

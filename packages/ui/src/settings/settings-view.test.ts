@@ -441,9 +441,7 @@ describe('settings view, connections', () => {
     expect(
       body.querySelector<HTMLInputElement>('[data-focus="conn-gitlab-url"]')?.placeholder,
     ).toBe('https://gitlab.example.com')
-    expect(body.textContent).toContain(
-      'read_api scope. Kept in the system keyring, never in a file.',
-    )
+    expect(body.textContent).toContain('read_api scope. Stored in the system keyring.')
     view.close()
   })
 
@@ -485,9 +483,7 @@ describe('settings view, connections', () => {
   it('should give GitHub a one-line read-only hint and the github.com placeholder', async () => {
     const { body, view } = await connectionsPage(connectionsHost([GITHUB_CONNECTOR]).host)
 
-    expect(body.textContent).toContain(
-      'Fine-grained, read only. Kept in the system keyring, never in a file.',
-    )
+    expect(body.textContent).toContain('Fine-grained, read-only. Stored in the system keyring.')
     expect(body.textContent).not.toContain('An empty address')
     expect(
       body.querySelector<HTMLInputElement>('[data-focus="conn-github-url"]')?.placeholder,
@@ -512,7 +508,7 @@ describe('settings view, connections', () => {
       'Pull requests: Read',
       'Commit statuses: Read',
       'Metadata: Read',
-      'A classic token needs the repo scope for private repositories, and only a classic token reads their checks.',
+      'Classic token: needs the repo scope for private repositories and is the only one that reads checks.',
     ])
     expect(document.activeElement).toBe(button)
     view.close()
@@ -654,7 +650,7 @@ describe('settings view, focus around a connection', () => {
     const token = page.control('conn-gitlab-token')
     expect(page.focused()).toBe('conn-gitlab-token')
     expect(page.body.querySelector(`#${token.getAttribute('aria-describedby')}`)?.textContent).toBe(
-      'GitLab refused the token. Check that it has not expired or been revoked.',
+      'GitLab refused the token. Check whether it expired or was revoked.',
     )
     page.view.close()
   })
@@ -760,7 +756,7 @@ describe('settings view, the settings file', () => {
     // Assert
     expect(marked).toEqual(['settings-tab-general', 'settings-tab-system'])
     expect(body.querySelector('#settings-tab-general')?.getAttribute('aria-description')).toBe(
-      'Has a setting that settings.json holds wrongly',
+      'Has an invalid value in settings.json',
     )
     view.close()
   })
