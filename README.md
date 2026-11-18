@@ -78,6 +78,12 @@ Requirements: Ubuntu 22.04 or Debian 12 or newer, on x86-64 or arm64, on X11 or 
 (the package declares it). macOS builds from source with `pnpm package:mac` and is being tested; from the
 next release on, an Apple Silicon `.dmg` signed ad hoc is attached as well.
 
+With Node 18 or newer, one command does it: `npx @devcockpit/install`. It downloads the latest release's
+file for your system, checks it against the release's `SHA256SUMS` and installs it (`sudo apt install` on
+Debian and Ubuntu, which asks for your password; on an Apple Silicon Mac, the app in `/Applications` and
+the `dck` command on your PATH). `--version 0.10.0` picks a release and `--download-only` only downloads
+and checks it. By hand:
+
 1. Download the `.deb` for your processor (`amd64` for most Intel and AMD PCs, `arm64` for ARM machines; `uname -m` prints `x86_64` or `aarch64`) from the
    [Releases](https://github.com/higorabreu/dev-cockpit/releases) page, and the `SHA256SUMS` file next to it.
 2. Check it: `sha256sum --check --ignore-missing SHA256SUMS`.

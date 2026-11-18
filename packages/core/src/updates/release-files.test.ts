@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Release } from '../ports/updates.ts'
-import { debPackageName, parseChecksums, releaseFiles } from './release-files.ts'
+import { debPackageName, macImageName, parseChecksums, releaseFiles } from './release-files.ts'
 
 const HASH_A = 'a'.repeat(64)
 const HASH_B = 'B'.repeat(64)
@@ -43,24 +43,40 @@ describe('parseChecksums', () => {
   })
 })
 
+describe('macImageName', () => {
+  it('should name the arm64 image when the processor is Apple Silicon', () => {
+    expect(macImageName('0.10.0', 'arm64')).toBe('dev-cockpit_0.10.0_arm64.dmg')
+  })
+
+  it('should name nothing when the processor is Intel', () => {
+    expect(macImageName('0.10.0', 'x64')).toBeUndefined()
+  })
+})
+
 describe('releaseFiles', () => {
-  it('should pick the package for the processor and the checksums when both are attached', () => {
+  const AMD64 = 'dev-cockpit_0.10.0_amd64.deb'
+
+  it('should pick the named package and the checksums when both are attached', () => {
     const files = releaseFiles(
-      release(['dev-cockpit_0.10.0_arm64.deb', 'dev-cockpit_0.10.0_amd64.deb', 'SHA256SUMS']),
-      'x64',
+      release(['dev-cockpit_0.10.0_arm64.deb', AMD64, 'SHA256SUMS']),
+      debPackageName('0.10.0', 'x64'),
     )
 
-    expect(files?.package.name).toBe('dev-cockpit_0.10.0_amd64.deb')
+    expect(files?.package.name).toBe(AMD64)
     expect(files?.checksums.name).toBe('SHA256SUMS')
   })
 
   it('should pick nothing when the checksums are missing', () => {
-    expect(releaseFiles(release(['dev-cockpit_0.10.0_amd64.deb']), 'x64')).toBeUndefined()
+    expect(releaseFiles(release([AMD64]), AMD64)).toBeUndefined()
   })
 
-  it('should pick nothing when the package for the processor is missing', () => {
-    expect(releaseFiles(release(['dev-cockpit_0.10.0_amd64.deb', 'SHA256SUMS']), 'arm64')).toBe(
-      undefined,
-    )
+  it('should pick nothing when the named package is missing', () => {
+    const files = release([AMD64, 'SHA256SUMS'])
+
+    expect(releaseFiles(files, macImageName('0.10.0', 'arm64'))).toBeUndefined()
+  })
+
+  it('should pick nothing when there is no package for the system', () => {
+    expect(releaseFiles(release(['SHA256SUMS']), undefined)).toBeUndefined()
   })
 })

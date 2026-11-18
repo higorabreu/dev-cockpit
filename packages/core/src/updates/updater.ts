@@ -3,7 +3,7 @@ import { type ErrorBody, errorBody } from '../ipc/protocol.ts'
 import type { Cancel, Scheduler } from '../ports/clock.ts'
 import type { Logger } from '../ports/logger.ts'
 import type { Release, ReleaseSource, UpdateInstaller } from '../ports/updates.ts'
-import { parseChecksums, releaseFiles } from './release-files.ts'
+import { debPackageName, parseChecksums, releaseFiles } from './release-files.ts'
 import { compareSemver, isNewerVersion, parseSemver } from './semver.ts'
 
 export const UPDATE_MODES = ['off', 'notify', 'install'] as const
@@ -162,7 +162,7 @@ export function createUpdater(deps: UpdaterDeps) {
     const { installer } = deps
     if (!installer || !release || installing || notice.kind === 'installed') return
     const target = release
-    const files = releaseFiles(target, deps.arch)
+    const files = releaseFiles(target, debPackageName(target.version, deps.arch))
     if (!files) return failInstall(target.version, errorBody('DCK-UPD-003', deps.arch))
     installing = true
     try {

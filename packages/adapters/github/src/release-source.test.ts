@@ -151,6 +151,36 @@ describe('createGitHubReleaseSource', () => {
     expect(codeOf(await releases.latest())).toBe('DCK-UPD-001')
   })
 
+  it('should ask the tag endpoint and read the release when a version is named', async () => {
+    const { source: releases, requests } = source(json(release()))
+
+    const result = await releases.tagged('0.10.0')
+
+    expect(requests[0]?.url).toBe('https://api.github.com/repos/acme/backend/releases/tags/v0.10.0')
+    expect(result.ok && result.value?.version).toBe('0.10.0')
+  })
+
+  it('should find nothing when the named version has no release', async () => {
+    const { source: releases } = source(json({ message: 'Not Found' }, 404))
+
+    expect(await releases.tagged('0.0.1')).toEqual({ ok: true, value: undefined })
+  })
+
+  it('should skip a named release when it is a prerelease', async () => {
+    const { source: releases } = source(json(release({ prerelease: true })))
+
+    expect(await releases.tagged('0.10.0')).toEqual({ ok: true, value: undefined })
+  })
+
+  it('should drop a file when its link is not an address', async () => {
+    const assets = [{ name: 'x.deb', browser_download_url: 'not a link', size: 1 }]
+    const { source: releases } = source(json(release({ assets })))
+
+    const result = await releases.latest()
+
+    expect(result.ok && result.value?.assets).toEqual([])
+  })
+
   it('should use the given roots when a local feed replaces GitHub', async () => {
     const local = 'http://127.0.0.1:4000'
     const fake = fakeHttp(
