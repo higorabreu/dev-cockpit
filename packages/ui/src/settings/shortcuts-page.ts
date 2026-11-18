@@ -17,7 +17,7 @@ import { inputGate } from '../platform/input-gate.ts'
 import type { Keymap } from '../platform/keymap.ts'
 import { type KeySlot, type KeySlots, place, type SlotValue } from './key-slots.ts'
 import type { SettingsClient } from './settings-client.ts'
-import { isMouseTrigger, triggerLabel } from './trigger-label.ts'
+import { triggerLabel } from './trigger-label.ts'
 
 type Child = Node | string | false | undefined
 
@@ -124,10 +124,10 @@ export function createShortcutsPage(ctx: ShortcutsPageContext) {
         ? t('settings.holdTrigger')
         : t(ACTION_LABELS[slot])
 
-  // A key as a cap; a mouse button by its name, which no cap stands for
+  // A cap for a key and for a mouse button alike, so the row reads the same whatever the trigger is
   function triggerView(code: HoldTrigger): HTMLElement {
     const name = triggerLabel(code, keymap.keyboard, t)
-    return isMouseTrigger(code) ? h('span', { class: 'sbutton-name' }, name) : keyCap(name)
+    return keyCap(name)
   }
 
   function valueView(value: SlotValue): HTMLElement {

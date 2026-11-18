@@ -402,9 +402,7 @@ describe('shortcuts page, the hold menu trigger', () => {
 
     // Assert
     expect(current().shortcuts.holdTrigger).toBe('Mouse1')
-    expect(find('[data-setting="shortcuts.holdTrigger"] .sbutton-name').textContent).toBe(
-      'Middle button',
-    )
+    expect(find('[data-setting="shortcuts.holdTrigger"] .key').textContent).toBe('Middle button')
     expect([down.defaultPrevented, up.defaultPrevented]).toEqual([true, true])
   })
 

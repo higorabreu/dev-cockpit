@@ -507,6 +507,8 @@
 .skey {
   box-sizing: border-box;
   height: 32px;
+  /* The caps end where the Change buttons above end; the frame a hover shows reaches into the gap */
+  margin-right: -7px;
   padding: 0 6px;
   display: inline-flex;
   align-items: center;
@@ -528,6 +530,7 @@
 }
 
 .skey[data-recording="true"] {
+  margin-right: 0;
   padding: 0 10px;
   border-color: var(--control-line);
 }
@@ -539,12 +542,6 @@
 }
 
 .skey-wait {
-  white-space: nowrap;
-}
-
-/* A mouse button as the hold menu's trigger: its name, since no cap stands for it */
-.sbutton-name {
-  color: var(--fg);
   white-space: nowrap;
 }
 
