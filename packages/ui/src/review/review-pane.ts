@@ -16,6 +16,8 @@ import {
   type PaneGrid,
   patchKey,
   type ReviewBase,
+  type ReviewDiff,
+  reviewDiff,
   type SessionActivityInfo,
   type Translator,
 } from '@dck/core'
@@ -137,6 +139,13 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const viewedMarks = new Map<string, string>()
   const changedSince = new Set<string>()
   const keys = new WeakMap<DiffFile, string>()
+  // Untracked files past the reading limit the user asked to read; read again after every read
+  const wanted = new Set<string>()
+  // A submodule the panel asked for, shown once the read in progress ends
+  let pendingModule: string | undefined
+  // A file the panel asked for while the diff was still being read
+  let pendingFile: string | undefined
+  let reading = false
   let drawnOptions = ''
 
   const markId = (path: string) => `${scope}|${ignoreWhitespace ? 'w' : ''}|${path}`
@@ -223,6 +232,10 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     i18n,
     onSelect: (index) => diff.revealFile(index),
     onOpen: () => diff.focus(),
+    onLoad: (index) => {
+      const file = files()[index]
+      if (file) void loadFile(file)
+    },
     isViewed,
   })
   list.element.id = `${deps.id}-files`
@@ -237,6 +250,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       shownAnyway.add(file.path)
       drawDiff()
     },
+    load: (file) => void loadFile(file),
     viewed: (file) => ({ viewed: isViewed(file), changed: changedSince.has(markId(file.path)) }),
     toggleViewed: (file) => toggleViewed(file),
     commentCount: (file) => comments.countFor(file.path),
@@ -275,6 +289,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
 
   // A quiet read (the change moved, the agent spoke) shows no loading text: the diff just updates
   async function load(quiet: boolean) {
+    reading = true
     busy = !quiet
     const loadingTimer = quiet
       ? undefined
@@ -307,7 +322,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
         texts.clear()
         expanded.clear()
         lastRead.clear()
+        wanted.clear()
       }
+      state = { kind: 'ok', diff: await withWanted(state.diff) }
       const repository = state.diff.root
       root = repository
       branch = state.diff.branch
@@ -327,6 +344,86 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       reconcileMarks(state.diff.files)
       comments.relocate(state.diff.files)
     }
+    reading = false
+    draw()
+    if (pendingModule !== undefined) showModule(pendingModule)
+    if (pendingFile !== undefined) showFile(pendingFile)
+  }
+
+  // The diff on a file the panel named, from the repository's top; a folder (an untracked one ends in /)
+  // opens its first file. One this scope does not show says so in the header
+  function showFile(path: string) {
+    pendingFile = path
+    if (reading) return
+    pendingFile = undefined
+    if (state.kind !== 'ok') return
+    const shown = files()
+    const index = shown.findIndex((file) =>
+      path.endsWith('/') ? file.path.startsWith(path) : file.path === path,
+    )
+    if (index < 0) {
+      showNotice(t('review.file.none', { path }))
+      return
+    }
+    list.select(index)
+    if (deps.memory.indexHidden) diff.focus()
+    else list.focus()
+  }
+
+  // The index opens on the submodule's group with the diff on its first file; a submodule with no change
+  // in this scope says so in the header
+  function showModule(path: string) {
+    pendingModule = path
+    if (reading) return
+    pendingModule = undefined
+    if (state.kind !== 'ok') return
+    if (state.diff.files.length > 0 && list.showModule(path)) {
+      if (deps.memory.indexHidden) diff.focus()
+      else list.focus()
+      return
+    }
+    showNotice(t('review.module.none', { path }))
+  }
+
+  // A file read on demand takes the place of its entry; what the listing knew about it stays
+  function replaced(found: ReviewDiff, read: ReadonlyMap<string, DiffFile>): ReviewDiff {
+    const next = found.files.map((file) => {
+      const content = file.unloaded ? read.get(file.path) : undefined
+      if (!content) return file
+      const generated = content.generated || file.generated
+      return file.module === undefined
+        ? { ...content, generated }
+        : { ...content, generated, module: file.module }
+    })
+    return reviewDiff(found.root, found.scope, found.branch, next, found.modules)
+  }
+
+  async function readUntracked(repository: string, file: DiffFile) {
+    return api.review.untrackedFile(repository, file.path, ignoreWhitespace)
+  }
+
+  // The files the user asked to read are read again with every read, so they stay current
+  async function withWanted(found: ReviewDiff): Promise<ReviewDiff> {
+    const asked = found.files.filter((file) => file.unloaded && wanted.has(file.path))
+    if (asked.length === 0) return found
+    const results = await Promise.all(asked.map((file) => readUntracked(found.root, file)))
+    const read = new Map<string, DiffFile>()
+    for (const result of results) if (result.ok) read.set(result.value.path, result.value)
+    return replaced(found, read)
+  }
+
+  // A click or Enter on a file listed without its content
+  async function loadFile(file: DiffFile) {
+    if (state.kind !== 'ok' || !file.unloaded) return
+    const found = state.diff
+    wanted.add(file.path)
+    const result = await readUntracked(found.root, file)
+    if (!result.ok) {
+      showNotice(t(`error.${errorCodeOf(result.error)}`))
+      return
+    }
+    if (state.kind !== 'ok' || state.diff !== found) return
+    state = { kind: 'ok', diff: replaced(found, new Map([[file.path, result.value]])) }
     draw()
   }
 
@@ -687,7 +784,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     }
     body.hidden = false
     message.hidden = true
-    list.show(files(), Math.max(0, list.selected()))
+    list.show(files(), state.diff.modules, Math.max(0, list.selected()))
     drawDiff()
   }
 
@@ -729,7 +826,8 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       diff.nextHunk(key === 'n' ? 1 : -1)
       if (where === 'index') diff.focus()
     } else if (key === 'v') {
-      const file = files()[where === 'index' ? list.selected() : diff.currentFile()]
+      const index = where === 'index' ? list.selectedFile() : diff.currentFile()
+      const file = index === undefined ? undefined : files()[index]
       if (file) toggleViewed(file)
     } else if (key === 'c' && where === 'diff') {
       const target = diff.commentTarget()
@@ -803,6 +901,8 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       } else element.focus()
     },
     hasFocus: () => element.contains(document.activeElement),
+    showModule,
+    showFile,
     send: () => sender.send(),
     agentState(agent: AgentState | undefined) {
       reporting = agent !== undefined

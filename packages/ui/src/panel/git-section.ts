@@ -19,6 +19,12 @@ export interface GitSource {
   ticket(branch: string | undefined): TicketLink | undefined
   // In the browser, through the host's check of the connected accounts' addresses
   openTicket(url: string): void
+  // The tab's review, opened on the group of this submodule (its folder from the repository's top)
+  openModule(path: string): void
+  // The tab's review, opened on this file (from the repository's top; a folder opens its first file)
+  openFile(path: string): void
+  // The tab's review, opened where it was
+  openReview(): void
 }
 
 const BRANCH_ICON =
@@ -54,11 +60,17 @@ function splitPath(path: string): [string, string] {
   return at === -1 ? ['', path] : [path.slice(0, at + 1), path.slice(at + 1)]
 }
 
-function fileRow(file: GitFile) {
+// A click or Enter opens the review on the file's diff
+function fileRow(i18n: Translator, file: GitFile, open: (path: string) => void) {
   const [directory, base] = splitPath(file.path)
-  return h(
-    'div',
-    { class: 'frow' },
+  const row = h(
+    'button',
+    {
+      type: 'button',
+      class: 'frow frow-open',
+      'data-focus': `git-file-${file.path}`,
+      'aria-label': i18n.t('git.fileReview.a11y', { path: file.path }),
+    },
     h(
       'span',
       { class: file.status === 'D' ? 'fname del' : 'fname', 'data-tip-full': file.path },
@@ -67,6 +79,8 @@ function fileRow(file: GitFile) {
     ),
     h('span', { class: 'fs' }, file.status),
   )
+  row.addEventListener('click', () => open(file.path))
+  return row
 }
 
 function commitRow(i18n: Translator, commit: GitCommit, nowSeconds: number) {
@@ -82,10 +96,16 @@ function commitRow(i18n: Translator, commit: GitCommit, nowSeconds: number) {
   )
 }
 
-function submoduleRow(i18n: Translator, module: GitSubmodule) {
-  return h(
-    'div',
-    { class: 'frow' },
+// A click or Enter opens the review on the submodule's changes
+function submoduleRow(i18n: Translator, module: GitSubmodule, open: (path: string) => void) {
+  const row = h(
+    'button',
+    {
+      type: 'button',
+      class: 'frow frow-open',
+      'data-focus': `git-module-${module.path}`,
+      'aria-label': `${i18n.t('git.moduleReview.a11y', { path: module.path })}, ${i18n.plural('git.moduleChanges', module.changed)}`,
+    },
     h('span', { class: 'fname' }, module.path),
     module.changed > 0 &&
       h(
@@ -95,6 +115,8 @@ function submoduleRow(i18n: Translator, module: GitSubmodule) {
       ),
     (module.ahead > 0 || module.behind > 0) && sync(i18n, module.ahead, module.behind),
   )
+  row.addEventListener('click', () => open(module.path))
+  return row
 }
 
 export function createGitSection(source: GitSource, i18n: Translator): PanelSection {
@@ -172,6 +194,26 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
     return chip
   }
 
+  // The branch line opens the review where it was, like the review's own key
+  function branchRow(git: GitStatus): HTMLElement {
+    const row = h(
+      'button',
+      {
+        type: 'button',
+        class: 'brow brow-open',
+        'data-focus': 'git-branch',
+        'aria-label': i18n.t('git.moduleReview.a11y', {
+          path: git.branch ?? i18n.t('git.detached'),
+        }),
+      },
+      icon(BRANCH_ICON, 14, 'branch-icon'),
+      h('b', { class: 'branch' }, git.branch ?? i18n.t('git.detached')),
+      sync(i18n, git.ahead, git.behind),
+    )
+    row.addEventListener('click', () => source.openReview())
+    return row
+  }
+
   function body(git: GitStatus): HTMLElement {
     const nowSeconds = Date.now() / 1000
     const ticket = source.ticket(git.branch)
@@ -215,13 +257,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
       h(
         'div',
         { class: 'group' },
-        h(
-          'div',
-          { class: 'brow' },
-          icon(BRANCH_ICON, 14, 'branch-icon'),
-          h('b', { class: 'branch' }, git.branch ?? i18n.t('git.detached')),
-          sync(i18n, git.ahead, git.behind),
-        ),
+        branchRow(git),
         (ticket || git.upstream) &&
           h(
             'div',
@@ -233,11 +269,15 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
       clean && h('p', { class: 'muted' }, i18n.t('git.clean')),
       git.staged.length > 0 &&
         group('staged', i18n.t('git.staged'), git.staged.length, () =>
-          limited('staged', git.staged, i18n.t('git.files'), fileRow),
+          limited('staged', git.staged, i18n.t('git.files'), (file) =>
+            fileRow(i18n, file, source.openFile),
+          ),
         ),
       git.changes.length > 0 &&
         group('changes', i18n.t('git.changes'), git.changes.length, () =>
-          limited('changes', git.changes, i18n.t('git.files'), fileRow),
+          limited('changes', git.changes, i18n.t('git.files'), (file) =>
+            fileRow(i18n, file, source.openFile),
+          ),
         ),
       git.incoming.length > 0 &&
         group(
@@ -263,7 +303,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
         ),
       git.submodules.length > 0 &&
         group('submodules', i18n.t('git.submodules'), git.submodules.length, () => [
-          ...git.submodules.map((module) => submoduleRow(i18n, module)),
+          ...git.submodules.map((module) => submoduleRow(i18n, module, source.openModule)),
           git.submodulesClean > 0 &&
             h(
               'p',

@@ -44,11 +44,13 @@ changed, and your merge requests and tasks.
 - **Review.** `Ctrl+Shift+D` shows what changed in the tab's repository beside or below its terminal, in
   one scroll: uncommitted changes, everything since the branch it came from, or the commits not pushed
   yet. The base branch is read from what git and VS Code recorded, never guessed from a name, and you can
-  pick another. It follows the agent as it works, keeping your place, and marks files as viewed as on
-  GitHub. Comments left on lines, as in a GitHub review, go back to the agent in one go: written to a
-  Markdown file in the repository's `.git/dck/`, with one line naming it typed at the tab's prompt,
-  without Enter, for whatever agent is listening. With no agent in the tab, at a shell prompt or under
-  another program, it waits and says so, and the comments stay.
+  pick another. Changes inside submodules show in the same review, nested ones too, each submodule a group
+  with its new commits; its row in the side panel opens the review on it. Every changed file is listed,
+  and past 300 untracked files the rest load when you open them. It follows the agent as it works, keeping
+  your place, and marks files as viewed as on GitHub. Comments left on lines, as in a GitHub review, go
+  back to the agent in one go: written to a Markdown file in the repository's `.git/dck/`, with one line
+  naming it typed at the tab's prompt, without Enter, for whatever agent is listening. With no agent in
+  the tab, at a shell prompt or under another program, it waits and says so, and the comments stay.
 - **Connectors.** Your GitLab merge requests and Jira tasks in one screen (below).
 - **Terminal.** `Ctrl+click` opens links in the browser and file or folder paths in their default app;
   selecting copies and the right or middle button pastes.
@@ -129,7 +131,7 @@ next launch, `--yes` restarts without asking and `--skip-build` installs the `.d
 | `Ctrl+Shift+P` | Project search (`Ctrl+D` pins or unpins a favorite) |
 | `Ctrl+Shift+M` | Work screen: merge requests and tasks |
 | `Ctrl+Shift+B` | Side panel |
-| `Ctrl+Shift+D` | Review what changed in the tab's repository beside or below its terminal; from the terminal it goes back to an open review, from the review it closes it (`Esc` back to the terminal; inside it `↑↓`, `Enter`, `[` `]` file, `n` `p` hunk, `v` viewed, `Shift+↑↓` or `Shift`+click select lines, `c` comment, `Ctrl+Enter` save it, `Ctrl+R` refresh) |
+| `Ctrl+Shift+D` | Review what changed in the tab's repository beside or below its terminal; from the terminal it goes back to an open review, from the review it closes it (`Esc` back to the terminal; inside it `↑↓`, `Enter`, `←` `→` fold a submodule in the file list, `[` `]` file, `n` `p` hunk, `v` viewed, `Shift+↑↓` or `Shift`+click select lines, `c` comment, `Ctrl+Enter` save it, `Ctrl+R` refresh) |
 | `Ctrl+Shift+E` | Switch the review between side by side and stacked (Settings brings back Automatic) |
 | `Ctrl+Shift+Enter` | Write the review's pending comments to a file and type a line naming it at the tab's prompt, without Enter ("Send to agent" in the review header); only while an agent runs in the tab |
 | `Ctrl+Shift+Up` / `Down` | Opacity |

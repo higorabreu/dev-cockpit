@@ -15,7 +15,7 @@ const sourceFiles = (folder: string): string[] =>
   })
 
 // Roles a user activates with a click; the others (dialog, listbox, status) are containers
-const CLICKABLE_ROLES = ['button', 'tab', 'option', 'menuitem', 'switch', 'link']
+const CLICKABLE_ROLES = ['button', 'tab', 'option', 'treeitem', 'menuitem', 'switch', 'link']
 
 describe('pointer cursor', () => {
   it('should load the base rule before every other stylesheet when the styles are imported', () => {

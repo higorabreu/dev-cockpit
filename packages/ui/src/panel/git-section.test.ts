@@ -32,6 +32,9 @@ function draw(
   extra: Partial<GitStatus> = {},
 ) {
   const opened: string[] = []
+  const modules: string[] = []
+  const files: string[] = []
+  let reviews = 0
   const snapshot: SessionSnapshot = {
     cwd: '/home/ana/acme',
     process: 'zsh',
@@ -44,12 +47,17 @@ function draw(
       requestRender: () => undefined,
       ticket: (name) => jiraTicketLink(name, jira?.site, new Set(jira?.projects ?? [])),
       openTicket: (url) => void opened.push(url),
+      openModule: (path) => void modules.push(path),
+      openFile: (path) => void files.push(path),
+      openReview: () => {
+        reviews += 1
+      },
     },
     createTranslator('en'),
   )
   const body = section.body()
   document.body.replaceChildren(body)
-  return { body, opened }
+  return { body, opened, modules, files, reviews: () => reviews }
 }
 
 describe('git section ticket', () => {
@@ -92,5 +100,59 @@ describe('git section remote', () => {
     const head = body.querySelector<HTMLElement>('[data-focus="git-outgoing"]')
 
     expect(head?.dataset.tip).toBe('Local commits not pushed to fork/feature/login yet')
+  })
+})
+
+describe('git section submodules', () => {
+  it('should open the review on a submodule when its row is clicked', () => {
+    // Arrange
+    const { body, modules } = draw('main', undefined, {
+      submodules: [{ path: 'libs/lib', changed: 2, ahead: 1, behind: 0 }],
+    })
+    const row = body.querySelector<HTMLButtonElement>('[data-focus="git-module-libs/lib"]')
+
+    // Act
+    row?.click()
+
+    // Assert
+    expect(modules).toEqual(['libs/lib'])
+    // The row shows it opens on hover; a tooltip under it covered the next group's title
+    expect(row?.dataset.tip).toBeUndefined()
+    expect(row?.getAttribute('aria-label')).toBe('Review changes in libs/lib, 2 changes')
+    expect(row?.dataset.focus).toBe('git-module-libs/lib')
+  })
+})
+
+describe('git section opens the review', () => {
+  it('should open the review on a changed file when its row is clicked', () => {
+    // Arrange
+    const { body, files } = draw('main', undefined, {
+      changed: 2,
+      staged: [{ status: 'A', path: 'src/new.ts' }],
+      changes: [{ status: 'M', path: 'src/app.ts' }],
+    })
+    const changed = body.querySelector<HTMLButtonElement>('[data-focus="git-file-src/app.ts"]')
+
+    // Act
+    changed?.click()
+    body.querySelector<HTMLButtonElement>('[data-focus="git-file-src/new.ts"]')?.click()
+
+    // Assert
+    expect(files).toEqual(['src/app.ts', 'src/new.ts'])
+    expect(changed?.getAttribute('aria-label')).toBe('Review the changes in src/app.ts')
+  })
+
+  it('should open the review where it was when the branch line is clicked', () => {
+    // Arrange
+    const { body, reviews } = draw('main')
+    const branch = body.querySelector<HTMLButtonElement>('[data-focus="git-branch"]')
+
+    // Act
+    branch?.click()
+
+    // Assert
+    expect(reviews()).toBe(1)
+    expect(branch?.dataset.tip).toBeUndefined()
+    expect(branch?.getAttribute('aria-label')).toBe('Review changes in main')
   })
 })

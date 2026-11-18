@@ -2,10 +2,19 @@ import { lastLine, type ReviewComment } from './comments.ts'
 import { collapseReason, type DiffFile } from './diff.ts'
 import { type DiffGap, diffRows } from './rows.ts'
 
-// Why a file shows no lines: it cannot be read here, or it starts collapsed until asked
-export type FileNotice = 'omitted' | 'non-utf8' | 'binary' | 'generated' | 'large' | 'no-content'
+// Why a file shows no lines: it cannot be read here, its content waits to be asked for, or it starts
+// collapsed until asked
+export type FileNotice =
+  | 'omitted'
+  | 'non-utf8'
+  | 'binary'
+  | 'generated'
+  | 'large'
+  | 'no-content'
+  | 'unloaded'
 
 export function fileNotice(file: DiffFile, shownAnyway: boolean): FileNotice | undefined {
+  if (file.unloaded) return 'unloaded'
   if (file.omitted) return 'omitted'
   if (file.nonUtf8) return 'non-utf8'
   if (file.binary) return 'binary'

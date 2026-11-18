@@ -72,6 +72,13 @@ function candidateAt(target: EventTarget | null): Candidate | undefined {
   return undefined
 }
 
+function tipLine(text: string): HTMLElement {
+  const line = document.createElement('span')
+  line.className = 'tip-line'
+  line.textContent = text
+  return line
+}
+
 export interface TooltipOptions {
   shortcutLabel?(id: string): string | undefined
 }
@@ -107,7 +114,11 @@ export function installTooltips(options: TooltipOptions = {}) {
   function show({ anchor, text, key, box: region }: Candidate) {
     // The element may have been replaced during the delay: there is nothing to anchor the tooltip to
     if (!anchor.isConnected) return
-    tip.replaceChildren(text, ...(key ? [keys(key, 'compact')] : []))
+    // A text of several lines, such as a list of commits, keeps each one on its own line, cut by the width
+    const lines = text.split('\n')
+    const body = lines.length > 1 ? lines.map((line) => tipLine(line)) : [text]
+    tip.toggleAttribute('data-lines', lines.length > 1)
+    tip.replaceChildren(...body, ...(key ? [keys(key, 'compact')] : []))
     // A stale position squeezes the tooltip against the edge and wraps the text, and the measurement comes out wrong
     tip.style.left = '0'
     tip.style.top = '0'

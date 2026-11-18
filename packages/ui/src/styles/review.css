@@ -300,6 +300,131 @@
   color: var(--success);
 }
 
+/* A submodule's group: its rows step in 16px per level, with a thin guide under each header's chevron
+   that ties the rows to their group */
+.rv-file[data-depth] {
+  padding-left: calc(8px + var(--rv-depth) * 16px);
+  background-image: repeating-linear-gradient(to right, var(--line) 0 1px, transparent 1px 16px);
+  background-position: 13px 0;
+  background-size: calc(var(--rv-depth) * 16px) 100%;
+  background-repeat: no-repeat;
+}
+
+/* The header of a submodule: its first line has a file row's height, its commits a shorter one below */
+.rv-module {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.rv-mod-line {
+  flex: none;
+  height: 27px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Turns down when the group is open; the shape tells the state as well as the rows under it */
+.rv-chev {
+  flex: none;
+  color: var(--muted);
+}
+
+.rv-module[aria-expanded="true"] .rv-chev {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rv-chev {
+    transition: transform var(--motion-fast);
+  }
+}
+
+.rv-mod-path {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rv-module[aria-selected="true"] .rv-mod-path {
+  font-weight: 600;
+}
+
+/* The "Submodule" tag in the index, and a submodule's folder before a path in the diff: a box sets them
+   apart from the folders and names around them */
+.rv-tag,
+.rv-modpart {
+  flex: none;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+/* The selected row's fill matches the line color in the light theme, so the box takes the control's */
+.rv-file[aria-selected="true"] .rv-tag {
+  border-color: var(--control-line);
+}
+
+.rv-modpart {
+  flex: 0 100 auto;
+  min-width: 0;
+  align-self: center;
+  margin-right: 6px;
+  overflow: hidden;
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+}
+
+.rv-mod-count {
+  flex: none;
+  margin-left: auto;
+  color: var(--muted);
+  font: 11.5px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The new commits, under the path: the first subjects, then how many more; the list is in the tooltip */
+.rv-mod-commits {
+  flex: none;
+  height: 18px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.rv-mod-subjects {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rv-mod-more {
+  flex: none;
+}
+
+/* A file listed without its content says so at the end of its row in two words; the folders give way */
+.rv-wait {
+  flex: none;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
 /* With no counts (a binary file) the tick goes to the end by itself */
 .rv-path + .rv-tick {
   margin-left: auto;
@@ -531,6 +656,12 @@
   color: var(--muted);
   font-size: 12px;
   text-overflow: ellipsis;
+}
+
+/* With little room the reason gives way before the path, so the file and its submodule stay named; the
+   factor is that large so the path does not lose the fraction of a pixel that would cut its box */
+.rv-fhead .rv-why {
+  flex-shrink: 100000;
 }
 
 .rv-fhead .rv-spacer {

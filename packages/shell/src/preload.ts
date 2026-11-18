@@ -88,6 +88,8 @@ const api: HostApi = {
   },
   review: {
     diff: (request) => ipcRenderer.invoke(hostChannels.reviewDiff, request),
+    untrackedFile: (root, path, ignoreWhitespace) =>
+      ipcRenderer.invoke(hostChannels.reviewUntracked, { root, path, ignoreWhitespace }),
     fileLines: (root, path) => ipcRenderer.invoke(hostChannels.reviewFile, { root, path }),
     fingerprint: (cwd) => ipcRenderer.invoke(hostChannels.reviewFingerprint, cwd),
     saveNotes: (root, markdown) => ipcRenderer.invoke(hostChannels.reviewNotes, { root, markdown }),

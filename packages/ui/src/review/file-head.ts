@@ -1,6 +1,6 @@
 import { type DiffFile, type FileNotice, isCollapsed, type Translator } from '@dck/core'
 import { h, icon } from '../panel/dom.ts'
-import { counts, fileLetter, pathLabel, statusKey } from './file-list.ts'
+import { counts, fileLetter, filePathLabel, statusKey } from './file-list.ts'
 
 export function sizeText(i18n: Translator, bytes: number): string {
   if (bytes < 1024) return i18n.t('review.size.b', { value: bytes })
@@ -16,6 +16,8 @@ export interface FileHeadDeps {
   isModified(event: MouseEvent): boolean
   open(path: string): void
   showAnyway(file: DiffFile): void
+  // Reads the content of a file listed without it
+  load(file: DiffFile): void
   // Whether the file is marked viewed, and whether a mark went away because the file changed again
   viewed(file: DiffFile): { readonly viewed: boolean; readonly changed: boolean }
   toggleViewed(file: DiffFile): void
@@ -62,6 +64,7 @@ export function noticeText(
   if (notice === 'large')
     return t('review.collapsed.large', { count: file.additions + file.deletions })
   if (notice === 'no-content') return t('review.noContent')
+  if (notice === 'unloaded') return t('review.unloaded')
   return undefined
 }
 
@@ -81,7 +84,7 @@ export function fileLabel(
   const name = viewed ? i18n.t('review.a11y.viewed', { file: named }) : named
   const why = noticeText(file, notice, i18n)
   if (why === undefined) return name
-  return isCollapsed(notice)
+  return isCollapsed(notice) || notice === 'unloaded'
     ? `${name}. ${why} ${i18n.t('review.a11y.showAnyway')}`
     : `${name}. ${why}`
 }
@@ -112,7 +115,7 @@ function viewedBox(file: DiffFile, deps: FileHeadDeps): HTMLElement {
 }
 
 // A file's header in the diff: state glyph, path (Ctrl+click opens it), labels, why it shows no lines,
-// "Show anyway" for a collapsed one, "Viewed" and the counts. Its buttons never take the focus from the
+// "Load diff" for a collapsed one or one whose content waits, "Viewed" and the counts. Its buttons never take the focus from the
 // diff
 export function fileHead(
   file: DiffFile,
@@ -121,7 +124,7 @@ export function fileHead(
 ): HTMLElement {
   const { i18n } = deps
   const letter = fileLetter(file, i18n)
-  const path = pathLabel(file.path)
+  const path = filePathLabel(file)
   path.classList.add('rv-open')
   path.dataset.tip = file.path
   path.dataset.tipKey = i18n.t('terminal.openPath', { modifier: deps.modifier })
@@ -129,7 +132,7 @@ export function fileHead(
     if (deps.isModified(event)) deps.open(file.path)
   })
   let action: HTMLElement | undefined
-  if (isCollapsed(notice)) {
+  if (isCollapsed(notice) || notice === 'unloaded') {
     action = h(
       'button',
       { type: 'button', class: 'vbtn rv-show', tabindex: '-1' },
@@ -138,10 +141,13 @@ export function fileHead(
     action.addEventListener('mousedown', (event) => event.preventDefault())
     action.addEventListener('click', (event) => {
       event.stopPropagation()
-      deps.showAnyway(file)
+      if (notice === 'unloaded') deps.load(file)
+      else deps.showAnyway(file)
     })
   }
-  const unreadable = isCollapsed(notice) ? undefined : noticeText(file, notice, i18n)
+  // A file whose content waits says so with its Load diff button alone: beside it the sentence only got cut
+  const unreadable =
+    isCollapsed(notice) || notice === 'unloaded' ? undefined : noticeText(file, notice, i18n)
   const changed = deps.viewed(file).changed
   const comments = deps.commentCount(file)
   return h(

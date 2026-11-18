@@ -7,6 +7,7 @@ import {
 } from './diff.ts'
 
 const SUBMODULE_MODE = '160000'
+const SUBPROJECT_LINE = /^Subproject commit [0-9a-f]+(-dirty)?$/
 const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@ ?(.*)$/
 const REPLACEMENT = '�'
 const ESCAPES: Readonly<Record<string, string>> = {
@@ -89,6 +90,8 @@ interface FileDraft {
   newMode: string | undefined
   binary: boolean
   submodule: boolean
+  // An `index` line, which every changed file has except a submodule whose commit stayed
+  indexed: boolean
   hunks: DiffHunk[]
 }
 
@@ -103,6 +106,7 @@ const draft = (rest: string): FileDraft => ({
   newMode: undefined,
   binary: false,
   submodule: false,
+  indexed: false,
   hunks: [],
 })
 
@@ -123,6 +127,12 @@ function finish(file: FileDraft): DiffFile {
     }
   }
   const moved = file.status === 'renamed' || file.status === 'copied'
+  // A submodule with only edits inside keeps its commit, so git prints no `index` line with its mode
+  const submodule =
+    file.submodule ||
+    (!file.indexed &&
+      file.hunks.length > 0 &&
+      file.hunks.every((hunk) => hunk.lines.every((line) => SUBPROJECT_LINE.test(line.text))))
   return {
     path,
     oldPath: moved ? oldPath : undefined,
@@ -131,7 +141,7 @@ function finish(file: FileDraft): DiffFile {
     newMode: file.newMode,
     binary: file.binary || nonUtf8,
     nonUtf8,
-    submodule: file.submodule,
+    submodule,
     crlf,
     generated: isGeneratedPath(path),
     untracked: false,
@@ -172,8 +182,10 @@ function readHeaderLine(file: FileDraft, line: string) {
     file.status = 'copied'
     file.renamedFrom = nameOf(value('copy from '), '')
   } else if (line.startsWith('copy to ')) file.renamedTo = nameOf(value('copy to '), '')
-  else if (line.startsWith('index ')) file.submodule ||= line.endsWith(` ${SUBMODULE_MODE}`)
-  else if (line.startsWith('--- ')) file.oldName = nameOf(value('--- '), 'a/')
+  else if (line.startsWith('index ')) {
+    file.indexed = true
+    file.submodule ||= line.endsWith(` ${SUBMODULE_MODE}`)
+  } else if (line.startsWith('--- ')) file.oldName = nameOf(value('--- '), 'a/')
   else if (line.startsWith('+++ ')) file.newName = nameOf(value('+++ '), 'b/')
   else if (line.startsWith('Binary files ') || line === 'GIT binary patch') file.binary = true
 }

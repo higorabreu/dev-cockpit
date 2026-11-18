@@ -2,6 +2,7 @@ import { readFile, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, join, normalize, relative, sep } from 'node:path'
 import {
   type DiffFile,
+  type DiffModule,
   type DiffOutcome,
   type DiffRequest,
   type DiffSource,
@@ -9,10 +10,14 @@ import {
   errorBody,
   fail,
   hashText,
+  isGeneratedPath,
+  MODULE_COMMITS,
   ok,
+  orderModuleFiles,
   parseUnifiedDiff,
   type Result,
   reviewDiff,
+  subprojectCommits,
 } from '@dck/core'
 import { createBaseFinder } from './git-base.ts'
 import { type GitAnswer, type GitFailure, type GitRun, inBatches, runGit } from './git-run.ts'
@@ -20,12 +25,19 @@ import { type GitAnswer, type GitFailure, type GitRun, inBatches, runGit } from 
 const QUICK = { timeoutMs: 5000, maxBytes: 1024 * 1024 }
 // The whole diff of a scope; past this the review says it is too large instead of freezing
 const DIFF = { timeoutMs: 15_000, maxBytes: 32 * 1024 * 1024 }
+// Past this many untracked files the rest are listed and read only when asked
 const UNTRACKED_LIMIT = 300
 const UNTRACKED_MAX_BYTES = 1024 * 1024
+// The diff of a file under the limit: every line gains a sign, so it can be twice the file
+const UNTRACKED_DIFF = { timeoutMs: 5000, maxBytes: 4 * UNTRACKED_MAX_BYTES }
 const READ_MAX_BYTES = 8 * 1024 * 1024
 const PARALLEL = 8
 // The status of a huge repository can be long; past this many changed paths only the status counts
 const STAMP_LIMIT = 2000
+// The changed submodules whose own status a fingerprint reads, nested ones counted; past it only the
+// parent's line for them counts, which misses a second edit of a file already changed inside
+const MODULE_STATUS_LIMIT = 16
+const PRINT_STATUS = ['status', '--porcelain=v2', '-z', '--branch', '--untracked-files=all']
 const STATUS = { timeoutMs: 5000, maxBytes: 8 * 1024 * 1024 }
 const DIFF_FLAGS = ['--no-color', '--no-ext-diff', '-M'] as const
 
@@ -75,6 +87,60 @@ export function statusPaths(output: string): string[] {
   return paths
 }
 
+// The submodules `git status --porcelain=v2 -z` lists as changed in any way (`S` and its flags)
+export function statusModules(output: string): string[] {
+  return output
+    .split('\0')
+    .filter((entry) => entry.startsWith('1 ') && (entry.split(' ')[2] ?? '').startsWith('S'))
+    .map((entry) => entry.split(' ').slice(8).join(' '))
+}
+
+// The submodules `git status --porcelain=v2 -z` marks as holding untracked files (`S..U`): `git diff`
+// leaves a submodule with only those out
+export function untrackedModules(output: string): string[] {
+  return output
+    .split('\0')
+    .filter((entry) => entry.startsWith('1 ') && /^S..U$/.test(entry.split(' ')[2] ?? ''))
+    .map((entry) => entry.split(' ').slice(8).join(' '))
+}
+
+// A repository the review reads: the top one, or a submodule by its folder from the top
+interface Repository {
+  readonly dir: string
+  // Put in front of the paths it reports, empty for the top one
+  readonly prefix: string
+  readonly module: string | undefined
+}
+
+// A submodule a repository's diff or status names, with the commit recorded at the scope's start
+interface ModuleEntry {
+  readonly path: string
+  // Undefined for a new submodule, HEAD when only untracked files changed it
+  readonly old: string | undefined
+  // Its entry in the parent's diff, kept when the submodule cannot be read
+  readonly entry: DiffFile | undefined
+}
+
+// What the reading of the top repository and its submodules gathered
+interface Gathered {
+  readonly tracked: DiffFile[]
+  readonly untracked: { readonly repo: Repository; readonly path: string }[]
+  readonly modules: DiffModule[]
+  readonly repos: Repository[]
+  bytes: number
+}
+
+// A file of a submodule, with its paths from the top and the submodule that holds it
+function inRepo(repo: Repository, file: DiffFile): DiffFile {
+  if (repo.module === undefined) return file
+  return {
+    ...file,
+    path: repo.prefix + file.path,
+    oldPath: file.oldPath === undefined ? undefined : repo.prefix + file.oldPath,
+    module: repo.module,
+  }
+}
+
 function failed(failure: GitFailure, step: string): ErrorBody {
   if (failure.kind === 'missing') return errorBody('DCK-GIT-005', step)
   if (failure.kind === 'timeout') return errorBody('DCK-GIT-002', step)
@@ -98,6 +164,16 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
   }
   const bases = createBaseFinder(answer)
 
+  // The status names paths from the repository's top, whatever folder it runs in; a folder keeps its top
+  const tops = new Map<string, string>()
+  async function topOf(cwd: string): Promise<string | undefined> {
+    const known = tops.get(cwd)
+    if (known !== undefined) return known
+    const top = await answer(cwd, ['rev-parse', '--show-toplevel'])
+    if (top) tops.set(cwd, top)
+    return top || undefined
+  }
+
   // HEAD, or the empty tree in a repository without commits, so its files read as added
   async function head(root: string): Promise<Result<string, ErrorBody>> {
     const commit = await answer(root, ['rev-parse', '--verify', '--quiet', 'HEAD^{commit}'])
@@ -106,36 +182,34 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
     return empty.ok ? ok(empty.stdout.trim()) : fail(failed(empty.failure, 'empty tree'))
   }
 
-  async function untracked(root: string, whitespace: readonly string[]): Promise<DiffFile[]> {
-    const listing = await quick(root, ['ls-files', '--others', '--exclude-standard', '-z'])
+  // Every untracked file of a repository, by its path there; a nested repository is a folder, not a file
+  async function untrackedPaths(dir: string): Promise<string[]> {
+    const listing = await run(dir, ['ls-files', '--others', '--exclude-standard', '-z'], STATUS)
     if (!listing.ok) return []
-    // A nested repository is listed as a folder and is not a file to compare
-    const paths = listing.stdout
-      .split('\0')
-      .filter((path) => path !== '' && !path.endsWith('/'))
-      .slice(0, UNTRACKED_LIMIT)
-    const found = await inBatches(paths, PARALLEL, async (path): Promise<DiffFile[]> => {
-      const size = await files.size(join(root, path))
-      if (size !== undefined && size > UNTRACKED_MAX_BYTES) {
-        return [omitted(path, size)]
-      }
-      const result = await run(
-        root,
-        ['diff', ...DIFF_FLAGS, ...whitespace, '--no-index', '--', '/dev/null', path],
-        QUICK,
-      )
-      if (!result.ok) return []
-      return parseUnifiedDiff(result.stdout).map((file) => ({
-        ...file,
-        path,
-        status: 'added',
-        untracked: true,
-      }))
-    })
-    return found.flat()
+    return listing.stdout.split('\0').filter((path) => path !== '' && !path.endsWith('/'))
   }
 
-  const omitted = (path: string, size: number): DiffFile => ({
+  // An untracked file as an addition; past 1 MB only its size, and one git cannot read stays listed
+  // with its content not loaded
+  async function readUntracked(
+    dir: string,
+    path: string,
+    whitespace: readonly string[],
+  ): Promise<DiffFile> {
+    const size = await files.size(join(dir, path))
+    if (size !== undefined && size > UNTRACKED_MAX_BYTES)
+      return { ...untrackedEntry(path), size, omitted: true }
+    const result = await run(
+      dir,
+      ['diff', ...DIFF_FLAGS, ...whitespace, '--no-index', '--', '/dev/null', path],
+      UNTRACKED_DIFF,
+    )
+    const [file] = result.ok ? parseUnifiedDiff(result.stdout) : []
+    if (!file) return { ...untrackedEntry(path), unloaded: true }
+    return { ...file, path, status: 'added', untracked: true }
+  }
+
+  const untrackedEntry = (path: string): DiffFile => ({
     path,
     oldPath: undefined,
     status: 'added',
@@ -145,14 +219,106 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
     nonUtf8: false,
     submodule: false,
     crlf: false,
-    generated: false,
+    generated: isGeneratedPath(path),
     untracked: true,
     additions: 0,
     deletions: 0,
     hunks: [],
-    size,
-    omitted: true,
   })
+
+  // The diff of a repository from a commit to its working tree, its untracked files and, through
+  // `gatherModule`, the same for each submodule it changed; answers how many files it added
+  async function gather(
+    repo: Repository,
+    from: string,
+    whitespace: readonly string[],
+    out: Gathered,
+  ): Promise<Result<number, ErrorBody>> {
+    const withModules = (await files.size(join(repo.dir, '.gitmodules'))) !== undefined
+    const [tracked, listed, status] = await Promise.all([
+      run(repo.dir, ['diff', ...DIFF_FLAGS, ...whitespace, from, '--'], DIFF),
+      untrackedPaths(repo.dir),
+      withModules ? run(repo.dir, ['status', '--porcelain=v2', '-z'], STATUS) : undefined,
+    ])
+    if (!tracked.ok) return fail(failed(tracked.failure, 'diff'))
+    out.bytes += tracked.stdout.length
+    out.repos.push(repo)
+    let count = listed.length
+    const changed: ModuleEntry[] = []
+    for (const file of parseUnifiedDiff(tracked.stdout)) {
+      if (file.submodule && file.status !== 'deleted') {
+        changed.push({ path: file.path, old: subprojectCommits(file).old, entry: file })
+        continue
+      }
+      out.tracked.push(inRepo(repo, file))
+      count += 1
+    }
+    const named = new Set(changed.map((entry) => entry.path))
+    for (const path of untrackedModules(status?.ok ? status.stdout : '')) {
+      if (!named.has(path)) changed.push({ path, old: 'HEAD', entry: undefined })
+    }
+    for (const path of listed) out.untracked.push({ repo, path })
+    const inside = await Promise.all(
+      changed.map((entry) => gatherModule(repo, entry, whitespace, out)),
+    )
+    for (const result of inside) {
+      if (!result.ok) return result
+      count += result.value
+    }
+    return ok(count)
+  }
+
+  // A submodule read as its own repository, from the commit the parent recorded at the scope's start (the
+  // empty tree for a new one): its new commits and its edits in one diff, as `--submodule=diff` shows. One
+  // that cannot be read (not checked out, its old commit not fetched) stays the parent's single entry
+  async function gatherModule(
+    parent: Repository,
+    changed: ModuleEntry,
+    whitespace: readonly string[],
+    out: Gathered,
+  ): Promise<Result<number, ErrorBody>> {
+    const dir = join(parent.dir, changed.path)
+    const path = parent.prefix + changed.path
+    const keep = (): Result<number, ErrorBody> => {
+      if (changed.entry === undefined) return ok(0)
+      out.tracked.push(inRepo(parent, changed.entry))
+      return ok(1)
+    }
+    // Not checked out, the folder belongs to the parent and git answers with the parent's top
+    if ((await answer(dir, ['rev-parse', '--show-toplevel'])) !== dir) return keep()
+    const from =
+      changed.old === undefined
+        ? await emptyTree(dir)
+        : await answer(dir, ['rev-parse', '--verify', '--quiet', `${changed.old}^{commit}`])
+    if (!from) return keep()
+    const module: Repository = { dir, prefix: `${path}/`, module: path }
+    const since = changed.old === undefined || changed.old === 'HEAD' ? undefined : from
+    const [read, commits] = await Promise.all([
+      gather(module, from, whitespace, out),
+      newCommits(dir, since),
+    ])
+    if (!read.ok) return read
+    if (read.value === 0 && commits.commitCount === 0) return keep()
+    out.modules.push({ path, ...commits })
+    return read
+  }
+
+  async function emptyTree(dir: string): Promise<string | undefined> {
+    const empty = await quick(dir, ['hash-object', '-t', 'tree', '--stdin'], '')
+    return empty.ok ? empty.stdout.trim() : undefined
+  }
+
+  // The subjects of the commits after `since` up to the submodule's HEAD, newest first, and their count
+  async function newCommits(dir: string, since: string | undefined) {
+    if (since === undefined) return { commits: [], commitCount: 0 }
+    const range = `${since}..HEAD`
+    const [count, subjects] = await Promise.all([
+      answer(dir, ['rev-list', '--count', range]),
+      quick(dir, ['log', '--no-color', '--format=%s', `-n${MODULE_COMMITS}`, range]),
+    ])
+    const commits = subjects.ok ? subjects.stdout.split('\n').filter((line) => line !== '') : []
+    return { commits, commitCount: Math.max(Number(count) || 0, commits.length) }
+  }
 
   // `linguist-generated` in .gitattributes marks files a tool wrote
   async function generatedByAttribute(root: string, paths: readonly string[]) {
@@ -175,7 +341,8 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
   // The new file's length lets the review offer the lines after the last hunk; a binary shows its size
   async function complete(root: string, file: DiffFile, generated: boolean): Promise<DiffFile> {
     const withFlag = generated && !file.generated ? { ...file, generated: true } : file
-    if (file.status === 'deleted' || file.submodule || file.omitted) return withFlag
+    if (file.status === 'deleted' || file.submodule || file.omitted || file.unloaded)
+      return withFlag
     const path = join(root, file.path)
     if (file.binary) {
       const size = await files.size(path)
@@ -189,6 +356,62 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       () => undefined,
     )
     return text === undefined ? withFlag : { ...withFlag, newLineCount: lineCount(text) }
+  }
+
+  // Every file in the order the review shows it; the first untracked ones in that order are read, the
+  // others only listed, whichever repository holds them
+  async function readFirstUntracked(
+    out: Gathered,
+    whitespace: readonly string[],
+  ): Promise<DiffFile[]> {
+    const where = new Map<string, Gathered['untracked'][number]>()
+    const waiting = out.untracked.map((entry) => {
+      const file: DiffFile = { ...inRepo(entry.repo, untrackedEntry(entry.path)), unloaded: true }
+      where.set(file.path, entry)
+      return file
+    })
+    const ordered = orderModuleFiles([...out.tracked, ...waiting], out.modules)
+    const first = ordered.filter((file) => file.unloaded).slice(0, UNTRACKED_LIMIT)
+    const read = new Map<string, DiffFile>()
+    await inBatches(first, PARALLEL, async (file) => {
+      const entry = where.get(file.path)
+      if (!entry) return
+      const content = await readUntracked(entry.repo.dir, entry.path, whitespace)
+      read.set(file.path, inRepo(entry.repo, content))
+    })
+    return ordered.map((file) => read.get(file.path) ?? file)
+  }
+
+  // Each repository answers for its own attributes, with its own paths
+  async function generatedInRepos(repos: readonly Repository[], listed: readonly DiffFile[]) {
+    const marked = new Set<string>()
+    await Promise.all(
+      repos.map(async (repo) => {
+        const local = listed
+          .filter((file) => file.module === repo.module)
+          .map((file) => file.path.slice(repo.prefix.length))
+        for (const path of await generatedByAttribute(repo.dir, local))
+          marked.add(repo.prefix + path)
+      }),
+    )
+    return marked
+  }
+
+  // The real path of a file of the repository, refusing a path or a link that leads outside it
+  async function insideRoot(root: string, path: string): Promise<Result<string, ErrorBody>> {
+    const inside = normalize(path)
+    if (isAbsolute(inside) || inside === '..' || inside.startsWith(`..${sep}`))
+      return fail(errorBody('DCK-GIT-004', 'relative path outside the root'))
+    const [realRoot, realTarget] = await Promise.all([
+      files.realpath(root).catch(() => undefined),
+      files.realpath(join(root, inside)).catch(() => undefined),
+    ])
+    if (realRoot === undefined || realTarget === undefined)
+      return fail(errorBody('DCK-GIT-001', 'file not found'))
+    const back = relative(realRoot, realTarget)
+    if (back === '' || back.startsWith('..') || isAbsolute(back))
+      return fail(errorBody('DCK-GIT-004', 'link outside the root'))
+    return ok(realTarget)
   }
 
   return {
@@ -212,50 +435,59 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       }
 
       const whitespace = request.ignoreWhitespace ? ['-w'] : []
-      const [tracked, added] = await Promise.all([
-        run(root, ['diff', ...DIFF_FLAGS, ...whitespace, from, '--'], DIFF),
-        untracked(root, whitespace),
-      ])
-      if (!tracked.ok) return fail(failed(tracked.failure, 'diff'))
-      const parsed = [...parseUnifiedDiff(tracked.stdout), ...added].sort((a, b) =>
-        a.path < b.path ? -1 : a.path > b.path ? 1 : 0,
-      )
-      const marked = await generatedByAttribute(
-        root,
-        parsed.map((file) => file.path),
-      )
-      const completed = await inBatches(parsed, PARALLEL, (file) =>
+      const out: Gathered = { tracked: [], untracked: [], modules: [], repos: [], bytes: 0 }
+      const read = await gather({ dir: root, prefix: '', module: undefined }, from, whitespace, out)
+      if (!read.ok) return read
+      if (out.bytes > DIFF.maxBytes) return fail(failed({ kind: 'too-large' }, 'diff'))
+      const listed = await readFirstUntracked(out, whitespace)
+      const marked = await generatedInRepos(out.repos, listed)
+      const completed = await inBatches(listed, PARALLEL, (file) =>
         complete(root, file, marked.has(file.path)),
       )
-      return ok({ kind: 'ok', diff: reviewDiff(root, request.scope, branch, completed) })
+      const modules = [...out.modules].sort((a, b) => (a.path < b.path ? -1 : 1))
+      return ok({ kind: 'ok', diff: reviewDiff(root, request.scope, branch, completed, modules) })
     },
 
+    // The status of the repository and, within the limits, of each changed submodule inside it, plus the
+    // size and time of every path they name: an edit inside a submodule moves it too
     async fingerprint(cwd) {
-      const status = await run(
-        cwd,
-        ['status', '--porcelain=v2', '-z', '--branch', '--untracked-files=all'],
-        STATUS,
-      )
-      if (!status.ok) return undefined
-      const paths = statusPaths(status.stdout).slice(0, STAMP_LIMIT)
-      const stamps = await inBatches(paths, PARALLEL * 2, (path) => files.stamp(join(cwd, path)))
-      return hashText(`${status.stdout}\0${stamps.map((stamp) => stamp ?? '-').join('\0')}`)
+      const root = await topOf(cwd)
+      if (root === undefined) return undefined
+      const parts: string[] = []
+      let stamps = STAMP_LIMIT
+      let modules = MODULE_STATUS_LIMIT
+      const visit = async (dir: string): Promise<boolean> => {
+        const status = await run(dir, PRINT_STATUS, STATUS)
+        if (!status.ok) return false
+        const paths = statusPaths(status.stdout).slice(0, stamps)
+        stamps -= paths.length
+        const stamped = await inBatches(paths, PARALLEL * 2, (path) => files.stamp(join(dir, path)))
+        parts.push(status.stdout, stamped.map((stamp) => stamp ?? '-').join('\0'))
+        // One at a time, so the limits fall on the same submodules every time
+        for (const path of statusModules(status.stdout)) {
+          if (modules === 0) break
+          modules -= 1
+          await visit(join(dir, path))
+        }
+        return true
+      }
+      if (!(await visit(root))) return undefined
+      return hashText(parts.join('\0'))
+    },
+
+    async untrackedFile(root, path, ignoreWhitespace): Promise<Result<DiffFile, ErrorBody>> {
+      const resolved = await insideRoot(root, path)
+      if (!resolved.ok) return resolved
+      const inside = normalize(path)
+      const file = await readUntracked(root, inside, ignoreWhitespace ? ['-w'] : [])
+      if (file.unloaded) return fail(errorBody('DCK-GIT-001', 'untracked file not readable'))
+      return ok(await complete(root, file, false))
     },
 
     async fileLines(root, path): Promise<Result<readonly string[], ErrorBody>> {
-      const inside = normalize(path)
-      if (isAbsolute(inside) || inside === '..' || inside.startsWith(`..${sep}`))
-        return fail(errorBody('DCK-GIT-004', 'relative path outside the root'))
-      const target = join(root, inside)
-      const [realRoot, realTarget] = await Promise.all([
-        files.realpath(root).catch(() => undefined),
-        files.realpath(target).catch(() => undefined),
-      ])
-      if (realRoot === undefined || realTarget === undefined)
-        return fail(errorBody('DCK-GIT-001', 'file not found'))
-      const back = relative(realRoot, realTarget)
-      if (back === '' || back.startsWith('..') || isAbsolute(back))
-        return fail(errorBody('DCK-GIT-004', 'link outside the root'))
+      const resolved = await insideRoot(root, path)
+      if (!resolved.ok) return resolved
+      const realTarget = resolved.value
       const size = await files.size(realTarget)
       if (size === undefined || size > READ_MAX_BYTES)
         return fail(errorBody('DCK-GIT-003', `file of ${size ?? 'unknown'} bytes`))

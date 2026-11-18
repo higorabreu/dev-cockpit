@@ -231,6 +231,33 @@ describe('parseUnifiedDiff', () => {
     expect(file.submodule).toBe(true)
   })
 
+  it('should mark a submodule when it only has edits inside and git prints no index line', () => {
+    const dirty = only(
+      lines(
+        'diff --git a/libs/other b/libs/other',
+        '--- a/libs/other',
+        '+++ b/libs/other',
+        '@@ -1 +1 @@',
+        '-Subproject commit 409f475ec419d1bb65ba5020f5b0ea11d512f6ec',
+        '+Subproject commit 409f475ec419d1bb65ba5020f5b0ea11d512f6ec-dirty',
+      ),
+    )
+    const text = only(
+      lines(
+        'diff --git a/notes.txt b/notes.txt',
+        'index 1234567..89abcde 100644',
+        '--- a/notes.txt',
+        '+++ b/notes.txt',
+        '@@ -1 +1 @@',
+        '-Subproject commit 1234567',
+        '+Subproject commit 89abcde',
+      ),
+    )
+
+    expect(dirty.submodule).toBe(true)
+    expect(text.submodule).toBe(false)
+  })
+
   it('should decode a quoted name with octal bytes when Git escaped it', () => {
     const file = only(
       lines(

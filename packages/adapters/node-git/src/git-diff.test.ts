@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { DiffOutcome, DiffRequest, ErrorBody, Result } from '@dck/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createGitDiffSource, statusPaths } from './git-diff.ts'
+import { createGitDiffSource, statusModules, statusPaths, untrackedModules } from './git-diff.ts'
 import type { GitAnswer } from './git-run.ts'
 
 let directory = ''
@@ -201,6 +201,50 @@ describe('createGitDiffSource', () => {
     expect(diff.files[0]).toMatchObject({ path: 'dump.sql', omitted: true, size: 1024 * 1024 + 1 })
   })
 
+  it('should list every untracked file and read only the first 300 when there are more', async () => {
+    // Arrange
+    const path = await repo('many', { 'a.txt': 'a\n' })
+    await mkdir(join(path, 'gen'))
+    for (let index = 0; index < 305; index++) {
+      await writeFile(join(path, 'gen', `f${String(index).padStart(3, '0')}.txt`), `${index}\n`)
+    }
+
+    // Act
+    const diff = okDiff(await createGitDiffSource().diff(request(path)))
+
+    // Assert
+    expect(diff.files).toHaveLength(305)
+    expect(diff.files.filter((file) => file.unloaded).map((file) => file.path)).toEqual([
+      'gen/f300.txt',
+      'gen/f301.txt',
+      'gen/f302.txt',
+      'gen/f303.txt',
+      'gen/f304.txt',
+    ])
+    expect(diff.files[304]).toMatchObject({ untracked: true, status: 'added', hunks: [] })
+  })
+
+  it('should read an untracked file as an addition when it is asked for by path', async () => {
+    const path = await repo('later', { 'a.txt': 'a\n' })
+    await writeFile(join(path, 'notes.txt'), 'one\ntwo\n')
+
+    const result = await createGitDiffSource().untrackedFile(path, 'notes.txt', false)
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { path: 'notes.txt', status: 'added', untracked: true, additions: 2, newLineCount: 2 },
+    })
+  })
+
+  it('should refuse to read an untracked file outside the repository', async () => {
+    const path = await repo('outside', { 'a.txt': 'a\n' })
+    await writeFile(join(directory, 'secret.txt'), 'no\n')
+
+    const result = await createGitDiffSource().untrackedFile(path, '../secret.txt', false)
+
+    expect(result.ok || result.error.data?.code).toBe('DCK-GIT-004')
+  })
+
   it('should read the working tree lines of a file when it is inside the repository', async () => {
     const path = await repo('lines', { 'a.txt': 'one\r\ntwo\n' })
 
@@ -244,6 +288,138 @@ describe('createGitDiffSource', () => {
       expect(result.ok || result.error.data?.code).toBe(code)
     },
   )
+})
+
+const addModule = (cwd: string, source: string, path: string) =>
+  run(cwd, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', source, path)
+
+// acme holds libs/lib, which holds vendor/deep, and libs/other
+async function nested() {
+  const deep = await repo('deep', { 'src/deep.txt': numbered(3) })
+  const lib = await repo('lib', { 'x.txt': numbered(3), 'src/util.ts': numbered(3) })
+  addModule(lib, deep, 'vendor/deep')
+  run(lib, 'commit', '-q', '-m', 'Add the deep module')
+  const other = await repo('other', { 'docs/guide.md': numbered(3) })
+  const acme = await repo('acme', { 'app.ts': numbered(3) })
+  addModule(acme, lib, 'libs/lib')
+  addModule(acme, other, 'libs/other')
+  run(acme, 'commit', '-q', '-m', 'Add libs')
+  run(
+    acme,
+    '-c',
+    'protocol.file.allow=always',
+    'submodule',
+    'update',
+    '--init',
+    '--recursive',
+    '-q',
+  )
+  return acme
+}
+
+describe('submodules', () => {
+  it('should read inside each changed submodule, nested ones too, with commits and untracked files', async () => {
+    // Arrange
+    const acme = await nested()
+    const lib = join(acme, 'libs/lib')
+    await writeFile(join(lib, 'x.txt'), numbered(3, ' committed'))
+    run(lib, 'commit', '-q', '-am', 'Fix the parser')
+    run(lib, 'commit', '-q', '--allow-empty', '-m', 'Add a fallback')
+    await writeFile(join(lib, 'src/util.ts'), `${numbered(3)}edit\n`)
+    await writeFile(join(lib, 'untracked.txt'), 'new\n')
+    await writeFile(join(lib, 'vendor/deep/src/deep.txt'), `${numbered(3)}deep\n`)
+    await writeFile(join(acme, 'libs/other/only.txt'), 'only\n')
+    await writeFile(join(acme, 'app.ts'), `${numbered(3)}app\n`)
+
+    // Act
+    const diff = okDiff(await createGitDiffSource().diff(request(acme)))
+
+    // Assert
+    expect(diff.files.map((file) => [file.path, file.module, file.untracked])).toEqual([
+      ['app.ts', undefined, false],
+      ['libs/lib/src/util.ts', 'libs/lib', false],
+      ['libs/lib/untracked.txt', 'libs/lib', true],
+      ['libs/lib/x.txt', 'libs/lib', false],
+      ['libs/lib/vendor/deep/src/deep.txt', 'libs/lib/vendor/deep', false],
+      ['libs/other/only.txt', 'libs/other', true],
+    ])
+    expect(diff.modules).toEqual([
+      { path: 'libs/lib', commits: ['Add a fallback', 'Fix the parser'], commitCount: 2 },
+      { path: 'libs/lib/vendor/deep', commits: [], commitCount: 0 },
+      { path: 'libs/other', commits: [], commitCount: 0 },
+    ])
+    const x = diff.files.find((file) => file.path === 'libs/lib/x.txt')
+    expect(x).toMatchObject({ additions: 3, deletions: 3, newLineCount: 3 })
+  })
+
+  it('should read the submodule from the commit recorded at the base when the scope is the branch', async () => {
+    // Arrange
+    const acme = await nested()
+    const lib = join(acme, 'libs/lib')
+    run(acme, 'checkout', '-q', '-b', 'feat/bump')
+    await writeFile(join(lib, 'x.txt'), numbered(4))
+    run(lib, 'commit', '-q', '-am', 'Grow x')
+    run(acme, 'commit', '-q', '-am', 'Bump lib')
+    const source = createGitDiffSource()
+
+    // Act
+    const branch = okDiff(await source.diff(request(acme, { scope: 'branch', base: 'main' })))
+    const uncommitted = okDiff(await source.diff(request(acme)))
+
+    // Assert
+    expect(branch.files.map((file) => file.path)).toEqual(['libs/lib/x.txt'])
+    expect(branch.modules).toEqual([{ path: 'libs/lib', commits: ['Grow x'], commitCount: 1 }])
+    expect(uncommitted.files).toEqual([])
+  })
+
+  it('should keep the single entry of a submodule whose recorded commit it does not have', async () => {
+    // Arrange
+    const acme = await nested()
+    run(acme, 'update-index', '--cacheinfo', `160000,${'1'.repeat(40)},libs/other`)
+    run(acme, 'commit', '-q', '-m', 'Point other to a commit it lacks')
+
+    // Act
+    const diff = okDiff(await createGitDiffSource().diff(request(acme)))
+
+    // Assert
+    expect(diff.files.map((file) => [file.path, file.submodule, file.module])).toEqual([
+      ['libs/other', true, undefined],
+    ])
+    expect(diff.modules).toEqual([])
+  })
+
+  it('should count the untracked files of submodules in the reading limit', async () => {
+    // Arrange
+    const acme = await nested()
+    await mkdir(join(acme, 'gen'))
+    for (let index = 0; index < 299; index++) {
+      await writeFile(join(acme, 'gen', `f${String(index).padStart(3, '0')}.txt`), `${index}\n`)
+    }
+    await writeFile(join(acme, 'libs/lib/a.txt'), 'a\n')
+    await writeFile(join(acme, 'libs/lib/b.txt'), 'b\n')
+
+    // Act
+    const diff = okDiff(await createGitDiffSource().diff(request(acme)))
+
+    // Assert
+    expect(diff.files).toHaveLength(301)
+    expect(diff.files.filter((file) => file.unloaded).map((file) => file.path)).toEqual([
+      'libs/lib/b.txt',
+    ])
+  })
+})
+
+describe('untrackedModules', () => {
+  it('should name the submodules with untracked files only when the status marks them', () => {
+    const output = [
+      '1 .M S..U 160000 160000 160000 aaa aaa libs/other',
+      '1 .M SCM. 160000 160000 160000 aaa aaa libs/lib',
+      '1 .M N... 100644 100644 100644 aaa bbb app.ts',
+      '',
+    ].join('\0')
+
+    expect(untrackedModules(output)).toEqual(['libs/other'])
+  })
 })
 
 describe('statusPaths', () => {
@@ -304,5 +480,68 @@ describe('fingerprint', () => {
 
   it('should give nothing when the folder is not inside a repository', async () => {
     expect(await createGitDiffSource().fingerprint(directory)).toBeUndefined()
+  })
+
+  it('should change when a file already changed is written again from a subfolder', async () => {
+    // Arrange
+    const path = await repo('acme', { 'main.ts': 'one\n', 'src/app.ts': 'app\n' })
+    await writeFile(join(path, 'main.ts'), 'two\n')
+    const source = createGitDiffSource()
+    const first = await source.fingerprint(join(path, 'src'))
+
+    // Act
+    await writeFile(join(path, 'main.ts'), 'three, longer\n')
+    const after = await source.fingerprint(join(path, 'src'))
+
+    // Assert
+    expect(after).not.toBe(first)
+  })
+
+  it('should change when a file already changed inside a nested submodule is written again', async () => {
+    // Arrange
+    const acme = await nested()
+    const deep = join(acme, 'libs/lib/vendor/deep/src/deep.txt')
+    await writeFile(deep, `${numbered(3)}deep\n`)
+    const source = createGitDiffSource()
+    const first = await source.fingerprint(acme)
+    const again = await source.fingerprint(acme)
+
+    // Act
+    await writeFile(deep, `${numbered(3)}deep, written again\n`)
+    const after = await source.fingerprint(acme)
+
+    // Assert
+    expect(again).toBe(first)
+    expect(after).not.toBe(first)
+  })
+
+  it('should change when a submodule gets a new commit while it already had one', async () => {
+    // Arrange
+    const acme = await nested()
+    const lib = join(acme, 'libs/lib')
+    run(lib, 'commit', '-q', '--allow-empty', '-m', 'One')
+    const source = createGitDiffSource()
+    const first = await source.fingerprint(acme)
+
+    // Act
+    run(lib, 'commit', '-q', '--allow-empty', '-m', 'Two')
+    const after = await source.fingerprint(acme)
+
+    // Assert
+    expect(after).not.toBe(first)
+  })
+})
+
+describe('statusModules', () => {
+  it('should name every changed submodule when the status lists them', () => {
+    const output = [
+      '1 .M S..U 160000 160000 160000 aaa aaa libs/other',
+      '1 .M SC.. 160000 160000 160000 aaa aaa libs/lib',
+      '1 .M N... 100644 100644 100644 aaa bbb app.ts',
+      '? notes.txt',
+      '',
+    ].join('\0')
+
+    expect(statusModules(output)).toEqual(['libs/other', 'libs/lib'])
   })
 })
