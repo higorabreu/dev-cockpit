@@ -325,6 +325,19 @@ describe('registerHostBridge pty', () => {
 
     expect(ptyHost.sessions.every((session) => session.killed)).toBe(true)
   })
+
+  it('should list the shell of each open terminal when a terminal has exited', async () => {
+    // Arrange
+    const { call, ptyHost, bridge } = setup()
+    await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+    await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+
+    // Act
+    ptyHost.sessions[0]?.emitExit({ code: 0, signal: null })
+
+    // Assert
+    expect(bridge.pids()).toEqual([ptyHost.sessions[1]?.pid])
+  })
 })
 
 describe('registerHostBridge clipboard and window', () => {

@@ -279,6 +279,16 @@ describe('selectPlatform', () => {
     expect(window.menu !== undefined).toBe(menu)
   })
 
+  it.each([
+    { platform: 'darwin' as const, expected: true },
+    { platform: 'linux' as const, expected: false },
+  ])(
+    'should ask before quitting only on a Mac when the app runs on $platform',
+    ({ platform, expected }) => {
+      expect(selectPlatform(context({ platform })).asksBeforeQuit).toBe(expected)
+    },
+  )
+
   it('should keep the window on every workspace and its focus as it is when the app runs on Linux', () => {
     // Arrange
     const { window } = selectPlatform(context({}))

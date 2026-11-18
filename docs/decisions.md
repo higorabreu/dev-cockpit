@@ -1348,6 +1348,37 @@ with its styles in `tab-notice-and-menu.css` and `#tabs[data-covered]`, the `upd
 text and the `align` and `caption` options of `tab-menu.ts`; drop the middle
 click listeners in `ui/src/tabs/tab-bar.ts` and `holdsMiddleButton` in `core/src/settings/hold-trigger.ts`.
 
+## D75. On a Mac the right click opens a menu, and ⌘Q asks while a tab runs a program
+
+**Decision:** [plans/mac-menu-quit.md](../plans/mac-menu-quit.md). On a Mac keyboard a two-finger tap or
+Ctrl+click in a terminal opens the tabs' small menu at the pointer with Copy (disabled without a
+selection), Paste and Select all, each with its key as keycaps (`⌘C`, `⌘V`, `⌘A`, which the Edit menu and
+xterm already give); arrows, Enter and Escape work and the focus goes back to the terminal. Linux and
+Windows keep pasting on right click. Ctrl+click never reaches xterm on a Mac, so it neither clears the
+selection the menu copies nor reaches a program that reads the mouse, and links and paths still open with
+`⌘`+click only (D40, D68). xterm's `rightClickSelectsWord` is off on every system: selecting copies, so
+the word under a right click would replace the clipboard before Paste. On a Mac `⌘Q`, the app menu's Quit
+and the menu bar icon's Quit go through `shell/src/quit/quit-guard.ts`: it reads the foreground of every
+open terminal afresh (the session inspector, as the panel does) and quits at once when all sit at their
+shell; otherwise it shows the window and asks with an in-app card, "Quit Dev Cockpit?" and one line with
+how many tabs run a program, Cancel focused, Quit beside it. Escape cancels, a second `⌘Q` while it asks
+quits, and the cockpit's keys stay quiet under the card. The window answers through `quit:answer`,
+validated with zod, and an answer nobody asked for is ignored. Linux quits at once from the tray. A
+logout, a shutdown or the system's own quit event never asks, so the system never waits on a hidden
+window.
+**Reason:** the maintainer's choice on 2026-11-18. On a Mac the secondary click is the context menu gesture
+and pasting there surprised; Terminal.app and iTerm2 offer the same three items. `⌘Q` beside `⌘W` ended
+agents and servers with no warning. The card follows the window's own look rather than a native dialog,
+which the cockpit uses only for the folder picker, and Cancel takes the focus because on a Mac the action
+that loses work is not the default. Checked on Linux under Xvfb with the window reloaded as a Mac
+keyboard, in both themes and languages: the menu with and without a selection, Escape and the focus,
+Ctrl+click keeping the selection, and the card with its answers sent back; the guard's count is covered by
+tests, since only a Mac routes its menu through it.
+**How to revert:** drop `openMenu` from `clipboard-behavior.ts` (the right click pastes again) with the
+Ctrl+click guard, `openTerminalMenu` in `app.ts`, `key` in the tab menu, the session's menu methods,
+`shell/src/quit`, `ui/src/quit` and its style, the `quit` host API and channels, `pids` in the bridge and
+`asksBeforeQuit`, and give the menus `app.quit` again.
+
 ## D77. Extensions can be installed from npm, without running npm
 
 **Decision:** besides a local folder and a git URL, `dck ext install` takes an npm package

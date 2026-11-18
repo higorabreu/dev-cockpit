@@ -76,6 +76,8 @@ import { nativeWayland, selectPlatform, usesGpu } from './platform/select-platfo
 import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
+import { registerQuitBridge } from './quit/quit-bridge.ts'
+import { createQuitGuard } from './quit/quit-guard.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
 import { watchSettingsFile } from './settings/settings-watch.ts'
 import { createSavedTabsFile } from './tabs/saved-tabs-file.ts'
@@ -299,6 +301,11 @@ app.whenReady().then(async () => {
   }
 
   const ipc = createElectronIpc(ipcMain)
+  const sessionInspector = createSessionInspector({
+    processes: platform.processes,
+    git: createGitInspector(),
+    agents: agentProfiles,
+  })
   const savedTabs = createSavedTabsFile(join(app.getPath('userData'), 'open-tabs.json'), logger)
   const bridge = registerHostBridge({
     ipcMain: ipc,
@@ -356,11 +363,7 @@ app.whenReady().then(async () => {
     },
     review: createGitDiffSource(),
     reviewNotes: createGitReviewNotes(),
-    sessions: createSessionInspector({
-      processes: platform.processes,
-      git: createGitInspector(),
-      agents: agentProfiles,
-    }),
+    sessions: sessionInspector,
     agents: agentProfiles,
 
     environment: createEnvironmentInspector({
@@ -450,6 +453,17 @@ app.whenReady().then(async () => {
     },
     logger,
   })
+
+  const quitGuard = createQuitGuard({
+    pids: () => bridge.pids(),
+    activity: (pid) => sessionInspector.activity(pid),
+    // The question is a card in the window, so the window shows first, even from the menu bar icon
+    ask: (running) => void dockActions.show().then(() => send(hostChannels.quitAsk, running)),
+    quit: () => app.quit(),
+  })
+  registerQuitBridge({ ipcMain: ipc, guard: quitGuard })
+  // The app menu's Quit (⌘Q) and the menu bar icon's; a logout or shutdown quits without asking
+  const quit = platform.asksBeforeQuit ? () => void quitGuard.request() : () => app.quit()
 
   activeKey = loaded.settings.shortcuts.toggleWindow
   void toggleKey.bind(activeKey).then((bound) => {
@@ -600,9 +614,7 @@ app.whenReady().then(async () => {
   const appMenu = platform.window.menu
   if (appMenu) {
     const refreshAppMenu = () =>
-      Menu.setApplicationMenu(
-        Menu.buildFromTemplate(appMenu({ t, openSettings, quit: () => app.quit() })),
-      )
+      Menu.setApplicationMenu(Menu.buildFromTemplate(appMenu({ t, openSettings, quit })))
     refreshAppMenu()
     settingsStore.onChange((_settings, changed) => {
       if (changed.includes('language')) refreshAppMenu()
@@ -623,7 +635,7 @@ app.whenReady().then(async () => {
       openSettings,
       autostart: platform.autostart,
       t,
-      quit: () => app.quit(),
+      quit,
       onChange: () => void refreshTrayMenu(),
     }
     const trayIcon = statusIcons.create({ tooltip: 'Dev Cockpit', menu: [] })

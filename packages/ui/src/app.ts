@@ -58,6 +58,7 @@ import { bindShortcuts } from './platform/shortcuts.ts'
 import { applyTheme, themeFor, watchSystemTheme } from './platform/theme.ts'
 import { createProjectSearch } from './projects/project-search.ts'
 import { createRootChooser } from './projects/root-chooser.ts'
+import { createQuitCard } from './quit/quit-card.ts'
 import { createReviewTabs } from './review/review-tabs.ts'
 import { applyOpacity } from './settings/preferences.ts'
 import type { SettingsClient } from './settings/settings-client.ts'
@@ -93,6 +94,7 @@ export interface AppElements {
   readonly edgeSize: HTMLElement
   readonly notice: HTMLElement
   readonly menu: HTMLElement
+  readonly quit: HTMLElement
   readonly scrim: HTMLElement
   readonly card: HTMLElement
   readonly hint: HTMLElement
@@ -165,6 +167,14 @@ export async function startApp(
     },
   })
   const menu = createTabMenu(elements.menu)
+  // Before the cockpit's keys are bound: while it asks, they stay quiet
+  const quitCard = createQuitCard(elements.quit, {
+    i18n,
+    quitKey: keymap.commandLabel('q'),
+    answer: (quit) => api.quit.answer(quit),
+    closeOthers: () => menu.close(),
+    done: () => focusActive(),
+  })
   let state: TabsState = emptyTabs
   let theme = themeFor(settings.current().theme)
   let counter = 0
@@ -628,6 +638,7 @@ export async function startApp(
         openFolder: (path, x, y) => openFolderMenu(id, path, x, y),
         tip: setTipRegion,
       },
+      openMenu: (x, y) => openTerminalMenu(id, x, y),
       onCopied: (text) => notice.copied(text),
       onExit: () => close(id),
       onInput() {
@@ -669,6 +680,40 @@ export async function startApp(
       y,
       false,
       () => sessions.get(tabId)?.focus(),
+      { pointer: true },
+    )
+  }
+
+  // A Mac's secondary click in a terminal; each item shows the key the Edit menu and xterm give it
+  function openTerminalMenu(tabId: string, x: number, y: number) {
+    const session = sessions.get(tabId)
+    if (!session) return
+    menu.open(
+      [
+        {
+          label: i18n.t('terminal.copy'),
+          enabled: session.hasSelection(),
+          key: keymap.commandLabel('c'),
+          run: () => session.copySelection(),
+        },
+        {
+          label: i18n.t('terminal.paste'),
+          enabled: true,
+          key: keymap.commandLabel('v'),
+          run: () => session.pasteClipboard(),
+        },
+        {
+          label: i18n.t('terminal.selectAll'),
+          enabled: true,
+          key: keymap.commandLabel('a'),
+          run: () => session.selectAll(),
+        },
+      ],
+      x,
+      y,
+      false,
+      () => session.focus(),
+      { pointer: true },
     )
   }
 
@@ -728,6 +773,7 @@ export async function startApp(
       for (const view of tabViews.values()) view.retranslate()
       showWorkWaiting(workWaiting)
       updateNotice.retranslate()
+      quitCard.retranslate()
       settingsView.rerender()
       renderTabs()
     }
@@ -1049,6 +1095,7 @@ export async function startApp(
   api.window.onShown(() => void viewsView.warm())
   api.window.onOpenSettings(() => settingsView.open())
   api.updates.onChange((update) => updateNotice.show(update))
+  api.quit.onAsk((running) => quitCard.ask(running))
   // A change that arrived first is newer than this answer
   void api.updates.state().then((update) => {
     if (!updateNotice.current()) updateNotice.show(update)
