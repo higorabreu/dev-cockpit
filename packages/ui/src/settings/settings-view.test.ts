@@ -673,114 +673,158 @@ describe('settings view, the settings file', () => {
     ],
   }
 
-  it('should show no notice when the file is used as written', () => {
+  const noteOf = (body: HTMLElement, key: string) =>
+    body.querySelector(`[data-setting="${key}"] .snote`)?.textContent
+
+  it('should show no word on the file and no strip when the file is used as written', () => {
+    // Arrange, Act
     const { body, view } = open()
 
-    expect(body.querySelector('.snotice')).toBeNull()
+    // Assert
+    expect(body.querySelector('.sfile-status')).toBeNull()
+    expect(body.querySelector('.sbroken')).toBeNull()
+    expect(body.querySelector('.snav-mark')).toBeNull()
     view.close()
   })
 
-  it('should name the default instead of null when a font in the file is not valid', () => {
+  it('should count the warnings beside the file button and open the file when it is pressed', async () => {
+    // Arrange
+    const { body, opens, view } = open([], api, undefined, 'pc', withIssues)
+    const status = body.querySelector<HTMLButtonElement>('.sfile-status')
+
+    // Act
+    status?.click()
+    await settle()
+
+    // Assert
+    expect(status?.textContent).toBe('3 warnings')
+    expect(status?.dataset.tip).toBe('3 values in settings.json are not used as written')
+    expect(opens()).toBe(1)
+    view.close()
+  })
+
+  it('should tell under each setting what the file holds and what is used instead', () => {
     // Arrange
     const file: SettingsFileState = {
       kind: 'ok',
-      issues: [{ key: 'terminal.fontFamily', kind: 'ignored', found: '"Nope;}"', used: 'null' }],
+      issues: [
+        ...withIssues.issues,
+        { key: 'terminal.fontFamily', kind: 'ignored', found: '"Nope;}"', used: 'null' },
+      ],
     }
 
     // Act
     const { body, view } = open([], api, undefined, 'pc', file)
+    const general = [noteOf(body, 'theme'), noteOf(body, 'terminal.fontFamily')]
+    body.querySelector<HTMLElement>('#settings-tab-system')?.click()
 
     // Assert
-    const row = body.querySelector('.snotice-list li')
-    expect(row?.lastElementChild?.textContent).toBe('Not valid, uses the default')
-    view.close()
-  })
-
-  it('should list each value it did not use with the key, the value found and the one in use', () => {
-    const { body, view } = open([], api, undefined, 'pc', withIssues)
-
-    const notice = body.querySelector('.snotice')
-    const rows = [...body.querySelectorAll('.snotice-list li')].map((row) =>
-      [...row.children].map((cell) => cell.textContent),
-    )
-
-    expect(notice?.querySelector('.snotice-text')?.textContent).toBe(
-      '3 values in settings.json are not used as written',
-    )
-    expect(rows).toEqual([
-      ['theme', '"purple"', 'Not valid, uses "dark"'],
-      ['system.notifyAfterSeconds', '2', 'Adjusted to 5'],
-      ['them', '"light"', 'Not a setting'],
+    expect(general).toEqual([
+      'In settings.json: "purple". Not valid, uses "dark".',
+      'In settings.json: "Nope;}". Not valid, uses the default.',
     ])
+    expect(noteOf(body, 'system.notifyAfterSeconds')).toBe('In settings.json: 2. Adjusted to 5.')
     view.close()
   })
 
-  it('should count the issues past the first five when the file has many', () => {
-    const many: SettingsFileState = {
-      kind: 'ok',
-      issues: Array.from({ length: 7 }, (_, index) => ({
-        key: `typo${index}`,
-        kind: 'unknown' as const,
-        found: '1',
-      })),
-    }
+  it('should mark the pages holding a setting the file got wrong and no page for an unknown key', () => {
+    // Arrange, Act
+    const { body, view } = open([], api, undefined, 'pc', withIssues)
+    const marked = [...body.querySelectorAll('.snav-item')]
+      .filter((item) => item.querySelector('.snav-mark'))
+      .map((item) => item.id)
 
-    const { body, view } = open([], api, undefined, 'pc', many)
-
-    expect(body.querySelectorAll('.snotice-key')).toHaveLength(5)
-    expect(body.querySelector('.snotice-more')?.textContent).toBe('and 2 more in the file')
-    view.close()
-  })
-
-  it('should say where the file broke when it is not valid', () => {
-    const { body, view } = open([], api, undefined, 'pc', { kind: 'invalid', line: 4, column: 12 })
-
-    expect(body.querySelector('.snotice-text')?.textContent).toBe(
-      'settings.json has an error at line 4, column 12. The last valid settings stay in use, and changes here wait until it is fixed.',
+    // Assert
+    expect(marked).toEqual(['settings-tab-general', 'settings-tab-system'])
+    expect(body.querySelector('#settings-tab-general')?.getAttribute('aria-description')).toBe(
+      'Has a setting that settings.json holds wrongly',
     )
     view.close()
   })
 
-  it('should draw the notice at once when the file is saved by hand while the screen is open', () => {
-    const { body, emitFile, view } = open()
+  it('should offer the reset on a setting the file holds wrongly even when the default is in use', async () => {
+    // Arrange
+    const { body, patches, view } = open([], api, undefined, 'pc', withIssues)
+    const reset = body.querySelector<HTMLButtonElement>('[data-setting="theme"] .sreset')
 
-    emitFile(withIssues)
+    // Act
+    const shown = reset?.hidden === false
+    reset?.click()
+    await settle()
 
-    expect(body.querySelectorAll('.snotice-list li')).toHaveLength(3)
+    // Assert
+    expect(shown).toBe(true)
+    expect(patches).toEqual([{ theme: 'dark' }])
     view.close()
   })
 
-  it('should put a refused choice back when the file is broken', async () => {
-    const { combobox, patches, view } = open([], api, undefined, 'pc', {
+  it('should say where the file broke above the page and disable the controls when it is not valid', () => {
+    // Arrange, Act
+    const { body, combobox, view } = open([], api, undefined, 'pc', {
+      kind: 'invalid',
+      line: 4,
+      column: 12,
+    })
+    const strip = body.querySelector('.smain > .sbroken')
+
+    // Assert
+    expect(strip?.querySelector('p')?.textContent).toBe(
+      'settings.json has an error at line 4, column 12. The settings in use stay as they are until it is fixed.',
+    )
+    expect(strip?.nextElementSibling?.id).toBe('settings-panel')
+    expect(combobox('theme').disabled).toBe(true)
+    expect(body.querySelector<HTMLInputElement>('[data-focus="set-fontSize"]')?.disabled).toBe(true)
+    expect(body.querySelector('.sfile-status')).toBeNull()
+    view.close()
+  })
+
+  it('should open the file from the strip when the file is broken', async () => {
+    // Arrange
+    const { body, opens, view } = open([], api, undefined, 'pc', {
       kind: 'invalid',
       line: 1,
       column: 2,
     })
-    const theme = combobox('theme')
-    theme.focus()
 
-    press(theme, 'Enter')
-    press(theme, 'ArrowDown')
-    press(theme, 'Enter')
+    // Act
+    body.querySelector<HTMLButtonElement>('.sbroken-open')?.click()
     await settle()
 
-    expect(patches).toEqual([{ theme: 'light' }])
-    expect(combobox('theme').querySelector('[data-current]')?.textContent).toBe('Dark')
+    // Assert
+    expect(opens()).toBe(1)
+    view.close()
+  })
+
+  it('should draw the warnings at once when the file is saved by hand while the screen is open', () => {
+    // Arrange
+    const { body, emitFile, view } = open()
+
+    // Act
+    emitFile(withIssues)
+
+    // Assert
+    expect(body.querySelector('.sfile-status')?.textContent).toBe('3 warnings')
+    expect(noteOf(body, 'theme')).toBe('In settings.json: "purple". Not valid, uses "dark".')
     view.close()
   })
 
   it('should open the file from the header button and say so when no app opened it', async () => {
+    // Arrange
     const { body, opens, view } = open()
     const button = body.querySelector<HTMLButtonElement>('[data-focus="set-open-file"]')
 
+    // Act: the fake host opens the file the first time only
     button?.click()
     await settle()
+    const opened = body.querySelector('.sfile-status')
     body.querySelector<HTMLButtonElement>('[data-focus="set-open-file"]')?.click()
     await settle()
 
+    // Assert
     expect(button?.getAttribute('data-tip')).toBe('Open the settings file')
+    expect(opened).toBeNull()
     expect(opens()).toBe(2)
-    expect(body.querySelector('.snotice-text')?.textContent).toBe('No app opened settings.json.')
+    expect(body.querySelector('.sfile-status')?.textContent).toBe('No app opened settings.json.')
     view.close()
   })
 
@@ -814,7 +858,6 @@ describe('settings view, the settings file', () => {
     body.querySelector<HTMLElement>('#settings-tab-projects')?.click()
 
     expect(body.querySelector('.snote')?.textContent).toBe('This folder does not exist.')
-    expect(body.querySelector('.snotice-why')?.textContent).toBe('Folder not found')
     view.close()
   })
 })

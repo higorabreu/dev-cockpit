@@ -347,11 +347,15 @@ export const ptBR = {
   'settings.file.open': 'Abrir o arquivo de configurações',
   'settings.file.openFailed': 'Nenhum aplicativo abriu o settings.json.',
   'settings.file.invalid':
-    'O settings.json tem um erro na linha {line}, coluna {column}. As últimas configurações válidas continuam em uso, e as mudanças feitas aqui esperam a correção.',
+    'O settings.json tem um erro na linha {line}, coluna {column}. As configurações em uso ficam como estão até ele ser corrigido.',
+  'settings.file.warnings.one': '1 aviso',
+  'settings.file.warnings.other': '{count} avisos',
+  'settings.file.rowNote': 'No settings.json: {found}. {reason}.',
+  'settings.file.openToFix': 'Abrir o arquivo',
+  'settings.file.tabHasIssue': 'Tem uma configuração escrita de forma errada no settings.json',
   'settings.file.issues.one': '1 valor do settings.json não é usado como está escrito',
   'settings.file.issues.other':
     '{count} valores do settings.json não são usados como estão escritos',
-  'settings.file.more': 'e mais {count} no arquivo',
   'settings.issue.ignored': 'Inválido, usa {used}',
   'settings.issue.ignoredDefault': 'Inválido, usa o padrão',
   'settings.issue.dropped': 'Inválido, deixado de fora',

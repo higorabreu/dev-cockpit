@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { defaultSettings, mergeSettings, parseSettings } from './settings.ts'
-import { previewValue, settingsEdits, settingsIssues } from './settings-file.ts'
+import { patchPaths, previewValue, settingsEdits, settingsIssues } from './settings-file.ts'
 
 const issuesOf = (raw: unknown) => settingsIssues(raw, parseSettings(raw))
 
@@ -108,7 +108,27 @@ describe('settingsEdits', () => {
     ])
   })
 
+  it('should write a set value the file holds wrongly when the value in use did not change', () => {
+    // Arrange
+    const raw = { theme: 'purple' }
+    const before = parseSettings(raw)
+
+    // Act
+    const edits = settingsEdits(raw, before, before, [['theme'], ['fontSize']])
+
+    // Assert
+    expect(edits).toEqual([{ path: ['theme'], value: 'dark' }])
+  })
+
   it('should edit nothing when the settings did not change', () => {
     expect(settingsEdits({}, defaultSettings, defaultSettings)).toEqual([])
+  })
+})
+
+describe('patchPaths', () => {
+  it('should give the path of every value a patch sets when it has groups', () => {
+    expect(
+      patchPaths({ theme: 'dark', terminal: { cursorStyle: 'bar', fontFamily: null } }),
+    ).toEqual([['theme'], ['terminal', 'cursorStyle'], ['terminal', 'fontFamily']])
   })
 })

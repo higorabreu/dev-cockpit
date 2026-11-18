@@ -6,6 +6,7 @@ import {
   type Logger,
   mergeSettings,
   parseSettings,
+  patchPaths,
   previewValue,
   type Settings,
   type SettingsFileState,
@@ -210,7 +211,7 @@ export function createSettingsStore(options: SettingsStoreOptions) {
           rejected = await options.veto(candidate, changedKeys(before, candidate))
           if (rejected.length > 0) next = mergeSettings(next, pick(stored, rejected))
         }
-        const edits = settingsEdits(lastRaw, stored, next)
+        const edits = settingsEdits(lastRaw, stored, next, patchPaths(patch))
         // A new file is plain JSON with every value, a starting point for editing it by hand
         const output =
           edits.length === 0

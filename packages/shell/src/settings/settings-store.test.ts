@@ -301,6 +301,20 @@ describe('createSettingsStore reload', () => {
     expect(states.at(-1)).toEqual({ kind: 'ok', issues: [] })
   })
 
+  it('should write the default over a wrong value when the screen resets a setting already at its default', async () => {
+    // Arrange
+    const { store } = await started()
+    await editFile({ theme: 'purple', fontSize: 14 })
+    await store.reload()
+
+    // Act
+    await store.update({ theme: 'dark' })
+
+    // Assert
+    expect(JSON.parse(await readFile(file, 'utf8'))).toMatchObject({ theme: 'dark', fontSize: 14 })
+    expect(store.get().file).toEqual({ kind: 'ok', issues: [] })
+  })
+
   it('should list the values it did not use as written when the file has them', async () => {
     const { store } = await started()
     await editFile({ theme: 'purple', system: { notifyAfterSeconds: 2 } })

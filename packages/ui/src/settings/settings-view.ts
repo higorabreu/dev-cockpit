@@ -77,6 +77,8 @@ const reference = (keymap: Keymap): ReadonlyArray<readonly [string, string]> => 
 // The shipped fonts are registered as variable fonts; the screen names them as the user knows them
 const shownFamily = (family: string) => family.replace(/ Variable$/, '')
 
+const WARNING = '<path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17.5v.01"/>'
+
 const TABS = [
   { id: 'general', label: 'settings.tab.general' },
   { id: 'shortcuts', label: 'settings.group.shortcuts' },
@@ -172,7 +174,7 @@ export function createSettingsView(
       'aria-label': t('settings.reset'),
     })
     button.textContent = '↺'
-    button.hidden = !differs(key, settings.current()) || settings.locked().includes(key)
+    button.hidden = !resettable(key)
     button.addEventListener('click', () => {
       void commit(
         patchFor(key, getPath(defaultSettings, key)),
@@ -185,10 +187,15 @@ export function createSettingsView(
   // Shows or hides each row's "restore" depending on the current value
   function refreshResets() {
     for (const button of body.querySelectorAll<HTMLElement>('.sreset')) {
-      const key = button.dataset.key ?? ''
-      button.hidden = !differs(key, settings.current()) || settings.locked().includes(key)
+      button.hidden = !resettable(button.dataset.key ?? '')
     }
   }
+
+  // A value the file holds wrongly can be put right by the reset, even when the one in use is the default
+  const resettable = (key: string) =>
+    (differs(key, settings.current()) || issueOf(key) !== undefined) &&
+    !settings.locked().includes(key) &&
+    !fileBroken()
 
   const labelId = (key: string) => `set-label-${key.replace(/\./g, '-')}`
 
@@ -206,7 +213,7 @@ export function createSettingsView(
     const note = notes.get(key) ?? fileNote(key)
     return h(
       'div',
-      { class: 'srow2', 'data-locked': locked ? 'true' : undefined },
+      { class: 'srow2', 'data-setting': key, 'data-locked': locked ? 'true' : undefined },
       h(
         'div',
         { class: 'slabel' },
@@ -221,14 +228,15 @@ export function createSettingsView(
     )
   }
 
-  const disabled = (key: string) => settings.locked().includes(key)
+  // While settings.json is broken nothing can be saved, so no control pretends it can
+  const fileBroken = () => settings.file().kind === 'invalid'
+  const disabled = (key: string) => settings.locked().includes(key) || fileBroken()
 
-  // What the file says about a key that is better told beside its control too
-  function fileNote(key: string): string | undefined {
+  // The value of settings.json not used as written for this setting, or one of its entries
+  function issueOf(key: string): SettingsIssue | undefined {
     const file = settings.file()
     if (file.kind !== 'ok') return undefined
-    const issue = file.issues.find((item) => item.key === key && item.kind === 'missingFolder')
-    return issue && t('settings.projectsRoot.missing')
+    return file.issues.find((issue) => issue.key === key || issue.key.startsWith(`${key}.`))
   }
 
   // A setting whose default is null (a font) has no value worth showing: the default is named instead
@@ -237,58 +245,59 @@ export function createSettingsView(
       ? t('settings.issue.ignoredDefault')
       : t(`settings.issue.${issue.kind}`, { used: issue.used ?? '' })
 
-  // At most this many issues are listed; the rest are counted, and the file has them all
-  const NOTICE_ROWS = 5
+  // What the file holds for this setting, told under its name, where it can be put right
+  function fileNote(key: string): string | undefined {
+    const issue = issueOf(key)
+    if (!issue) return undefined
+    if (issue.kind === 'missingFolder') return t('settings.projectsRoot.missing')
+    return t('settings.file.rowNote', { found: issue.found, reason: issueText(issue) })
+  }
 
-  // Above the tabs: what settings.json says, whichever page is open. Nothing when all is well
-  function fileNotice(): HTMLElement | false {
+  // Beside the button that opens the file: a short word on its state, the detail is on each setting
+  function fileStatus(): HTMLElement | false {
     const file = settings.file()
-    const warn = icon(
-      '<path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17.5v.01"/>',
-      14,
-      'snotice-icon',
+    // A broken file has its own strip over the page
+    const text = openFailed
+      ? t('settings.file.openFailed')
+      : file.kind === 'ok' && file.issues.length > 0
+        ? i18n.plural('settings.file.warnings', file.issues.length)
+        : undefined
+    if (text === undefined) return false
+    const tip =
+      file.kind === 'ok' && file.issues.length > 0 && !openFailed
+        ? i18n.plural('settings.file.issues', file.issues.length)
+        : undefined
+    const status = h(
+      'button',
+      {
+        type: 'button',
+        class: 'sfile-status',
+        'data-focus': 'set-file-status',
+        'data-tip': tip,
+      },
+      icon(WARNING, 14, 'sfile-warn'),
+      h('span', {}, text),
     )
-    if (file.kind === 'invalid')
-      return h(
-        'div',
-        { class: 'snotice', role: 'status' },
-        warn,
-        h('p', { class: 'snotice-text' }, t('settings.file.invalid', file)),
-      )
-    if (openFailed)
-      return h(
-        'div',
-        { class: 'snotice', role: 'status' },
-        warn,
-        h('p', { class: 'snotice-text' }, t('settings.file.openFailed')),
-      )
-    if (file.issues.length === 0) return false
-    const shown = file.issues.slice(0, NOTICE_ROWS)
-    const hidden = file.issues.length - shown.length
+    status.addEventListener('click', () => void openFile())
+    return status
+  }
+
+  // Above the page, only while the file cannot be read: nothing here saves until it is fixed
+  function brokenStrip(): HTMLElement | false {
+    const file = settings.file()
+    if (file.kind !== 'invalid') return false
+    const open = h(
+      'button',
+      { type: 'button', class: 'sbroken-open', 'data-focus': 'set-broken-open' },
+      t('settings.file.openToFix'),
+    )
+    open.addEventListener('click', () => void openFile())
     return h(
       'div',
-      { class: 'snotice', role: 'status' },
-      warn,
-      h(
-        'div',
-        { class: 'snotice-body' },
-        h('p', { class: 'snotice-text' }, i18n.plural('settings.file.issues', file.issues.length)),
-        h(
-          'ul',
-          { class: 'snotice-list' },
-          ...shown.map((issue) =>
-            h(
-              'li',
-              {},
-              h('span', { class: 'snotice-key' }, issue.key),
-              h('span', { class: 'snotice-found' }, issue.found),
-              h('span', { class: 'snotice-why' }, issueText(issue)),
-            ),
-          ),
-          hidden > 0 &&
-            h('li', { class: 'snotice-more' }, t('settings.file.more', { count: hidden })),
-        ),
-      ),
+      { class: 'sbroken', role: 'status' },
+      icon(WARNING, 14, 'sfile-warn'),
+      h('p', {}, t('settings.file.invalid', file)),
+      open,
     )
   }
 
@@ -315,7 +324,6 @@ export function createSettingsView(
     return control.element
   }
 
-  // The stored value is a fraction (0.6); the bar and the text show a percentage (60)
   // A font picker: the first option is the default (null in the file), then the installed families. A name
   // set by hand that is not installed stays listed, so the control never shows another font than the file's
   function fontSelect(key: string, families: readonly string[], fallback: string): HTMLElement {
@@ -337,6 +345,7 @@ export function createSettingsView(
     return control.element
   }
 
+  // The stored value is a fraction (0.6); the bar and the text show a percentage (60)
   function percent(
     key: string,
     limits: { readonly min: number; readonly max: number },
@@ -754,7 +763,13 @@ export function createSettingsView(
       'header',
       { class: 'shead2' },
       h('h1', {}, t('settings.title')),
-      h('div', { class: 'shead-actions' }, fileButton(), closeButton(t, closeView, 'set-close')),
+      h(
+        'div',
+        { class: 'shead-actions' },
+        fileStatus(),
+        fileButton(),
+        closeButton(t, closeView, 'set-close'),
+      ),
     )
   }
 
@@ -766,7 +781,21 @@ export function createSettingsView(
     if (focus) body.querySelector<HTMLElement>(`#settings-tab-${id}`)?.focus()
   }
 
-  function tabList(): HTMLElement {
+  // The pages holding a setting the file got wrong, marked in the list so the user knows where to look
+  function tabsWithIssues(panels: Record<TabId, Node[]>): ReadonlySet<TabId> {
+    const marked = new Set<TabId>()
+    for (const tab of TABS) {
+      for (const node of panels[tab.id]) {
+        if (!(node instanceof Element)) continue
+        for (const row of node.querySelectorAll<HTMLElement>('[data-setting]')) {
+          if (issueOf(row.dataset.setting ?? '')) marked.add(tab.id)
+        }
+      }
+    }
+    return marked
+  }
+
+  function tabList(marked: ReadonlySet<TabId>): HTMLElement {
     const list = h('div', {
       class: 'snav',
       role: 'tablist',
@@ -786,8 +815,10 @@ export function createSettingsView(
           'aria-controls': 'settings-panel',
           tabindex: selected ? '0' : '-1',
           'data-focus': `set-tab-${tab.id}`,
+          'aria-description': marked.has(tab.id) ? t('settings.file.tabHasIssue') : undefined,
         },
         t(tab.label),
+        marked.has(tab.id) && h('span', { class: 'snav-mark', 'aria-hidden': 'true' }),
       )
       button.addEventListener('click', () => selectTab(tab.id))
       list.append(button)
@@ -1041,23 +1072,26 @@ export function createSettingsView(
       ],
     }
 
-    const notice = fileNotice()
     body.replaceChildren(
       header(),
-      ...(notice ? [notice] : []),
       h(
         'div',
         { class: 'sbody' },
-        tabList(),
+        tabList(tabsWithIssues(panels)),
         h(
           'div',
-          {
-            class: 'spanel scroll scroll-edges',
-            role: 'tabpanel',
-            id: 'settings-panel',
-            'aria-labelledby': `settings-tab-${activeTab}`,
-          },
-          ...panels[activeTab],
+          { class: 'smain' },
+          brokenStrip(),
+          h(
+            'div',
+            {
+              class: 'spanel scroll scroll-edges',
+              role: 'tabpanel',
+              id: 'settings-panel',
+              'aria-labelledby': `settings-tab-${activeTab}`,
+            },
+            ...panels[activeTab],
+          ),
         ),
       ),
     )

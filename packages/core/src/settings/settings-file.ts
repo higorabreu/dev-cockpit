@@ -106,15 +106,28 @@ export function settingsIssues(raw: unknown, settings: Settings): readonly Setti
 const valueAt = (source: unknown, path: readonly string[]): unknown =>
   path.reduce<unknown>((value, key) => (isRecord(value) ? value[key] : undefined), source)
 
-// What to write so the file holds `after` where it changed from `before`. Where the file has something
-// other than an object on the way (`"system": 5`), the whole value from that point on is written
+// The values a patch sets, each by its path of keys
+export function patchPaths(patch: unknown, path: readonly string[] = []): readonly string[][] {
+  if (!isRecord(patch)) return [[...path]]
+  return Object.entries(patch).flatMap(([key, value]) => patchPaths(value, [...path, key]))
+}
+
+// What to write so the file holds `after` where it changed from `before`, and where a value the user set
+// (`touched`) is written otherwise in the file, so a reset puts right a value the model had replaced.
+// Where the file has something other than an object on the way (`"system": 5`), the whole value from that
+// point on is written
 export function settingsEdits(
   raw: unknown,
   before: Settings,
   after: Settings,
+  touched: readonly (readonly string[])[] = [],
 ): readonly SettingsEdit[] {
   const edits = new Map<string, SettingsEdit>()
-  for (const path of changedPaths(before, after)) {
+  const wrongInFile = touched.filter((path) => {
+    const written = valueAt(raw, path)
+    return written !== undefined && !same(written, valueAt(after, path))
+  })
+  for (const path of [...changedPaths(before, after), ...wrongInFile]) {
     let cut = path.length
     let node = raw
     for (const [index, key] of path.slice(0, -1).entries()) {

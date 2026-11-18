@@ -131,9 +131,10 @@ the GitLab and Jira connections. Everything applies at once. Settings live in a 
 hand, like VS Code's: the button beside the screen's close (or Open the settings file in the hold menu's
 System list) opens it in your editor, it takes comments and trailing commas, and whatever you save
 applies at once while the screen's own changes keep your comments and layout. A value it cannot use goes
-back to its default or to the nearest limit, and the top of the screen lists each one with what is used
-instead; a file that is not valid JSON keeps the last good settings and the screen says the line and
-column to fix. The `DCK_KEY`, `DCK_HEIGHT` and `DCK_PROJECTS_ROOT` variables win over the file.
+back to its default or to the nearest limit: the screen counts the warnings beside the file button, marks
+the pages that have one and says under each setting what the file holds and what is used instead, and its
+reset writes the right value back; a file that is not valid JSON keeps the last good settings, the
+controls wait, and a line above the page says the line and column to fix. The `DCK_KEY`, `DCK_HEIGHT` and `DCK_PROJECTS_ROOT` variables win over the file.
 
 The interface draws with Inter and JetBrains Mono, which ship with the cockpit. The terminal draws, by
 default, with the font of your own terminal (the GNOME Terminal or Ptyxis profile, else the system's

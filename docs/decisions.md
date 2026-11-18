@@ -1028,12 +1028,15 @@ path as the screen, so theme, language, opacity, shortcuts and the rest need no 
 window's own reads back the same text and applies nothing twice. A global shortcut written by hand goes
 through the same veto as the screen: a key the system refuses keeps the previous one, the file keeps what
 the user wrote, and the screen says so. A file that is not valid JSON with comments (or whose top is not
-an object) keeps the settings in use, is never written over, refuses the screen's changes until it is
-fixed, and the screen says the line and column of the first error. A notice at the top of the settings
-screen lists every value of the file the model did not use as written (went back to its default, clamped
-or corrected, left out of a list or map, not a setting at all, refused by the system, a projects folder
-that does not exist), each with its key, the value found and what is used instead, five at most with the
-rest counted. A number typed on the screen out of range says beside its field what it became, and the
+an object) keeps the settings in use, is never written over, disables the screen's controls until it is
+fixed, and one line above the page (not across the screen) says the line and column of the first error,
+with a button that opens the file. A value of the file the model did not use as written (went back to its
+default, clamped or corrected, left out of a list or map, not a setting at all, refused by the system, a
+projects folder that does not exist) is told where it is fixed: under its setting, what the file holds and
+what is used instead, and the setting's reset writes the right value into the file even when the one in
+use is already the default; the pages holding one get a mark; beside the file button a short count
+("3 warnings") opens the file, which is the only place an unknown key shows. Nothing stacks at the top of
+the screen however many there are. A number typed on the screen out of range says beside its field what it became, and the
 projects folder field says when its folder does not exist. "Open the settings file", a button in the
 screen's header and an item in the hold menu's System list, opens the file in the system's default editor
 through the host (`settings:open-file`, which takes no path), writing it first when there is none. D41's
@@ -1041,15 +1044,16 @@ through the host (`settings:open-file`, which takes no path), writing it first w
 **Reason:** the maintainer wants the user to shape the cockpit by hand like in VS Code: it applies as soon
 as it is saved, takes comments, has a button that opens it and says which field it ignored (2026-11-17,
 `plans/personalization.md`, front B). QA also found "Notify a long command after" typed as 2 silently
-became 5, and a projects folder that does not exist was saved with no word.
+became 5, and a projects folder that does not exist was saved with no word. A first list stacked at the
+top of the screen was refused by the maintainer (2026-11-18): it grows with the file and spoils the screen.
 **Accepted cost:** a new adapter package for a parser; a value the model corrected stays as written in the
-file until the user or the screen changes it, so the notice keeps listing it; while the file is broken the
+file until the user or the screen changes it, so its warning stays; while the file is broken the
 screen, the theme shortcut and the opacity keys change nothing; a key inserted into a group the user wrote
 on one line breaks that group into lines. Removing a connector's address by hand forgets its token, as
 the screen's Disconnect does.
 **How to revert:** drop `packages/adapters/jsonc`, the `SettingsText` port, `core/src/settings/settings-file.ts`,
 `reload`, `ensureFile`, `onFile` and the edits in `shell/src/settings/settings-store.ts`, the
-`settings:file` and `settings:open-file` channels, the notice, button and notes in
+`settings:file` and `settings:open-file` channels, the warnings, strip, button and notes in
 `ui/src/settings/settings-view.ts` and the hold menu item, and go back to `JSON.parse` and whole-file writes
 with `reloadExtensions` for D41.
 
