@@ -364,7 +364,7 @@ export const en: Record<MessageKey, string> = {
   'settings.updates.install': 'Install',
   'settings.updates.hint.off': 'GitHub is never contacted.',
   'settings.updates.hint.notify': 'Tells when a new version is out.',
-  'settings.updates.hint.install': 'Installs the new version; asks for the system password.',
+  'settings.updates.hint.install': 'Installs the new version automatically.',
   'settings.updates.hint.page': 'Tells and opens the release page to install it.',
   'settings.updates.check': 'Check now',
   'settings.updates.checking': 'Checking',

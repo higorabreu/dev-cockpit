@@ -365,7 +365,7 @@ export const ptBR = {
   'settings.updates.install': 'Instalar',
   'settings.updates.hint.off': 'Nenhuma consulta ao GitHub.',
   'settings.updates.hint.notify': 'Avisa quando há uma nova versão.',
-  'settings.updates.hint.install': 'Instala a nova versão; pede a senha do sistema.',
+  'settings.updates.hint.install': 'Instala a nova versão automaticamente.',
   'settings.updates.hint.page': 'Avisa e abre a página da versão para instalar.',
   'settings.updates.check': 'Verificar agora',
   'settings.updates.checking': 'Verificando',

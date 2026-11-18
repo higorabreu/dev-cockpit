@@ -94,7 +94,7 @@ Off by default: the cockpit makes no network call of its own. **Updates** in Set
   beside the tabs with **Update** and **What's new** (the release page). Dismissing it hides it until a
   newer version; the hold menu's System list keeps the update.
 - **Install**: also downloads the `.deb` for your processor, checks it against the release's `SHA256SUMS`
-  and installs it with `pkexec` (the system's password dialog). Then **Restart** opens the tabs again in
+  and installs it with `pkexec` (the system asks for authorization). Then **Restart** opens the tabs again in
   their folders; what runs in them (an agent, a server) ends, so the cockpit asks first while an agent
   runs. Not restarted, the new version starts the next time.
 
