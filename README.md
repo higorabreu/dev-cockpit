@@ -109,7 +109,7 @@ next launch, `--yes` restarts without asking and `--skip-build` installs the `.d
 | `Ctrl+Tab`, `Ctrl+Shift+Tab` | Next / previous tab |
 | `Alt+1` to `8`, `Alt+9` | Go to tab; `Alt+9` goes to the last one |
 | `Ctrl+Shift+K` | Clear the terminal and its scrollback (`Ctrl+K` stays with the shell) |
-| Hold the right `Ctrl` | Action wheel: tabs, projects, agent, system. Releasing runs the item |
+| Hold the right `Ctrl` (configurable) | Action wheel: tabs, projects, agent, system. Releasing runs the item |
 | `Ctrl+Shift+P` | Project search (`Ctrl+D` pins or unpins a favorite) |
 | `Ctrl+Shift+M` | Work screen: merge requests and tasks |
 | `Ctrl+Shift+B` | Side panel |
@@ -129,13 +129,29 @@ next word; a full-screen program gets the raw key. The left Option is Meta (`⌥
 types accents and symbols (Settings, Option as Meta), and `⌥`+drag selects inside programs that use the
 mouse. `F12` needs `fn` unless the F keys are set as standard function keys.
 
+These are the defaults: Settings, Shortcuts changes any of them. Click a key, or press Enter on it, and
+press the new one; Esc cancels. A letter or digit needs Ctrl, Alt or `⌘`, an F key can stand alone. A key
+another action already has asks first (Swap or Cancel), and a Ctrl key the shell uses (`Ctrl+R`) is
+allowed with a note that the terminal no longer gets it. `settings.json` keeps only what you changed:
+
+```jsonc
+"shortcuts": {
+  "keys": { "newTab": "Ctrl+Alt+N", "fullHeight": "F10" }, // Cmd and Option on a Mac
+  "holdTrigger": "Mouse1" // the middle button; Mouse3 back, Mouse4 forward, or a key such as "F13"
+}
+```
+
+The action wheel opens with any key that types nothing (a modifier, an F key, Caps Lock, Pause) or with
+the middle, back or forward mouse button: hold it, move the mouse to an item, release to run it, Esc
+cancels. While a mouse button opens the wheel, its click does nothing else (no middle-click paste).
+
 The `dck` command controls the window from outside (`dck toggle`, `dck ping`): useful to bind to a system
 shortcut if the global key is refused.
 
 ## Settings
 
 `Ctrl+,` opens the screen: language, theme, opacity, the interface and code fonts, the terminal's font,
-size and cursor (block, bar or underline, blinking or not), which Option is Meta on a Mac, window height, global key, hold menu key,
+size and cursor (block, bar or underline, blinking or not), which Option is Meta on a Mac, window height, global key, hold menu key or button, every interface key,
 projects folder, start with the system, the threshold to notify a long command, the review layout and
 the GitLab and Jira connections. Everything applies at once. Settings live in a `settings.json` that can also be edited by
 hand, like VS Code's: the button beside the screen's close (or Open the settings file in the hold menu's
@@ -170,8 +186,8 @@ architecture, decisions and roadmap, and [AGENTS.md](AGENTS.md) for the coding s
 - The package runs with `--no-sandbox`, because of Ubuntu's sandbox restriction.
 - No agent metrics or approvals banner in the panel: the cockpit marks the tab where an agent needs you
   instead (D37).
-- Connectors are built in (GitLab and Jira Cloud); third-party connectors and key remapping for the
-  remaining shortcuts are not done.
+- Connectors are built in (GitLab and Jira Cloud); third-party connectors are not done. The keys inside
+  a panel (the review's single keys, the arrows of a list) cannot be changed.
 - The GNOME tray icon opens the menu and does not toggle the window directly.
 
 ## License

@@ -49,5 +49,5 @@ Decided with the maintainer:
   behavior suppressed. Tests.
 - [x] C7. Settings: the hold trigger recorder (key or mouse button, refusals, conflicts), labels in both
   catalogs. Tests.
-- [ ] C8. D69, D51 and D68 where they no longer hold, the README keys and settings, the settings rule; a
+- [x] C8. D69, D51 and D68 where they no longer hold, the README keys and settings, the settings rule; a
   run of the real app under Xvfb (PC and Mac keyboard, dark and light, English and Portuguese).

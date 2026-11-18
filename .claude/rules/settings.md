@@ -25,3 +25,7 @@ paths:
   (`shell/src/settings/env-overrides.ts`).
 - A change the system may refuse (the global shortcut) goes through the store's `veto` and returns to the
   previous value. Everything applies immediately, with no restart when possible.
+- **Keys (D69):** `shortcuts.keys` holds only the actions the user changed, as chord text read by
+  `parseChord` (`core/src/settings/shortcut-keys.ts`). A new action with a key goes in `SHORTCUT_IDS`, in
+  the keymap's defaults for each keyboard and in a group of `ui/src/settings/shortcuts-page.ts`; its label
+  and its tooltip (`data-tip-shortcut`) always come from the keymap, never from a written key.
