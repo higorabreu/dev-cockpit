@@ -118,12 +118,23 @@ export interface MenuMarkup {
   readonly hint: string
 }
 
+// How the open menu is used: held, releasing runs; open after a click of a mouse trigger, a click runs
+export type HintMode = 'hold' | 'click'
+
+function hintMarkup(mode: HintMode, t: Translate): string {
+  const navigate = `<span>${kbd(['←', '→', '↑', '↓'])} ${escapeHtml(t('menu.hint.navigate'))}</span>`
+  if (mode === 'click')
+    return `${navigate}<span>${kbd(['Enter'])} ${escapeHtml(t('menu.hint.pick'))}</span><span>${kbd(['Esc'])} ${escapeHtml(t('menu.hint.close'))}</span>`
+  return `${navigate}<span>${escapeHtml(t('menu.hint.release'))}</span><span>${kbd(['Esc'])} ${escapeHtml(t('menu.hint.cancel'))}</span>`
+}
+
 // Shows the selected category's rows inside `shown`, or all of them; the rest sits behind overflow cues
 export function wheelMarkup(
   state: HoldMenuState,
   t: Translate,
   shown?: RowWindow,
   layout = CENTERED,
+  hint: HintMode = 'hold',
 ): MenuMarkup {
   const count = state.categories.length
   const category = currentCategory(state)
@@ -147,6 +158,6 @@ export function wheelMarkup(
   return {
     mode: 'wheel-mode',
     card: `<svg class="wheel" width="${fixed(layout.size)}" height="${fixed(layout.size)}" viewBox="${-half} ${-half} ${geometry.size} ${geometry.size}"><circle class="backdrop" r="${half}"/>${sectors}${hub}</svg>${list}`,
-    hint: `<span>${kbd(['←', '→', '↑', '↓'])} ${escapeHtml(t('menu.hint.navigate'))}</span><span>${escapeHtml(t('menu.hint.release'))}</span><span>${kbd(['Esc'])} ${escapeHtml(t('menu.hint.cancel'))}</span>`,
+    hint: hintMarkup(hint, t),
   }
 }

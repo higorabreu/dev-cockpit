@@ -58,6 +58,8 @@ const ARROWS: Record<string, Direction> = {
   ArrowLeft: 'left',
 }
 
+const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'AltGraph', 'CapsLock'])
+
 type Mode = { kind: 'closed' } | { kind: 'wheel'; menu: HoldMenuState }
 
 const consume = (event: Event) => {
@@ -165,7 +167,7 @@ export function createHoldMenuController(
     let layout = pinned === undefined ? start : { ...start, ...pinned }
     for (let pass = 1; ; pass++) {
       const shown = followSelection(total, selectedIndex(menu), rows, firstRow.get(category))
-      paint(wheelMarkup(menu, t, shown, layout))
+      paint(wheelMarkup(menu, t, shown, layout, gesture.isSticky() ? 'click' : 'hold'))
       place(layout)
       const fit = pass < FIT_PASSES ? measureFit(menu, rows, total, pinned) : undefined
       if (fit === undefined || (fit.rows === rows && sameLayout(fit.layout, layout))) {
@@ -186,6 +188,7 @@ export function createHoldMenuController(
   }
 
   function close() {
+    gesture.cancel()
     mode = { kind: 'closed' }
     elements.scrim.classList.remove('open')
     delete elements.card.dataset.placed
@@ -205,10 +208,9 @@ export function createHoldMenuController(
       if (!event.repeat) gesture.press()
       return
     }
-    if (!gesture.isHeld()) return
+    if (!gesture.isHeld() && !gesture.isSticky()) return
     if (event.key === 'Escape' && gesture.isOpen()) {
       consume(event)
-      gesture.cancel()
       close()
       return
     }
@@ -223,7 +225,19 @@ export function createHoldMenuController(
       }
       return
     }
+    if (gesture.isSticky()) return stickyKey(event)
     gesture.otherKey()
+  }
+
+  // Open after a click of a mouse trigger: Enter runs the selected row; a key that writes closes the menu
+  // and goes on to the terminal, so nothing is typed under it. A modifier alone leaves it open
+  function stickyKey(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      consume(event)
+      commit()
+      return
+    }
+    if (!MODIFIER_KEYS.has(event.key)) close()
   }
 
   function onKeyUp(event: KeyboardEvent) {
@@ -296,24 +310,25 @@ export function createHoldMenuController(
     (event) => {
       if (isTrigger(event)) {
         consume(event)
-        gesture.press()
+        // A second click of the button closes the menu its first click left open
+        if (!gesture.press()) close()
         return
       }
       gesture.otherKey()
       if (!offCard(event)) return
-      gesture.cancel()
       close()
     },
     true,
   )
-  // Released, the button runs the selected row, as the key does
+  // Released, the button runs the selected row, as the key does; a quick click leaves the menu open
   window.addEventListener(
     'mouseup',
     (event) => {
       if (!isTrigger(event)) return
       consume(event)
-      if (gesture.release()) commit()
-      else close()
+      const outcome = gesture.releaseButton()
+      if (outcome === 'run') commit()
+      else if (outcome === 'close') close()
     },
     true,
   )
@@ -324,16 +339,10 @@ export function createHoldMenuController(
     capture: true,
     passive: false,
   })
-  window.addEventListener('blur', () => {
-    gesture.cancel()
-    close()
-  })
+  window.addEventListener('blur', close)
   elements.card.addEventListener('mousemove', onPointer)
   elements.card.addEventListener('click', onPointer)
   elements.card.addEventListener('wheel', onWheel, { passive: false })
-  // A cue only moves the window, so it must not take the focus from the terminal
-  elements.card.addEventListener('mousedown', (event) => {
-    if (event.target instanceof Element && event.target.closest('[data-reveal]'))
-      event.preventDefault()
-  })
+  // A press on the card only picks or moves the list, so it never takes the focus from the terminal
+  elements.card.addEventListener('mousedown', (event) => event.preventDefault())
 }
