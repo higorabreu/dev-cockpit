@@ -351,24 +351,30 @@ describe('submodules', () => {
     expect(util).toMatchObject({ additions: 1, deletions: 0, newLineCount: 4 })
   })
 
-  it('should read the submodule from the commit recorded at the base when the scope is the branch', async () => {
+  it('should read a submodule on a branch with no base from its upstream, else its HEAD, in Base', async () => {
     // Arrange
     const acme = await nested()
     const lib = join(acme, 'libs/lib')
     run(acme, 'checkout', '-q', '-b', 'feat/bump')
+    await pulled(acme, 'libs/lib', 'lib', 2)
     await writeFile(join(lib, 'x.txt'), numbered(4))
     run(lib, 'commit', '-q', '-am', 'Grow x')
     run(acme, 'commit', '-q', '-am', 'Bump lib')
+    await writeFile(join(lib, 'src/util.ts'), `${numbered(3)}edit\n`)
     const source = createGitDiffSource()
+    const scope = request(acme, { scope: 'branch', base: 'main' })
 
     // Act
-    const branch = okDiff(await source.diff(request(acme, { scope: 'branch', base: 'main' })))
-    const uncommitted = okDiff(await source.diff(request(acme)))
+    const tracked = okDiff(await source.diff(scope))
+    run(lib, 'branch', '-q', '--unset-upstream')
+    const alone = okDiff(await source.diff(scope))
 
     // Assert
-    expect(branch.files.map((file) => file.path)).toEqual(['libs/lib/x.txt'])
-    expect(branch.modules).toEqual([{ path: 'libs/lib', commits: ['Grow x'], commitCount: 1 }])
-    expect(uncommitted.files).toEqual([])
+    expect(shown(tracked)).toEqual(['libs/lib/src/util.ts', 'libs/lib/x.txt'])
+    expect(tracked.modules).toEqual([
+      { path: 'libs/lib', commits: ['Grow x', 'Upstream 2', 'Upstream 1'], commitCount: 3 },
+    ])
+    expect(shown(alone)).toEqual(['libs/lib/src/util.ts'])
   })
 
   it('should keep the single entry of a submodule whose recorded commit it does not have', async () => {

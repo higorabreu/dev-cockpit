@@ -368,9 +368,10 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
   }
 
   // Where a submodule's own review starts: its HEAD; the merge base with its upstream, else its HEAD; the
-  // merge base with the base its branch has, found as the parent's is. Detached, as a submodule often is,
-  // or with no base found, it starts at the commit the parent recorded: what the parent's branch moved it
-  // through is then the nearest thing to its branch
+  // merge base with the base its branch has, found as the parent's is. A branch with no base is usually
+  // the integration branch it pulls, so it falls back to Unpushed and never lists what was pulled. Only a
+  // detached HEAD, as `submodule update` leaves it, starts at the commit the parent recorded: with no
+  // branch, what the parent's branch moved it through is the nearest thing to one
   async function ownStart(
     dir: string,
     scope: DiffScope,
@@ -379,12 +380,13 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
     const current = await head(dir)
     if (!current.ok) return undefined
     if (scope === 'uncommitted') return current.value
-    if (scope === 'unpushed')
-      return (await answer(dir, ['merge-base', 'HEAD', '@{upstream}'])) || current.value
+    const unpushed = async () =>
+      (await answer(dir, ['merge-base', 'HEAD', '@{upstream}'])) || current.value
+    if (scope === 'unpushed') return unpushed()
     if (!(await answer(dir, ['symbolic-ref', '--quiet', 'HEAD']))) return recorded
     const branch = await bases.find(dir, current.value, undefined)
     const merge = branch.base && (await answer(dir, ['merge-base', 'HEAD', branch.base.name]))
-    return merge || recorded
+    return merge || unpushed()
   }
 
   // The submodules a repository records, by folder: `.gitmodules` names them and the index confirms
