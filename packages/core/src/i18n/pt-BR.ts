@@ -237,7 +237,7 @@ export const ptBR = {
   'settings.cursorBlink': 'Cursor piscando',
   'settings.macOptionAsMeta': 'Option como Meta',
   'settings.macOptionAsMeta.hint':
-    'Meta move por palavra no shell (⌥B, ⌥F); um Option que não é Meta digita acentos e símbolos.',
+    'O Meta move por palavra no shell; o outro Option digita acentos e símbolos.',
   'settings.macOptionAsMeta.left': 'Option esquerdo',
   'settings.macOptionAsMeta.both': 'Os dois',
   'settings.macOptionAsMeta.none': 'Nenhum',
@@ -251,8 +251,7 @@ export const ptBR = {
   'settings.group.shortcuts': 'Atalhos',
   'settings.toggleWindow': 'Abrir e fechar a janela',
   'settings.toggleWindow.hint': 'Atalho global: vale em qualquer programa.',
-  'settings.toggleWindow.hint.mac':
-    'Atalho global: vale em qualquer programa. As teclas F precisam de fn, a não ser que estejam como teclas de função padrão nos Ajustes do Sistema.',
+  'settings.toggleWindow.hint.mac': 'Vale em qualquer programa. No Mac, as teclas F pedem o fn.',
   'settings.record': 'Alterar',
   'settings.recording': 'Pressione a nova tecla (Esc cancela)',
   'settings.shortcutRefused': 'Outro programa já usa essa tecla. Nada mudou.',

@@ -237,7 +237,7 @@ export const en: Record<MessageKey, string> = {
   'settings.cursorBlink': 'Blinking cursor',
   'settings.macOptionAsMeta': 'Option as Meta',
   'settings.macOptionAsMeta.hint':
-    'Meta moves by word in the shell (⌥B, ⌥F); an Option that is not Meta types accents and symbols.',
+    'Meta moves by word in the shell; the other Option types accents and symbols.',
   'settings.macOptionAsMeta.left': 'Left Option',
   'settings.macOptionAsMeta.both': 'Both',
   'settings.macOptionAsMeta.none': 'Neither',
@@ -251,8 +251,7 @@ export const en: Record<MessageKey, string> = {
   'settings.group.shortcuts': 'Shortcuts',
   'settings.toggleWindow': 'Show and hide the window',
   'settings.toggleWindow.hint': 'Global shortcut: works in any program.',
-  'settings.toggleWindow.hint.mac':
-    'Global shortcut: works in any program. The F keys need fn unless they are set as standard function keys in System Settings.',
+  'settings.toggleWindow.hint.mac': 'Works in any program. On a Mac, F keys need fn.',
   'settings.record': 'Change',
   'settings.recording': 'Press the new key (Esc cancels)',
   'settings.shortcutRefused': 'Another program already uses that key. Nothing changed.',
