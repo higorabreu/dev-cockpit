@@ -86,7 +86,7 @@ export function createSessionsSection(source: SessionsSource, i18n: Translator):
     icon: '<path d="M4 6h16M4 12h16M4 18h10"/>',
     expandedByDefault: true,
     summary: () => i18n.plural('sessions.count', source.tabs().length),
-    badge: () => (source.finishedCount() > 0 ? String(source.finishedCount()) : undefined),
+    waiting: () => source.finishedCount(),
     body() {
       // One connection serves every session, so the hint shows once, under the first agent that needs it
       let hinted = false

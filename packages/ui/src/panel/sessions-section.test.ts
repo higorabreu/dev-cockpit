@@ -22,7 +22,11 @@ const running: SessionActivityInfo = {
   agent: acme,
 }
 
-function draw(hinted: string | readonly string[] | undefined, locale: 'en' | 'pt-BR' = 'en') {
+function draw(
+  hinted: string | readonly string[] | undefined,
+  locale: 'en' | 'pt-BR' = 'en',
+  waiting = 0,
+) {
   const asking = new Set(typeof hinted === 'string' ? [hinted] : (hinted ?? []))
   const calls: string[] = []
   const source: SessionsSource = {
@@ -34,20 +38,35 @@ function draw(hinted: string | readonly string[] | undefined, locale: 'en' | 'pt
     info: (id) => (id === 'tab-1' ? running : undefined),
     finished: () => undefined,
     needsYou: () => false,
-    finishedCount: () => 0,
+    finishedCount: () => waiting,
     select: (id) => void calls.push(`select ${id}`),
     connectHint: (id) => (asking.has(id) ? acme : undefined),
     connect: (id) => void calls.push(`connect ${id}`),
     dismissConnect: () => void calls.push('dismiss'),
   }
-  const body = createSessionsSection(source, createTranslator(locale)).body()
+  const section = createSessionsSection(source, createTranslator(locale))
+  const body = section.body()
   document.body.replaceChildren(body)
   const button = (name: string) =>
     [...body.querySelectorAll<HTMLButtonElement>('.sconnect button')].find(
       (candidate) => candidate.textContent === name,
     )
-  return { body, calls, button }
+  return { body, calls, button, section }
 }
+
+describe('sessions section, rail dot', () => {
+  it('should count no waiting tab when nothing waits for the user', () => {
+    const { section } = draw(undefined)
+
+    expect(section.waiting()).toBe(0)
+  })
+
+  it('should count the tabs that wait for the user when some finished out of sight', () => {
+    const { section } = draw(undefined, 'en', 12)
+
+    expect(section.waiting()).toBe(12)
+  })
+})
 
 describe('sessions section, connect hint', () => {
   it('should show the hint under the agent row when the agent can be connected', () => {
