@@ -121,6 +121,16 @@
 }
 
 /* An item with a key: the label on the left and the keycaps on the right, as in the hold menu */
+/* A disabled item's keys dim with its label: the muted color and no fill, so the cap keeps its outline */
+#tab-menu button:disabled .key {
+  background: none;
+  color: var(--muted);
+}
+
+#tab-menu button:disabled .kplus {
+  color: var(--muted);
+}
+
 #tab-menu button:has(.keys) {
   display: flex;
   align-items: center;
