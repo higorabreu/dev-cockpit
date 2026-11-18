@@ -66,6 +66,8 @@ export const ptBR = {
   'tabs.close': 'Fechar aba',
   'tabs.closeOthers': 'Fechar as outras',
   'tabs.duplicate': 'Duplicar aba',
+  'tabs.rename': 'Renomear aba',
+  'tabs.nameField': 'Nome da aba',
   'tabs.next': 'Próxima aba',
   'tabs.previous': 'Aba anterior',
   'tabs.nextFinished': 'Próxima aba esperando você',
@@ -221,6 +223,9 @@ export const ptBR = {
   'settings.heightRatio': 'Altura ancorada',
   'settings.heightRatio.hint': 'Parte da altura da tela que a janela ocupa.',
   'settings.panelOnFullHeight': 'Abrir o painel em altura total',
+  'settings.restoreTabs': 'Reabrir as abas ao iniciar',
+  'settings.restoreTabs.hint':
+    'Cada uma na sua pasta e com o seu nome. O que rodava na aba, como um agente, não volta.',
   'settings.group.shortcuts': 'Atalhos',
   'settings.toggleWindow': 'Abrir e fechar a janela',
   'settings.toggleWindow.hint': 'Atalho global: vale em qualquer programa.',

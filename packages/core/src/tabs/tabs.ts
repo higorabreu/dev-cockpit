@@ -3,7 +3,11 @@ import { recordInteraction } from '../recency/recency.ts'
 export interface TabInfo {
   readonly id: string
   readonly label: string
+  // The name the tab opened with, kept while a name the user typed shows instead
+  readonly autoLabel?: string
 }
+
+export const MAX_TAB_NAME = 64
 
 export interface TabsState {
   readonly tabs: readonly TabInfo[]
@@ -65,6 +69,18 @@ export function reorderTabs(state: TabsState, ids: readonly string[]): TabsState
   const byId = new Map(state.tabs.map((tab) => [tab.id, tab]))
   const tabs = ids.flatMap((id) => byId.get(id) ?? [])
   return { ...state, tabs }
+}
+
+// A typed name replaces the label; an empty one, or the automatic name itself, brings that name back
+export function renameTab(state: TabsState, id: string, name: string): TabsState {
+  const tab = state.tabs.find((entry) => entry.id === id)
+  if (!tab) return state
+  const auto = tab.autoLabel ?? tab.label
+  const typed = name.replace(/\s+/g, ' ').trim().slice(0, MAX_TAB_NAME).trim()
+  const next: TabInfo =
+    typed === '' || typed === auto ? { id, label: auto } : { id, label: typed, autoLabel: auto }
+  if (next.label === tab.label && next.autoLabel === tab.autoLabel) return state
+  return { ...state, tabs: state.tabs.map((entry) => (entry.id === id ? next : entry)) }
 }
 
 // A duplicate keeps the name and gets the lowest free index: dev-cockpit(2), dev-cockpit(3)

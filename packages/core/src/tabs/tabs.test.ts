@@ -6,7 +6,9 @@ import {
   closeTab,
   duplicateLabel,
   emptyTabs,
+  MAX_TAB_NAME,
   openTab,
+  renameTab,
   reorderTabs,
   stepTab,
 } from './tabs.ts'
@@ -132,6 +134,52 @@ describe('reorderTabs', () => {
     const state = withTabs('a', 'b', 'c')
 
     expect(reorderTabs(state, ['c', 'b', 'a']).activeId).toBe('c')
+  })
+})
+
+describe('renameTab', () => {
+  it('should show the typed name and keep the automatic one when the tab is renamed', () => {
+    // Arrange
+    const state = withTabs('a', 'b')
+
+    // Act
+    const next = renameTab(state, 'b', 'api billing')
+
+    // Assert
+    expect(next.tabs[1]).toEqual({ id: 'b', label: 'api billing', autoLabel: 'b' })
+    expect(next.activeId).toBe(state.activeId)
+  })
+
+  it('should bring the automatic name back when the name is cleared', () => {
+    const named = renameTab(withTabs('a'), 'a', 'api')
+
+    expect(renameTab(named, 'a', '   ').tabs[0]).toEqual({ id: 'a', label: 'a' })
+  })
+
+  it('should keep the first automatic name when the tab is renamed twice', () => {
+    const twice = renameTab(renameTab(withTabs('a'), 'a', 'api'), 'a', 'web')
+
+    expect(twice.tabs[0]).toEqual({ id: 'a', label: 'web', autoLabel: 'a' })
+  })
+
+  it('should drop the typed name when it is the automatic name itself', () => {
+    const back = renameTab(renameTab(withTabs('a'), 'a', 'api'), 'a', 'a')
+
+    expect(back.tabs[0]).toEqual({ id: 'a', label: 'a' })
+  })
+
+  it('should trim, join the spaces and cut a long name', () => {
+    const next = renameTab(withTabs('a'), 'a', `  api \t  billing ${'x'.repeat(100)}`)
+
+    expect(next.tabs[0]?.label.startsWith('api billing x')).toBe(true)
+    expect(next.tabs[0]?.label).toHaveLength(MAX_TAB_NAME)
+  })
+
+  it('should return the same state when nothing changes or the tab does not exist', () => {
+    const state = withTabs('a')
+
+    expect(renameTab(state, 'a', 'a')).toBe(state)
+    expect(renameTab(state, 'missing', 'x')).toBe(state)
   })
 })
 

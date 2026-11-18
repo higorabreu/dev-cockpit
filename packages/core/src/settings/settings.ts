@@ -105,6 +105,8 @@ export const settingsSchema = z.preprocess(
     window: section({
       heightRatio: bounded(LIMITS.heightRatio.min, LIMITS.heightRatio.max, 0.5),
       panelOnFullHeight: z.boolean().catch(true),
+      // The tabs of the last run open again on start, each in its folder and with its name
+      restoreTabs: z.boolean().catch(true),
     }),
     shortcuts: section({
       toggleWindow: z.string().trim().min(1).max(64).catch('F12'),

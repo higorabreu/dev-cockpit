@@ -67,6 +67,8 @@ export const en: Record<MessageKey, string> = {
   'tabs.close': 'Close tab',
   'tabs.closeOthers': 'Close others',
   'tabs.duplicate': 'Duplicate tab',
+  'tabs.rename': 'Rename tab',
+  'tabs.nameField': 'Tab name',
   'tabs.next': 'Next tab',
   'tabs.previous': 'Previous tab',
   'tabs.nextFinished': 'Next waiting for you',
@@ -221,6 +223,9 @@ export const en: Record<MessageKey, string> = {
   'settings.heightRatio': 'Docked height',
   'settings.heightRatio.hint': 'Share of the screen height the window takes.',
   'settings.panelOnFullHeight': 'Open the panel in full height',
+  'settings.restoreTabs': 'Reopen the tabs on start',
+  'settings.restoreTabs.hint':
+    'Each in its folder and with its name. What ran in a tab, like an agent, does not come back.',
   'settings.group.shortcuts': 'Shortcuts',
   'settings.toggleWindow': 'Show and hide the window',
   'settings.toggleWindow.hint': 'Global shortcut: works in any program.',

@@ -3,6 +3,7 @@ import type { Connector } from '../connectors/connector.ts'
 import type { ErrorBody } from '../ipc/protocol.ts'
 import type { Result } from '../result.ts'
 import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
+import type { SavedTabs } from '../tabs/saved-tabs.ts'
 import type { AgentProfile } from './agent.ts'
 import type { ConnectionFields, ConnectionStatus, DisabledConnector } from './connections.ts'
 import type { DiffOutcome, DiffRequest } from './diff-source.ts'
@@ -122,6 +123,11 @@ export interface HostApi {
     // The system folder picker; undefined when the user cancels
     chooseRoot(): Promise<string | undefined>
   }
+  // The tabs of the last run, kept for the next start
+  readonly tabs: {
+    saved(): Promise<SavedTabs | undefined>
+    save(tabs: SavedTabs): void
+  }
   readonly window: {
     toggleFullHeight(): void
     onShown(listener: () => void): Unsubscribe
@@ -173,6 +179,8 @@ export const hostChannels = {
   projectsTouch: 'projects:touch',
   projectsToggleFavorite: 'projects:toggle-favorite',
   projectsChooseRoot: 'projects:choose-root',
+  tabsSaved: 'tabs:saved',
+  tabsSave: 'tabs:save',
   windowToggleFullHeight: 'window:toggle-full-height',
   windowShown: 'window:shown',
   windowOpenSettings: 'window:open-settings',

@@ -4,6 +4,7 @@ import type { Keymap, ShortcutId } from './keymap.ts'
 export interface ShortcutActions {
   newTab(): void
   closeTab(): void
+  renameTab(): void
   toggleReview(): void
   toggleReviewLayout(): void
   sendReview(): void
@@ -25,6 +26,7 @@ export function bindShortcuts(actions: ShortcutActions, keymap: Keymap): () => v
   const bindings: ReadonlyArray<readonly [ShortcutId, () => void]> = [
     ['newTab', actions.newTab],
     ['closeTab', actions.closeTab],
+    ['renameTab', actions.renameTab],
     ['nextTab', actions.nextTab],
     ['previousTab', actions.previousTab],
     ['settings', actions.openSettings],

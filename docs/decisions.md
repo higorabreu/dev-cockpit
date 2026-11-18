@@ -984,6 +984,21 @@ of a 768 pixel screen the Tabs and Agent lists show one row and cover the top or
 the compact geometry from `menu-view.ts`, the placement in the controller and the `--wheel` and `top` rules
 in `styles/hold-menu.css`, and set the card back to `position: relative` in the centered flex scrim.
 
+## D62. A tab is renamed in place and keeps its automatic name underneath
+
+**Decision:** the tab's name turns into a field on the tab itself, opened by a double-click on the tab, by
+Rename tab in its context menu and in the hold menu's Tabs list, and by `Ctrl+Shift+R` (`⇧⌘R` on the Mac)
+for the active tab. Enter or a click elsewhere keeps the name, Esc leaves the old one, and an empty field
+brings back the automatic name, which shows in the field as its hint. The automatic name stays what it
+was (the project's name, or "shell N"); a typed name only covers it. A name is at most 64 characters,
+trimmed, with its spaces joined. While the field is open the tab bar does not redraw, so an attention mark
+arriving then shows once the edit ends.
+**Reason:** the maintainer asked to name a tab beyond the folder it opened in (2026-11-17). Editing in place
+was chosen over a small dialog: it keeps the eye on the tab and costs no extra surface. Following the
+terminal's current folder was offered and declined: the automatic name stays as it was.
+**How to revert:** drop `renameTab` and `autoLabel` from `core/src/tabs/tabs.ts`, `rename` from
+`ui/src/tabs/tab-bar.ts`, the `renameTab` shortcut, the menu items and the `.tab-name` styles.
+
 ## D63. The hold menu has no tab switcher
 
 **Decision:** the tab switcher of D12 (Space with the trigger held, a card of tabs by most recent use) is
@@ -995,3 +1010,19 @@ side panel, and out of a short window. The tab bar already does the job.
 **How to revert:** bring back `core/src/tab-switcher/`, `recentTabs` in `core/src/tabs/tabs.ts`, the
 switcher mode of `ui/src/hold-menu/hold-menu-controller.ts` with its Space key, `switcherMarkup` in
 `menu-view.ts`, its styles in `hold-menu.css` and the `menu.switcher.*` texts.
+
+## D64. The tabs of the last run open again on start
+
+**Decision:** on start the window opens the tabs of the last run in their order, each in the folder its
+terminal was in (it follows `cd`), with the name the user gave it, and activates the one that was. A
+project's tab keeps its project's name and stays tied to the project. A folder that is gone opens the
+home folder. What ran in a tab (an agent, a server) does not come back: only its shell, in its folder.
+The window writes `open-tabs.json` in the app's data folder after every change of the tabs and every
+`cd` the watcher sees, debounced and only when something changed; the host validates it with zod and
+writes it atomically. "Reopen the tabs on start" in the Window group of the settings turns it off; it is
+on by default.
+**Reason:** the maintainer asked for the tabs, by folder and with their names, to survive a restart
+(2026-11-17), and chose the terminal's current folder over the one the tab opened in.
+**How to revert:** drop `core/src/tabs/saved-tabs.ts`, the `tabs` part of the host API and its channels,
+`shell/src/tabs/saved-tabs-file.ts`, the `window.restoreTabs` setting and `restoreTabs` and
+`saveTabsSoon` in `ui/src/app.ts`, and open one tab on start again.

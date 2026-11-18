@@ -19,6 +19,7 @@ describe('createKeymap labels', () => {
   it.each([
     ['newTab', 'Ctrl+Shift+T', '⌘T'],
     ['closeTab', 'Ctrl+Shift+W', '⌘W'],
+    ['renameTab', 'Ctrl+Shift+R', '⇧⌘R'],
     ['nextTab', 'Ctrl+Tab', '⌃Tab'],
     ['previousTab', 'Ctrl+Shift+Tab', '⌃⇧Tab'],
     ['settings', 'Ctrl+,', '⌘,'],
