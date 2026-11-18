@@ -398,6 +398,8 @@ export function registerHostBridge(options: BridgeOptions) {
   })
 
   return {
+    // The shell of each open terminal, to read what runs in it before quitting
+    pids: () => [...sessions.values()].map((session) => session.pid),
     killAll() {
       for (const session of sessions.values()) session.kill()
       sessions.clear()

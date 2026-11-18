@@ -118,6 +118,12 @@ export const en: Record<MessageKey, string> = {
   'updates.menu.install': 'Update to {version}',
   'updates.menu.page': "What's new in {version}",
 
+  'quit.title': 'Quit Dev Cockpit?',
+  'quit.running.one': '{count} tab has a program running.',
+  'quit.running.other': '{count} tabs have a program running.',
+  'quit.confirm': 'Quit',
+  'quit.cancel': 'Cancel',
+
   'terminal.exited': '[process exited]',
   'terminal.openLink': '{modifier}+click',
   'terminal.openPath': '{modifier}+click to open',

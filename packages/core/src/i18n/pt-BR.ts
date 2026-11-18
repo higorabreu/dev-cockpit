@@ -117,6 +117,12 @@ export const ptBR = {
   'updates.menu.install': 'Atualizar para {version}',
   'updates.menu.page': 'Novidades da {version}',
 
+  'quit.title': 'Sair do Dev Cockpit?',
+  'quit.running.one': '{count} aba tem um programa em execução.',
+  'quit.running.other': '{count} abas têm um programa em execução.',
+  'quit.confirm': 'Sair',
+  'quit.cancel': 'Cancelar',
+
   'terminal.exited': '[processo encerrado]',
   'terminal.openLink': '{modifier}+clique',
   'terminal.openPath': '{modifier}+clique para abrir',

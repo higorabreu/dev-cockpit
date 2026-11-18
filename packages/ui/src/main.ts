@@ -46,6 +46,7 @@ await startApp(
     edgeSize: element('edge-size'),
     notice: element('notice'),
     menu: element('tab-menu'),
+    quit: element('quit'),
     search: element('search'),
     searchInput: element('search-input') as HTMLInputElement,
     searchResults: element('search-results'),
