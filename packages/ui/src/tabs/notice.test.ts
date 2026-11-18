@@ -86,7 +86,7 @@ describe('createNotice compact form', () => {
     text.textContent = 'Version 0.10.0 available'
     const icon = document.createElement('button')
     icon.setAttribute('aria-label', 'Version 0.10.0 available')
-    return { element, notice, room, text, icon }
+    return { element, notice, room, text, icon, strip }
   }
 
   it('should show the full form when the tabs keep their room beside it', () => {
@@ -152,6 +152,39 @@ describe('createNotice compact form', () => {
     expect(element.style.minWidth).toBe('')
     expect(element.style.minHeight).toBe('')
     expect([...element.childNodes]).toEqual([icon])
+  })
+
+  it('should end the strip where the full form would while a copy shows over the compact form', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const { notice, text, icon, strip } = compactSetup(300)
+    notice.setLasting([text], [icon])
+
+    // Act
+    notice.copied('abc')
+    const during = {
+      covered: strip.dataset.covered,
+      width: strip.style.getPropertyValue('--covered'),
+    }
+    vi.advanceTimersByTime(2000)
+
+    // Assert: the strip hides what the full form takes beyond the icon, then shows it all again
+    expect(during).toEqual({ covered: '', width: `${FULL - ICON}px` })
+    expect(strip.dataset.covered).toBeUndefined()
+    expect(strip.style.getPropertyValue('--covered')).toBe('')
+  })
+
+  it('should leave the strip whole when a copy shows over the full form', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const { notice, text, icon, strip } = compactSetup(MIN_STRIP_PX)
+    notice.setLasting([text], [icon])
+
+    // Act
+    notice.copied('abc')
+
+    // Assert
+    expect(strip.dataset.covered).toBeUndefined()
   })
 
   it('should stay full when the notice has no compact form', () => {

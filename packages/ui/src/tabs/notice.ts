@@ -29,8 +29,21 @@ export function createNotice(element: HTMLElement, i18n: Translator, strip?: HTM
     element.replaceChildren(...(small ? compact : full))
   }
 
+  // While a copy shows over the compact form, the strip ends where the full form would end it
+  function cover(covered: number | undefined) {
+    if (!strip) return
+    if (covered === undefined) {
+      delete strip.dataset.covered
+      strip.style.removeProperty('--covered')
+      return
+    }
+    strip.dataset.covered = ''
+    strip.style.setProperty('--covered', `${covered}px`)
+  }
+
   function showLasting() {
     timer = undefined
+    cover(undefined)
     element.style.removeProperty('min-width')
     element.style.removeProperty('min-height')
     element.classList.toggle('lasting', full.length > 0)
@@ -66,8 +79,10 @@ export function createNotice(element: HTMLElement, i18n: Translator, strip?: HTM
         // A copy over the compact form leaves nothing in the flow: the height keeps the line drawn
         element.style.minHeight = `${box.height}px`
       }
-      // The compact form is too narrow for the copy: it shows over the end of the strip, out of the flow
+      // The compact form is too narrow for the copy: it shows over the end of the strip, out of the flow,
+      // at the place and with the clear room it has over the full form
       if (held > 0 && isCompact()) {
+        cover(Math.max(0, fullWidth - box.width))
         const over = document.createElement('span')
         over.className = 'notice-over'
         over.append(label, amount)

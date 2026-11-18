@@ -140,7 +140,7 @@ button.notice-icon:focus-visible {
 }
 
 /* A copy over the compact form lies over the end of the tab strip, out of the flow, so no tab moves; the
-   tabs under it fade as the strip's own edge does */
+   strip hides what the full notice would have taken (`#tabs[data-covered]`), so the text sits on the bar */
 .notice-over {
   position: absolute;
   top: 50%;
@@ -148,10 +148,8 @@ button.notice-icon:focus-visible {
   transform: translateY(-50%);
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  padding-left: 24px;
-  background: rgb(var(--bg-rgb));
-  mask-image: linear-gradient(to right, transparent, #000 24px);
+  /* The gap a copy has over the full form, so both read the same */
+  gap: 6px;
 }
 
 #tab-menu {
