@@ -1193,8 +1193,10 @@ menu key becomes a recorder like the global key: one key that types nothing, by 
 the reason, and the earlier values stay valid. Held, a mouse trigger opens the wheel as the key does,
 moving selects, releasing runs and Esc cancels; while it is the trigger its own mousedown, mouseup,
 click, auxclick and context menu are consumed, so Linux's middle-click paste, a program's mouse report
-and back or forward do not happen. Keys inside panels (the review's single keys, arrows in lists) stay
-fixed.
+and back or forward do not happen. The wheel is drawn above Settings, the views, the search and the tab
+list, so a trigger tried right after recording it opens in sight (it used to open under Settings, unseen);
+only the quit card and the tooltip stay above it. Keys inside panels (the review's single keys, arrows in
+lists) stay fixed.
 **Reason:** the maintainer's choice on 2026-11-18, on top of D68: people bring keys from other terminals
 and editors, and a MacBook or a mouse with side buttons has no right Ctrl to hold. Swap in place keeps a
 conflict a one-click choice, without a modal. Checked on Linux under Xvfb with the PC keyboard and with
