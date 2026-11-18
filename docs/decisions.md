@@ -1284,3 +1284,28 @@ to name no authors.
 `core/src/about/about.ts`, `shell/src/updates/about-bridge.ts` and the `about` host API, and put the
 Updates row back in System.
 
+## D74. On a narrow window the update notice is one icon with a menu, and a middle click closes a tab
+
+**Decision:** [plans/tab-bar-refinements.md](../plans/tab-bar-refinements.md). The update notice (D71)
+keeps its text and buttons while the tab strip keeps at least 508 px beside it (three tabs at their widest,
+168 px each); with less it becomes one 26 px icon button, the size of the bar's own buttons: a download
+arrow drawn like the rail icons, with a dot for news to act on, a diamond in the warning color while a
+restart asks about running agents, a failure glyph in the critical color, and no dot and no menu while the
+download or the install runs. Its tooltip and name are the full notice's text; a click, Enter or Space
+opens the tab bar's own small menu (`tabs/tab-menu.ts`) with the same actions as the full notice in that
+state, and Esc gives the focus back to the icon. Restart chosen there with an agent running brings the menu
+back with Restart anyway and Cancel; nothing restarts by itself. The rule is measured, not a window
+breakpoint: the notice measures its full form whenever it changes and compares the room the strip would
+keep, so it follows the language, the state and the window's width, and never the number of tabs (opening a
+tab never changes the notice's form). A copy over the compact notice holds its box and shows over the end
+of the strip, out of the flow, fading the tabs under it like the strip's edge, so no tab moves. A middle
+click on a tab closes it with no question, the same path as the menu's Close and the close key; its press
+and release are cancelled, so Linux pastes no primary selection and nothing scrolls or takes the focus.
+When the middle button is the hold menu's trigger (`Mouse1`, D69) the click keeps that meaning.
+**Reason:** the maintainer's choice on 2026-11-18. At 1366 px the full notice is about 330 px and leaves the
+tabs more than 900; at 900 px it would leave them less than 480, and in the narrowest windows almost
+nothing. A fixed window width would break with the language and the state; a rule on the tabs' own width
+would make the notice change form as tabs open. Middle click to close is what browsers and terminals do.
+**How to revert:** drop the compact form from `ui/src/tabs/notice.ts` and `ui/src/updates/update-notice.ts`
+with its styles in `tab-notice-and-menu.css` and the `updates.downloadingPercent` text; drop the middle
+click listeners in `ui/src/tabs/tab-bar.ts` and `holdsMiddleButton` in `core/src/settings/hold-trigger.ts`.
