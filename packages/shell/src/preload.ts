@@ -117,6 +117,10 @@ const api: HostApi = {
     saved: () => ipcRenderer.invoke(hostChannels.tabsSaved),
     save: (tabs) => ipcRenderer.send(hostChannels.tabsSave, tabs),
   },
+  about: {
+    version: () => ipcRenderer.invoke(hostChannels.aboutVersion),
+    open: (link) => ipcRenderer.send(hostChannels.aboutOpen, link),
+  },
   updates: {
     state: () => ipcRenderer.invoke(hostChannels.updatesState),
     check: () => ipcRenderer.invoke(hostChannels.updatesCheck),

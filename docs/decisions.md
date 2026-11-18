@@ -1159,7 +1159,7 @@ from the keymap with its action and hold menu item, the `'last'` tab target, `Me
 ## D71. Updates from the project's GitHub releases, off until the user opts in
 
 **Decision:** [plans/auto-update.md](../plans/auto-update.md). The setting `system.updates` is `off` (the
-default), `notify` or `install`, a row in Settings > System with "Check now" beside it (disabled while
+default), `notify` or `install`, a row in Settings > About (moved there from System, beside the version) with "Check now" beside it (disabled while
 off) and the last check's answer in the row's line. Off, the cockpit never contacts GitHub. Notify and
 install read the public `releases/latest` endpoint of `higorabreu/dev-cockpit` five seconds after start
 and every 12 hours, with no token and only a `dev-cockpit/<version>` User-Agent; drafts, prereleases and
@@ -1190,3 +1190,19 @@ has not run yet.
 `@dck/adapter-github`, `platform/linux/deb-installer.ts`, `shell/src/updates`, the `updates` part of the
 host API and its channels, `ui/src/updates`, the lasting part of `ui/src/tabs/notice.ts`, the
 `system.updates` setting and its row, the `DCK-UPD-*` codes and the `build-mac` job.
+
+## D72. Settings has an About page with the version, the updates and the project's links
+
+**Decision:** a last page, About, names the cockpit and what it is, the version that runs (`about:version`
+from the host's `app.getVersion()`), the Updates row moved there from System, and four links: GitHub (the
+repository), What's new in this version (the release notes of the running version's tag), Report a problem
+(a blank new issue) and the AGPL-3.0 license. The window names a link (`about:open` with one of four names,
+validated with zod) and the host builds the address on the cockpit's own repository, so no address comes
+from the window. No people are named; the repository carries the authors.
+**Reason:** suggested by a colleague of the maintainer (2026-11-18); the maintainer chose to move the
+updates beside the version, to open a blank issue rather than one filled with the version and system, and
+to name no authors.
+**How to revert:** drop the `about` tab of `ui/src/settings/settings-view.ts` and its styles,
+`core/src/about/about.ts`, `shell/src/updates/about-bridge.ts` and the `about` host API, and put the
+Updates row back in System.
+

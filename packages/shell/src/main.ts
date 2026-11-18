@@ -79,6 +79,7 @@ import { createRecencyStore } from './projects/recency-store.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
 import { watchSettingsFile } from './settings/settings-watch.ts'
 import { createSavedTabsFile } from './tabs/saved-tabs-file.ts'
+import { registerAboutBridge } from './updates/about-bridge.ts'
 import { loadDismissedFile } from './updates/dismissed-file.ts'
 import { registerUpdateBridge } from './updates/update-bridge.ts'
 
@@ -430,6 +431,12 @@ app.whenReady().then(async () => {
     dismissed: await loadDismissedFile(join(app.getPath('userData'), 'updates.json'), logger),
     logger,
     onChange: (state) => send(hostChannels.updatesChanged, state),
+  })
+  registerAboutBridge({
+    ipcMain: ipc,
+    repository: RELEASES_REPOSITORY,
+    version: app.getVersion(),
+    openExternal: (url) => void electronShell.openExternal(url),
   })
   registerUpdateBridge({
     ipcMain: ipc,

@@ -5,7 +5,7 @@ hand. The maintainer asked for opt-in updates from the project's own GitHub rele
 
 Decided with the maintainer:
 
-- The setting `system.updates`: `off` (the default), `notify` or `install`, a row in Settings > System with
+- The setting `system.updates`: `off` (the default), `notify` or `install`, a row in Settings > About (first in System) with
   a "Check now" button beside it (disabled while off) that says the result in a short line ("Up to date",
   "Version X available").
 - `off`: the cockpit never contacts GitHub. `notify` and `install` check at start and every 12 hours, only

@@ -1,4 +1,5 @@
 import {
+  type AboutLink,
   acceleratorFromEvent,
   type ConnectionStatus,
   type Connector,
@@ -89,6 +90,7 @@ const TABS = [
   { id: 'projects', label: 'settings.group.projects' },
   { id: 'connections', label: 'settings.group.connections' },
   { id: 'system', label: 'settings.group.system' },
+  { id: 'about', label: 'settings.tab.about' },
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
@@ -112,6 +114,8 @@ export function createSettingsView(
   const t = i18n.t
   let recording = false
   let autostart = false
+  // The version that runs, asked of the host when the screen opens
+  let version: string | undefined
   // What the host knows of the cockpit's releases, for the Updates row
   let update: UpdateState | undefined
   // The fonts installed, asked for each time the screen opens so a font installed since then shows up
@@ -878,6 +882,36 @@ export function createSettingsView(
   const group = (title: string | undefined, ...rows: Child[]) =>
     h('section', { class: 'sgroup' }, title && h('h2', {}, title), ...rows)
 
+  // A link of the About page, opened by the host on the cockpit's own repository
+  function aboutLink(link: AboutLink, label: string): HTMLElement {
+    const button = h(
+      'button',
+      { type: 'button', class: 'slink', 'data-focus': `about-${link}` },
+      label,
+    )
+    button.addEventListener('click', () => api.about.open(link))
+    return button
+  }
+
+  // The cockpit by name, what it is, the version that runs and its pages
+  function aboutHead(): HTMLElement {
+    return h(
+      'section',
+      { class: 'sgroup sabout' },
+      h('h2', { class: 'sabout-name' }, 'Dev Cockpit'),
+      h('p', { class: 'shint' }, t('about.description')),
+      h('p', { class: 'sabout-version' }, version ? t('about.version', { version }) : ''),
+      h(
+        'p',
+        { class: 'sabout-links' },
+        aboutLink('repository', t('about.repository')),
+        aboutLink('releaseNotes', t('about.releaseNotes')),
+        aboutLink('issue', t('about.issue')),
+        aboutLink('license', t('about.license')),
+      ),
+    )
+  }
+
   function render() {
     const pending = focusNext
     const focused = pending ?? document.activeElement?.getAttribute('data-focus')
@@ -1097,7 +1131,6 @@ export function createSettingsView(
             checkbox('system.agentConnectHint'),
             t('settings.agentConnectHint.hint'),
           ),
-          updatesRow(),
         ),
         group(
           undefined,
@@ -1109,6 +1142,7 @@ export function createSettingsView(
           ),
         ),
       ],
+      about: [aboutHead(), group(undefined, updatesRow())],
     }
 
     body.replaceChildren(
@@ -1153,6 +1187,10 @@ export function createSettingsView(
     void loadConnections()
     void api.fonts.system().then((found) => {
       fonts = found
+      if (isOpen()) render()
+    })
+    void api.about.version().then((found) => {
+      version = found
       if (isOpen()) render()
     })
     void api.autostart.isEnabled().then((on) => {

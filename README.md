@@ -87,7 +87,7 @@ newer `.deb` over the old one. To start at login, tick **Start with the system**
 
 ## Updates
 
-Off by default: the cockpit makes no network call of its own. **Updates** in Settings > System chooses:
+Off by default: the cockpit makes no network call of its own. **Updates** in Settings > About chooses:
 
 - **Notify**: checks the project's GitHub releases at start and every 12 hours, without an account and
   sending nothing about you (only the version, in the User-Agent), and says "Version x.y.z available"
@@ -153,7 +153,7 @@ shortcut if the global key is refused.
 `Ctrl+,` opens the screen: language, theme, opacity, the interface and code fonts, the terminal's font,
 size and cursor (block, bar or underline, blinking or not), which Option is Meta on a Mac, window height, global key, hold menu key,
 projects folder, start with the system, the threshold to notify a long command, updates, the review layout
-and the GitLab and Jira connections. Everything applies at once. Settings live in a `settings.json` that can also be edited by
+and the GitLab and Jira connections; an About page shows the version and the project's links. Everything applies at once. Settings live in a `settings.json` that can also be edited by
 hand, like VS Code's: the button beside the screen's close (or Open the settings file in the hold menu's
 System list) opens it in your editor, it takes comments and trailing commas, and whatever you save
 applies at once while the screen's own changes keep your comments and layout. A value it cannot use goes

@@ -1,3 +1,4 @@
+import type { AboutLink } from '../about/about.ts'
 import type { AgentSignal } from '../attention/agent-signal.ts'
 import type { Connector } from '../connectors/connector.ts'
 import type { SystemFontsInfo } from '../fonts/fonts.ts'
@@ -139,6 +140,11 @@ export interface HostApi {
     saved(): Promise<SavedTabs | undefined>
     save(tabs: SavedTabs): void
   }
+  // The About page: the version that runs, and its links opened by name, the host knowing the addresses
+  readonly about: {
+    version(): Promise<string>
+    open(link: AboutLink): void
+  }
   // The cockpit's own releases; nothing takes an argument, the host knows the release and its files
   readonly updates: {
     state(): Promise<UpdateState>
@@ -213,6 +219,8 @@ export const hostChannels = {
   fontsSystem: 'fonts:system',
   tabsSaved: 'tabs:saved',
   tabsSave: 'tabs:save',
+  aboutVersion: 'about:version',
+  aboutOpen: 'about:open',
   updatesState: 'updates:state',
   updatesCheck: 'updates:check',
   updatesInstall: 'updates:install',

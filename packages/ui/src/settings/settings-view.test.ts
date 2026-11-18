@@ -97,6 +97,7 @@ const api = {
     status: async () => ({ kind: 'none' }),
   },
   autostart: { isEnabled: async () => false },
+  about: { version: async () => '0.9.0', open: () => undefined },
   updates: updatesHost().updates,
   fonts: {
     system: async () => ({
@@ -344,10 +345,10 @@ describe('settings view, agent connect hint', () => {
 describe('settings view, updates', () => {
   const systemPage = (initial: Settings, host: HostApi) => {
     const opened = open([], host, initial)
-    opened.body.querySelector<HTMLElement>('#settings-tab-system')?.click()
+    opened.body.querySelector<HTMLElement>('#settings-tab-about')?.click()
     const row = opened.body.querySelector<HTMLElement>('[data-setting="system.updates"]')
     const check = opened.body.querySelector<HTMLButtonElement>('[data-focus="set-updates-check"]')
-    if (!row || !check) throw new Error('invariant: the System page has the Updates row')
+    if (!row || !check) throw new Error('invariant: the About page has the Updates row')
     return { ...opened, row, check }
   }
   const withUpdates = (fake: ReturnType<typeof updatesHost>) =>
@@ -520,6 +521,7 @@ function connectionsHost(
       disconnect: async (): Promise<ConnectionStatus> => ({ kind: 'none' }),
     },
     autostart: { isEnabled: async () => false },
+    about: { version: async () => '0.9.0', open: () => undefined },
     updates: api.updates,
     fonts: api.fonts,
   } as unknown as HostApi
@@ -1111,6 +1113,31 @@ describe('settings view fonts and cursor', () => {
       { terminal: { cursorStyle: 'bar' } },
       { terminal: { cursorBlink: false } },
     ])
+    view.close()
+  })
+})
+
+describe('settings view, about', () => {
+  it('should name the cockpit, the version that runs and open its pages by name', async () => {
+    // Arrange
+    const asked: string[] = []
+    const host = {
+      ...api,
+      about: { version: async () => '1.2.3', open: (link: string) => void asked.push(link) },
+    } as unknown as HostApi
+    const { body, view } = open([], host)
+    await settle()
+
+    // Act
+    body.querySelector<HTMLElement>('#settings-tab-about')?.click()
+    for (const link of ['repository', 'releaseNotes', 'issue', 'license'])
+      body.querySelector<HTMLButtonElement>(`[data-focus="about-${link}"]`)?.click()
+
+    // Assert
+    expect(body.querySelector('.sabout-name')?.textContent).toBe('Dev Cockpit')
+    expect(body.querySelector('.sabout-version')?.textContent).toBe('Version 1.2.3')
+    expect(body.querySelector('[data-setting="system.updates"]')).not.toBeNull()
+    expect(asked).toEqual(['repository', 'releaseNotes', 'issue', 'license'])
     view.close()
   })
 })
