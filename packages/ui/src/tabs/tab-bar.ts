@@ -56,7 +56,7 @@ export function createTabBar(
   container.style.scrollPaddingInline = `${FADE_PX}px`
   container.addEventListener('scroll', syncEdges, { passive: true })
   new ResizeObserver(syncEdges).observe(container)
-  // A roda vertical rola a barra na horizontal
+  // The vertical wheel scrolls the bar sideways
   container.addEventListener(
     'wheel',
     (event) => {

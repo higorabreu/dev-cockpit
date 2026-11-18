@@ -24,7 +24,13 @@ describe('createAttentionTracker', () => {
 
     const event = tracker.update('a', idle, false)
 
-    expect(event).toEqual({ tabId: 'a', process: 'pnpm', durationMs: 5000, notify: false })
+    expect(event).toEqual({
+      tabId: 'a',
+      source: 'command',
+      process: 'pnpm',
+      durationMs: 5000,
+      notify: false,
+    })
     expect(tracker.unseenIds()).toEqual(['a'])
     expect(tracker.finished('a')).toEqual({ process: 'pnpm', durationMs: 5000 })
   })

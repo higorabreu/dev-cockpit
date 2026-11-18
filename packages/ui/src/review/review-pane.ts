@@ -2,6 +2,7 @@ import {
   type AgentState,
   type BranchInfo,
   branchName,
+  carryGaps,
   changeRows,
   type DiffFile,
   type DiffGap,
@@ -26,6 +27,7 @@ import { displayPath } from '../panel/format.ts'
 import type { Keymap } from '../platform/keymap.ts'
 import { createDiffView, LINE_HEIGHT } from './diff-view.ts'
 import { counts, createFileList } from './file-list.ts'
+import { watchHead } from './head-fit.ts'
 import { createReviewComments } from './review-comments.ts'
 import { createReviewRefresh } from './review-refresh.ts'
 import { createReviewSend } from './review-send.ts'
@@ -120,14 +122,16 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   let cwd: string | undefined
   let orientation: Orientation | undefined
   let focusInside = false
+  // The tab's program reported its state: the marks and the send agree it is an agent
+  let reporting = false
   // The next drawing starts the diff at the top: a new scope or whitespace setting is a new reading
   let resetReading = true
   // Per file path: the gaps the user opened, the text that fills them and the collapse they lifted
   const expanded = new Map<string, Set<number>>()
   const texts = new Map<string, readonly string[]>()
   const shownAnyway = new Set<string>()
-  // A file whose hunks moved since the last read loses its open gaps, which named the old hunks
-  const shapes = new Map<string, string>()
+  // Each file as last read: a file whose hunks moved finds its open gaps again by their old lines
+  const lastRead = new Map<string, DiffFile>()
   // Files marked viewed in this tab, per scope and whitespace setting, each tied to the change it had;
   // a mark that went away because the file changed again is remembered to say so
   const viewedMarks = new Map<string, string>()
@@ -214,6 +218,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   })
   // Beside the other header controls, before the index toggle
   head.insertBefore(sender.element, indexToggle)
+  watchHead(head, select.element)
 
   const list = createFileList({
     id: deps.id,
@@ -244,6 +249,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const body = h('div', { class: 'rv-body' }, list.element, diff.element)
   const message = h('div', { class: 'rv-state' })
   const hints = hintBar()
+  new ResizeObserver(() => fitHints()).observe(hints)
   const element = h(
     'section',
     { class: 'review', id: deps.id, tabindex: '-1' },
@@ -302,22 +308,41 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       if (root !== state.diff.root) {
         texts.clear()
         expanded.clear()
-        shapes.clear()
+        lastRead.clear()
       }
-      root = state.diff.root
+      const repository = state.diff.root
+      root = repository
       branch = state.diff.branch
+      const reread: DiffFile[] = []
       for (const file of state.diff.files) {
-        const shape = file.hunks.map((hunk) => `${hunk.newStart},${hunk.newCount}`).join(' ')
-        if (shapes.get(file.path) !== shape) {
-          expanded.delete(file.path)
-          texts.delete(file.path)
-        }
-        shapes.set(file.path, shape)
+        const before = lastRead.get(file.path)
+        const opened = expanded.get(file.path)
+        lastRead.set(file.path, file)
+        if (!before || sameShape(before, file)) continue
+        texts.delete(file.path)
+        if (!opened || opened.size === 0) continue
+        expanded.set(file.path, new Set(carryGaps(before, file, opened)))
+        reread.push(file)
       }
+      // The moved file's text is read again before the draw, so its open gaps never flash shut
+      await Promise.all(reread.map((file) => readText(repository, file)))
       reconcileMarks(state.diff.files)
       comments.relocate(state.diff.files)
     }
     draw()
+  }
+
+  const shapeOf = (file: DiffFile) =>
+    file.hunks.map((hunk) => `${hunk.newStart},${hunk.newCount}`).join(' ')
+  const sameShape = (a: DiffFile, b: DiffFile) => shapeOf(a) === shapeOf(b)
+
+  // The working tree's text of a file, which every opened gap of it shows; false when it cannot be read
+  async function readText(repository: string, file: DiffFile): Promise<boolean> {
+    if (texts.has(file.path)) return true
+    const lines = await api.review.fileLines(repository, file.path)
+    if (!lines.ok) return false
+    texts.set(file.path, lines.value)
+    return true
   }
 
   // The field for the selected lines, or the cursor's line, of a file of the change
@@ -347,13 +372,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     const opened = expanded.get(file.path) ?? new Set<number>()
     opened.add(gap.id)
     expanded.set(file.path, opened)
-    if (!texts.has(file.path)) {
-      const lines = await api.review.fileLines(state.diff.root, file.path)
-      if (!lines.ok) {
-        opened.delete(gap.id)
-        return
-      }
-      texts.set(file.path, lines.value)
+    if (!(await readText(state.diff.root, file))) {
+      opened.delete(gap.id)
+      return
     }
     drawDiff()
   }
@@ -467,7 +488,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   let hintsFor: string | undefined
   function drawHints() {
     const withFiles = state.kind === 'ok' && state.diff.files.length > 0
-    const key = `${withFiles} ${focusInside}`
+    // In the comment field only its own keys apply
+    const typing = document.activeElement instanceof HTMLTextAreaElement && focusInside
+    const key = `${withFiles} ${focusInside} ${typing}`
     if (hintsFor === key) return
     hintsFor = key
     if (!focusInside) {
@@ -476,21 +499,46 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       hints.replaceChildren(come)
       return
     }
+    if (typing) {
+      hints.replaceChildren(
+        keyHint(deps.keymap.commandLabel('Enter'), t('review.hint.save')),
+        keyHint('Esc', t('review.hint.cancel')),
+      )
+      return
+    }
     const refreshAction = actionHint(deps.keymap.commandLabel('r'), t('review.refresh'))
     refreshAction.addEventListener('click', () => refresh.request())
+    // The number is the order in which a hint gives way when the bar has no room for all of them
+    const droppable = (hint: HTMLElement, order: number) => {
+      hint.dataset.drop = String(order)
+      return hint
+    }
     hints.replaceChildren(
       ...(withFiles
         ? [
-            keyHint('↑↓', t('review.hint.navigate')),
-            keyHint('[ ]', t('review.hint.file')),
-            keyHint('n p', t('review.hint.hunk')),
-            keyHint('c', t('review.hint.comment')),
-            keyHint('v', t('review.hint.viewed')),
+            droppable(keyHint('↑↓', t('review.hint.navigate')), 5),
+            droppable(keyHint('[ ]', t('review.hint.file')), 3),
+            droppable(keyHint('n p', t('review.hint.hunk')), 2),
+            droppable(keyHint('c', t('review.hint.comment')), 4),
+            droppable(keyHint('v', t('review.hint.viewed')), 1),
           ]
         : []),
       keyHint('Esc', t('review.hint.terminal')),
       refreshAction,
     )
+    fitHints()
+  }
+
+  // The way back to the terminal and Refresh always stay; the review's keys give way one by one
+  function fitHints() {
+    const droppable = [...hints.querySelectorAll<HTMLElement>('[data-drop]')].sort(
+      (a, b) => Number(a.dataset.drop) - Number(b.dataset.drop),
+    )
+    for (const hint of droppable) hint.hidden = false
+    for (const hint of droppable) {
+      if (hints.scrollWidth <= hints.clientWidth) return
+      hint.hidden = true
+    }
   }
 
   function drawStatus() {
@@ -504,13 +552,22 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     }
     const { diff: found } = state
     const viewed = found.files.filter(isViewed).length
+    const count = found.files.length
+    if (viewed === 0) {
+      totals.replaceChildren(
+        h('span', { class: 'rv-tally' }, i18n.plural('review.files', count)),
+        counts(found.additions, found.deletions),
+      )
+      return
+    }
+    const full = i18n.plural('review.viewedFiles', count, { viewed })
+    // A narrow review shows only the numbers; the whole sentence is in the tooltip
     totals.replaceChildren(
+      h('span', { class: 'rv-tally' }, full),
       h(
         'span',
-        {},
-        viewed === 0
-          ? i18n.plural('review.files', found.files.length)
-          : i18n.plural('review.viewedFiles', found.files.length, { viewed }),
+        { class: 'rv-tally-short', 'data-tip': full },
+        t('review.viewedFiles.short', { viewed, count }),
       ),
       counts(found.additions, found.deletions),
     )
@@ -646,8 +703,10 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     indexToggle.hidden = !withFiles
     drawState()
     drawHints()
-    // A focused list or diff that a new state hid would leave the keys on the page's body
-    if (focusInside && !element.contains(document.activeElement)) pane.focus()
+    // A focused list or diff that a new state hid would leave the keys on the page's body, and the pane
+    // itself, focused while it loaded, takes no review key: both hand the keys to the diff or the index
+    const resting = document.activeElement === element && withFiles
+    if (focusInside && (resting || !element.contains(document.activeElement))) pane.focus()
   }
 
   function keyTarget(target: EventTarget | null) {
@@ -681,8 +740,13 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     event.stopPropagation()
   })
   // Where the keys are decides the hints: the review's own, or the way back to it
-  element.addEventListener('focusin', () => {
+  element.addEventListener('focusin', (event) => {
     focusInside = true
+    // A click on a bare part of the pane focuses the pane itself, where the review's keys do nothing
+    if (event.target === element && state.kind === 'ok' && state.diff.files.length > 0) {
+      pane.focus()
+      return
+    }
     drawHints()
   })
   element.addEventListener('focusout', (event) => {
@@ -709,17 +773,26 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   close.addEventListener('click', () => deps.onClose())
 
   const onVisibility = () => refresh.visibility()
+  // A focused child that a redraw removed sends a focusout with no target, so the review cannot tell
+  // the keys left it until the focus arrives somewhere else
+  const onFocusElsewhere = (event: FocusEvent) => {
+    if (!focusInside || (event.target instanceof Node && element.contains(event.target))) return
+    focusInside = false
+    drawHints()
+  }
 
   const pane = {
     element,
     open() {
       document.addEventListener('visibilitychange', onVisibility)
+      document.addEventListener('focusin', onFocusElsewhere)
       refresh.open()
       diff.unpark()
     },
     // The reading stays: reopened in the same tab, the review is where it was left
     close() {
       document.removeEventListener('visibilitychange', onVisibility)
+      document.removeEventListener('focusin', onFocusElsewhere)
       diff.park()
       refresh.close()
     },
@@ -732,9 +805,12 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     },
     hasFocus: () => element.contains(document.activeElement),
     send: () => sender.send(),
-    agentState: (agent: AgentState | undefined) => refresh.agentState(agent),
+    agentState(agent: AgentState | undefined) {
+      reporting = agent !== undefined
+      refresh.agentState(agent)
+    },
     // The watcher's read of the tab: the send button follows what runs in its terminal
-    activity: (info: SessionActivityInfo | undefined) => sender.sync(info),
+    activity: (info: SessionActivityInfo | undefined) => sender.sync(info, reporting),
     // How the tab shows the review: beside or below the terminal, or alone in a narrow tab
     setArrangement(next: Orientation | undefined, narrow: boolean) {
       orientation = next

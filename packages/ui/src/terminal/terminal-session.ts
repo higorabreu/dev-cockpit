@@ -100,13 +100,11 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   terminal.onKey(() => options.onInput?.())
   terminal.onResize(({ cols, rows }) => api.pty.resize(id, cols, rows))
   let lastOutputAt = Date.now()
-  const stopData = api.pty.onData((sessionId, data) => {
-    if (sessionId !== id) return
+  const stopData = api.pty.onData(id, (data) => {
     lastOutputAt = Date.now()
     terminal.write(data)
   })
-  const stopExit = api.pty.onExit((sessionId) => {
-    if (sessionId !== id) return
+  const stopExit = api.pty.onExit(id, () => {
     terminal.write(`\r\n${options.exitedText}\r\n`)
     options.onExit()
   })

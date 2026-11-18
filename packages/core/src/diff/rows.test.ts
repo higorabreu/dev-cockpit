@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DiffFile } from './diff.ts'
 import { parseUnifiedDiff } from './parse.ts'
-import { changedPairs, diffGaps, diffRows, gapSize } from './rows.ts'
+import { carryGaps, changedPairs, diffGaps, diffRows, gapSize } from './rows.ts'
 
 // A 30-line file where lines 5 and 20 changed and line 25 was removed
 const text = [
@@ -69,6 +69,62 @@ describe('diffGaps', () => {
       [1, 4, 0],
       [5, 8, 2],
     ])
+  })
+})
+
+describe('carryGaps', () => {
+  // The same file after the agent also changed line 10: a new hunk comes in and every later gap moves
+  const edited = (): DiffFile => {
+    const [file] = parseUnifiedDiff(
+      [
+        'diff --git a/a.ts b/a.ts',
+        '--- a/a.ts',
+        '+++ b/a.ts',
+        '@@ -4,3 +4,3 @@ function one() {',
+        ' l4',
+        '-l5',
+        '+L5',
+        ' l6',
+        '@@ -10,1 +10,2 @@',
+        '-l10',
+        '+L10',
+        '+more',
+        '@@ -19,3 +20,4 @@ function two() {',
+        ' l19',
+        '-l20',
+        '+L20',
+        '+extra',
+        ' l21',
+        '@@ -24,3 +26,2 @@',
+        ' l24',
+        '-l25',
+        ' l26',
+        '',
+      ].join('\n'),
+    )
+    if (!file) throw new Error('invariant: no file parsed')
+    return { ...file, newLineCount: 31 }
+  }
+
+  it('should find the opened gaps again by their old lines when an edit elsewhere moved their ids', () => {
+    // Arrange: the gaps that start at old lines 7, 22 and 27 were opened
+    const opened = new Set([1, 2, 3])
+
+    // Act
+    const carried = carryGaps(parsed(), edited(), opened)
+
+    // Assert
+    expect([...carried].sort()).toEqual([1, 3, 4])
+  })
+
+  it('should keep every opened gap when the file did not move', () => {
+    expect([...carryGaps(parsed(), parsed(), new Set([0, 3]))].sort()).toEqual([0, 3])
+  })
+
+  it('should drop an opened gap when the new read has no gap starting at its old line', () => {
+    const noGaps = { ...edited(), hunks: [] }
+
+    expect([...carryGaps(parsed(), noGaps, new Set([0, 1]))]).toEqual([])
   })
 })
 

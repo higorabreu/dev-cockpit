@@ -46,30 +46,37 @@ describe('wheelSize', () => {
 })
 
 describe('placeWheel', () => {
-  // Seven rows of 33 pixels in a list with a 12 pixel frame, measured with every row on screen
-  const seven = { total: 7, rows: 7, height: 243, pitch: 33, cues: 0 }
+  // Seven rows of 33 pixels in a list 250 wide with a 12 pixel frame, measured with every row on screen
+  const seven = { total: 7, rows: 7, height: 243, pitch: 33, cues: 0, width: 250 }
+  // A band of the window's height, across a window 1920 wide (8 pixels kept from each side)
+  const room = (top: number, bottom: number, width = 1920) => ({
+    top,
+    bottom,
+    left: 8,
+    right: width - 8,
+  })
 
   it('should keep the wheel centered when its list fits there', () => {
     // Arrange
-    const band = { top: 8, bottom: 1072 }
+    const space = room(8, 1072)
 
     // Act
-    const placement = placeWheel(0, 4, band, seven)
+    const placement = placeWheel(0, 4, space, seven)
 
     // Assert
-    expect(placement.layout).toEqual({ size: WHEEL_SIZE, top: 442, overlap: 0 })
+    expect(placement.layout).toEqual({ size: WHEEL_SIZE, top: 442, left: 862, overlap: 0 })
     expect(placement.rows).toBe(7)
   })
 
   it('should move the wheel down only as far as the list above it needs', () => {
-    const placement = placeWheel(0, 4, { top: 8, bottom: 497 }, seven)
+    const placement = placeWheel(0, 4, room(8, 497), seven)
 
     expect(placement.layout.top).toBe(263)
     expect(placement.rows).toBe(7)
   })
 
   it('should move the wheel up when the list opens below it', () => {
-    const placement = placeWheel(2, 4, { top: 8, bottom: 497 }, seven)
+    const placement = placeWheel(2, 4, room(8, 497), seven)
 
     expect(placement.layout.top).toBe(46)
     expect(placement.rows).toBe(7)
@@ -77,21 +84,47 @@ describe('placeWheel', () => {
 
   it('should keep the wheel inside the band and window the list when even moving is not enough', () => {
     // Measured with every row on screen, before the cues take their room
-    const placement = placeWheel(0, 4, { top: 8, bottom: 334 }, seven)
+    const placement = placeWheel(0, 4, room(8, 334), seven)
 
-    expect(placement.layout).toEqual({ size: COMPACT_WHEEL, top: 170, overlap: 0 })
+    expect(placement.layout).toEqual({ size: COMPACT_WHEEL, top: 170, left: 878, overlap: 0 })
     expect(placement.rows).toBe(4)
   })
 
   it('should keep a pinned wheel still and fit the list to the room it has there', () => {
-    const placement = placeWheel(0, 4, { top: 8, bottom: 497 }, seven, 150)
+    const placement = placeWheel(0, 4, room(8, 497), seven, { top: 150, left: 300 })
 
     expect(placement.layout.top).toBe(150)
+    expect(placement.layout.left).toBe(300)
     expect(placement.rows).toBe(3)
   })
 
+  it('should move the wheel left only as far as a list opening to its right needs', () => {
+    // Arrange: a window 683 wide; centered, the right list would end at 341 + 110 + 340
+    const wide = { ...seven, width: 340 }
+
+    // Act
+    const placement = placeWheel(1, 4, room(8, 334, 683), wide)
+
+    // Assert: the list now ends at the window's margin
+    const { left, size } = placement.layout
+    expect(left + size / 2 + size / 2 + 12 + 340).toBe(675)
+  })
+
+  it('should move the wheel right when a list opening to its left needs it', () => {
+    const placement = placeWheel(3, 4, room(8, 334, 683), { ...seven, width: 340 })
+
+    const { left, size } = placement.layout
+    expect(left + size / 2 - (size / 2 + 12) - 340).toBe(8)
+  })
+
+  it('should keep the wheel centered across when its side list fits', () => {
+    const placement = placeWheel(1, 4, room(8, 1072), seven)
+
+    expect(placement.layout.left).toBe(862)
+  })
+
   it('should keep the list off the wheel when one row fits above it', () => {
-    const placement = placeWheel(0, 4, { top: 8, bottom: 280 }, seven)
+    const placement = placeWheel(0, 4, room(8, 280), seven)
 
     expect(placement.layout.overlap).toBe(0)
     expect(placement.rows).toBeGreaterThanOrEqual(1)
@@ -99,20 +132,20 @@ describe('placeWheel', () => {
 
   it('should lay the list over part of the wheel when not one row fits above it', () => {
     // Arrange: the compact wheel at the bottom of the band leaves 46 pixels above it
-    const band = { top: 8, bottom: 230 }
+    const space = room(8, 230)
 
     // Act
-    const placement = placeWheel(0, 4, band, seven)
+    const placement = placeWheel(0, 4, space, seven)
 
     // Assert: one row between the cues takes 93 pixels with this frame
-    expect(placement.layout).toEqual({ size: COMPACT_WHEEL, top: 66, overlap: 47 })
+    expect(placement.layout).toEqual({ size: COMPACT_WHEEL, top: 66, left: 878, overlap: 47 })
     expect(placement.rows).toBe(1)
   })
 
   it('should keep a short list off the wheel when it fits whole above it', () => {
-    const one = { total: 1, rows: 1, height: 45, pitch: 33, cues: 0 }
+    const one = { total: 1, rows: 1, height: 45, pitch: 33, cues: 0, width: 220 }
 
-    const placement = placeWheel(0, 4, { top: 8, bottom: 250 }, one)
+    const placement = placeWheel(0, 4, room(8, 250), one)
 
     expect(placement.layout.overlap).toBe(0)
     expect(placement.rows).toBe(1)
@@ -197,6 +230,7 @@ describe('fitRows', () => {
     height: 14 + rows * 33 + cues,
     pitch: 33,
     cues,
+    width: 250,
   })
 
   it('should show every row when the whole list fits the limit', () => {

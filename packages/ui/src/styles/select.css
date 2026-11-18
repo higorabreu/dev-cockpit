@@ -1,5 +1,7 @@
-/* The closed control matches the text inputs of a settings row */
+/* The closed control matches the text inputs of a settings row, and never grows past its container */
 .select {
+  max-width: 100%;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -27,14 +29,19 @@
   color: var(--muted);
 }
 
-/* Every label shares one cell, so the control is as wide as the longest one and does not jump */
+/* Every label shares one cell, so the control is as wide as the longest one and does not jump; with less
+   room the cell narrows and the current label ends in an ellipsis, whole in its tooltip */
 .select-value {
+  min-width: 0;
   display: grid;
+  grid-template-columns: minmax(0, max-content);
 }
 
 /* Only the other labels are hidden: the current one inherits, so it hides with an inactive tab */
 .select-value > span {
   grid-area: 1 / 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

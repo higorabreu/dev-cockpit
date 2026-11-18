@@ -84,8 +84,8 @@ export function createFileList(deps: FileListDeps) {
     const name = i18n.t('review.a11y.file', {
       path: file.path,
       status,
-      added: file.additions,
-      removed: file.deletions,
+      added: i18n.plural('review.a11y.added', file.additions),
+      removed: i18n.plural('review.a11y.removed', file.deletions),
     })
     const element = h(
       'div',

@@ -38,6 +38,12 @@ export interface Band {
   readonly bottom: number
 }
 
+// The band and the window's sides, each already inside the margin the menu keeps from the edges
+export interface Room extends Band {
+  readonly left: number
+  readonly right: number
+}
+
 // The window's height free for the menu: the tab bar sits under the terminal, or on top in full screen
 export function listBand(
   bar: { readonly top: number; readonly bottom: number; readonly height: number },
@@ -83,6 +89,7 @@ export interface ListMeasure {
   readonly pitch: number
   // Height of the overflow cues on screen, zero when the list was not windowed
   readonly cues: number
+  readonly width: number
 }
 
 // Height of the list with every row on screen
@@ -101,8 +108,9 @@ export function fitRows(measure: ListMeasure, limit: number): number {
 
 export interface WheelLayout {
   readonly size: number
-  // The wheel's top edge, in pixels from the window's top
+  // The wheel's top left corner, in pixels from the window's
   readonly top: number
+  readonly left: number
   // How far a vertical list moves onto the wheel, in a window too short for one row of it
   readonly overlap: number
 }
@@ -115,9 +123,10 @@ export function wheelSize(band: Band): number {
   return Math.max(MIN_WHEEL, Math.min(COMPACT_WHEEL, height))
 }
 
-export function centeredLayout(band: Band): WheelLayout {
-  const size = wheelSize(band)
-  return { size, top: (band.top + band.bottom - size) / 2, overlap: 0 }
+export function centeredLayout(room: Room): WheelLayout {
+  const size = wheelSize(room)
+  const top = (room.top + room.bottom - size) / 2
+  return { size, top, left: (room.left + room.right - size) / 2, overlap: 0 }
 }
 
 // Centered on the band, moved away from its list only as far as the list needs, and kept inside the band
@@ -128,30 +137,51 @@ function wheelTop(anchor: ListAnchor, size: number, band: Band, need: number): n
   return Math.min(Math.max(top, band.top), Math.max(band.top, band.bottom - size))
 }
 
+// Centered across the window, moved sideways away from its list only as far as the list's width needs: a
+// side list grows away from the wheel, a vertical one is centered on it
+function wheelLeft(anchor: ListAnchor, size: number, room: Room, width: number): number {
+  let left = (room.left + room.right - size) / 2
+  if (anchor.opening === 'side' && anchor.x > size / 2)
+    left = Math.min(left, room.right - width - anchor.x)
+  else if (anchor.opening === 'side') left = Math.max(left, room.left + width - anchor.x)
+  else
+    left = Math.min(
+      Math.max(left, room.left + width / 2 - anchor.x),
+      room.right - width / 2 - anchor.x,
+    )
+  return Math.min(Math.max(left, room.left), Math.max(room.left, room.right - size))
+}
+
+export interface Pin {
+  readonly top: number
+  readonly left: number
+}
+
 export interface Placement {
   readonly layout: WheelLayout
   readonly rows: number
 }
 
-// Where the wheel goes and how many rows its list shows. A `pinned` top keeps the wheel still, so it never
+// Where the wheel goes and how many rows its list shows. A `pinned` wheel stays where it is, so it never
 // slides out from under the pointer; the list then fits the room it has there
 export function placeWheel(
   index: number,
   count: number,
-  band: Band,
+  room: Room,
   measure: ListMeasure,
-  pinned?: number,
+  pinned?: Pin,
 ): Placement {
-  const size = wheelSize(band)
+  const size = wheelSize(room)
   const need = fullHeight(measure)
   const anchor = listAnchor(index, count, size)
-  const top = pinned ?? wheelTop(anchor, size, band, need)
-  const limit = listLimit(anchor.opening, top + anchor.y, band)
+  const top = pinned?.top ?? wheelTop(anchor, size, room, need)
+  const left = pinned?.left ?? wheelLeft(anchor, size, room, measure.width)
+  const limit = listLimit(anchor.opening, top + anchor.y, room)
   const rows = fitRows(measure, limit)
   // The list stays in its sector's direction and inside the window: with no room for one row between the
   // cues, it covers part of the wheel instead
   const { height, pitch, cues } = measure
   const smallest = Math.min(need, height - measure.rows * pitch - cues + pitch + 2 * CUE_HEIGHT)
   const overlap = anchor.opening === 'side' ? 0 : Math.max(0, smallest - limit)
-  return { layout: { size, top, overlap }, rows }
+  return { layout: { size, top, left, overlap }, rows }
 }

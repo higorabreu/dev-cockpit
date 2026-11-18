@@ -99,6 +99,14 @@ describe('reviewSendBlock', () => {
     activity,
   })
 
+  it('should let the line go to a program that reports its state whatever its name', () => {
+    expect(reviewSendBlock(en, at('busy', 'node'), true)).toBeUndefined()
+  })
+
+  it('should keep the line from the shell prompt even when a program had reported before', () => {
+    expect(reviewSendBlock(en, at('idle', 'bash'), true)).toBe('No agent in this tab')
+  })
+
   it('should let the line go when an agent runs in the tab or the tab was not read yet', () => {
     // Act
     const reasons = [reviewSendBlock(en, at('agent', 'claude')), reviewSendBlock(en, undefined)]
