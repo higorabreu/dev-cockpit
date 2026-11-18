@@ -616,4 +616,10 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-UPD-004': 'The update download failed',
   'error.DCK-UPD-005': 'Corrupted download; update canceled',
   'error.DCK-UPD-006': 'The update could not be installed',
+  'error.DCK-INS-001': 'No installer for this system yet',
+  'error.DCK-INS-002': 'Could not read the release from GitHub',
+  'error.DCK-INS-003': 'Release not found',
+  'error.DCK-INS-004': 'The download failed',
+  'error.DCK-INS-005': 'Corrupted download; nothing was installed',
+  'error.DCK-INS-006': 'The installation failed',
 }

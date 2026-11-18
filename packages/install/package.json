@@ -1,0 +1,44 @@
+{
+  "name": "@devcockpit/install",
+  "version": "0.10.0",
+  "description": "Installs Dev Cockpit, a Guake-style terminal cockpit for developers, from its GitHub releases",
+  "type": "module",
+  "bin": {
+    "devcockpit-install": "dist/install.mjs"
+  },
+  "files": [
+    "dist/install.mjs"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "node scripts/build.mjs",
+    "prepack": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "@dck/adapter-github": "workspace:^",
+    "@dck/adapter-node-fetch": "workspace:^",
+    "@dck/core": "workspace:^",
+    "esbuild": "^0.28.2"
+  },
+  "keywords": [
+    "dev-cockpit",
+    "terminal",
+    "installer"
+  ],
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/higorabreu/dev-cockpit.git",
+    "directory": "packages/install"
+  },
+  "bugs": {
+    "url": "https://github.com/higorabreu/dev-cockpit/issues"
+  },
+  "homepage": "https://github.com/higorabreu/dev-cockpit#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}
