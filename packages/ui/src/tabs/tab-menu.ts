@@ -1,10 +1,5 @@
 import { keys } from '../kit/keys.ts'
-
-export interface MenuOptions {
-  // Opened by a click with the focus in the terminal: the first item takes the focus without its ring, as a
-  // right click on a tab gives it, since a text field's focus would pass its ring on to the item
-  readonly pointer?: boolean
-}
+import { h } from '../panel/dom.ts'
 
 export interface MenuAction {
   readonly label: string
@@ -13,6 +8,24 @@ export interface MenuAction {
   readonly key?: string
   run(): void
 }
+
+export interface MenuOptions {
+  // `end` puts the menu's right edge at x, to line it up with the control that opened it
+  readonly align?: 'start' | 'end'
+  // A line above the items that says why they are offered; read, never focused
+  readonly caption?: string
+  // Opened by a click with the focus in the terminal: the first item takes the focus without its ring, as a
+  // right click on a tab gives it, since a text field's focus would pass its ring on to the item
+  readonly pointer?: boolean
+}
+
+// One opening of the menu: closing it does nothing once the menu has been opened again for another use
+export interface MenuHandle {
+  close(): void
+}
+
+// Between the menu and the point or the bar it opens from
+const GAP = 6
 
 const STEPS: Record<string, (index: number, count: number) => number> = {
   ArrowDown: (index, count) => (index + 1) % count,
@@ -25,6 +38,7 @@ const STEPS: Record<string, (index: number, count: number) => number> = {
 export function createTabMenu(element: HTMLElement) {
   // Where the focus goes back when the menu closes without running anything else
   let restore: (() => void) | undefined
+  let openings = 0
 
   const close = () => {
     if (element.hidden) return
@@ -73,8 +87,17 @@ export function createTabMenu(element: HTMLElement) {
       above: boolean,
       onClose?: () => void,
       options: MenuOptions = {},
-    ) {
+    ): MenuHandle {
+      openings += 1
+      const opening = openings
+      const caption =
+        options.caption === undefined
+          ? []
+          : [h('div', { class: 'menu-caption', id: 'tab-menu-caption' }, options.caption)]
+      if (options.caption === undefined) element.removeAttribute('aria-labelledby')
+      else element.setAttribute('aria-labelledby', 'tab-menu-caption')
       element.replaceChildren(
+        ...caption,
         ...actions.map((action) => {
           const item = document.createElement('button')
           item.type = 'button'
@@ -96,11 +119,17 @@ export function createTabMenu(element: HTMLElement) {
       element.hidden = false
       restore = onClose
       const { width, height } = element.getBoundingClientRect()
-      const fitsBelow = y + 6 + height <= window.innerHeight - 4
-      element.style.left = `${Math.max(4, Math.min(x, window.innerWidth - width - 4))}px`
-      element.style.top = `${Math.max(4, above || !fitsBelow ? y - height - 6 : y + 6)}px`
+      const fitsBelow = y + GAP + height <= window.innerHeight - 4
+      const left = options.align === 'end' ? x - width : x
+      element.style.left = `${Math.max(4, Math.min(left, window.innerWidth - width - 4))}px`
+      element.style.top = `${Math.max(4, above || !fitsBelow ? y - height - GAP : y + GAP)}px`
       // Otherwise the browser decides, so a menu opened from the keyboard keeps its ring
       items()[0]?.focus(options.pointer ? { focusVisible: false } : undefined)
+      return {
+        close: () => {
+          if (opening === openings) close()
+        },
+      }
     },
   }
 }

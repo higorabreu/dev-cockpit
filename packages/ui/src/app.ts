@@ -14,6 +14,7 @@ import {
   emptyTabs,
   formatDuration,
   type HostApi,
+  holdsMiddleButton,
   JIRA_CONNECTOR,
   jiraTicketLink,
   localeFor,
@@ -139,7 +140,9 @@ export async function startApp(
   const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
   const nativeMiddlePaste = navigator.platform.startsWith('Linux')
-  const notice = createNotice(elements.notice, i18n)
+  // The hold menu's key or mouse button, read at each use: Settings can change it while the window is open
+  const holdTrigger = () => settings.current().shortcuts.holdTrigger ?? keymap.holdTrigger
+  const notice = createNotice(elements.notice, i18n, elements.tabs)
   const updateNotice = createUpdateNotice({
     notice,
     i18n,
@@ -147,6 +150,21 @@ export async function startApp(
     agentTabs: () => state.tabs.filter((tab) => watcher.get(tab.id)?.activity === 'agent').length,
     saveTabs: () => saveTabsNow(),
     done: () => focusActive(),
+    openMenu(actions, anchor, caption) {
+      // Off the bar on the terminal's side, its right edge on the icon's
+      const right = anchor.getBoundingClientRect().right
+      const box = bar.getBoundingClientRect()
+      const above = !document.body.classList.contains('full')
+      return menu.open(
+        actions,
+        right,
+        above ? box.top : box.bottom,
+        above,
+        // Closed with Esc or a click elsewhere, the focus goes back to the icon as it is drawn now
+        () => elements.notice.querySelector<HTMLElement>('.notice-icon')?.focus(),
+        caption === undefined ? { align: 'end' } : { align: 'end', caption },
+      )
+    },
   })
   const menu = createTabMenu(elements.menu)
   // Before the cockpit's keys are bound: while it asks, they stay quiet
@@ -792,6 +810,8 @@ export async function startApp(
     elements.tabs,
     {
       activate: (id) => update(activateTab(state, id)),
+      close,
+      middleClickCloses: () => !holdsMiddleButton(holdTrigger()),
       reorder: (ids) => {
         state = reorderTabs(state, ids)
         render()
@@ -1023,7 +1043,7 @@ export async function startApp(
         if (item.id.startsWith(PROJECT_PREFIX)) openProject(item.id.slice(PROJECT_PREFIX.length))
         else commands[item.id]?.()
       },
-      triggerCode: () => settings.current().shortcuts.holdTrigger ?? keymap.holdTrigger,
+      triggerCode: holdTrigger,
     },
     {
       after(milliseconds, task) {

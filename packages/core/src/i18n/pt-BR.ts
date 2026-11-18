@@ -107,6 +107,7 @@ export const ptBR = {
   'updates.whatsNew': 'Novidades',
   'updates.dismiss': 'Dispensar',
   'updates.downloading': 'Baixando {version}',
+  'updates.downloadingPercent': 'Baixando {version}, {percent}%',
   'updates.installing': 'Instalando {version}',
   'updates.installed': 'Atualizado para {version}',
   'updates.restart': 'Reiniciar',
