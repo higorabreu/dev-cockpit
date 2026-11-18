@@ -737,6 +737,22 @@ describe('createReviewPane', () => {
     expect(text('.rv-status')).toBe('No changes in libs/gone to review')
   })
 
+  it('should open the diff on the file the panel names and say so when the scope has no such file', async () => {
+    // Arrange
+    const { pane, text } = setup(repository())
+
+    // Act
+    pane.open()
+    pane.showFile('pnpm-lock.yaml')
+    await flush()
+    const selected = pane.element.querySelector('.rv-files [aria-selected="true"]')?.textContent
+    pane.showFile('src/gone.ts')
+
+    // Assert
+    expect(selected).toContain('pnpm-lock.yaml')
+    expect(text('.rv-status')).toBe('No changes in src/gone.ts to review')
+  })
+
   it('should mark and unmark a file with its Viewed checkbox', async () => {
     const { pane } = setup(repository())
     pane.open()

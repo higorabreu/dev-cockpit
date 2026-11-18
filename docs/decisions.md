@@ -1179,6 +1179,8 @@ loaded" in its header, and is read on a click or Enter through `review:untracked
 path inside it); the 1 MB per file limit stays and the 32 MB limit counts every repository's diff
 together. The fingerprint adds the status of each changed submodule, nested ones too, at most 16 read one
 at a time, sharing the 2000 stamped paths, and stamps paths from the repository's top.
+The panel's Git section opens the review too: a changed or staged file's row opens the diff on that file
+(an untracked folder on its first file), and the branch line opens the review where it was.
 **Reason:** decided with the maintainer (2026-11-18): a changed submodule read as two "Subproject commit"
 lines told nothing, and untracked files past the 300th were dropped with no sign. Reading each submodule
 by itself instead of parsing `--submodule=diff` gives clean paths, the commits for the header, the

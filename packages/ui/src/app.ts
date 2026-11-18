@@ -417,6 +417,12 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
           openModule(path) {
             if (state.activeId) reviews.showModule(state.activeId, path)
           },
+          openFile(path) {
+            if (state.activeId) reviews.showFile(state.activeId, path)
+          },
+          openReview() {
+            if (state.activeId) reviews.show(state.activeId)
+          },
         },
         i18n,
       ),

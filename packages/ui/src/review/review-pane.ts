@@ -143,6 +143,8 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const wanted = new Set<string>()
   // A submodule the panel asked for, shown once the read in progress ends
   let pendingModule: string | undefined
+  // A file the panel asked for while the diff was still being read
+  let pendingFile: string | undefined
   let reading = false
   let drawnOptions = ''
 
@@ -347,6 +349,27 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     reading = false
     draw()
     if (pendingModule !== undefined) showModule(pendingModule)
+    if (pendingFile !== undefined) showFile(pendingFile)
+  }
+
+  // The diff on a file the panel named, from the repository's top; a folder (an untracked one ends in /)
+  // opens its first file. One this scope does not show says so in the header
+  function showFile(path: string) {
+    pendingFile = path
+    if (reading) return
+    pendingFile = undefined
+    if (state.kind !== 'ok') return
+    const shown = files()
+    const index = shown.findIndex((file) =>
+      path.endsWith('/') ? file.path.startsWith(path) : file.path === path,
+    )
+    if (index < 0) {
+      showNotice(t('review.file.none', { path }))
+      return
+    }
+    list.select(index)
+    if (deps.memory.indexHidden) diff.focus()
+    else list.focus()
   }
 
   // The index opens on the submodule's group with the diff on its first file; a submodule with no change
@@ -880,6 +903,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     },
     hasFocus: () => element.contains(document.activeElement),
     showModule,
+    showFile,
     send: () => sender.send(),
     agentState(agent: AgentState | undefined) {
       reporting = agent !== undefined
