@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   chordTrigger,
+  holdsMiddleButton,
   holdTriggerProblem,
   isHoldTrigger,
   mouseTrigger,
@@ -61,6 +62,14 @@ describe('mouse triggers', () => {
     expect(mouseTrigger(1)).toBe('Mouse1')
     expect(triggerButton('Mouse4')).toBe(4)
     expect(triggerButton('ControlRight')).toBeUndefined()
+  })
+})
+
+describe('holdsMiddleButton', () => {
+  it('should be true only when the middle button is the trigger', () => {
+    expect(holdsMiddleButton('Mouse1')).toBe(true)
+    expect(holdsMiddleButton('Mouse3')).toBe(false)
+    expect(holdsMiddleButton('ControlRight')).toBe(false)
   })
 })
 

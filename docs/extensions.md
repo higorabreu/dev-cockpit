@@ -104,14 +104,15 @@ second and third connectors, Jira and GitHub, fitted it without a change.
       "title": "views.review",
       "description": "views.review.description",
       "empty": "views.empty.review",
-      "badge": "views.waiting"
+      "badge": "review"
     },
     {
       "id": "mine",
       "kind": "mergeRequest",
       "title": "views.mine",
       "description": "views.mine.description",
-      "empty": "views.empty.mine"
+      "empty": "views.empty.mine",
+      "badge": "attention"
     }
   ]
 }
@@ -125,7 +126,7 @@ second and third connectors, Jira and GitHub, fitted it without a change.
 | `connection.address` | Always asked; `placeholder` is shown in the empty field |
 | `connection.email` | Optional; when present the account e-mail is asked too, with its `placeholder` |
 | `connection.token` | Always asked; `label` and `hint` are keys of the text catalogs; `permissions`, optional, is a list of 1 to 6 keys shown under a "Permissions" disclosure below the hint |
-| `views` | 1 to 8 views. `id` is unique across connectors; `kind` is `mergeRequest` or `issue`; `title`, `description` and `empty` are catalog keys (the tab's name, its tooltip saying what the list holds, and the text of an empty list); `badge` is an optional plural catalog key, and the item count of that view becomes the rail badge |
+| `views` | 1 to 8 views. `id` is unique across connectors; `kind` is `mergeRequest` or `issue`; `title`, `description` and `empty` are catalog keys (the tab's name, its tooltip saying what the list holds, and the text of an empty list); `badge`, optional, is what the view counts toward the dot on the Work button: `review` every item, `attention` only the merge requests whose CI failed or whose open discussion changed since the user last saw the tab |
 
 Jira declares the e-mail too, and a view of the other kind:
 
@@ -178,21 +179,22 @@ across the product. Its address may be left empty, which means github.com:
       "title": "views.review",
       "description": "views.github.review.description",
       "empty": "views.empty.github.review",
-      "badge": "views.github.waiting"
+      "badge": "review"
     },
     {
       "id": "github-mine",
       "kind": "mergeRequest",
       "title": "views.mine",
       "description": "views.github.mine.description",
-      "empty": "views.empty.github.mine"
+      "empty": "views.empty.github.mine",
+      "badge": "attention"
     }
   ]
 }
 ```
 
-When more than one connected view declares a `badge`, the rail badge sums them and its text names no kind
-of item.
+The Work button shows a dot while the connected views that declare a `badge` count anything, whatever
+service they come from; the screen reader hears the total ("Work, 4 items waiting").
 
 Every text is a key of the text catalogs (`core/src/i18n`), checked when the declaration is read, so a
 connector is translated like the rest of the interface. The declaration is strict: an unknown field is an

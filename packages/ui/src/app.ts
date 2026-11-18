@@ -14,6 +14,7 @@ import {
   emptyTabs,
   formatDuration,
   type HostApi,
+  holdsMiddleButton,
   JIRA_CONNECTOR,
   jiraTicketLink,
   localeFor,
@@ -21,7 +22,6 @@ import {
   noSystemFonts,
   notificationText,
   openTab,
-  type PluralKey,
   type ProgramStatus,
   type Project,
   renameTab,
@@ -42,6 +42,7 @@ import {
 import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
 import { createHoldMenuController } from './hold-menu/hold-menu-controller.ts'
 import { setFullHeight } from './kit/layout-mode.ts'
+import { showRailDot } from './kit/rail-dot.ts'
 import { translateStatic } from './kit/static-text.ts'
 import { setTipRegion } from './kit/tooltip.ts'
 import { createEnvironmentSection } from './panel/environment-section.ts'
@@ -61,7 +62,6 @@ import { createReviewTabs } from './review/review-tabs.ts'
 import { applyOpacity } from './settings/preferences.ts'
 import type { SettingsClient } from './settings/settings-client.ts'
 import { createSettingsView } from './settings/settings-view.ts'
-import { attentionMark } from './tabs/attention-mark.ts'
 import { createNotice } from './tabs/notice.ts'
 import { createSessionWatcher } from './tabs/sessions-watcher.ts'
 import { createTabBar } from './tabs/tab-bar.ts'
@@ -69,6 +69,7 @@ import { createTabList } from './tabs/tab-list.ts'
 import { createTabMenu } from './tabs/tab-menu.ts'
 import { createTerminalSession, type TerminalSession } from './terminal/terminal-session.ts'
 import { createUpdateNotice } from './updates/update-notice.ts'
+import { createSeenMarks } from './views/seen-marks.ts'
 import { createViewsView } from './views/views-view.ts'
 import { createResizeEdge } from './window/resize-edge.ts'
 
@@ -137,7 +138,9 @@ export async function startApp(
   const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
   const nativeMiddlePaste = navigator.platform.startsWith('Linux')
-  const notice = createNotice(elements.notice, i18n)
+  // The hold menu's key or mouse button, read at each use: Settings can change it while the window is open
+  const holdTrigger = () => settings.current().shortcuts.holdTrigger ?? keymap.holdTrigger
+  const notice = createNotice(elements.notice, i18n, elements.tabs)
   const updateNotice = createUpdateNotice({
     notice,
     i18n,
@@ -145,6 +148,21 @@ export async function startApp(
     agentTabs: () => state.tabs.filter((tab) => watcher.get(tab.id)?.activity === 'agent').length,
     saveTabs: () => saveTabsNow(),
     done: () => focusActive(),
+    openMenu(actions, anchor, caption) {
+      // Off the bar on the terminal's side, its right edge on the icon's
+      const right = anchor.getBoundingClientRect().right
+      const box = bar.getBoundingClientRect()
+      const above = !document.body.classList.contains('full')
+      return menu.open(
+        actions,
+        right,
+        above ? box.top : box.bottom,
+        above,
+        // Closed with Esc or a click elsewhere, the focus goes back to the icon as it is drawn now
+        () => elements.notice.querySelector<HTMLElement>('.notice-icon')?.focus(),
+        caption === undefined ? { align: 'end' } : { align: 'end', caption },
+      )
+    },
   })
   const menu = createTabMenu(elements.menu)
   let state: TabsState = emptyTabs
@@ -219,21 +237,17 @@ export async function startApp(
     i18n,
     onClose: () => focusActive(),
     openSettings: () => settingsView.open('connections'),
-    onBadge: showBadge,
+    onWaiting: showWorkWaiting,
+    seen: createSeenMarks(localStorage),
     // The ticket link in the Git section follows the Jira tasks as they arrive
     onItems: () => panel.render(),
     keymap,
   })
 
-  let badge: { count: number; label: PluralKey | undefined } = { count: 0, label: undefined }
-  function showBadge(count: number, label: PluralKey | undefined) {
-    badge = { count, label }
-    elements.viewsButton.setAttribute(
-      'aria-label',
-      count === 0 || label === undefined
-        ? i18n.t('views.title')
-        : `${i18n.t('views.title')}. ${i18n.plural(label, count)}`,
-    )
+  let workWaiting = 0
+  function showWorkWaiting(count: number) {
+    workWaiting = count
+    showRailDot(elements.viewsButton, i18n, i18n.t('views.title'), count)
   }
 
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
@@ -442,7 +456,7 @@ export async function startApp(
       createEnvironmentSection({ status: () => environment }, i18n),
     ],
     afterPointer: () => focusActive(),
-    t: i18n.t,
+    i18n,
     title: () => {
       const cwd = state.activeId ? watcher.get(state.activeId)?.cwd : undefined
       return cwd ? displayPath(cwd) : ''
@@ -712,7 +726,7 @@ export async function startApp(
       viewsView.retranslate()
       reviews.retranslate()
       for (const view of tabViews.values()) view.retranslate()
-      showBadge(badge.count, badge.label)
+      showWorkWaiting(workWaiting)
       updateNotice.retranslate()
       settingsView.rerender()
       renderTabs()
@@ -723,7 +737,7 @@ export async function startApp(
     // The keymap reads the keys by itself; what drew a key's label draws it again
     if (changed.some((key) => key.startsWith('shortcuts.keys'))) reviews.keysChanged()
     if (changed.includes('system.agentConnectHint')) panel.render()
-    // A connector was enabled or disabled: its tabs and the badge follow
+    // A connector was enabled or disabled: its tabs and the Work dot follow
     if (changed.includes('extensions.disabled')) void viewsView.warm()
     if (changed.includes('fontSize')) {
       for (const session of sessions.values()) session.setFontSize(next.fontSize)
@@ -749,16 +763,9 @@ export async function startApp(
   const tabBar = createTabBar(
     elements.tabs,
     {
-      hiddenAttention(kind) {
-        if (kind) elements.tabsAll.dataset.attention = kind
-        else delete elements.tabsAll.dataset.attention
-        const label = kind
-          ? `${i18n.t('tabs.all')}, ${attentionMark(kind, i18n.t).label}`
-          : i18n.t('tabs.all')
-        elements.tabsAll.setAttribute('aria-label', label)
-        elements.tabsAll.setAttribute('data-tip', label)
-      },
       activate: (id) => update(activateTab(state, id)),
+      close,
+      middleClickCloses: () => !holdsMiddleButton(holdTrigger()),
       reorder: (ids) => {
         state = reorderTabs(state, ids)
         render()
@@ -990,7 +997,7 @@ export async function startApp(
         if (item.id.startsWith(PROJECT_PREFIX)) openProject(item.id.slice(PROJECT_PREFIX.length))
         else commands[item.id]?.()
       },
-      triggerCode: () => settings.current().shortcuts.holdTrigger ?? keymap.holdTrigger,
+      triggerCode: holdTrigger,
     },
     {
       after(milliseconds, task) {
@@ -1037,7 +1044,7 @@ export async function startApp(
   })
   elements.settingsButton.addEventListener('click', () => settingsView.toggle())
   elements.viewsButton.addEventListener('click', () => viewsView.toggle())
-  showBadge(0, undefined)
+  showWorkWaiting(0)
   void viewsView.warm()
   api.window.onShown(() => void viewsView.warm())
   api.window.onOpenSettings(() => settingsView.open())

@@ -1,15 +1,17 @@
 import { type AttentionKind, MAX_TAB_NAME, type TabsState, type Translate } from '@dck/core'
 import { h, icon } from '../panel/dom.ts'
-import { attentionMark, reviewMark, strongestMark } from './attention-mark.ts'
+import { attentionMark, reviewMark } from './attention-mark.ts'
 
 export interface TabBarCallbacks {
   activate(id: string): void
   contextMenu(id: string, x: number, y: number): void
+  // Closes the tab as its menu item and the close key do
+  close(id: string): void
+  // False while the middle button opens the hold menu (D69): it keeps that meaning on a tab
+  middleClickCloses(): boolean
   reorder(ids: readonly string[]): void
   // The name typed for a tab, or undefined when the edit was cancelled
   rename(id: string, name: string | undefined): void
-  // The strongest mark among tabs outside the visible area of the bar
-  hiddenAttention(kind: AttentionKind | undefined): void
 }
 
 const FADE_PX = 24
@@ -20,7 +22,6 @@ const SPLIT_GLYPH = '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d=
 export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks, t: Translate) {
   let dragging: HTMLElement | undefined
   let lastActive: string | undefined
-  let hiddenAttention: AttentionKind | undefined
   let last: Parameters<typeof render> = [{ tabs: [], activeId: undefined, recent: [] }]
   // While a name is being typed the bar does not redraw: a redraw would take the field away
   let editing: { readonly id: string; finish(save: boolean): void } | undefined
@@ -29,19 +30,7 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
   const idOf = (button: Element) => (button as HTMLElement).dataset.id ?? ''
   const currentOrder = () => [...container.children].map(idOf)
 
-  function hiddenMark(): AttentionKind | undefined {
-    const view = container.getBoundingClientRect()
-    // Only attention marks count; an open review asks nothing of the user
-    const hidden = [...container.querySelectorAll<HTMLElement>('.pip:not(.review)')].filter(
-      (pip) => {
-        const box = pip.getBoundingClientRect()
-        return box.right > view.right + 1 || box.left < view.left - 1
-      },
-    )
-    return strongestMark(hidden.map((pip) => pip.dataset.kind as AttentionKind))
-  }
-
-  // Faded only on the edge that has more tabs, and the notice for a tab that finished out of sight
+  // Faded only on the edge that has more tabs
   function syncEdges() {
     const start = container.scrollLeft > 1
     const end = container.scrollLeft + container.clientWidth < container.scrollWidth - 1
@@ -49,10 +38,6 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
     else if (start) container.dataset.fade = 'start'
     else if (end) container.dataset.fade = 'end'
     else delete container.dataset.fade
-    const hidden = hiddenMark()
-    if (hidden === hiddenAttention) return
-    hiddenAttention = hidden
-    callbacks.hiddenAttention(hidden)
   }
 
   container.style.scrollPaddingInline = `${FADE_PX}px`
@@ -134,6 +119,17 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
         button.addEventListener('contextmenu', (event) => {
           event.preventDefault()
           callbacks.contextMenu(tab.id, event.clientX, event.clientY)
+        })
+        // The middle button closes the tab, as in a browser. On Linux its release would also paste the
+        // selection into the focused terminal, and its press would move the focus or start autoscroll
+        for (const type of ['mousedown', 'mouseup'] as const)
+          button.addEventListener(type, (event) => {
+            if (event.button === 1) event.preventDefault()
+          })
+        button.addEventListener('auxclick', (event) => {
+          if (event.button !== 1) return
+          event.preventDefault()
+          if (callbacks.middleClickCloses()) callbacks.close(tab.id)
         })
         button.addEventListener('dragstart', (event) => {
           dragging = button

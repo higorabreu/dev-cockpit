@@ -44,7 +44,6 @@ export interface ThemeTokens {
     readonly diffRemoveInk: string
   }
   readonly overlay: {
-    readonly selection: string
     readonly scroll: string
     readonly scrollHover: string
     readonly scrollActive: string
@@ -60,6 +59,9 @@ export interface Tokens {
     readonly listSelected: number
     // The fg share over a diff line's own tint when the line is selected for a comment
     readonly lineSelected: number
+    // The fg share over the window color for a terminal selection, while the terminal has focus and without it
+    readonly terminalSelection: number
+    readonly terminalSelectionInactive: number
     readonly iconIdle: number
   }
   readonly font: { readonly sans: string; readonly mono: string }

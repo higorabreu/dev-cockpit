@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contrastRatio, mix, parseHex, relativeLuminance } from './color.ts'
+import { contrastRatio, formatHex, mix, parseHex, relativeLuminance } from './color.ts'
 
 describe('parseHex', () => {
   it('should return the channels when the color is a valid hex', () => {
@@ -13,6 +13,20 @@ describe('parseHex', () => {
   it('should reject the color when it is not a six digit hex', () => {
     expect(() => parseHex('#fff')).toThrow()
     expect(() => parseHex('rgb(0, 0, 0)')).toThrow()
+  })
+})
+
+describe('formatHex', () => {
+  it('should write two lowercase digits per channel when formatting a color', () => {
+    const color = [5, 171, 255] as const
+
+    const result = formatHex(color)
+
+    expect(result).toBe('#05abff')
+  })
+
+  it('should give back the same hex when formatting a parsed color', () => {
+    expect(formatHex(parseHex('#1b2c3d'))).toBe('#1b2c3d')
   })
 })
 
