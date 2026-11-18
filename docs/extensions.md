@@ -126,7 +126,7 @@ second and third connectors, Jira and GitHub, fitted it without a change.
 | `connection.address` | Always asked; `placeholder` is shown in the empty field |
 | `connection.email` | Optional; when present the account e-mail is asked too, with its `placeholder` |
 | `connection.token` | Always asked; `label` and `hint` are keys of the text catalogs; `permissions`, optional, is a list of 1 to 6 keys shown under a "Permissions" disclosure below the hint |
-| `views` | 1 to 8 views. `id` is unique across connectors; `kind` is `mergeRequest` or `issue`; `title`, `description` and `empty` are catalog keys (the tab's name, its tooltip saying what the list holds, and the text of an empty list); `badge`, optional, is what the view adds to the Work button's badge: `review` counts every item, `attention` only the merge requests whose CI failed or whose open discussion changed since the user last saw the tab |
+| `views` | 1 to 8 views. `id` is unique across connectors; `kind` is `mergeRequest` or `issue`; `title`, `description` and `empty` are catalog keys (the tab's name, its tooltip saying what the list holds, and the text of an empty list); `badge`, optional, is what the view counts toward the dot on the Work button: `review` every item, `attention` only the merge requests whose CI failed or whose open discussion changed since the user last saw the tab |
 
 Jira declares the e-mail too, and a view of the other kind:
 
@@ -193,8 +193,8 @@ across the product. Its address may be left empty, which means github.com:
 }
 ```
 
-The Work badge sums the connected views that declare a `badge`, whatever service they come from; its
-tooltip names the two parts, "3 to review, 1 of yours needs attention", and no kind of item.
+The Work button shows a dot while the connected views that declare a `badge` count anything, whatever
+service they come from; the screen reader hears the total ("Work, 4 items waiting").
 
 Every text is a key of the text catalogs (`core/src/i18n`), checked when the declaration is read, so a
 connector is translated like the rest of the interface. The declaration is strict: an unknown field is an
