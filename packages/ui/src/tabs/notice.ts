@@ -10,6 +10,7 @@ export function createNotice(element: HTMLElement, i18n: Translator) {
 
   function showLasting() {
     timer = undefined
+    element.style.removeProperty('min-width')
     element.classList.toggle('lasting', lasting.length > 0)
     element.replaceChildren(...lasting)
   }
@@ -22,7 +23,10 @@ export function createNotice(element: HTMLElement, i18n: Translator) {
       label.textContent = i18n.t('notice.copied')
       amount.className = 'notice-count'
       amount.textContent = i18n.plural('notice.chars', count)
-      element.classList.remove('lasting')
+      // Over a lasting notice the copy keeps its width and its line, so the tabs beside it do not move
+      const held = lasting.length > 0 ? element.getBoundingClientRect().width : 0
+      element.classList.toggle('lasting', held > 0)
+      if (held > 0) element.style.minWidth = `${held}px`
       element.replaceChildren(label, amount)
       clearTimeout(timer)
       timer = setTimeout(showLasting, VISIBLE_MS)
