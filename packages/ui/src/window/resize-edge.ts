@@ -1,7 +1,8 @@
 export interface ResizeEdgeDeps {
   readonly edge: HTMLElement
-  // Shows the height while dragging, in percent of the screen
+  // Shows the height while dragging, in percent of the screen, centered on the tab bar
   readonly label: HTMLElement
+  readonly bar: HTMLElement
   // The host moves the window and answers the fraction of the screen it takes; undefined when it is locked
   resize(height: number): Promise<number | undefined>
   end(keep: boolean): void
@@ -25,9 +26,22 @@ export function createResizeEdge(deps: ResizeEdgeDeps) {
   let busy = false
   let settleTimer: ReturnType<typeof setTimeout> | undefined
 
+  // Centered on the bar, measured each time since the bar moves to the top at full height. Its top is a
+  // tab's own, fraction included, so the label sits on the same line as the tab names
   function show(ratio: number) {
     label.textContent = `${Math.round(ratio * 100)}%`
     label.hidden = false
+    const { bar } = deps
+    const box = bar.getBoundingClientRect()
+    const tab = bar.querySelector('.tab')?.getBoundingClientRect()
+    // The real size, fraction included: offsetHeight rounds 29.5 up and the label would sit a quarter low
+    const size = label.getBoundingClientRect()
+    const top = tab
+      ? tab.top + (tab.height - size.height) / 2
+      : box.top + bar.clientTop + (bar.clientHeight - size.height) / 2
+    const left = box.left + bar.clientLeft + (bar.clientWidth - size.width) / 2
+    label.style.top = `${top}px`
+    label.style.left = `${left}px`
   }
 
   // One request at a time: a fast pointer sends only the latest height once the host answered

@@ -9,7 +9,8 @@ function setup(answer: (height: number) => number | undefined = (height) => heig
   const edge = document.createElement('div')
   const label = document.createElement('div')
   label.hidden = true
-  document.body.append(edge, label)
+  const bar = document.createElement('div')
+  document.body.append(bar, edge, label)
   // happy-dom has no pointer capture; the edge only needs to keep the pointer
   let captured: number | undefined
   edge.setPointerCapture = (id) => {
@@ -27,6 +28,7 @@ function setup(answer: (height: number) => number | undefined = (height) => heig
   const control = createResizeEdge({
     edge,
     label,
+    bar,
     resize: async (height) => {
       asked.push(height)
       return answer(height)
@@ -45,6 +47,7 @@ function setup(answer: (height: number) => number | undefined = (height) => heig
   return {
     edge,
     label,
+    bar,
     control,
     pointer,
     asked,
@@ -153,5 +156,46 @@ describe('createResizeEdge', () => {
 
     // Assert
     expect(edge.hidden).toBe(true)
+  })
+
+  it('should center the percent on the tab bar when it shows', async () => {
+    // Arrange: happy-dom lays nothing out, so the boxes are given
+    const { pointer, label, bar } = setup()
+    bar.getBoundingClientRect = () => new DOMRect(0, 300, 1000, 40)
+    Object.defineProperties(bar, {
+      clientTop: { value: 1 },
+      clientLeft: { value: 0 },
+      clientHeight: { value: 39 },
+      clientWidth: { value: 1000 },
+    })
+    label.getBoundingClientRect = () => new DOMRect(0, 0, 50, 25)
+
+    // Act
+    pointer('pointerdown', 500)
+    pointer('pointermove', 450)
+    await settle()
+
+    // Assert
+    expect(label.style.top).toBe('308px')
+    expect(label.style.left).toBe('475px')
+  })
+
+  it('should put the percent on the line of the tab names when the bar has a tab', async () => {
+    // Arrange
+    const { pointer, label, bar } = setup()
+    const tab = document.createElement('button')
+    tab.className = 'tab'
+    bar.append(tab)
+    bar.getBoundingClientRect = () => new DOMRect(0, 300, 1000, 42)
+    tab.getBoundingClientRect = () => new DOMRect(8, 306.5, 80, 29.5)
+    label.getBoundingClientRect = () => new DOMRect(0, 0, 50.5, 29.5)
+
+    // Act
+    pointer('pointerdown', 500)
+    pointer('pointermove', 450)
+    await settle()
+
+    // Assert
+    expect(label.style.top).toBe('306.5px')
   })
 })

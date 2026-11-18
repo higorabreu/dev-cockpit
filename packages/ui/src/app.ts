@@ -947,6 +947,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const resizeEdge = createResizeEdge({
     edge: elements.edge,
     label: elements.edgeSize,
+    bar,
     resize: (height) => api.window.resize(height),
     end: (keep) => api.window.endResize(keep),
     toggleFullHeight: () => api.window.toggleFullHeight(),

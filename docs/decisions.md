@@ -1099,11 +1099,11 @@ system's Inter and JetBrains Mono.
 
 **Decision:** the bottom edge of the window is a handle, a 6 pixel strip with no visible grip: the resize
 cursor and a thin line on hover, no tooltip (it would cover the tab names whenever the pointer brushes the
-edge). Dragging it moves the window's bottom while its top stays, a label shows the height in percent of the
-work area, and on release the height is saved as `window.heightRatio`, so the next opening keeps it and the
+edge). Dragging it moves the window's bottom while its top stays, a label as tall as a tab, centered on the
+tab bar and on the line of the tab names, shows the height in percent of the work area, and on release the height is saved as `window.heightRatio`, so the next opening keeps it and the
 slider in the settings follows. The limits are those of the setting (30% to 100%), the edge snaps to 50% and
-100% within 12 pixels, and Esc while dragging puts the window back. At full height a drag leaves it and
-sets the anchored height where it is released; a double click on the edge switches full height. While the
+100% within 12 pixels, and Esc while dragging puts the window back. At full height a drag leaves it at once (the tab bar goes back
+under the terminals as the drag starts) and sets the anchored height where it is released; a double click on the edge switches full height. While the
 edge moves, the terminals keep their grid and fit when the pointer rests 150 ms and on release, so a shell
 or a TUI redraws once instead of on every frame. With the height locked by `DCK_HEIGHT` the edge is not
 offered. The window asks the host for each height (`window:resize`, one request at a time, validated with

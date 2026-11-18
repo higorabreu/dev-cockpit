@@ -376,8 +376,14 @@ app.whenReady().then(async () => {
         .toggleFullHeight()
         .then((fullHeight) => send(hostChannels.windowFullHeight, fullHeight)),
     // DCK_HEIGHT pins the height, so the edge moves nothing
-    resizeWindow: (height) =>
-      settingsStore.get().locked.includes('window.heightRatio') ? undefined : dock.resizeTo(height),
+    resizeWindow(height) {
+      if (settingsStore.get().locked.includes('window.heightRatio')) return undefined
+      const wasFullHeight = dock.isFullHeight()
+      const ratio = dock.resizeTo(height)
+      // The drag leaves full height at once, so the tab bar goes back under the terminals while it moves
+      if (wasFullHeight) send(hostChannels.windowFullHeight, false)
+      return ratio
+    },
     endResizeWindow(keep) {
       const ratio = dock.endResize(keep)
       send(hostChannels.windowFullHeight, dock.isFullHeight())
