@@ -30,6 +30,21 @@ function safeJson(raw: string): unknown {
 
 // The tabs of the last run. A missing or invalid file is no tabs: the window opens one as it always did
 export function createSavedTabsFile(file: string, logger: Logger) {
+  // Saves run one after the other, so two writes never share the temporary file
+  let pending = Promise.resolve()
+
+  async function write(tabs: SavedTabs): Promise<void> {
+    try {
+      await mkdir(dirname(file), { recursive: true })
+      // Writes beside it and renames, so a crash never leaves the file half-written
+      const temporary = `${file}.tmp`
+      await writeFile(temporary, JSON.stringify(tabs))
+      await rename(temporary, file)
+    } catch (error) {
+      logger.error('could not save the tabs', { file, error: String(error) })
+    }
+  }
+
   return {
     async load(): Promise<SavedTabs | undefined> {
       const raw = await readFile(file, 'utf8').catch((error: NodeJS.ErrnoException) => {
@@ -42,17 +57,12 @@ export function createSavedTabsFile(file: string, logger: Logger) {
       if (!parsed.success) logger.warn('saved tabs invalid, opening one tab', { file })
       return parsed.success ? parsed.data : undefined
     },
-    async save(tabs: SavedTabs): Promise<void> {
-      try {
-        await mkdir(dirname(file), { recursive: true })
-        // Writes beside it and renames, so a crash never leaves the file half-written
-        const temporary = `${file}.tmp`
-        await writeFile(temporary, JSON.stringify(tabs))
-        await rename(temporary, file)
-      } catch (error) {
-        logger.error('could not save the tabs', { file, error: String(error) })
-      }
+    save(tabs: SavedTabs): Promise<void> {
+      pending = pending.then(() => write(tabs))
+      return pending
     },
+    // Settles once every save asked so far is on disk, so a restart does not cut the last one
+    written: () => pending,
   }
 }
 

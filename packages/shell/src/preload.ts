@@ -1,4 +1,11 @@
-import type { AgentSignal, PtyExit, Settings, SettingsFileState, ViewSnapshot } from '@dck/core'
+import type {
+  AgentSignal,
+  PtyExit,
+  Settings,
+  SettingsFileState,
+  UpdateState,
+  ViewSnapshot,
+} from '@dck/core'
 import { type HostApi, hostChannels } from '@dck/core/host-api'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
@@ -111,6 +118,19 @@ const api: HostApi = {
   tabs: {
     saved: () => ipcRenderer.invoke(hostChannels.tabsSaved),
     save: (tabs) => ipcRenderer.send(hostChannels.tabsSave, tabs),
+  },
+  about: {
+    version: () => ipcRenderer.invoke(hostChannels.aboutVersion),
+    open: (link) => ipcRenderer.send(hostChannels.aboutOpen, link),
+  },
+  updates: {
+    state: () => ipcRenderer.invoke(hostChannels.updatesState),
+    check: () => ipcRenderer.invoke(hostChannels.updatesCheck),
+    install: () => ipcRenderer.send(hostChannels.updatesInstall),
+    dismiss: () => ipcRenderer.send(hostChannels.updatesDismiss),
+    openRelease: () => ipcRenderer.send(hostChannels.updatesOpenRelease),
+    restart: () => ipcRenderer.send(hostChannels.updatesRestart),
+    onChange: (listener) => subscribe<[UpdateState]>(hostChannels.updatesChanged, listener),
   },
   window: {
     toggleFullHeight: () => ipcRenderer.send(hostChannels.windowToggleFullHeight),

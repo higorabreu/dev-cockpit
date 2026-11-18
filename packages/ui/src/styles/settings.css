@@ -397,7 +397,8 @@
 .srange,
 .snumber,
 .sshortcut,
-.sfolder {
+.sfolder,
+.supdates {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -554,4 +555,51 @@
 /* A checked box uses the design system's accent, not the browser's blue */
 .scontrol input[type="checkbox"] {
   accent-color: var(--accent);
+}
+
+/* The About page: the cockpit's name as a title, not as a group's small heading */
+.spanel .sabout h2.sabout-name {
+  margin: 0 0 2px;
+  color: var(--fg);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.sabout p {
+  margin: 0;
+}
+
+.sabout .sabout-version {
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sabout .sabout-links {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+/* A link to a page of the cockpit: text, underlined, aligned with the words above it */
+.slink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+}
+
+.slink:hover {
+  color: var(--fg);
+}
+
+.slink:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+  border-radius: var(--radius-small);
 }

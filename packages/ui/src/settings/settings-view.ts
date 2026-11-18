@@ -1,4 +1,6 @@
 import {
+  type AboutLink,
+  acceleratorFromEvent,
   type ConnectionStatus,
   type Connector,
   connectedFirst,
@@ -16,6 +18,9 @@ import {
   shortcutKeysPatch,
   type Translator,
   terminalFamily,
+  UPDATE_MODES,
+  type UpdateMode,
+  type UpdateState,
 } from '@dck/core'
 import { trapFocus } from '../kit/focus-trap.ts'
 import { closeButton } from '../kit/panel-frame.ts'
@@ -64,6 +69,7 @@ const TABS = [
   { id: 'projects', label: 'settings.group.projects' },
   { id: 'connections', label: 'settings.group.connections' },
   { id: 'system', label: 'settings.group.system' },
+  { id: 'about', label: 'settings.tab.about' },
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
@@ -87,6 +93,10 @@ export function createSettingsView(
   const mac = deps.keymap.keyboard === 'mac'
   const t = i18n.t
   let autostart = false
+  // The version that runs, asked of the host when the screen opens
+  let version: string | undefined
+  // What the host knows of the cockpit's releases, for the Updates row
+  let update: UpdateState | undefined
   // The fonts installed, asked for each time the screen opens so a font installed since then shows up
   let fonts: SystemFontsInfo = noSystemFonts
   let confirmingReset = false
@@ -408,6 +418,45 @@ export function createSettingsView(
   async function changeAutostart(checked: boolean) {
     autostart = await api.autostart.set(checked)
     render()
+  }
+
+  // One line under the name: the last check's answer, else what the chosen mode does
+  function updatesHint(mode: UpdateMode): string {
+    const check = update?.check
+    if (mode !== 'off' && check && check.kind !== 'never') {
+      if (check.kind === 'checking') return t('settings.updates.checking')
+      if (check.kind === 'current') return t('settings.updates.current')
+      if (check.kind === 'available') return t('updates.available', { version: check.version })
+      return t(`error.${check.code}` as MessageKey)
+    }
+    if (mode === 'install' && update?.canInstall === false) return t('settings.updates.hint.page')
+    return t(`settings.updates.hint.${mode}`)
+  }
+
+  function updatesRow(): HTMLElement {
+    const key = 'system.updates'
+    const mode = settings.current().system.updates
+    const check = h(
+      'button',
+      {
+        type: 'button',
+        class: 'srecord',
+        'data-focus': 'set-updates-check',
+        disabled: mode === 'off' || update?.check.kind === 'checking' || disabled(key),
+      },
+      t('settings.updates.check'),
+    )
+    check.addEventListener('click', () => void api.updates.check())
+    const control = h(
+      'span',
+      { class: 'supdates' },
+      select(
+        key,
+        UPDATE_MODES.map((value) => [value, t(`settings.updates.${value}`)] as const),
+      ),
+      check,
+    )
+    return row(key, t('settings.updates'), control, updatesHint(mode))
   }
 
   const statusOf = (id: string) => statuses.get(id) ?? { kind: 'none' as const }
@@ -774,6 +823,35 @@ export function createSettingsView(
   const group = (title: string | undefined, ...rows: Child[]) =>
     h('section', { class: 'sgroup' }, title && h('h2', {}, title), ...rows)
 
+  // A link of the About page, opened by the host on the cockpit's own repository
+  function aboutLink(link: AboutLink, label: string): HTMLElement {
+    const button = h(
+      'button',
+      { type: 'button', class: 'slink', 'data-focus': `about-${link}` },
+      label,
+    )
+    button.addEventListener('click', () => api.about.open(link))
+    return button
+  }
+
+  // The cockpit by name, the version that runs and its pages
+  function aboutHead(): HTMLElement {
+    return h(
+      'section',
+      { class: 'sgroup sabout' },
+      h('h2', { class: 'sabout-name' }, 'Dev Cockpit'),
+      h('p', { class: 'sabout-version' }, version ? t('about.version', { version }) : ''),
+      h(
+        'p',
+        { class: 'sabout-links' },
+        aboutLink('repository', t('about.repository')),
+        aboutLink('releaseNotes', t('about.releaseNotes')),
+        aboutLink('issue', t('about.issue')),
+        aboutLink('license', t('about.license')),
+      ),
+    )
+  }
+
   const shortcuts = createShortcutsPage({
     settings,
     keymap: deps.keymap,
@@ -1003,6 +1081,7 @@ export function createSettingsView(
           ),
         ),
       ],
+      about: [aboutHead(), group(undefined, updatesRow())],
     }
 
     body.replaceChildren(
@@ -1049,8 +1128,16 @@ export function createSettingsView(
       fonts = found
       if (isOpen()) render()
     })
+    void api.about.version().then((found) => {
+      version = found
+      if (isOpen()) render()
+    })
     void api.autostart.isEnabled().then((on) => {
       autostart = on
+      if (isOpen()) render()
+    })
+    void api.updates.state().then((state) => {
+      update = state
       if (isOpen()) render()
     })
   }
@@ -1082,6 +1169,12 @@ export function createSettingsView(
 
   // The file was saved by hand: its errors and ignored values show at once
   settings.onFile(() => {
+    if (isOpen() && local === 0) render()
+  })
+
+  // A check's answer reaches the line under Updates, whoever started it
+  api.updates.onChange((state) => {
+    update = state
     if (isOpen() && local === 0) render()
   })
 

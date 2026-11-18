@@ -39,7 +39,7 @@ describe('parseSettings', () => {
       shortcuts: { toggleWindow: 'F12', holdTrigger: null, keys: {} },
       projects: { root: null, depth: 2 },
       connections: {},
-      system: { notifyAfterSeconds: 30, agentConnectHint: true },
+      system: { notifyAfterSeconds: 30, agentConnectHint: true, updates: 'off' },
       review: { layout: 'auto', sideRatio: 0.5, stackedRatio: 0.5, bases: {} },
       extensions: { disabled: [] },
     })
@@ -118,6 +118,12 @@ describe('parseSettings', () => {
       false,
     )
     expect(parseSettings({ system: { agentConnectHint: 'no' } }).system.agentConnectHint).toBe(true)
+  })
+
+  it('should keep updates off unless a known mode was chosen when reading', () => {
+    expect(defaultSettings.system.updates).toBe('off')
+    expect(parseSettings({ system: { updates: 'install' } }).system.updates).toBe('install')
+    expect(parseSettings({ system: { updates: 'always' } }).system.updates).toBe('off')
   })
 
   it('should keep a known review layout and go back to auto when it is unknown', () => {

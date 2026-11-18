@@ -37,6 +37,17 @@ describe('createSavedTabsFile', () => {
     expect(await readdir(dirname(file))).toEqual(['open-tabs.json'])
   })
 
+  it('should hold the last of several saves on disk when every save asked so far is written', async () => {
+    const store = createSavedTabsFile(file, silentLogger)
+    const last = { tabs: [{ name: 'last' }], active: 0 }
+
+    void store.save(saved)
+    void store.save(last)
+    await store.written()
+
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual(last)
+  })
+
   it('should have no tabs when the file is not valid', async () => {
     const store = createSavedTabsFile(file, silentLogger)
     await store.save(saved)

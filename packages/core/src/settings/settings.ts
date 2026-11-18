@@ -6,6 +6,7 @@ import { EXTENSION_ID_MAX, EXTENSION_ID_PATTERN } from '../extensions/manifest.t
 import { isFontName } from '../fonts/fonts.ts'
 import { PANE_RATIO, SPLIT_PREFERENCES } from '../panes/panes.ts'
 import type { ConnectionFields } from '../ports/connections.ts'
+import { UPDATE_MODES } from '../updates/updater.ts'
 import { isHoldTrigger } from './hold-trigger.ts'
 import type { SettingsFileState } from './settings-file.ts'
 import { isShortcutId, parseChord, SHORTCUT_IDS, type ShortcutId } from './shortcut-keys.ts'
@@ -166,6 +167,8 @@ export const settingsSchema = z.preprocess(
       ),
       // "Not now" on the Sessions hint turns it off; the System page turns it back on
       agentConnectHint: z.boolean().catch(true),
+      // Off until the user opts in: the cockpit never contacts GitHub by itself (D71)
+      updates: z.enum(UPDATE_MODES).catch('off'),
     }),
     review: section({
       // How the review sits beside the terminal: by the tab's shape, or always one way while it fits

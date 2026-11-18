@@ -18,6 +18,12 @@ import { createSettingsView } from './settings-view.ts'
 const api = {
   connections: { list: async () => [], disabled: async () => [], status: async () => undefined },
   autostart: { isEnabled: async () => false },
+  about: { version: async () => '0.9.0', open: () => undefined },
+  updates: {
+    state: async () => ({ canInstall: false, check: { kind: 'never' }, notice: { kind: 'none' } }),
+    check: async () => ({ canInstall: false, check: { kind: 'never' }, notice: { kind: 'none' } }),
+    onChange: () => () => undefined,
+  },
   fonts: {
     system: async () => ({
       terminal: null,

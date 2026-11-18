@@ -203,5 +203,35 @@
     "category": "invalid_argument",
     "retryable": false,
     "rpc": -32037
+  },
+  "DCK-UPD-001": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32038
+  },
+  "DCK-UPD-002": {
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32039
+  },
+  "DCK-UPD-003": {
+    "category": "not_found",
+    "retryable": false,
+    "rpc": -32040
+  },
+  "DCK-UPD-004": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32041
+  },
+  "DCK-UPD-005": {
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32042
+  },
+  "DCK-UPD-006": {
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32043
   }
 }
