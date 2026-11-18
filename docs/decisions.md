@@ -672,6 +672,13 @@ tab's agent changes state (debounced 400 ms), and never while the review is clos
 in the same tab; a request from the maintainer on 2026-11-13 (`plans/review.md`).
 **How to revert:** drop `createReviewTabs` and `createTabView` from `app.ts`, the `review` channels from
 the bridge and the preload, and the `review/` and `panes/` folders; the terminal goes back to filling the tab.
+**Update: untracked files are read in process (2026-11-18).** One `diff --no-index` per untracked file cost
+over 5 s for 300 files on a Mac, so the adapter builds the addition from the file's bytes as git shows it
+(`untracked-file.ts`: NUL in the first 8000 bytes is binary, a link shows its target), with one
+`check-attr` and one `config` per repository. A file git would transform first still goes through
+`diff --no-index`: a diff driver, a clean filter, `ident`, a working tree encoding, or a carriage return
+when `text`, `eol`, `crlf` or `core.autocrlf` may convert line ends. A test compares both readers on every
+kind of file. To revert, send every file to `diffUntracked`.
 
 ## D48. The review fits the tab's shape, reads as one scroll and compares with where the branch started
 
