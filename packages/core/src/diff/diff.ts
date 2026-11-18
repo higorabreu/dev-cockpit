@@ -57,9 +57,25 @@ export interface DiffFile {
   readonly omitted?: true
   // How many lines the new version has, so the unchanged lines after the last hunk can be shown
   readonly newLineCount?: number
+  // The innermost submodule that holds the file, by its folder from the repository's top; the path is
+  // from the top too
+  readonly module?: string
   // An untracked file past the reading limit: listed, its content read only when asked
   readonly unloaded?: true
 }
+
+// A submodule whose changes the review shows inside it, as a group of its files
+export interface DiffModule {
+  // Its folder from the repository's top; a nested one starts with the folder of the one that holds it
+  readonly path: string
+  // The subjects of its new commits since the scope's start, newest first, at most MODULE_COMMITS
+  readonly commits: readonly string[]
+  // All of them, which can be more than the subjects
+  readonly commitCount: number
+}
+
+// How many commit subjects a submodule carries; the rest is a count
+export const MODULE_COMMITS = 10
 
 export interface ReviewDiff {
   // The repository's top folder
@@ -68,6 +84,8 @@ export interface ReviewDiff {
   // What the second scope compares with, found in either scope so the select can name it
   readonly branch: BranchInfo
   readonly files: readonly DiffFile[]
+  // The submodules with changes, each holding the files whose `module` names it or a nested one
+  readonly modules: readonly DiffModule[]
   readonly additions: number
   readonly deletions: number
 }
@@ -77,6 +95,7 @@ export function reviewDiff(
   scope: DiffScope,
   branch: BranchInfo,
   files: readonly DiffFile[],
+  modules: readonly DiffModule[] = [],
 ): ReviewDiff {
   let additions = 0
   let deletions = 0
@@ -84,7 +103,7 @@ export function reviewDiff(
     additions += file.additions
     deletions += file.deletions
   }
-  return { root, scope, branch, files, additions, deletions }
+  return { root, scope, branch, files, modules, additions, deletions }
 }
 
 const LOCK_FILES = new Set([

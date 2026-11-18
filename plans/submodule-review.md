@@ -55,10 +55,13 @@ panel lists submodules with rows that do nothing. Untracked files past the 300th
 
 ## Tasks
 
-- [ ] SM-T1. `core`: `DiffModule`, a file's `module`, the files' order, the index rows with collapse, the
-  `unloaded` notice; tests. (S1, S2, S6)
-- [ ] SM-T2. `node-git`: submodules read recursively in every scope, their untracked files, their commits,
-  the shared limits; tests against real repositories with a nested submodule. (S1, S6)
+- [x] SM-T1. `core`: `DiffModule`, a file's `module`, the files' order, the index rows with collapse, the
+  `unloaded` notice; tests. (S1, S2, S6) The parser now marks a submodule with only edits inside: git
+  prints no `index` line for it, so it read as a text file named after the folder.
+- [x] SM-T2. `node-git`: submodules read recursively in every scope, their untracked files, their commits,
+  the shared limits; tests against real repositories with a nested submodule. (S1, S6) The commits are
+  those after the recorded one up to the submodule's HEAD (`log old..HEAD`); a submodule moved back
+  shows its files and no commit. The 32 MB limit counts the diffs of every repository together.
 - [ ] SM-T3. `ui`: the groups in the index, the submodule part in the diff headers, the commits line and its
   tooltip, both catalogs. (S2, S3, S4, S8)
 - [x] SM-T4. Every untracked file listed, "Content not loaded" and the diff loaded on demand through a host
