@@ -70,8 +70,9 @@ jobs:
     name: Build .dmg (arm64)
     needs: release-please
     if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.release-please.outputs.release_created == 'true') }}
-    # Apple Silicon: package-mac.mjs builds for the runner's own processor, so this is the arm64 image
-    runs-on: macos-14
+    # Apple Silicon: package-mac.mjs builds for the runner's own processor, and macos-latest is arm64;
+    # a fixed image such as macos-14 stops running once GitHub retires it, as it did for 0.10.0
+    runs-on: macos-latest
     env:
       TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
     steps:
