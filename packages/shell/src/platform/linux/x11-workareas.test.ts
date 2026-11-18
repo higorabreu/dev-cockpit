@@ -39,18 +39,55 @@ describe('createElectronScreen with system work areas', () => {
       id: 1,
       bounds: { x: 0, y: 0, width: 1920, height: 1080 },
       workArea: { x: 0, y: 0, width: 1920, height: 1080 },
+      scaleFactor: 1,
+    }),
+  }
+  // Electron at 150%: the monitor is 1920x1080 device pixels, 1280x720 DIP, with a 32px top bar
+  const scaledApi = {
+    getCursorScreenPoint: () => ({ x: 0, y: 0 }),
+    getDisplayNearestPoint: () => ({
+      id: 1,
+      bounds: { x: 0, y: 0, width: 1280, height: 720 },
+      workArea: { x: 0, y: 21, width: 1280, height: 699 },
+      scaleFactor: 1.5,
     }),
   }
 
   it('should use the system work area when the monitor has one', () => {
     const screen = createElectronScreen(api, () => parseGtkWorkareas(output))
 
-    expect(screen.displayNearest({ x: 10, y: 10 }).workArea.height).toBe(1017)
+    const display = screen.displayNearest({ x: 10, y: 10 })
+
+    expect(display.workArea.height).toBe(1017)
+    expect(display.source).toBe('gtk')
+  })
+
+  it('should convert the system work area to DIP when the display is scaled', () => {
+    const screen = createElectronScreen(scaledApi, () => [
+      { x: 0, y: 32, width: 1920, height: 1048 },
+    ])
+
+    const display = screen.displayNearest({ x: 10, y: 10 })
+
+    expect(display.workArea).toEqual({ x: 0, y: 21, width: 1280, height: 699 })
+    expect(display.source).toBe('gtk')
+  })
+
+  it('should keep the Electron work area when the system one goes past the display bounds', () => {
+    const screen = createElectronScreen(api, () => [{ x: 0, y: 32, width: 1920, height: 1100 }])
+
+    const display = screen.displayNearest({ x: 10, y: 10 })
+
+    expect(display.workArea).toEqual({ x: 0, y: 0, width: 1920, height: 1080 })
+    expect(display.source).toBe('electron')
   })
 
   it('should keep the Electron work area when the system reports none', () => {
     const screen = createElectronScreen(api)
 
-    expect(screen.displayNearest({ x: 10, y: 10 }).workArea.height).toBe(1080)
+    const display = screen.displayNearest({ x: 10, y: 10 })
+
+    expect(display.workArea.height).toBe(1080)
+    expect(display.source).toBe('electron')
   })
 })
