@@ -61,6 +61,6 @@ packaged app ignores the variable. `pkexec` is found on `PATH`, so a check puts 
   (start check, restart with saved tabs, the test-only override).
 - [x] U6. Window: the notice (available, downloading, installing, installed, failed, agent warning), the
   hold menu item, the System row with "Check now"; texts in both catalogs.
-- [ ] U7. Release workflow: the Mac image job, the `.dmg` in `SHA256SUMS`; YAML checked, not run.
+- [x] U7. Release workflow: the Mac image job, the `.dmg` in `SHA256SUMS`; YAML checked, not run.
 - [ ] U8. D71, README, a check in the real app under Xvfb against a local fake feed (both themes, both
   languages).

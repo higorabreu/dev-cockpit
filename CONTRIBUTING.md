@@ -71,8 +71,9 @@ By contributing you agree that your contribution is licensed under the
 Releases are automated with [release-please](https://github.com/googleapis/release-please). Every push to
 `main` updates a pull request named `chore: release x.y.z` with the version and the changelog computed
 from the Conventional Commits since the last release. Merging that pull request creates the tag and the
-GitHub release, and the workflow then builds the `.deb` packages and attaches them with `SHA256SUMS` and a
-build provenance attestation. While the version is 0.x, a breaking change bumps the minor number and
+GitHub release, and the workflow then builds the `.deb` packages and, on a macOS runner, the arm64 `.dmg`,
+and attaches them with `SHA256SUMS` and a build provenance attestation. A failed Mac build does not hold
+the `.deb` packages back: the release goes out without its image. While the version is 0.x, a breaking change bumps the minor number and
 nothing goes to 1.0 by itself.
 
 The release pull request is opened by a bot, and pull requests opened with the default `GITHUB_TOKEN` do
