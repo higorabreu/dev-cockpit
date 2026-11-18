@@ -55,7 +55,7 @@ packaged app ignores the variable. `pkexec` is found on `PATH`, so a check puts 
   fake source, installer and scheduler; error codes `DCK-UPD-*` with catalog texts.
 - [x] U4. Shell: the Linux installer (download, hash, pkexec, cancelled dialog) with a faked fetch and
   executor.
-- [ ] U5. Setting `system.updates`, host API channels, the dismissed version file, wiring in `main.ts`
+- [x] U5. Setting `system.updates`, host API channels, the dismissed version file, wiring in `main.ts`
   (start check, restart with saved tabs, the test-only override).
 - [ ] U6. Window: the notice (available, downloading, installing, installed, failed, agent warning), the
   hold menu item, the System row with "Check now"; texts in both catalogs.

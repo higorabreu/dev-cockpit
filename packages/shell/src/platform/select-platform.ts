@@ -1,3 +1,4 @@
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createGnomeShortcut } from '@dck/adapter-gnome-shortcuts'
 import * as linuxProc from '@dck/adapter-linux-proc'
@@ -12,11 +13,13 @@ import {
   type PtyOptions,
   type SecretStore,
   type SystemFonts,
+  type UpdateInstaller,
 } from '@dck/core'
 import { systemSecretStore } from '@dck/daemon/secret-store'
 import { createLaunchdAutostart } from './darwin/launchd-autostart.ts'
 import { readLoginPath } from './darwin/login-path.ts'
 import { createPanelWindow, type PanelApp } from './darwin/panel-window.ts'
+import { createDebInstaller, runProgram } from './linux/deb-installer.ts'
 import { createRegularWindow } from './linux/regular-window.ts'
 import { createLinuxSystemFonts, runCommand } from './linux/system-fonts.ts'
 import { createXdgAutostart, defaultAutostartDirectory } from './linux/xdg-autostart.ts'
@@ -30,6 +33,7 @@ export interface PlatformContext {
   readonly execPath: string
   readonly appPath: string
   readonly resourcesPath: string
+  readonly appVersion: string
   readonly logger: Logger
   // Electron's app, which the Mac panel activates, hides and keeps out of the Dock
   readonly app: PanelApp
@@ -46,6 +50,8 @@ export interface Platform {
   loginPath(): Promise<string | undefined>
   readonly window: PlatformWindow
   readonly fonts: SystemFonts
+  // Undefined where the cockpit cannot replace itself: it then only points to the release page
+  readonly updateInstaller: UpdateInstaller | undefined
 }
 
 // Exported so a test can check which adapter a platform gets without inspecting the system
@@ -65,6 +71,13 @@ export const nativeWayland = (
   platform === 'linux' &&
   env.XDG_SESSION_TYPE === 'wayland' &&
   commandLine.getSwitchValue('ozone-platform') !== 'x11'
+
+// Only the .deb installs in /opt/dev-cockpit; a development run installs only against a local test feed
+export const installsDeb = (context: PlatformContext) =>
+  context.platform === 'linux' &&
+  (context.packaged
+    ? context.execPath.startsWith('/opt/dev-cockpit/')
+    : context.env.DCK_UPDATE_FEED !== undefined)
 
 export function selectPlatform(context: PlatformContext): Platform {
   const { platform, env, home, packaged, execPath, appPath, resourcesPath, logger } = context
@@ -124,5 +137,14 @@ export function selectPlatform(context: PlatformContext): Platform {
       platform === 'linux'
         ? createLinuxSystemFonts(runCommand)
         : { read: async () => noSystemFonts },
+    updateInstaller: installsDeb(context)
+      ? createDebInstaller({
+          fetch,
+          run: runProgram,
+          tempRoot: tmpdir(),
+          userAgent: `dev-cockpit/${context.appVersion}`,
+          logger,
+        })
+      : undefined,
   }
 }

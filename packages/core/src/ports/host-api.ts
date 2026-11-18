@@ -6,6 +6,7 @@ import type { Result } from '../result.ts'
 import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
 import type { SettingsFileState } from '../settings/settings-file.ts'
 import type { SavedTabs } from '../tabs/saved-tabs.ts'
+import type { UpdateState } from '../updates/updater.ts'
 import type { AgentProfile } from './agent.ts'
 import type { ConnectionFields, ConnectionStatus, DisabledConnector } from './connections.ts'
 import type { DiffOutcome, DiffRequest } from './diff-source.ts'
@@ -138,6 +139,19 @@ export interface HostApi {
     saved(): Promise<SavedTabs | undefined>
     save(tabs: SavedTabs): void
   }
+  // The cockpit's own releases; nothing takes an argument, the host knows the release and its files
+  readonly updates: {
+    state(): Promise<UpdateState>
+    // Does nothing while `system.updates` is off
+    check(): Promise<UpdateState>
+    install(): void
+    dismiss(): void
+    // The release's page in the browser
+    openRelease(): void
+    // The window saves its tabs first; the host waits for that write, relaunches and quits
+    restart(): void
+    onChange(listener: (state: UpdateState) => void): Unsubscribe
+  }
   readonly window: {
     toggleFullHeight(): void
     // The bottom edge dragged to this height in pixels; the fraction of the screen it takes, or undefined
@@ -199,6 +213,13 @@ export const hostChannels = {
   fontsSystem: 'fonts:system',
   tabsSaved: 'tabs:saved',
   tabsSave: 'tabs:save',
+  updatesState: 'updates:state',
+  updatesCheck: 'updates:check',
+  updatesInstall: 'updates:install',
+  updatesDismiss: 'updates:dismiss',
+  updatesOpenRelease: 'updates:open-release',
+  updatesRestart: 'updates:restart',
+  updatesChanged: 'updates:changed',
   windowToggleFullHeight: 'window:toggle-full-height',
   windowResize: 'window:resize',
   windowResizeEnd: 'window:resize-end',

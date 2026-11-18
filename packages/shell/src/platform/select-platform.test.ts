@@ -8,6 +8,7 @@ import { FakeDockWindow } from '@dck/core/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { PlacedWindow } from './platform-window.ts'
 import {
+  installsDeb,
   nativeWayland,
   type PlatformContext,
   processAdapters,
@@ -31,6 +32,7 @@ const context = (overrides: Partial<PlatformContext>): PlatformContext => ({
   execPath: '/opt/dck/electron',
   appPath: '/opt/dck/app',
   resourcesPath: '/opt/dck/resources',
+  appVersion: '0.9.0',
   logger: silentLogger,
   app: { focus: () => undefined, hide: () => undefined },
   ...overrides,
@@ -104,6 +106,40 @@ describe('selectPlatform', () => {
     // Assert
     const entry = await readFile(join(directory, 'dev-cockpit.desktop'), 'utf8')
     expect(entry.split('\n')).toContain(exec)
+  })
+
+  it.each([
+    {
+      when: 'the .deb runs from /opt/dev-cockpit',
+      overrides: { execPath: '/opt/dev-cockpit/dev-cockpit' },
+      expected: true,
+    },
+    { when: 'the app runs packaged from another folder', overrides: {}, expected: false },
+    {
+      when: 'a packaged app is given a test feed',
+      overrides: { env: { DCK_UPDATE_FEED: 'http://127.0.0.1:4000' } },
+      expected: false,
+    },
+    {
+      when: 'a development build is given a test feed',
+      overrides: { packaged: false, env: { DCK_UPDATE_FEED: 'http://127.0.0.1:4000' } },
+      expected: true,
+    },
+    {
+      when: 'a development build has no test feed',
+      overrides: { packaged: false },
+      expected: false,
+    },
+    {
+      when: 'the app runs on macOS',
+      overrides: { platform: 'darwin' as const, execPath: '/opt/dev-cockpit/dev-cockpit' },
+      expected: false,
+    },
+  ])('should install updates $expected when $when', ({ overrides, expected }) => {
+    const selected = context(overrides)
+
+    expect(installsDeb(selected)).toBe(expected)
+    expect(selectPlatform(selected).updateInstaller !== undefined).toBe(expected)
   })
 
   it('should start the app hidden through a LaunchAgent with the sandbox when the platform is macOS', async () => {

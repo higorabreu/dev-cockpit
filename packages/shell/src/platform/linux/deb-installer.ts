@@ -1,3 +1,4 @@
+import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { createWriteStream } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -38,6 +39,15 @@ export interface DebInstallerDeps {
   readonly userAgent: string
   readonly logger: Logger
 }
+
+// No timeout: pkexec waits while the user types the password
+export const runProgram = (command: string, args: readonly string[]): Promise<CommandResult> =>
+  new Promise((resolve) => {
+    execFile(command, [...args], { maxBuffer: 16 * 1024 * 1024 }, (error, _stdout, stderr) => {
+      const code = error ? (typeof error.code === 'number' ? error.code : null) : 0
+      resolve({ code, stderr: String(stderr) })
+    })
+  })
 
 const lastLine = (text: string) => text.trim().split('\n').at(-1)?.slice(0, 200) ?? ''
 

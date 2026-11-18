@@ -4,6 +4,7 @@ import { realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
+import { createGitHubReleaseSource } from '@dck/adapter-github'
 import { createJsoncSettingsText } from '@dck/adapter-jsonc'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import {
@@ -21,6 +22,7 @@ import {
   createDockController,
   createJsonLogger,
   createTranslator,
+  createUpdater,
   errorBody,
   fail,
   hostChannels,
@@ -77,9 +79,15 @@ import { createRecencyStore } from './projects/recency-store.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
 import { watchSettingsFile } from './settings/settings-watch.ts'
 import { createSavedTabsFile } from './tabs/saved-tabs-file.ts'
+import { loadDismissedFile } from './updates/dismissed-file.ts'
+import { registerUpdateBridge } from './updates/update-bridge.ts'
 
 // The compositor answers in a few milliseconds; past this the window opens with the last size it knew
 const WAYLAND_BOUNDS_MS = 150
+// The first update check waits for the window to settle; it is not on the path to the first frame
+const UPDATE_START_MS = 5000
+// Where the cockpit's own releases are published
+const RELEASES_REPOSITORY = 'higorabreu/dev-cockpit'
 
 const logger = createJsonLogger((line) => process.stderr.write(line))
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
@@ -137,6 +145,7 @@ app.whenReady().then(async () => {
     execPath: process.execPath,
     appPath: app.getAppPath(),
     resourcesPath: process.resourcesPath,
+    appVersion: app.getVersion(),
     logger,
     app,
   })
@@ -240,9 +249,10 @@ app.whenReady().then(async () => {
 
   logger.info('notifications available', { supported: Notification.isSupported() })
 
+  const http = createFetchHttpClient()
   const implementations = createConnectorConnections({
     secrets: platform.secrets,
-    http: createFetchHttpClient(),
+    http,
     profile: profile.profile,
     account: (id) => ({
       get: () => storedAccount(settingsStore.get().settings, id),
@@ -287,8 +297,10 @@ app.whenReady().then(async () => {
     for (const id of implementations.keys()) void views.configure(id, accountOf(settings, id))
   }
 
+  const ipc = createElectronIpc(ipcMain)
+  const savedTabs = createSavedTabsFile(join(app.getPath('userData'), 'open-tabs.json'), logger)
   const bridge = registerHostBridge({
-    ipcMain: createElectronIpc(ipcMain),
+    ipcMain: ipc,
     ptyHost: createNodePtyHost(),
     clipboard: {
       // Files copied in a file manager paste as their paths, as in VTE
@@ -331,7 +343,7 @@ app.whenReady().then(async () => {
       createFavoritesStore(join(app.getPath('userData'), 'favorite-projects.json'), logger),
     ),
     fonts: platform.fonts,
-    savedTabs: createSavedTabsFile(join(app.getPath('userData'), 'open-tabs.json'), logger),
+    savedTabs,
     // Modal to the window: it stays on top of everything, so a free dialog would open behind it
     async pickFolder() {
       const { canceled, filePaths } = await dialog.showOpenDialog(window, {
@@ -396,6 +408,42 @@ app.whenReady().then(async () => {
     },
   })
 
+  // A development run may read a local test feed; the packaged app always reads GitHub (D71)
+  const updateFeed = app.isPackaged ? undefined : process.env.DCK_UPDATE_FEED
+  const updater = createUpdater({
+    source: createGitHubReleaseSource({
+      http,
+      repository: RELEASES_REPOSITORY,
+      appVersion: app.getVersion(),
+      ...(updateFeed ? { apiRoot: updateFeed, webRoot: updateFeed } : {}),
+    }),
+    installer: platform.updateInstaller,
+    currentVersion: app.getVersion(),
+    arch: process.arch,
+    mode: () => settingsStore.get().settings.system.updates,
+    scheduler: {
+      after(milliseconds, task) {
+        const timer = setTimeout(task, milliseconds)
+        return () => clearTimeout(timer)
+      },
+    },
+    dismissed: await loadDismissedFile(join(app.getPath('userData'), 'updates.json'), logger),
+    logger,
+    onChange: (state) => send(hostChannels.updatesChanged, state),
+  })
+  registerUpdateBridge({
+    ipcMain: ipc,
+    updater,
+    openExternal: (url) => void electronShell.openExternal(url),
+    // The window sent its tabs just before asking; the new process starts once this one has quit
+    async restart() {
+      await savedTabs.written()
+      app.relaunch()
+      app.quit()
+    },
+    logger,
+  })
+
   activeKey = loaded.settings.shortcuts.toggleWindow
   void toggleKey.bind(activeKey).then((bound) => {
     if (bound) logger.info('shortcut registered', { key: activeKey })
@@ -412,6 +460,7 @@ app.whenReady().then(async () => {
       catalog = readCatalog()
       configureViews()
     }
+    if (changed.includes('system.updates')) updater.modeChanged()
     for (const [id, connection] of implementations) {
       const prefix = `connections.${id}`
       if (!changed.some((key) => key === prefix || key.startsWith(`${prefix}.`))) continue
@@ -508,6 +557,7 @@ app.whenReady().then(async () => {
     if (!process.env.DCK_START_HIDDEN) showWindow()
     // A height of 100% saved last time lays the window out for the whole screen from the start
     syncLayout()
+    setTimeout(() => updater.start(), UPDATE_START_MS)
     logger.info('window ready', { endpoint })
   })
 
@@ -580,6 +630,7 @@ app.whenReady().then(async () => {
   }
 
   app.on('before-quit', () => {
+    updater.stop()
     stopWatchingSettings()
     link.stop()
     bridge.killAll()
