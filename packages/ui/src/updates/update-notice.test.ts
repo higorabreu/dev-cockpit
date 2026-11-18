@@ -115,7 +115,7 @@ describe('createUpdateNotice', () => {
 
     button('Restart').click()
 
-    expect(labels(element)).toEqual(['1 tab has an agent running', 'Restart anyway', 'Cancel'])
+    expect(labels(element)).toEqual(['1 tab has an agent running', 'Cancel', 'Restart anyway'])
     expect(calls).toEqual(['done'])
     button('Restart anyway').click()
     expect(calls).toEqual(['done', 'saveTabs', 'restart', 'done'])
@@ -223,7 +223,7 @@ describe('createUpdateNotice compact', () => {
     // Assert
     expect(menus.map((menu) => menu.labels)).toEqual([
       ['Restart', 'Dismiss'],
-      ['Restart anyway', 'Cancel'],
+      ['Cancel', 'Restart anyway'],
     ])
     expect(menus[1]?.anchor).toBe(asked)
     expect(menus.map((menu) => menu.caption)).toEqual([undefined, '1 tab has an agent running'])
