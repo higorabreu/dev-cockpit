@@ -254,34 +254,10 @@ export function createSettingsView(
     return t('settings.file.rowNote', { found: issue.found, reason: issueText(issue) })
   }
 
-  // Beside the button that opens the file: a short word on its state, the detail is on each setting
-  function fileStatus(): HTMLElement | false {
-    const file = settings.file()
-    // A broken file has its own strip over the page
-    const text = openFailed
-      ? t('settings.file.openFailed')
-      : file.kind === 'ok' && file.issues.length > 0
-        ? i18n.plural('settings.file.warnings', file.issues.length)
-        : undefined
-    if (text === undefined) return false
-    const tip =
-      file.kind === 'ok' && file.issues.length > 0 && !openFailed
-        ? i18n.plural('settings.file.issues', file.issues.length)
-        : undefined
-    const status = h(
-      'button',
-      {
-        type: 'button',
-        class: 'sfile-status',
-        'data-focus': 'set-file-status',
-        'data-tip': tip,
-      },
-      icon(WARNING, 14, 'sfile-warn'),
-      h('span', {}, text),
-    )
-    status.addEventListener('click', () => void openFile())
-    return status
-  }
+  // Only when no app opened the file: the button alone gives no sign that nothing happened
+  const openFailedText = () =>
+    openFailed &&
+    h('span', { class: 'sfile-failed', role: 'status' }, t('settings.file.openFailed'))
 
   // Above the page, only while the file cannot be read: nothing here saves until it is fixed
   function brokenStrip(): HTMLElement | false {
@@ -740,20 +716,26 @@ export function createSettingsView(
     return sections
   }
 
+  // Warnings mark the button with a dot and count in its tooltip; the detail is under each setting
   function fileButton(): HTMLElement {
+    const file = settings.file()
+    const warnings = file.kind === 'ok' ? file.issues.length : 0
+    const tip =
+      warnings > 0 ? i18n.plural('settings.file.openWarnings', warnings) : t('settings.file.open')
     const button = h(
       'button',
       {
         type: 'button',
-        class: 'pclose',
+        class: 'pclose sfile',
         'data-focus': 'set-open-file',
-        'data-tip': t('settings.file.open'),
-        'aria-label': t('settings.file.open'),
+        'data-tip': tip,
+        'aria-label': tip,
       },
       icon(
         '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M10 12l-1.5 2.5L10 17M14 12l1.5 2.5L14 17"/>',
         14,
       ),
+      warnings > 0 && h('span', { class: 'sfile-dot', 'aria-hidden': 'true' }),
     )
     button.addEventListener('click', () => void openFile())
     return button
@@ -767,7 +749,7 @@ export function createSettingsView(
       h(
         'div',
         { class: 'shead-actions' },
-        fileStatus(),
+        openFailedText(),
         fileButton(),
         closeButton(t, closeView, 'set-close'),
       ),

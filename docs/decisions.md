@@ -1047,8 +1047,9 @@ with a button that opens the file. A value of the file the model did not use as 
 default, clamped or corrected, left out of a list or map, not a setting at all, refused by the system, a
 projects folder that does not exist) is told where it is fixed: under its setting, what the file holds and
 what is used instead, and the setting's reset writes the right value into the file even when the one in
-use is already the default; the pages holding one get a mark; beside the file button a short count
-("3 warnings") opens the file, which is the only place an unknown key shows. Nothing stacks at the top of
+use is already the default; the pages holding one get a mark, and so does the button that opens the file,
+whose tooltip counts them ("Open the settings file: 3 warnings"); an unknown key shows only there and in
+the file. Nothing stacks at the top of
 the screen however many there are. A number typed on the screen out of range says beside its field what it became, and the
 projects folder field says when its folder does not exist. "Open the settings file", a button in the
 screen's header and an item in the hold menu's System list, opens the file in the system's default editor

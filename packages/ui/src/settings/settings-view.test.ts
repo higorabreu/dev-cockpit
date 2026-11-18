@@ -681,25 +681,22 @@ describe('settings view, the settings file', () => {
     const { body, view } = open()
 
     // Assert
-    expect(body.querySelector('.sfile-status')).toBeNull()
+    expect(body.querySelector('.sfile-dot')).toBeNull()
     expect(body.querySelector('.sbroken')).toBeNull()
     expect(body.querySelector('.snav-mark')).toBeNull()
     view.close()
   })
 
-  it('should count the warnings beside the file button and open the file when it is pressed', async () => {
-    // Arrange
-    const { body, opens, view } = open([], api, undefined, 'pc', withIssues)
-    const status = body.querySelector<HTMLButtonElement>('.sfile-status')
-
-    // Act
-    status?.click()
-    await settle()
+  it('should put a dot on the file button and count the warnings in its tooltip when the file has some', () => {
+    // Arrange, Act
+    const { body, view } = open([], api, undefined, 'pc', withIssues)
+    const button = body.querySelector<HTMLButtonElement>('[data-focus="set-open-file"]')
 
     // Assert
-    expect(status?.textContent).toBe('3 warnings')
-    expect(status?.dataset.tip).toBe('3 values in settings.json are not used as written')
-    expect(opens()).toBe(1)
+    expect(button?.querySelector('.sfile-dot')).not.toBeNull()
+    expect(button?.dataset.tip).toBe('Open the settings file: 3 warnings')
+    expect(button?.getAttribute('aria-label')).toBe('Open the settings file: 3 warnings')
+    expect(body.querySelector('.shead-actions')?.textContent).toBe('')
     view.close()
   })
 
@@ -774,7 +771,7 @@ describe('settings view, the settings file', () => {
     expect(strip?.nextElementSibling?.id).toBe('settings-panel')
     expect(combobox('theme').disabled).toBe(true)
     expect(body.querySelector<HTMLInputElement>('[data-focus="set-fontSize"]')?.disabled).toBe(true)
-    expect(body.querySelector('.sfile-status')).toBeNull()
+    expect(body.querySelector('.sfile-dot')).toBeNull()
     view.close()
   })
 
@@ -803,7 +800,7 @@ describe('settings view, the settings file', () => {
     emitFile(withIssues)
 
     // Assert
-    expect(body.querySelector('.sfile-status')?.textContent).toBe('3 warnings')
+    expect(body.querySelector('[data-focus="set-open-file"] .sfile-dot')).not.toBeNull()
     expect(noteOf(body, 'theme')).toBe('In settings.json: "purple". Not valid, uses the default.')
     view.close()
   })
@@ -816,7 +813,7 @@ describe('settings view, the settings file', () => {
     // Act: the fake host opens the file the first time only
     button?.click()
     await settle()
-    const opened = body.querySelector('.sfile-status')
+    const opened = body.querySelector('.sfile-failed')
     body.querySelector<HTMLButtonElement>('[data-focus="set-open-file"]')?.click()
     await settle()
 
@@ -824,7 +821,7 @@ describe('settings view, the settings file', () => {
     expect(button?.getAttribute('data-tip')).toBe('Open the settings file')
     expect(opened).toBeNull()
     expect(opens()).toBe(2)
-    expect(body.querySelector('.sfile-status')?.textContent).toBe('No app opened settings.json.')
+    expect(body.querySelector('.sfile-failed')?.textContent).toBe('No app opened settings.json.')
     view.close()
   })
 

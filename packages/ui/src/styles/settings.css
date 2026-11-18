@@ -134,30 +134,25 @@
   gap: 4px;
 }
 
-/* What settings.json says, in a word beside the button that opens it; the detail is on each setting */
-.sfile-status {
-  height: 26px;
-  padding: 0 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 0;
-  border-radius: var(--radius-medium);
-  background: none;
+/* Warnings in settings.json: a dot on the button that opens it, as the pages with one get in the list */
+.sfile {
+  position: relative;
+}
+
+.sfile-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
+  box-shadow: 0 0 0 1.5px var(--surface);
+}
+
+.sfile-failed {
   color: var(--muted);
-  font: inherit;
   font-size: 12px;
-  cursor: pointer;
-}
-
-.sfile-status:hover {
-  background: var(--hover);
-  color: var(--fg);
-}
-
-.sfile-status:focus-visible {
-  outline: 2px solid var(--fg);
-  outline-offset: 1px;
 }
 
 .sfile-warn {
