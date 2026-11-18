@@ -1284,3 +1284,22 @@ to name no authors.
 `core/src/about/about.ts`, `shell/src/updates/about-bridge.ts` and the `about` host API, and put the
 Updates row back in System.
 
+
+## D77. Extensions can be installed from npm, without running npm
+
+**Decision:** besides a local folder and a git URL, `dck ext install` takes an npm package
+(`dck ext install @devcockpit/<name>[@version]`). The cockpit reads the package from the registry itself,
+checks the tarball against the registry's SHA-512 `integrity`, unpacks it into the extensions folder and
+loads its `dck-extension.json` through the same rules as any installed extension. No lifecycle script runs
+and no dependency is installed; a package that declares dependencies is refused until the extension host
+(phase 3) settles how code extensions bring theirs. Official extensions live under the `@devcockpit` scope,
+which only its members can publish to, so the scope marks what the project ships; third parties publish
+under their own name with the keyword `dck-extension`. The registry address is a setting, the public
+registry by default. `npm install -g` is not a way to install an extension: the cockpit never looks in
+Node's global folder.
+**Reason:** the maintainer's choice on 2026-11-18, after creating the `devcockpit` npm organization for the
+installer (D76). npm already gives versions, a name space, integrity hashes and hosting, and authors
+already know how to publish there. Unpacking the tarball instead of calling npm keeps the install free of
+the scripts that make npm packages a common attack path, and leaves Node and npm optional for users.
+**How to revert:** drop the npm source from `dck ext install` and `dck ext update` and its setting; folder
+and git installs stay.
