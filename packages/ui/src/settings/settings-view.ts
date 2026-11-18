@@ -17,6 +17,9 @@ import {
   type SystemFontsInfo,
   type Translator,
   terminalFamily,
+  UPDATE_MODES,
+  type UpdateMode,
+  type UpdateState,
 } from '@dck/core'
 import { trapFocus } from '../kit/focus-trap.ts'
 import { keys as keyCaps } from '../kit/keys.ts'
@@ -109,6 +112,8 @@ export function createSettingsView(
   const t = i18n.t
   let recording = false
   let autostart = false
+  // What the host knows of the cockpit's releases, for the Updates row
+  let update: UpdateState | undefined
   // The fonts installed, asked for each time the screen opens so a font installed since then shows up
   let fonts: SystemFontsInfo = noSystemFonts
   let confirmingReset = false
@@ -471,6 +476,45 @@ export function createSettingsView(
   async function changeAutostart(checked: boolean) {
     autostart = await api.autostart.set(checked)
     render()
+  }
+
+  // One line under the name: the last check's answer, else what the chosen mode does
+  function updatesHint(mode: UpdateMode): string {
+    const check = update?.check
+    if (mode !== 'off' && check && check.kind !== 'never') {
+      if (check.kind === 'checking') return t('settings.updates.checking')
+      if (check.kind === 'current') return t('settings.updates.current')
+      if (check.kind === 'available') return t('updates.available', { version: check.version })
+      return t(`error.${check.code}` as MessageKey)
+    }
+    if (mode === 'install' && update?.canInstall === false) return t('settings.updates.hint.page')
+    return t(`settings.updates.hint.${mode}`)
+  }
+
+  function updatesRow(): HTMLElement {
+    const key = 'system.updates'
+    const mode = settings.current().system.updates
+    const check = h(
+      'button',
+      {
+        type: 'button',
+        class: 'srecord',
+        'data-focus': 'set-updates-check',
+        disabled: mode === 'off' || update?.check.kind === 'checking' || disabled(key),
+      },
+      t('settings.updates.check'),
+    )
+    check.addEventListener('click', () => void api.updates.check())
+    const control = h(
+      'span',
+      { class: 'supdates' },
+      select(
+        key,
+        UPDATE_MODES.map((value) => [value, t(`settings.updates.${value}`)] as const),
+      ),
+      check,
+    )
+    return row(key, t('settings.updates'), control, updatesHint(mode))
   }
 
   const statusOf = (id: string) => statuses.get(id) ?? { kind: 'none' as const }
@@ -1053,6 +1097,7 @@ export function createSettingsView(
             checkbox('system.agentConnectHint'),
             t('settings.agentConnectHint.hint'),
           ),
+          updatesRow(),
         ),
         group(
           undefined,
@@ -1114,6 +1159,10 @@ export function createSettingsView(
       autostart = on
       if (isOpen()) render()
     })
+    void api.updates.state().then((state) => {
+      update = state
+      if (isOpen()) render()
+    })
   }
 
   function closeView() {
@@ -1141,6 +1190,12 @@ export function createSettingsView(
 
   // The file was saved by hand: its errors and ignored values show at once
   settings.onFile(() => {
+    if (isOpen() && local === 0) render()
+  })
+
+  // A check's answer reaches the line under Updates, whoever started it
+  api.updates.onChange((state) => {
+    update = state
     if (isOpen() && local === 0) render()
   })
 

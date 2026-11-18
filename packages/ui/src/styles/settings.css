@@ -391,7 +391,8 @@
 .srange,
 .snumber,
 .sshortcut,
-.sfolder {
+.sfolder,
+.supdates {
   display: flex;
   align-items: center;
   gap: 8px;

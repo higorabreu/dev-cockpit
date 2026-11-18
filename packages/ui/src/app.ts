@@ -68,6 +68,7 @@ import { createTabBar } from './tabs/tab-bar.ts'
 import { createTabList } from './tabs/tab-list.ts'
 import { createTabMenu } from './tabs/tab-menu.ts'
 import { createTerminalSession, type TerminalSession } from './terminal/terminal-session.ts'
+import { createUpdateNotice } from './updates/update-notice.ts'
 import { createViewsView } from './views/views-view.ts'
 import { createResizeEdge } from './window/resize-edge.ts'
 
@@ -133,6 +134,14 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const keymap = createKeymap(keyboardFor(navigator.platform))
   const nativeMiddlePaste = navigator.platform.startsWith('Linux')
   const notice = createNotice(elements.notice, i18n)
+  const updateNotice = createUpdateNotice({
+    notice,
+    i18n,
+    updates: api.updates,
+    agentTabs: () => state.tabs.filter((tab) => watcher.get(tab.id)?.activity === 'agent').length,
+    saveTabs: () => saveTabsNow(),
+    done: () => focusActive(),
+  })
   const menu = createTabMenu(elements.menu)
   let state: TabsState = emptyTabs
   let theme = themeFor(settings.current().theme)
@@ -480,20 +489,29 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   function saveTabsSoon() {
     if (restoring || !settings.current().window.restoreTabs) return
     clearTimeout(saveTimer)
-    saveTimer = setTimeout(() => {
-      const next = tabsToSave(state, (id) => {
-        const cwd = watcher.get(id)?.cwd
-        const project = projectOf(id)
-        return {
-          ...(cwd ? { cwd } : {}),
-          ...(project ? { project } : {}),
-          named: namedTabs.has(id),
-        }
-      })
-      if (sameSavedTabs(lastSaved, next)) return
-      lastSaved = next
-      api.tabs.save(next)
-    }, SAVE_TABS_MS)
+    saveTimer = setTimeout(writeTabs, SAVE_TABS_MS)
+  }
+
+  function writeTabs() {
+    const next = tabsToSave(state, (id) => {
+      const cwd = watcher.get(id)?.cwd
+      const project = projectOf(id)
+      return {
+        ...(cwd ? { cwd } : {}),
+        ...(project ? { project } : {}),
+        named: namedTabs.has(id),
+      }
+    })
+    if (sameSavedTabs(lastSaved, next)) return
+    lastSaved = next
+    api.tabs.save(next)
+  }
+
+  // Before a restart: what is waiting for the debounce is written now
+  function saveTabsNow() {
+    if (restoring || !settings.current().window.restoreTabs) return
+    clearTimeout(saveTimer)
+    writeTabs()
   }
 
   // The last run's tabs, in their order, folders and names, with the one that was active; else one tab
@@ -682,6 +700,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       reviews.retranslate()
       for (const view of tabViews.values()) view.retranslate()
       showBadge(badge.count, badge.label)
+      updateNotice.retranslate()
       settingsView.rerender()
       renderTabs()
     }
@@ -834,6 +853,9 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     'system:settings': () => settingsView.open(),
     'system:settings-file': () => void settings.openFile(),
     'system:panel': togglePanel,
+    // The hold menu offers it only while a newer release can be taken
+    'system:update': () =>
+      updateNotice.current()?.canInstall ? api.updates.install() : api.updates.openRelease(),
     'project:search': searchProjects,
     'views:open': () => void viewsView.open(),
   }
@@ -929,9 +951,18 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
             label: i18n.t('menu.system.theme'),
             shortcut: keymap.label('theme'),
           },
+          ...updateItems(),
         ],
       },
     ]
+  }
+
+  // While a newer release can be taken, dismissed or not: install it here, or read about it where it cannot
+  function updateItems() {
+    const update = updateNotice.current()
+    if (!update?.offer) return []
+    const label = update.canInstall ? 'updates.menu.install' : 'updates.menu.page'
+    return [{ id: 'system:update', label: i18n.t(label, { version: update.offer }) }]
   }
 
   createHoldMenuController(
@@ -996,6 +1027,11 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   void viewsView.warm()
   api.window.onShown(() => void viewsView.warm())
   api.window.onOpenSettings(() => settingsView.open())
+  api.updates.onChange((update) => updateNotice.show(update))
+  // A change that arrived first is newer than this answer
+  void api.updates.state().then((update) => {
+    if (!updateNotice.current()) updateNotice.show(update)
+  })
   api.window.onShown(() => {
     setTimeout(markActiveSeen, 150)
     document.body.classList.remove('enter')

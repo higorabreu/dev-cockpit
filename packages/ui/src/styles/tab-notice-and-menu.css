@@ -16,6 +16,68 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* An update's notice holds actions: centered on the bar's buttons rather than on the text's baseline */
+#notice.lasting {
+  align-items: center;
+  gap: 6px;
+  /* A line apart from the bar's own buttons, so its dismiss is not read as one of them */
+  padding-right: 10px;
+  border-right: 1px solid var(--line);
+}
+
+.notice-text {
+  margin-right: 2px;
+}
+
+/* Room for 100%, so the text beside it holds still while the number grows */
+.notice-percent {
+  min-width: 4ch;
+}
+
+.notice-text.warning {
+  color: var(--warning);
+}
+
+.notice-text.critical {
+  color: var(--critical);
+}
+
+.notice-action {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.notice-dismiss {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.notice-action:hover,
+.notice-dismiss:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.notice-action:focus-visible,
+.notice-dismiss:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
 #tab-menu {
   position: fixed;
   z-index: 40;

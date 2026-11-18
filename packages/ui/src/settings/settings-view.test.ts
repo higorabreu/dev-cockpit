@@ -13,6 +13,7 @@ import {
   type SettingsFileState,
   type SettingsPatch,
   settingsFileOk,
+  type UpdateState,
 } from '@dck/core'
 import { describe, expect, it } from 'vitest'
 import { createKeymap, type Keyboard } from '../platform/keymap.ts'
@@ -64,6 +65,30 @@ function fakeSettings(
   return { client, patches, emit, emitFile, opens: () => opens }
 }
 
+// The host's side of the Updates row: its state, the checks asked and the change listeners
+function updatesHost(
+  initial: UpdateState = { canInstall: true, check: { kind: 'never' }, notice: { kind: 'none' } },
+  answer: UpdateState = initial,
+) {
+  let state = initial
+  let checks = 0
+  const listeners = new Set<(next: UpdateState) => void>()
+  const updates = {
+    state: async () => state,
+    check: async () => {
+      checks += 1
+      state = answer
+      for (const listener of listeners) listener(state)
+      return state
+    },
+    onChange: (listener: (next: UpdateState) => void) => {
+      listeners.add(listener)
+      return () => void listeners.delete(listener)
+    },
+  }
+  return { updates, checks: () => checks }
+}
+
 // Only what opening the screen asks the host for
 const api = {
   connections: {
@@ -72,6 +97,7 @@ const api = {
     status: async () => ({ kind: 'none' }),
   },
   autostart: { isEnabled: async () => false },
+  updates: updatesHost().updates,
   fonts: {
     system: async () => ({
       terminal: 'MesloLGS NF',
@@ -315,6 +341,95 @@ describe('settings view, agent connect hint', () => {
   })
 })
 
+describe('settings view, updates', () => {
+  const systemPage = (initial: Settings, host: HostApi) => {
+    const opened = open([], host, initial)
+    opened.body.querySelector<HTMLElement>('#settings-tab-system')?.click()
+    const row = opened.body.querySelector<HTMLElement>('[data-setting="system.updates"]')
+    const check = opened.body.querySelector<HTMLButtonElement>('[data-focus="set-updates-check"]')
+    if (!row || !check) throw new Error('invariant: the System page has the Updates row')
+    return { ...opened, row, check }
+  }
+  const withUpdates = (fake: ReturnType<typeof updatesHost>) =>
+    ({ ...api, updates: fake.updates }) as unknown as HostApi
+  const mode = (updates: Settings['system']['updates']) =>
+    mergeSettings(defaultSettings, { system: { updates } })
+
+  it('should say GitHub is never contacted and disable Check now when updates are off', async () => {
+    const fake = updatesHost()
+    const { row, check, view } = systemPage(defaultSettings, withUpdates(fake))
+    await settle()
+
+    expect(row.textContent).toContain('The cockpit never contacts GitHub')
+    expect(check.disabled).toBe(true)
+    view.close()
+  })
+
+  it('should check and say up to date when Check now is pressed and nothing is newer', async () => {
+    const fake = updatesHost(undefined, {
+      canInstall: true,
+      check: { kind: 'current' },
+      notice: { kind: 'none' },
+    })
+    const { body, check, view } = systemPage(mode('notify'), withUpdates(fake))
+    await settle()
+
+    check.click()
+    await settle()
+
+    expect(fake.checks()).toBe(1)
+    expect(body.querySelector('[data-setting="system.updates"]')?.textContent).toContain(
+      'Up to date',
+    )
+    view.close()
+  })
+
+  it('should name the newer version in the row when a check finds one', async () => {
+    const fake = updatesHost({
+      canInstall: true,
+      check: { kind: 'available', version: '0.10.0' },
+      notice: { kind: 'available', version: '0.10.0' },
+      offer: '0.10.0',
+    })
+    const { body, view } = systemPage(mode('notify'), withUpdates(fake))
+    await settle()
+
+    expect(body.querySelector('[data-setting="system.updates"]')?.textContent).toContain(
+      'Version 0.10.0 available',
+    )
+    view.close()
+  })
+
+  it('should say the release page is the way when install is chosen where the cockpit cannot install', async () => {
+    const fake = updatesHost({
+      canInstall: false,
+      check: { kind: 'never' },
+      notice: { kind: 'none' },
+    })
+    const { body, view } = systemPage(mode('install'), withUpdates(fake))
+    await settle()
+
+    expect(body.querySelector('[data-setting="system.updates"]')?.textContent).toContain(
+      'Tells and opens the release page to install by hand',
+    )
+    view.close()
+  })
+
+  it('should save the chosen mode when another one is picked', async () => {
+    const { combobox, patches, view } = systemPage(defaultSettings, withUpdates(updatesHost()))
+
+    const select = combobox('system.updates')
+    select.focus()
+    press(select, 'Enter')
+    press(select, 'ArrowDown')
+    press(select, 'Enter')
+    await settle()
+
+    expect(patches).toEqual([{ system: { updates: 'notify' } }])
+    view.close()
+  })
+})
+
 describe('settings view, projects folder', () => {
   const withPicker = (answer: string | undefined) =>
     ({ ...api, projects: { chooseRoot: async () => answer } }) as unknown as HostApi
@@ -405,6 +520,7 @@ function connectionsHost(
       disconnect: async (): Promise<ConnectionStatus> => ({ kind: 'none' }),
     },
     autostart: { isEnabled: async () => false },
+    updates: api.updates,
     fonts: api.fonts,
   } as unknown as HostApi
   return {

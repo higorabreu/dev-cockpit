@@ -29,7 +29,7 @@ Decided with the maintainer:
 
 ## Design
 
-- Core, no I/O: `updates/version.ts` (semver parse and compare), `updates/release-files.ts` (the package
+- Core, no I/O: `updates/semver.ts` (semver parse and compare), `updates/release-files.ts` (the package
   name for an architecture, the `SHA256SUMS` parser) and `updates/updater.ts` (the state machine: checks,
   the 12 hour timer, dismissal, download, verify, install), over two ports in `ports/updates.ts`:
   `ReleaseSource` (the newest release) and `UpdateInstaller` (fetch a text, download with a SHA-256,
@@ -40,6 +40,8 @@ Decided with the maintainer:
   `updates/` for the dismissed version file and the IPC channels (no channel takes an argument: the host
   knows the release, its page and its files).
 - Window: `ui/src/updates/` for the notice and the restart guard; the System row in the settings view.
+  `ui/src/tabs/notice.ts` keeps a lasting notice under the short "Copied" one, so a copy no longer wipes
+  the update.
 
 **Test-only override:** with `DCK_UPDATE_FEED=<base URL>` and an app that is not packaged
 (`app.isPackaged` false), the release source reads `<base URL>/repos/higorabreu/dev-cockpit/releases/latest`
@@ -57,7 +59,7 @@ packaged app ignores the variable. `pkexec` is found on `PATH`, so a check puts 
   executor.
 - [x] U5. Setting `system.updates`, host API channels, the dismissed version file, wiring in `main.ts`
   (start check, restart with saved tabs, the test-only override).
-- [ ] U6. Window: the notice (available, downloading, installing, installed, failed, agent warning), the
+- [x] U6. Window: the notice (available, downloading, installing, installed, failed, agent warning), the
   hold menu item, the System row with "Check now"; texts in both catalogs.
 - [ ] U7. Release workflow: the Mac image job, the `.dmg` in `SHA256SUMS`; YAML checked, not run.
 - [ ] U8. D71, README, a check in the real app under Xvfb against a local fake feed (both themes, both
