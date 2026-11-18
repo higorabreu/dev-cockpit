@@ -242,3 +242,57 @@ body.full #main {
 #dock[data-open="false"] #split {
   display: none;
 }
+
+/* The window's bottom edge: dragged, it changes the docked height. No grip at rest, a line on hover */
+#edge {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  z-index: 20;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+#edge::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: transparent;
+  transition: background var(--motion-fast);
+}
+
+#edge:hover::after,
+#edge[data-drag="true"]::after {
+  background: var(--muted);
+}
+
+/* While the edge is dragged the pointer keeps its resize shape over the whole window and selects nothing */
+body[data-resizing="true"],
+body[data-resizing="true"] * {
+  cursor: ns-resize !important;
+  user-select: none;
+}
+
+/* As tall as a tab (its padding less the border) and placed by the script in the middle of the bar */
+#edge-size {
+  position: fixed;
+  z-index: 20;
+  min-width: 5ch;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-medium);
+  background: var(--surface);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  pointer-events: none;
+}
+
+#edge-size[hidden] {
+  display: none;
+}

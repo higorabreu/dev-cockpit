@@ -52,6 +52,8 @@ function setup(picked: string | undefined = undefined) {
   const clipboard = new MemoryClipboard('conteúdo')
   const sent: Array<[string, ...unknown[]]> = []
   let fullHeightToggles = 0
+  const resizes: number[] = []
+  const resizeEnds: boolean[] = []
   const touched: string[] = []
   let autostartOn = false
   let settingsFileOpens = 0
@@ -206,6 +208,11 @@ function setup(picked: string | undefined = undefined) {
     toggleFullHeight: () => {
       fullHeightToggles += 1
     },
+    resizeWindow: (height) => {
+      resizes.push(height)
+      return Math.round((height / 1000) * 100) / 100
+    },
+    endResizeWindow: (keep) => void resizeEnds.push(keep),
   })
   const call = (channel: string, ...args: unknown[]) =>
     (handlers.get(channel) as (...a: unknown[]) => unknown)({}, ...args)
@@ -231,6 +238,8 @@ function setup(picked: string | undefined = undefined) {
     fileReads,
     savedNotes,
     fullHeights: () => fullHeightToggles,
+    resizes,
+    resizeEnds,
   }
 }
 
@@ -949,5 +958,46 @@ describe('registerHostBridge saved tabs', () => {
 
     expect(await call(hostChannels.tabsSaved)).toEqual({ tabs: [{ name: 'api' }], active: 0 })
     expect(warnings.map((warning) => warning.message)).toContain('tabs to save refused')
+  })
+})
+
+describe('registerHostBridge window resize', () => {
+  it('should resize to a whole height in pixels and answer the fraction it takes', () => {
+    // Arrange
+    const { call, resizes } = setup()
+
+    // Act
+    const ratio = call(hostChannels.windowResize, 600)
+
+    // Assert
+    expect(ratio).toBe(0.6)
+    expect(resizes).toEqual([600])
+  })
+
+  it.each([['600'], [-5], [0.5], [1e9]])(
+    'should refuse the height %s when it is not a window height',
+    (height) => {
+      // Arrange
+      const { call, resizes } = setup()
+
+      // Act
+      const ratio = call(hostChannels.windowResize, height)
+
+      // Assert
+      expect(ratio).toBeUndefined()
+      expect(resizes).toEqual([])
+    },
+  )
+
+  it('should keep the drag only when the window says true', () => {
+    // Arrange
+    const { call, resizeEnds } = setup()
+
+    // Act
+    call(hostChannels.windowResizeEnd, true)
+    call(hostChannels.windowResizeEnd, 'yes')
+
+    // Assert
+    expect(resizeEnds).toEqual([true, false])
   })
 })

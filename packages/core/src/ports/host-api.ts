@@ -140,6 +140,11 @@ export interface HostApi {
   }
   readonly window: {
     toggleFullHeight(): void
+    // The bottom edge dragged to this height in pixels; the fraction of the screen it takes, or undefined
+    // when the height is locked
+    resize(height: number): Promise<number | undefined>
+    // Kept, the dragged height is saved; dropped, the window goes back to how it was
+    endResize(keep: boolean): void
     onShown(listener: () => void): Unsubscribe
     // The tray asks to open the settings screen inside the window
     onOpenSettings(listener: () => void): Unsubscribe
@@ -195,6 +200,8 @@ export const hostChannels = {
   tabsSaved: 'tabs:saved',
   tabsSave: 'tabs:save',
   windowToggleFullHeight: 'window:toggle-full-height',
+  windowResize: 'window:resize',
+  windowResizeEnd: 'window:resize-end',
   windowShown: 'window:shown',
   windowOpenSettings: 'window:open-settings',
   windowFullHeight: 'window:full-height',
