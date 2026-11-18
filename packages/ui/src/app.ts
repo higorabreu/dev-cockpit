@@ -22,7 +22,6 @@ import {
   noSystemFonts,
   notificationText,
   openTab,
-  type PluralKey,
   type ProgramStatus,
   type Project,
   renameTab,
@@ -43,6 +42,7 @@ import {
 import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
 import { createHoldMenuController } from './hold-menu/hold-menu-controller.ts'
 import { setFullHeight } from './kit/layout-mode.ts'
+import { showRailDot } from './kit/rail-dot.ts'
 import { translateStatic } from './kit/static-text.ts'
 import { setTipRegion } from './kit/tooltip.ts'
 import { createEnvironmentSection } from './panel/environment-section.ts'
@@ -69,6 +69,7 @@ import { createTabList } from './tabs/tab-list.ts'
 import { createTabMenu } from './tabs/tab-menu.ts'
 import { createTerminalSession, type TerminalSession } from './terminal/terminal-session.ts'
 import { createUpdateNotice } from './updates/update-notice.ts'
+import { createSeenMarks } from './views/seen-marks.ts'
 import { createViewsView } from './views/views-view.ts'
 import { createResizeEdge } from './window/resize-edge.ts'
 
@@ -236,21 +237,17 @@ export async function startApp(
     i18n,
     onClose: () => focusActive(),
     openSettings: () => settingsView.open('connections'),
-    onBadge: showBadge,
+    onWaiting: showWorkWaiting,
+    seen: createSeenMarks(localStorage),
     // The ticket link in the Git section follows the Jira tasks as they arrive
     onItems: () => panel.render(),
     keymap,
   })
 
-  let badge: { count: number; label: PluralKey | undefined } = { count: 0, label: undefined }
-  function showBadge(count: number, label: PluralKey | undefined) {
-    badge = { count, label }
-    elements.viewsButton.setAttribute(
-      'aria-label',
-      count === 0 || label === undefined
-        ? i18n.t('views.title')
-        : `${i18n.t('views.title')}. ${i18n.plural(label, count)}`,
-    )
+  let workWaiting = 0
+  function showWorkWaiting(count: number) {
+    workWaiting = count
+    showRailDot(elements.viewsButton, i18n, i18n.t('views.title'), count)
   }
 
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
@@ -459,7 +456,7 @@ export async function startApp(
       createEnvironmentSection({ status: () => environment }, i18n),
     ],
     afterPointer: () => focusActive(),
-    t: i18n.t,
+    i18n,
     title: () => {
       const cwd = state.activeId ? watcher.get(state.activeId)?.cwd : undefined
       return cwd ? displayPath(cwd) : ''
@@ -729,7 +726,7 @@ export async function startApp(
       viewsView.retranslate()
       reviews.retranslate()
       for (const view of tabViews.values()) view.retranslate()
-      showBadge(badge.count, badge.label)
+      showWorkWaiting(workWaiting)
       updateNotice.retranslate()
       settingsView.rerender()
       renderTabs()
@@ -740,7 +737,7 @@ export async function startApp(
     // The keymap reads the keys by itself; what drew a key's label draws it again
     if (changed.some((key) => key.startsWith('shortcuts.keys'))) reviews.keysChanged()
     if (changed.includes('system.agentConnectHint')) panel.render()
-    // A connector was enabled or disabled: its tabs and the badge follow
+    // A connector was enabled or disabled: its tabs and the Work dot follow
     if (changed.includes('extensions.disabled')) void viewsView.warm()
     if (changed.includes('fontSize')) {
       for (const session of sessions.values()) session.setFontSize(next.fontSize)
@@ -1047,7 +1044,7 @@ export async function startApp(
   })
   elements.settingsButton.addEventListener('click', () => settingsView.toggle())
   elements.viewsButton.addEventListener('click', () => viewsView.toggle())
-  showBadge(0, undefined)
+  showWorkWaiting(0)
   void viewsView.warm()
   api.window.onShown(() => void viewsView.warm())
   api.window.onOpenSettings(() => settingsView.open())

@@ -325,7 +325,7 @@ export function createGitSection(source: GitSource, i18n: Translator): PanelSect
       const git = source.snapshot()?.git
       return git ? i18n.plural('git.summary', git.changed) : ''
     },
-    badge: () => undefined,
+    waiting: () => 0,
     body() {
       const snapshot = source.snapshot()
       if (!snapshot) return h('p', { class: 'muted' }, i18n.t('sessions.noInfo'))

@@ -27,7 +27,7 @@ export const GITHUB_CONNECTOR = {
       title: 'views.review',
       description: 'views.github.review.description',
       empty: 'views.empty.github.review',
-      badge: 'views.github.waiting',
+      badge: 'review',
     },
     {
       id: 'github-mine',
@@ -35,6 +35,7 @@ export const GITHUB_CONNECTOR = {
       title: 'views.mine',
       description: 'views.github.mine.description',
       empty: 'views.empty.github.mine',
+      badge: 'attention',
     },
   ],
 } as const satisfies Connector
