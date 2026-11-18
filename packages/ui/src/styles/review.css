@@ -300,6 +300,18 @@
   color: var(--success);
 }
 
+/* A file listed without its content says so at the end of its row, giving way before the name */
+.rv-wait {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* With no counts (a binary file) the tick goes to the end by itself */
 .rv-path + .rv-tick {
   margin-left: auto;

@@ -57,6 +57,8 @@ export interface FileListDeps {
   onSelect(index: number): void
   // Enter: the diff takes the keys
   onOpen(): void
+  // A click or Enter on a file listed without its content reads it
+  onLoad(index: number): void
   isViewed(file: DiffFile): boolean
 }
 
@@ -81,12 +83,15 @@ export function createFileList(deps: FileListDeps) {
   function row(file: DiffFile, index: number): HTMLElement {
     const status = i18n.t(statusKey(file))
     const viewed = deps.isViewed(file)
-    const name = i18n.t('review.a11y.file', {
+    const named = i18n.t('review.a11y.file', {
       path: file.path,
       status,
       added: i18n.plural('review.a11y.added', file.additions),
       removed: i18n.plural('review.a11y.removed', file.deletions),
     })
+    const name = file.unloaded
+      ? `${named}. ${i18n.t('review.unloaded')}. ${i18n.t('review.a11y.showAnyway')}`
+      : named
     const element = h(
       'div',
       {
@@ -102,6 +107,7 @@ export function createFileList(deps: FileListDeps) {
       },
       fileLetter(file, i18n),
       pathLabel(file.path),
+      file.unloaded && h('span', { class: 'rv-wait' }, i18n.t('review.unloaded')),
       file.hunks.length === 0 ? undefined : counts(file.additions, file.deletions),
       viewed &&
         h('span', { class: 'rv-tick', 'data-tip': i18n.t('review.viewed') }, icon(TICK, 14)),
@@ -160,7 +166,9 @@ export function createFileList(deps: FileListDeps) {
   element.addEventListener('click', (event) => {
     const target = (event.target as Element).closest<HTMLElement>('[data-index]')
     if (!target) return
-    select(Number(target.dataset.index))
+    const index = Number(target.dataset.index)
+    select(index)
+    if (files[index]?.unloaded) deps.onLoad(index)
   })
   element.addEventListener('keydown', (event) => {
     if (event.ctrlKey || event.altKey || event.metaKey) return
@@ -171,6 +179,7 @@ export function createFileList(deps: FileListDeps) {
     else if (key === 'PageUp') select(selected - PAGE)
     else if (key === 'Home') select(0)
     else if (key === 'End') select(files.length - 1)
+    else if (key === 'Enter' && files[selected]?.unloaded) deps.onLoad(selected)
     else if (key === 'Enter') deps.onOpen()
     else return
     event.preventDefault()

@@ -441,6 +441,7 @@ export const en: Record<MessageKey, string> = {
   'review.nonUtf8': 'Not UTF-8, shown as binary',
   'review.omitted': 'Too large to show ({size})',
   'review.noContent': 'No content changes',
+  'review.unloaded': 'Content not loaded',
   'review.showLines.one': 'Expand {count} line',
   'review.showLines.other': 'Expand {count} lines',
   'review.size.b': '{value} B',

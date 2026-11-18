@@ -16,6 +16,8 @@ import {
   type PaneGrid,
   patchKey,
   type ReviewBase,
+  type ReviewDiff,
+  reviewDiff,
   type SessionActivityInfo,
   type Translator,
 } from '@dck/core'
@@ -137,6 +139,8 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const viewedMarks = new Map<string, string>()
   const changedSince = new Set<string>()
   const keys = new WeakMap<DiffFile, string>()
+  // Untracked files past the reading limit the user asked to read; read again after every read
+  const wanted = new Set<string>()
   let drawnOptions = ''
 
   const markId = (path: string) => `${scope}|${ignoreWhitespace ? 'w' : ''}|${path}`
@@ -225,6 +229,10 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     i18n,
     onSelect: (index) => diff.revealFile(index),
     onOpen: () => diff.focus(),
+    onLoad: (index) => {
+      const file = files()[index]
+      if (file) void loadFile(file)
+    },
     isViewed,
   })
   list.element.id = `${deps.id}-files`
@@ -239,6 +247,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       shownAnyway.add(file.path)
       drawDiff()
     },
+    load: (file) => void loadFile(file),
     viewed: (file) => ({ viewed: isViewed(file), changed: changedSince.has(markId(file.path)) }),
     toggleViewed: (file) => toggleViewed(file),
     commentCount: (file) => comments.countFor(file.path),
@@ -309,7 +318,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
         texts.clear()
         expanded.clear()
         lastRead.clear()
+        wanted.clear()
       }
+      state = { kind: 'ok', diff: await withWanted(state.diff) }
       const repository = state.diff.root
       root = repository
       branch = state.diff.branch
@@ -329,6 +340,44 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       reconcileMarks(state.diff.files)
       comments.relocate(state.diff.files)
     }
+    draw()
+  }
+
+  // A file read on demand takes the place of its entry; what the listing knew about it stays
+  function replaced(found: ReviewDiff, read: ReadonlyMap<string, DiffFile>): ReviewDiff {
+    const next = found.files.map((file) => {
+      const content = file.unloaded ? read.get(file.path) : undefined
+      return content ? { ...content, generated: content.generated || file.generated } : file
+    })
+    return reviewDiff(found.root, found.scope, found.branch, next)
+  }
+
+  async function readUntracked(repository: string, file: DiffFile) {
+    return api.review.untrackedFile(repository, file.path, ignoreWhitespace)
+  }
+
+  // The files the user asked to read are read again with every read, so they stay current
+  async function withWanted(found: ReviewDiff): Promise<ReviewDiff> {
+    const asked = found.files.filter((file) => file.unloaded && wanted.has(file.path))
+    if (asked.length === 0) return found
+    const results = await Promise.all(asked.map((file) => readUntracked(found.root, file)))
+    const read = new Map<string, DiffFile>()
+    for (const result of results) if (result.ok) read.set(result.value.path, result.value)
+    return replaced(found, read)
+  }
+
+  // A click or Enter on a file listed without its content
+  async function loadFile(file: DiffFile) {
+    if (state.kind !== 'ok' || !file.unloaded) return
+    const found = state.diff
+    wanted.add(file.path)
+    const result = await readUntracked(found.root, file)
+    if (!result.ok) {
+      showNotice(t(`error.${errorCodeOf(result.error)}`))
+      return
+    }
+    if (state.kind !== 'ok' || state.diff !== found) return
+    state = { kind: 'ok', diff: replaced(found, new Map([[file.path, result.value]])) }
     draw()
   }
 

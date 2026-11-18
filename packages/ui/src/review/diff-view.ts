@@ -45,13 +45,14 @@ export interface DiffComments {
   remove(id: string): void
 }
 
-export interface DiffViewDeps extends Omit<FileHeadDeps, 'showAnyway'> {
+export interface DiffViewDeps extends Omit<FileHeadDeps, 'showAnyway' | 'load'> {
   readonly id: string
   readonly comments: DiffComments
   // The gutter's "+": the comment field for these lines
   comment(target: CommentTarget): void
   expand(file: DiffFile, gap: DiffGap): void
   showAnyway(file: DiffFile): void
+  load(file: DiffFile): void
   // The file the diff is on changed: the one at its top, or the one the keys went to
   onCurrentFile(index: number): void
 }
@@ -211,6 +212,7 @@ export function createDiffView(deps: DiffViewDeps) {
     isModified: deps.isModified,
     open: deps.open,
     showAnyway: deps.showAnyway,
+    load: deps.load,
     viewed: deps.viewed,
     toggleViewed: deps.toggleViewed,
     commentCount: deps.commentCount,
@@ -608,6 +610,7 @@ export function createDiffView(deps: DiffViewDeps) {
     if (!row || !file) return
     if (row.kind === 'expand') deps.expand(file, row.gap)
     else if (row.kind === 'file' && isCollapsed(row.notice)) deps.showAnyway(file)
+    else if (row.kind === 'file' && row.notice === 'unloaded') deps.load(file)
   }
 
   // A new orientation or the index folding changes the visible width the headers and bands span

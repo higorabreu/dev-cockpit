@@ -9,6 +9,7 @@ import {
   errorBody,
   fail,
   hashText,
+  isGeneratedPath,
   ok,
   parseUnifiedDiff,
   type Result,
@@ -20,8 +21,11 @@ import { type GitAnswer, type GitFailure, type GitRun, inBatches, runGit } from 
 const QUICK = { timeoutMs: 5000, maxBytes: 1024 * 1024 }
 // The whole diff of a scope; past this the review says it is too large instead of freezing
 const DIFF = { timeoutMs: 15_000, maxBytes: 32 * 1024 * 1024 }
+// Past this many untracked files the rest are listed and read only when asked
 const UNTRACKED_LIMIT = 300
 const UNTRACKED_MAX_BYTES = 1024 * 1024
+// The diff of a file under the limit: every line gains a sign, so it can be twice the file
+const UNTRACKED_DIFF = { timeoutMs: 5000, maxBytes: 4 * UNTRACKED_MAX_BYTES }
 const READ_MAX_BYTES = 8 * 1024 * 1024
 const PARALLEL = 8
 // The status of a huge repository can be long; past this many changed paths only the status counts
@@ -106,36 +110,46 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
     return empty.ok ? ok(empty.stdout.trim()) : fail(failed(empty.failure, 'empty tree'))
   }
 
-  async function untracked(root: string, whitespace: readonly string[]): Promise<DiffFile[]> {
-    const listing = await quick(root, ['ls-files', '--others', '--exclude-standard', '-z'])
+  // Every untracked file of a repository, by its path there; a nested repository is a folder, not a file
+  async function untrackedPaths(dir: string): Promise<string[]> {
+    const listing = await run(dir, ['ls-files', '--others', '--exclude-standard', '-z'], STATUS)
     if (!listing.ok) return []
-    // A nested repository is listed as a folder and is not a file to compare
-    const paths = listing.stdout
-      .split('\0')
-      .filter((path) => path !== '' && !path.endsWith('/'))
-      .slice(0, UNTRACKED_LIMIT)
-    const found = await inBatches(paths, PARALLEL, async (path): Promise<DiffFile[]> => {
-      const size = await files.size(join(root, path))
-      if (size !== undefined && size > UNTRACKED_MAX_BYTES) {
-        return [omitted(path, size)]
-      }
-      const result = await run(
-        root,
-        ['diff', ...DIFF_FLAGS, ...whitespace, '--no-index', '--', '/dev/null', path],
-        QUICK,
-      )
-      if (!result.ok) return []
-      return parseUnifiedDiff(result.stdout).map((file) => ({
-        ...file,
-        path,
-        status: 'added',
-        untracked: true,
-      }))
-    })
-    return found.flat()
+    return listing.stdout.split('\0').filter((path) => path !== '' && !path.endsWith('/'))
   }
 
-  const omitted = (path: string, size: number): DiffFile => ({
+  // An untracked file as an addition; past 1 MB only its size, and one git cannot read stays listed
+  // with its content not loaded
+  async function readUntracked(
+    dir: string,
+    path: string,
+    whitespace: readonly string[],
+  ): Promise<DiffFile> {
+    const size = await files.size(join(dir, path))
+    if (size !== undefined && size > UNTRACKED_MAX_BYTES)
+      return { ...untrackedEntry(path), size, omitted: true }
+    const result = await run(
+      dir,
+      ['diff', ...DIFF_FLAGS, ...whitespace, '--no-index', '--', '/dev/null', path],
+      UNTRACKED_DIFF,
+    )
+    const [file] = result.ok ? parseUnifiedDiff(result.stdout) : []
+    if (!file) return { ...untrackedEntry(path), unloaded: true }
+    return { ...file, path, status: 'added', untracked: true }
+  }
+
+  // The first files are read and the rest only listed, so a huge untracked folder never hides a file
+  async function untracked(root: string, whitespace: readonly string[]): Promise<DiffFile[]> {
+    const paths = await untrackedPaths(root)
+    const read = await inBatches(paths.slice(0, UNTRACKED_LIMIT), PARALLEL, (path) =>
+      readUntracked(root, path, whitespace),
+    )
+    const listed = paths
+      .slice(UNTRACKED_LIMIT)
+      .map((path): DiffFile => ({ ...untrackedEntry(path), unloaded: true }))
+    return [...read, ...listed]
+  }
+
+  const untrackedEntry = (path: string): DiffFile => ({
     path,
     oldPath: undefined,
     status: 'added',
@@ -145,13 +159,11 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
     nonUtf8: false,
     submodule: false,
     crlf: false,
-    generated: false,
+    generated: isGeneratedPath(path),
     untracked: true,
     additions: 0,
     deletions: 0,
     hunks: [],
-    size,
-    omitted: true,
   })
 
   // `linguist-generated` in .gitattributes marks files a tool wrote
@@ -175,7 +187,8 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
   // The new file's length lets the review offer the lines after the last hunk; a binary shows its size
   async function complete(root: string, file: DiffFile, generated: boolean): Promise<DiffFile> {
     const withFlag = generated && !file.generated ? { ...file, generated: true } : file
-    if (file.status === 'deleted' || file.submodule || file.omitted) return withFlag
+    if (file.status === 'deleted' || file.submodule || file.omitted || file.unloaded)
+      return withFlag
     const path = join(root, file.path)
     if (file.binary) {
       const size = await files.size(path)
@@ -189,6 +202,23 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       () => undefined,
     )
     return text === undefined ? withFlag : { ...withFlag, newLineCount: lineCount(text) }
+  }
+
+  // The real path of a file of the repository, refusing a path or a link that leads outside it
+  async function insideRoot(root: string, path: string): Promise<Result<string, ErrorBody>> {
+    const inside = normalize(path)
+    if (isAbsolute(inside) || inside === '..' || inside.startsWith(`..${sep}`))
+      return fail(errorBody('DCK-GIT-004', 'relative path outside the root'))
+    const [realRoot, realTarget] = await Promise.all([
+      files.realpath(root).catch(() => undefined),
+      files.realpath(join(root, inside)).catch(() => undefined),
+    ])
+    if (realRoot === undefined || realTarget === undefined)
+      return fail(errorBody('DCK-GIT-001', 'file not found'))
+    const back = relative(realRoot, realTarget)
+    if (back === '' || back.startsWith('..') || isAbsolute(back))
+      return fail(errorBody('DCK-GIT-004', 'link outside the root'))
+    return ok(realTarget)
   }
 
   return {
@@ -242,20 +272,19 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       return hashText(`${status.stdout}\0${stamps.map((stamp) => stamp ?? '-').join('\0')}`)
     },
 
-    async fileLines(root, path): Promise<Result<readonly string[], ErrorBody>> {
+    async untrackedFile(root, path, ignoreWhitespace): Promise<Result<DiffFile, ErrorBody>> {
+      const resolved = await insideRoot(root, path)
+      if (!resolved.ok) return resolved
       const inside = normalize(path)
-      if (isAbsolute(inside) || inside === '..' || inside.startsWith(`..${sep}`))
-        return fail(errorBody('DCK-GIT-004', 'relative path outside the root'))
-      const target = join(root, inside)
-      const [realRoot, realTarget] = await Promise.all([
-        files.realpath(root).catch(() => undefined),
-        files.realpath(target).catch(() => undefined),
-      ])
-      if (realRoot === undefined || realTarget === undefined)
-        return fail(errorBody('DCK-GIT-001', 'file not found'))
-      const back = relative(realRoot, realTarget)
-      if (back === '' || back.startsWith('..') || isAbsolute(back))
-        return fail(errorBody('DCK-GIT-004', 'link outside the root'))
+      const file = await readUntracked(root, inside, ignoreWhitespace ? ['-w'] : [])
+      if (file.unloaded) return fail(errorBody('DCK-GIT-001', 'untracked file not readable'))
+      return ok(await complete(root, file, false))
+    },
+
+    async fileLines(root, path): Promise<Result<readonly string[], ErrorBody>> {
+      const resolved = await insideRoot(root, path)
+      if (!resolved.ok) return resolved
+      const realTarget = resolved.value
       const size = await files.size(realTarget)
       if (size === undefined || size > READ_MAX_BYTES)
         return fail(errorBody('DCK-GIT-003', `file of ${size ?? 'unknown'} bytes`))

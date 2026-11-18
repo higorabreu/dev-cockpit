@@ -2,6 +2,7 @@
 import {
   type BranchInfo,
   createTranslator,
+  type DiffFile,
   type DiffOutcome,
   type DiffRequest,
   type ErrorBody,
@@ -65,6 +66,23 @@ const repository = (text = diffText(3000, 5000) + lockText, branch: BranchInfo =
 
 type Answer = Result<DiffOutcome, ErrorBody>
 
+const untrackedBlank = (path: string): DiffFile => ({
+  path,
+  oldPath: undefined,
+  status: 'added',
+  oldMode: undefined,
+  newMode: undefined,
+  binary: false,
+  nonUtf8: false,
+  submodule: false,
+  crlf: false,
+  generated: false,
+  untracked: true,
+  additions: 0,
+  deletions: 0,
+  hunks: [],
+})
+
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
 
@@ -82,6 +100,22 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
       diff: async (request: DiffRequest) => {
         requests.push(request)
         return typeof answer === 'function' ? answer() : answer
+      },
+      untrackedFile: async (root: string, path: string) => {
+        reads.push(`untracked ${root}|${path}`)
+        const [file] = parseUnifiedDiff(
+          [
+            `diff --git a/${path} b/${path}`,
+            '--- /dev/null',
+            `+++ b/${path}`,
+            '@@ -0,0 +1 @@',
+            '+hello',
+            '',
+          ].join('\n'),
+        )
+        return file
+          ? ok({ ...file, status: 'added', untracked: true })
+          : fail(errorBody('DCK-GIT-001', 'x'))
       },
       fileLines: async (root: string, path: string) => {
         reads.push(`${root}|${path}`)
@@ -210,6 +244,46 @@ describe('createReviewPane', () => {
     ])
     expect(pane.element.querySelector('.rv-show')).toBeNull()
     expect(pane.element.querySelectorAll('.rv-row[data-kind]').length).toBe(6)
+  })
+
+  it('should list a file past the reading limit and read it on a click or on Enter', async () => {
+    // Arrange
+    const waiting = (path: string): DiffFile => ({
+      ...untrackedBlank(path),
+      unloaded: true,
+    })
+    const answer = ok({
+      kind: 'ok' as const,
+      diff: reviewDiff('/home/ana/acme', 'uncommitted', feature, [
+        waiting('gen/f300.txt'),
+        waiting('gen/f301.txt'),
+      ]),
+    })
+    const { pane, reads, text, key } = setup(answer)
+    pane.open()
+    await flush()
+    const notices = [...pane.element.querySelectorAll('.rv-file .rv-wait')].map(
+      (n) => n.textContent,
+    )
+    const header = text('.rv-filerow[data-file="0"] .rv-why')
+
+    // Act
+    pane.element.querySelector<HTMLElement>('.rv-file[data-index="0"]')?.click()
+    await flush()
+    const index = pane.element.querySelector('.rv-files') as HTMLElement
+    key(index, 'ArrowDown')
+    key(index, 'Enter')
+    await flush()
+
+    // Assert
+    expect(notices).toEqual(['Content not loaded', 'Content not loaded'])
+    expect(header).toBe('Content not loaded')
+    expect(reads).toEqual([
+      'untracked /home/ana/acme|gen/f300.txt',
+      'untracked /home/ana/acme|gen/f301.txt',
+    ])
+    expect(pane.element.querySelector('.rv-wait')).toBeNull()
+    expect(text('.rv-totals')).toBe('2 files+2−0')
   })
 
   it('should group the rows of each file under its name for a screen reader', async () => {

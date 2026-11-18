@@ -201,6 +201,50 @@ describe('createGitDiffSource', () => {
     expect(diff.files[0]).toMatchObject({ path: 'dump.sql', omitted: true, size: 1024 * 1024 + 1 })
   })
 
+  it('should list every untracked file and read only the first 300 when there are more', async () => {
+    // Arrange
+    const path = await repo('many', { 'a.txt': 'a\n' })
+    await mkdir(join(path, 'gen'))
+    for (let index = 0; index < 305; index++) {
+      await writeFile(join(path, 'gen', `f${String(index).padStart(3, '0')}.txt`), `${index}\n`)
+    }
+
+    // Act
+    const diff = okDiff(await createGitDiffSource().diff(request(path)))
+
+    // Assert
+    expect(diff.files).toHaveLength(305)
+    expect(diff.files.filter((file) => file.unloaded).map((file) => file.path)).toEqual([
+      'gen/f300.txt',
+      'gen/f301.txt',
+      'gen/f302.txt',
+      'gen/f303.txt',
+      'gen/f304.txt',
+    ])
+    expect(diff.files[304]).toMatchObject({ untracked: true, status: 'added', hunks: [] })
+  })
+
+  it('should read an untracked file as an addition when it is asked for by path', async () => {
+    const path = await repo('later', { 'a.txt': 'a\n' })
+    await writeFile(join(path, 'notes.txt'), 'one\ntwo\n')
+
+    const result = await createGitDiffSource().untrackedFile(path, 'notes.txt', false)
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { path: 'notes.txt', status: 'added', untracked: true, additions: 2, newLineCount: 2 },
+    })
+  })
+
+  it('should refuse to read an untracked file outside the repository', async () => {
+    const path = await repo('outside', { 'a.txt': 'a\n' })
+    await writeFile(join(directory, 'secret.txt'), 'no\n')
+
+    const result = await createGitDiffSource().untrackedFile(path, '../secret.txt', false)
+
+    expect(result.ok || result.error.data?.code).toBe('DCK-GIT-004')
+  })
+
   it('should read the working tree lines of a file when it is inside the repository', async () => {
     const path = await repo('lines', { 'a.txt': 'one\r\ntwo\n' })
 

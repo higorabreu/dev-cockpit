@@ -442,6 +442,7 @@ export const ptBR = {
   'review.nonUtf8': 'Codificação diferente de UTF-8, exibido como binário',
   'review.omitted': 'Muito grande para exibir ({size})',
   'review.noContent': 'Conteúdo sem alterações',
+  'review.unloaded': 'Conteúdo não carregado',
   'review.showLines.one': 'Expandir {count} linha',
   'review.showLines.other': 'Expandir {count} linhas',
   'review.size.b': '{value} B',

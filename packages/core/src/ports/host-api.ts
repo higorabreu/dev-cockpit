@@ -1,5 +1,6 @@
 import type { AgentSignal } from '../attention/agent-signal.ts'
 import type { Connector } from '../connectors/connector.ts'
+import type { DiffFile } from '../diff/diff.ts'
 import type { SystemFontsInfo } from '../fonts/fonts.ts'
 import type { ErrorBody } from '../ipc/protocol.ts'
 import type { Result } from '../result.ts'
@@ -100,6 +101,12 @@ export interface HostApi {
   // What changed in the repository of a tab's folder, read only
   readonly review: {
     diff(request: DiffRequest): Promise<Result<DiffOutcome, ErrorBody>>
+    // An untracked file listed without its content, only for a root a diff answered with
+    untrackedFile(
+      root: string,
+      path: string,
+      ignoreWhitespace: boolean,
+    ): Promise<Result<DiffFile, ErrorBody>>
     // Only for a root a diff answered with, and a path inside it
     fileLines(root: string, path: string): Promise<Result<readonly string[], ErrorBody>>
     // Changes when the diff of the folder's repository may have changed; undefined when unknown
@@ -184,6 +191,7 @@ export const hostChannels = {
   viewsChanged: 'views:changed',
   reviewDiff: 'review:diff',
   reviewFile: 'review:file',
+  reviewUntracked: 'review:untracked',
   reviewFingerprint: 'review:fingerprint',
   reviewNotes: 'review:notes',
   autostartGet: 'autostart:get',

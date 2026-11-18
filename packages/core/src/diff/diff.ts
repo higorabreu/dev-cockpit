@@ -57,6 +57,8 @@ export interface DiffFile {
   readonly omitted?: true
   // How many lines the new version has, so the unchanged lines after the last hunk can be shown
   readonly newLineCount?: number
+  // An untracked file past the reading limit: listed, its content read only when asked
+  readonly unloaded?: true
 }
 
 export interface ReviewDiff {

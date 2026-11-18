@@ -61,8 +61,10 @@ panel lists submodules with rows that do nothing. Untracked files past the 300th
   the shared limits; tests against real repositories with a nested submodule. (S1, S6)
 - [ ] SM-T3. `ui`: the groups in the index, the submodule part in the diff headers, the commits line and its
   tooltip, both catalogs. (S2, S3, S4, S8)
-- [ ] SM-T4. Every untracked file listed, "Content not loaded" and the diff loaded on demand through a host
-  channel. (S6)
+- [x] SM-T4. Every untracked file listed, "Content not loaded" and the diff loaded on demand through a host
+  channel. (S6) The listing reads with the status's 8 MB budget instead of 1 MB, a file git cannot diff
+  stays listed as not loaded, and the on-demand read is `review:untracked`, only for a known root and a
+  path that stays inside it.
 - [ ] SM-T5. The fingerprint reads inside changed submodules, bounded. (S7)
 - [ ] SM-T6. The panel's submodule rows open the review on their group. (S5)
 - [ ] SM-T7. D70, the README's review section, the roadmap; checked in the real app under Xvfb in both
