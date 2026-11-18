@@ -36,7 +36,7 @@ Decided with the maintainer:
 ## Tasks
 
 - [x] C1. This plan.
-- [ ] C2. Core: chord text (`parseChord`, `formatChord`, `chordFromEvent`, the shell rule) and the
+- [x] C2. Core: chord text (`parseChord`, `formatChord`, `chordFromEvent`, the shell rule) and the
   `shortcuts.keys` setting with zod, warnings through `settingsIssues`, tests.
 - [ ] C3. Core: the hold trigger as a key code that does not type or a mouse button, with the reason a key
   is refused, tests; old values stay valid.

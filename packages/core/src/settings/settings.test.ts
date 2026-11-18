@@ -10,6 +10,7 @@ import {
   parseSettings,
   reviewBaseFor,
   reviewBasePatch,
+  shortcutKeysPatch,
   storedAccount,
 } from './settings.ts'
 
@@ -35,7 +36,7 @@ describe('parseSettings', () => {
         macOptionAsMeta: 'left',
       },
       window: { heightRatio: 0.5, panelOnFullHeight: true, restoreTabs: true },
-      shortcuts: { toggleWindow: 'F12', holdTrigger: null },
+      shortcuts: { toggleWindow: 'F12', holdTrigger: null, keys: {} },
       projects: { root: null, depth: 2 },
       connections: {},
       system: { notifyAfterSeconds: 30, agentConnectHint: true },
@@ -143,6 +144,40 @@ describe('parseSettings', () => {
       'MetaRight',
     )
     expect(parseSettings({ shortcuts: { holdTrigger: 'KeyQ' } }).shortcuts.holdTrigger).toBeNull()
+  })
+})
+
+describe('parseSettings, shortcuts.keys', () => {
+  it('should keep the custom keys as written when each names an action and a chord', () => {
+    // Act
+    const settings = parseSettings({ shortcuts: { keys: { newTab: 'ctrl+t', fullHeight: 'F10' } } })
+
+    // Assert
+    expect(settings.shortcuts.keys).toEqual({ newTab: 'ctrl+t', fullHeight: 'F10' })
+  })
+
+  it('should drop an entry and keep the others when it names no action or holds no chord', () => {
+    // Act
+    const settings = parseSettings({
+      shortcuts: { keys: { newTab: 'Ctrl+T', openAll: 'Ctrl+O', closeTab: 'W', theme: 5 } },
+    })
+
+    // Assert
+    expect(settings.shortcuts.keys).toEqual({ newTab: 'Ctrl+T' })
+  })
+
+  it('should give an action its default keys back when the patch sets it to null', () => {
+    // Arrange
+    const custom = mergeSettings(
+      defaultSettings,
+      shortcutKeysPatch({ newTab: 'Ctrl+T', theme: 'F8' }),
+    )
+
+    // Act
+    const back = mergeSettings(custom, shortcutKeysPatch({ newTab: null }))
+
+    // Assert
+    expect(back.shortcuts.keys).toEqual({ theme: 'F8' })
   })
 })
 
