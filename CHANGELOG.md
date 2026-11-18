@@ -3,6 +3,34 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.9.0](https://github.com/higorabreu/dev-cockpit/compare/v0.8.0...v0.9.0) (2026-11-18)
+
+
+### Features
+
+* comment on review lines and send the comments to the agent ([5d2638e](https://github.com/higorabreu/dev-cockpit/commit/5d2638e842f64fbd7c08d9407f4b5266f4b87a9d))
+* fonts, cursor and a settings.json like VS Code's ([#80](https://github.com/higorabreu/dev-cockpit/issues/80)) ([e7f9a44](https://github.com/higorabreu/dev-cockpit/commit/e7f9a44663ad6df6f0e7b23db527683fff31ff87))
+* list GitHub pull requests to review and to follow up ([4766f16](https://github.com/higorabreu/dev-cockpit/commit/4766f162669051d52b6175220b276874d66ef2cb))
+* Mac keyboard: line editing, clear, last tab, split Option and right Command ([#83](https://github.com/higorabreu/dev-cockpit/issues/83)) ([912b2a2](https://github.com/higorabreu/dev-cockpit/commit/912b2a2a798606f4be5009432013ba4564aa0a1b))
+* recognize Codex and mark its tab from its own status reports ([3f539f4](https://github.com/higorabreu/dev-cockpit/commit/3f539f49400e837fb97a379dbb4b7c3699b805d0))
+* rename tabs and reopen them on start ([#79](https://github.com/higorabreu/dev-cockpit/issues/79)) ([38a7fc7](https://github.com/higorabreu/dev-cockpit/commit/38a7fc7b0d50379da70aa125cd1f3c3a53c0234e))
+* send the review by what runs in the tab's terminal ([9e5a2f8](https://github.com/higorabreu/dev-cockpit/commit/9e5a2f8afc5ea71da072a5d27ae250535e6b0ce2))
+* set the window's height by dragging its bottom edge ([#82](https://github.com/higorabreu/dev-cockpit/issues/82)) ([538166b](https://github.com/higorabreu/dev-cockpit/commit/538166b3d9d003bd57e6e827c058e55f41285954))
+
+
+### Bug Fixes
+
+* fit the hold menu list to the window and cue the rows it hides ([ab90a92](https://github.com/higorabreu/dev-cockpit/commit/ab90a928a846cb7c882a03d0813beddf641a6ee4))
+* give the review's comment field the design system scrollbar ([7ae06f3](https://github.com/higorabreu/dev-cockpit/commit/7ae06f38eef7da7c845e0f3973f9341e2c83413f))
+* keep a rail badge off its icon ([d38e039](https://github.com/higorabreu/dev-cockpit/commit/d38e039d8dcb0cce193a95370f028a6bdb59a3ec))
+* keep the bottom of the window on screen at full height ([#81](https://github.com/higorabreu/dev-cockpit/issues/81)) ([4d25240](https://github.com/higorabreu/dev-cockpit/commit/4d2524029a583815ac12ff81d85eab249412e9f6))
+* keep the review's expanded lines open across refreshes ([bba7379](https://github.com/higorabreu/dev-cockpit/commit/bba7379c19b40c31b8204e59b6d64597c20e88f4))
+* review header in a split pane and a full QA pass ([#78](https://github.com/higorabreu/dev-cockpit/issues/78)) ([e423562](https://github.com/higorabreu/dev-cockpit/commit/e423562027f0488118b8a48260b07348aa8d355c))
+* send the review only to an agent running in the tab ([c388759](https://github.com/higorabreu/dev-cockpit/commit/c3887597e05c101f8c04479dca498fdbf1847f5d))
+* tab bar on top at 100% height, and the dragged edge follows the pointer to the pixel ([#84](https://github.com/higorabreu/dev-cockpit/issues/84)) ([cf31d8b](https://github.com/higorabreu/dev-cockpit/commit/cf31d8b2226af23659d0676dac3ec350213bbe57))
+* **ui:** fit hold menu lists below the tab bar in full screen ([c11cc8d](https://github.com/higorabreu/dev-cockpit/commit/c11cc8d6c6eeb2c53fe184ebd1796a2a0d1a18d9))
+* **ui:** move and shrink the hold menu wheel in a short window ([8c2c17f](https://github.com/higorabreu/dev-cockpit/commit/8c2c17fae4121e4661afa0a0cdc5de41d16ee199))
+
 ## [0.8.0](https://github.com/higorabreu/dev-cockpit/compare/v0.7.1...v0.8.0) (2026-11-17)
 
 
