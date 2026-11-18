@@ -235,6 +235,12 @@ export const en: Record<MessageKey, string> = {
   'settings.cursorStyle.bar': 'Bar',
   'settings.cursorStyle.underline': 'Underline',
   'settings.cursorBlink': 'Blinking cursor',
+  'settings.macOptionAsMeta': 'Option as Meta',
+  'settings.macOptionAsMeta.hint':
+    'Meta moves by word in the shell (⌥B, ⌥F); an Option that is not Meta types accents and symbols.',
+  'settings.macOptionAsMeta.left': 'Left Option',
+  'settings.macOptionAsMeta.both': 'Both',
+  'settings.macOptionAsMeta.none': 'Neither',
   'settings.group.window': 'Window',
   'settings.heightRatio': 'Docked height',
   'settings.heightRatio.hint': 'Share of the screen height the window takes.',

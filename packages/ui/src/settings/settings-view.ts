@@ -943,6 +943,18 @@ export function createSettingsView(
             ]),
           ),
           row('terminal.cursorBlink', t('settings.cursorBlink'), checkbox('terminal.cursorBlink')),
+          // xterm reads the switch only on a Mac, so another keyboard has nothing to choose
+          mac &&
+            row(
+              'terminal.macOptionAsMeta',
+              t('settings.macOptionAsMeta'),
+              select('terminal.macOptionAsMeta', [
+                ['left', t('settings.macOptionAsMeta.left')],
+                ['both', t('settings.macOptionAsMeta.both')],
+                ['none', t('settings.macOptionAsMeta.none')],
+              ]),
+              t('settings.macOptionAsMeta.hint'),
+            ),
         ),
         group(
           t('settings.group.window'),

@@ -923,6 +923,25 @@ describe('settings view fonts and cursor', () => {
     view.close()
   })
 
+  it('should save which Option is Meta from the Terminal group when the keyboard is a Mac one', async () => {
+    // Arrange
+    const { combobox, patches, view } = open([], api, undefined, 'mac')
+    const option = combobox('terminal.macOptionAsMeta')
+    const shown = option.querySelector('[data-current="true"]')?.textContent
+    option.focus()
+
+    // Act
+    press(option, 'Enter')
+    press(option, 'ArrowDown')
+    press(option, 'Enter')
+    await settle()
+
+    // Assert
+    expect(shown).toBe('Left Option')
+    expect(patches).toEqual([{ terminal: { macOptionAsMeta: 'both' } }])
+    view.close()
+  })
+
   it('should save the bar cursor and its blink from the Terminal group', async () => {
     // Arrange
     const { body, combobox, patches, view } = open()

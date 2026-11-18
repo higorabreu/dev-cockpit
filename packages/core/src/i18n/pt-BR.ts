@@ -235,6 +235,12 @@ export const ptBR = {
   'settings.cursorStyle.bar': 'Barra',
   'settings.cursorStyle.underline': 'Sublinhado',
   'settings.cursorBlink': 'Cursor piscando',
+  'settings.macOptionAsMeta': 'Option como Meta',
+  'settings.macOptionAsMeta.hint':
+    'Meta move por palavra no shell (⌥B, ⌥F); um Option que não é Meta digita acentos e símbolos.',
+  'settings.macOptionAsMeta.left': 'Option esquerdo',
+  'settings.macOptionAsMeta.both': 'Os dois',
+  'settings.macOptionAsMeta.none': 'Nenhum',
   'settings.group.window': 'Janela',
   'settings.heightRatio': 'Altura ancorada',
   'settings.heightRatio.hint': 'Parte da altura da tela que a janela ocupa.',

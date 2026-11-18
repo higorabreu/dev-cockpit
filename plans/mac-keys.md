@@ -32,7 +32,7 @@ Out of scope: the Ctrl+click and right click paste, a confirmation on `⌘Q`, th
   action, a `tab:clear` item in the hold menu with the key, texts in both catalogs.
 - [x] T4. Last tab: the digit 9 of `TAB` goes to the last tab on both keyboards.
 - [x] T5. `macOptionClickForcesSelection: true`.
-- [ ] T6. Option keys: setting `terminal.macOptionAsMeta`, a tracker of the right Option in
+- [x] T6. Option keys: setting `terminal.macOptionAsMeta`, a tracker of the right Option in
   `ui/src/terminal/option-key.ts` with tests, the session flips `macOptionIsMeta` per key, the row in the
   Terminal group on a Mac keyboard only, applied at once on change.
 - [ ] T7. Hold menu key: `MetaRight` in `HOLD_TRIGGERS`, the Mac default in `HOLD_TRIGGER`, labels in

@@ -561,6 +561,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       theme,
       fontSize: settings.current().fontSize,
       ...terminalLook(settings.current(), systemFonts),
+      macOptionAsMeta: settings.current().terminal.macOptionAsMeta,
       ...(options.cwd ? { cwd: options.cwd } : {}),
       exitedText: i18n.t('terminal.exited'),
       nativeMiddlePaste,
@@ -690,7 +691,12 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     }
     if (changed.some((key) => key.startsWith('appearance.')))
       applyAppearance(document.documentElement, next.appearance)
-    if (changed.some((key) => key.startsWith('terminal.'))) void applyTerminalLook()
+    if (changed.includes('terminal.macOptionAsMeta')) {
+      for (const session of sessions.values())
+        session.setOptionAsMeta(next.terminal.macOptionAsMeta)
+    }
+    const look = changed.filter((key) => key !== 'terminal.macOptionAsMeta')
+    if (look.some((key) => key.startsWith('terminal.'))) void applyTerminalLook()
     // The layout or a kept share changed, here or in another window; a new font changes the columns
     if (changed.includes('fontSize') || changed.some((key) => key.startsWith('review.'))) {
       for (const view of tabViews.values()) view.relayout()

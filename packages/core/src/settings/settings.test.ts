@@ -28,7 +28,12 @@ describe('parseSettings', () => {
       opacity: 1,
       fontSize: 16,
       appearance: { fontFamily: null, codeFontFamily: null },
-      terminal: { fontFamily: null, cursorStyle: 'block', cursorBlink: true },
+      terminal: {
+        fontFamily: null,
+        cursorStyle: 'block',
+        cursorBlink: true,
+        macOptionAsMeta: 'left',
+      },
       window: { heightRatio: 0.5, panelOnFullHeight: true, restoreTabs: true },
       shortcuts: { toggleWindow: 'F12', holdTrigger: null },
       projects: { root: null, depth: 2 },
@@ -51,8 +56,18 @@ describe('parseSettings', () => {
       fontFamily: 'MesloLGS NF',
       cursorStyle: 'bar',
       cursorBlink: true,
+      macOptionAsMeta: 'left',
     })
     expect(settings.appearance).toEqual({ fontFamily: null, codeFontFamily: 'Fira Code' })
+  })
+
+  it('should send an unknown Option mode back to the left Option when the file holds one', () => {
+    expect(parseSettings({ terminal: { macOptionAsMeta: 'right' } }).terminal.macOptionAsMeta).toBe(
+      'left',
+    )
+    expect(parseSettings({ terminal: { macOptionAsMeta: 'none' } }).terminal.macOptionAsMeta).toBe(
+      'none',
+    )
   })
 
   it('should send an unknown cursor style back to the block', () => {
