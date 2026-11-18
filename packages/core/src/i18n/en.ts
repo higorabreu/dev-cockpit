@@ -108,6 +108,7 @@ export const en: Record<MessageKey, string> = {
   'updates.whatsNew': "What's new",
   'updates.dismiss': 'Dismiss',
   'updates.downloading': 'Downloading {version}',
+  'updates.downloadingPercent': 'Downloading {version}, {percent}%',
   'updates.installing': 'Installing {version}',
   'updates.installed': 'Updated to {version}',
   'updates.restart': 'Restart',

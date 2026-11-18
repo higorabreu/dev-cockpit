@@ -37,6 +37,9 @@ export function triggerButton(trigger: HoldTrigger): number | undefined {
   return found ? Number(found[1]) : undefined
 }
 
+// True when the middle button (`Mouse1`) holds the menu, so a middle click on a tab keeps that meaning
+export const holdsMiddleButton = (trigger: HoldTrigger) => triggerButton(trigger) === 1
+
 // Keys whose code and key have the same name, so a trigger and a chord with no modifier can be the same key
 const SHARED_NAMES = /^(F([1-9]|1\d|2[0-4])|Insert|Pause|ScrollLock|ContextMenu)$/
 
