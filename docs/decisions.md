@@ -1155,3 +1155,38 @@ the fn hint need a real Mac.
 `macOptionClickForcesSelection`, the `terminal.macOptionAsMeta` setting and its row, `clearTerminal`
 from the keymap with its action and hold menu item, the `'last'` tab target, `MetaRight` from
 `HOLD_TRIGGERS` (set `HOLD_TRIGGER.mac` back to `AltRight`) and `accelerator` from the keymap.
+
+## D71. Updates from the project's GitHub releases, off until the user opts in
+
+**Decision:** [plans/auto-update.md](../plans/auto-update.md). The setting `system.updates` is `off` (the
+default), `notify` or `install`, a row in Settings > System with "Check now" beside it (disabled while
+off) and the last check's answer in the row's line. Off, the cockpit never contacts GitHub. Notify and
+install read the public `releases/latest` endpoint of `higorabreu/dev-cockpit` five seconds after start
+and every 12 hours, with no token and only a `dev-cockpit/<version>` User-Agent; drafts, prereleases and
+a tag that is not a version are skipped and versions are compared by semver (`core/src/updates`). A newer
+release shows a notice at the end of the tab bar (the `#notice` spot, apart from the bar's buttons by a
+line, covering no tab; a copy notice shows over it for a moment): "Version 0.10.0 available" with
+"Update", "What's new" (the release page, opened by the host, which never takes an address from the
+window) and a dismiss that hides it until a newer version (`updates.json` in the data folder). While an
+update can be taken the hold menu's System list has "Update to 0.10.0". Install mode, or "Update", on
+Linux with the `.deb` in `/opt/dev-cockpit`: the package for the running processor is downloaded to a
+private temporary folder and hashed while written, its SHA-256 is compared in core with the release's
+`SHA256SUMS` (a mismatch is refused, the file removed and the notice says so), and `pkexec apt-get install
+-y` installs it; a dismissed password dialog (pkexec's 126) offers the update again and is not retried by
+itself in that run. Then "Updated to 0.10.0" with "Restart": the cockpit never restarts by itself, and if
+not restarted the new version runs on the next start. With an agent running in a tab, "Restart" asks in
+the notice first ("1 tab has an agent running", Restart anyway, Cancel). A restart writes the tabs, waits
+for the write, then `app.relaunch()` and a clean quit. Failures (`DCK-UPD-001` to `006`) end in a short
+notice and a `logger.warn`. A Mac or Windows build, and a Linux app not installed from the `.deb`, only
+point to the release page. The release workflow builds the arm64 `.dmg` on a macOS runner, attaches it to
+the same release and lists it in `SHA256SUMS`; a failed Mac build does not hold the `.deb` packages back.
+A development run reads a local feed from `DCK_UPDATE_FEED` (the packaged app ignores it).
+**Reason:** the maintainer's choice on 2026-11-18: updating meant downloading, checking and installing the
+`.deb` by hand. Opt-in, so a fresh install makes no network call of its own; the checksum guards against
+a corrupt or swapped download, and polkit's own dialog asks for the password rather than the cockpit. The
+Mac build is signed ad hoc, so it cannot replace itself; it gets the link. The release workflow's Mac job
+has not run yet.
+**How to revert:** drop `core/src/updates`, `ports/updates.ts`, `release-source.ts` in
+`@dck/adapter-github`, `platform/linux/deb-installer.ts`, `shell/src/updates`, the `updates` part of the
+host API and its channels, `ui/src/updates`, the lasting part of `ui/src/tabs/notice.ts`, the
+`system.updates` setting and its row, the `DCK-UPD-*` codes and the `build-mac` job.

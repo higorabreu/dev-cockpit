@@ -72,8 +72,8 @@ what exists today. The clips show example data.
 ## Install
 
 Requirements: Ubuntu 22.04 or Debian 12 or newer, on x86-64 or arm64, on X11 or Wayland, and `libsecret-tools` for the system keyring
-(the package declares it). macOS builds from source with `pnpm package:mac` and is being tested; it is
-not in the releases yet.
+(the package declares it). macOS builds from source with `pnpm package:mac` and is being tested; from the
+next release on, an Apple Silicon `.dmg` signed ad hoc is attached as well.
 
 1. Download the `.deb` for your processor (`amd64` for most Intel and AMD PCs, `arm64` for ARM machines; `uname -m` prints `x86_64` or `aarch64`) from the
    [Releases](https://github.com/higorabreu/dev-cockpit/releases) page, and the `SHA256SUMS` file next to it.
@@ -81,9 +81,25 @@ not in the releases yet.
 3. Install it: `sudo apt install ./dev-cockpit_<version>_<arch>.deb`.
 
 This installs the app in `/opt/dev-cockpit`, adds a **Dev Cockpit** entry to the application menu and the
-`dck` command. The default global key is **F12**. To update, install the newer `.deb` over the old one. To
-start at login, tick **Start with the system** in the tray icon menu (off by default). To remove it:
-`sudo apt remove dev-cockpit`. Data lives in `~/.config/dev-cockpit`.
+`dck` command. The default global key is **F12**. To update, turn on [Updates](#updates) or install the
+newer `.deb` over the old one. To start at login, tick **Start with the system** in the tray icon menu
+(off by default). To remove it: `sudo apt remove dev-cockpit`. Data lives in `~/.config/dev-cockpit`.
+
+## Updates
+
+Off by default: the cockpit makes no network call of its own. **Updates** in Settings > System chooses:
+
+- **Notify**: checks the project's GitHub releases at start and every 12 hours, without an account and
+  sending nothing about you (only the version, in the User-Agent), and says "Version x.y.z available"
+  beside the tabs with **Update** and **What's new** (the release page). Dismissing it hides it until a
+  newer version; the hold menu's System list keeps the update.
+- **Install**: also downloads the `.deb` for your processor, checks it against the release's `SHA256SUMS`
+  and installs it with `pkexec` (the system's password dialog). Then **Restart** opens the tabs again in
+  their folders; what runs in them (an agent, a server) ends, so the cockpit asks first while an agent
+  runs. Not restarted, the new version starts the next time.
+
+**Check now** beside the setting checks at once. Only stable releases count. A Mac only gets the link to
+the release page.
 
 ## Build from source
 
@@ -136,8 +152,8 @@ shortcut if the global key is refused.
 
 `Ctrl+,` opens the screen: language, theme, opacity, the interface and code fonts, the terminal's font,
 size and cursor (block, bar or underline, blinking or not), which Option is Meta on a Mac, window height, global key, hold menu key,
-projects folder, start with the system, the threshold to notify a long command, the review layout and
-the GitLab and Jira connections. Everything applies at once. Settings live in a `settings.json` that can also be edited by
+projects folder, start with the system, the threshold to notify a long command, updates, the review layout
+and the GitLab and Jira connections. Everything applies at once. Settings live in a `settings.json` that can also be edited by
 hand, like VS Code's: the button beside the screen's close (or Open the settings file in the hold menu's
 System list) opens it in your editor, it takes comments and trailing commas, and whatever you save
 applies at once while the screen's own changes keep your comments and layout. A value it cannot use goes

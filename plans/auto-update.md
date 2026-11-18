@@ -62,5 +62,20 @@ packaged app ignores the variable. `pkexec` is found on `PATH`, so a check puts 
 - [x] U6. Window: the notice (available, downloading, installing, installed, failed, agent warning), the
   hold menu item, the System row with "Check now"; texts in both catalogs.
 - [x] U7. Release workflow: the Mac image job, the `.dmg` in `SHA256SUMS`; YAML checked, not run.
-- [ ] U8. D71, README, a check in the real app under Xvfb against a local fake feed (both themes, both
+- [x] U8. D71, README, a check in the real app under Xvfb against a local fake feed (both themes, both
   languages).
+
+## Results
+
+Checked in the built app under Xvfb against a local feed (a fake 3 MB package served slowly) with a stub
+`pkexec` on `PATH`, dark and light, English and Portuguese: off makes no request in six seconds and keeps
+Check now disabled; notify and install say what they do, and Check now answers "Version 0.10.0 available"
+or "Up to date"; the notice goes through available, downloading with its percent, installing and
+"Updated to 0.10.0"; Restart with a process named `claude` running asks inline; a wrong checksum is
+refused with its notice; a dismissed password dialog (exit 126) offers the update again; the hold menu's
+System list ends with "Update to 0.10.0"; ten tabs keep their place with the notice shown. Requests carry
+only `dev-cockpit/0.9.0` as User-Agent and no token. A real relaunch, outside Playwright (which kills its
+process group), opened the restarted cockpit with the tab back in its folder.
+
+Not checked: the release workflow's Mac job (it runs only on a release), a real `pkexec` install of a real
+package, and a Mac.
