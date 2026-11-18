@@ -431,7 +431,7 @@ export function createSettingsView(
       recording ? t('settings.recording') : t('settings.record'),
     )
     button.addEventListener('click', () => (recording ? stopRecording() : startRecording()))
-    return h('span', { class: 'sshortcut' }, keyCaps(current), button)
+    return h('span', { class: 'sshortcut' }, keyCaps(deps.keymap.accelerator(current)), button)
   }
 
   function startRecording() {
@@ -999,7 +999,7 @@ export function createSettingsView(
             'shortcuts.toggleWindow',
             t('settings.toggleWindow'),
             shortcutControl(),
-            t('settings.toggleWindow.hint'),
+            t(mac ? 'settings.toggleWindow.hint.mac' : 'settings.toggleWindow.hint'),
           ),
           row(
             'shortcuts.holdTrigger',

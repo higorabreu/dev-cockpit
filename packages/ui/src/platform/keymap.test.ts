@@ -112,6 +112,26 @@ describe('createKeymap tabIndex', () => {
   })
 })
 
+describe('createKeymap accelerator', () => {
+  it.each([
+    ['Super+Alt+K', '⌥⌘K'],
+    ['Ctrl+Shift+Space', '⌃⇧Space'],
+    ['CommandOrControl+Option+Up', '⌥⌘↑'],
+    ['F12', 'F12'],
+    ['Super+F12', '⌘F12'],
+  ])('should write %s as %s when the keyboard is a Mac one', (value, label) => {
+    expect(createKeymap('mac').accelerator(value)).toBe(label)
+  })
+
+  it('should leave a key with a name it does not know as written when the keyboard is a Mac one', () => {
+    expect(createKeymap('mac').accelerator('Hyper+K')).toBe('Hyper+K')
+  })
+
+  it('should write the key as Electron does when the keyboard is a PC one', () => {
+    expect(createKeymap('pc').accelerator('Super+Alt+K')).toBe('Super+Alt+K')
+  })
+})
+
 describe('keyboardFor', () => {
   it('should be a Mac keyboard when the browser runs on a Mac', () => {
     expect(keyboardFor('MacIntel')).toBe('mac')

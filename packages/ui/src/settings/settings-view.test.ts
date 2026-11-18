@@ -171,6 +171,21 @@ describe('settings view selects', () => {
     view.close()
   })
 
+  it('should show the global key in the Mac symbols with the fn hint when the keyboard is a Mac one', () => {
+    // Arrange
+    const chosen = mergeSettings(defaultSettings, { shortcuts: { toggleWindow: 'Super+Alt+K' } })
+    const { body, view } = open([], api, chosen, 'mac')
+
+    // Act
+    body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
+
+    // Assert
+    const row = body.querySelector<HTMLElement>('[data-setting="shortcuts.toggleWindow"]')
+    expect(row?.querySelector('.sshortcut .keys')?.textContent).toBe('⌥⌘K')
+    expect(row?.querySelector('.shint')?.textContent).toContain('fn')
+    view.close()
+  })
+
   it('should hold the right Command by default with no reset when the keyboard is a Mac one', () => {
     // Arrange
     const { body, combobox, view } = open([], api, undefined, 'mac')

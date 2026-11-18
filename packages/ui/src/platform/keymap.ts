@@ -175,6 +175,42 @@ function modifiersLabel(modifiers: Modifiers, keyboard: Keyboard, key?: string):
 // A tab by its place, from 0, or the last one
 export type TabTarget = number | 'last'
 
+// Electron's names for the modifiers of a global key, hand-written ones included, by the slot they take
+const ACCELERATOR_MODIFIERS: Readonly<Record<string, keyof Modifiers>> = {
+  ctrl: 'ctrl',
+  control: 'ctrl',
+  alt: 'alt',
+  option: 'alt',
+  shift: 'shift',
+  super: 'meta',
+  meta: 'meta',
+  cmd: 'meta',
+  command: 'meta',
+  cmdorctrl: 'meta',
+  commandorcontrol: 'meta',
+}
+const ACCELERATOR_KEYS: Readonly<Record<string, string>> = {
+  Up: '↑',
+  Down: '↓',
+  Left: '←',
+  Right: '→',
+}
+
+// A global key ("Super+Alt+K") in the Mac's symbols (⌥⌘K); a PC shows it as Electron writes it, and a
+// name this does not know leaves the whole key as written
+function acceleratorLabel(value: string, keyboard: Keyboard): string {
+  const parts = value.split('+')
+  const key = parts.pop()
+  if (keyboard === 'pc' || !key) return value
+  const held: Partial<Record<keyof Modifiers, boolean>> = {}
+  for (const part of parts) {
+    const slot = ACCELERATOR_MODIFIERS[part.toLowerCase()]
+    if (!slot) return value
+    held[slot] = true
+  }
+  return modifiersLabel(held, keyboard, ACCELERATOR_KEYS[key] ?? key)
+}
+
 export interface Keymap {
   readonly keyboard: Keyboard
   // The hold menu key until the user picks one
@@ -195,6 +231,8 @@ export interface Keymap {
   command(event: KeyInput, letter: string): boolean
   commandLabel(letter: string): string
   clipboard(event: KeyInput): 'copy' | 'paste' | undefined
+  // The global key as this keyboard writes it
+  accelerator(value: string): string
 }
 
 export function createKeymap(keyboard: Keyboard): Keymap {
@@ -221,6 +259,7 @@ export function createKeymap(keyboard: Keyboard): Keymap {
     },
     command: (event, letter) => matchesChord(event, { ...primary, key: letter }),
     commandLabel: (letter) => label({ ...primary, key: letter }),
+    accelerator: (value) => acceleratorLabel(value, keyboard),
     clipboard(event) {
       if (clipboard.copy && matchesChord(event, clipboard.copy)) return 'copy'
       if (clipboard.paste && matchesChord(event, clipboard.paste)) return 'paste'

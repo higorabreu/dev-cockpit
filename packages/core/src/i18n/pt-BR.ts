@@ -251,6 +251,8 @@ export const ptBR = {
   'settings.group.shortcuts': 'Atalhos',
   'settings.toggleWindow': 'Abrir e fechar a janela',
   'settings.toggleWindow.hint': 'Atalho global: vale em qualquer programa.',
+  'settings.toggleWindow.hint.mac':
+    'Atalho global: vale em qualquer programa. As teclas F precisam de fn, a não ser que estejam como teclas de função padrão nos Ajustes do Sistema.',
   'settings.record': 'Alterar',
   'settings.recording': 'Pressione a nova tecla (Esc cancela)',
   'settings.shortcutRefused': 'Outro programa já usa essa tecla. Nada mudou.',
