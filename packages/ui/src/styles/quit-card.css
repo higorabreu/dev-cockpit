@@ -17,10 +17,11 @@
 .quit-card {
   width: min(340px, calc(100% - 24px));
   box-sizing: border-box;
-  padding: 16px 16px 12px;
+  /* The same 16px from the border to the title's line box and to the buttons' edges */
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-large);
@@ -39,7 +40,7 @@
 }
 
 .quit-actions {
-  margin-top: 10px;
+  margin-top: 8px;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
