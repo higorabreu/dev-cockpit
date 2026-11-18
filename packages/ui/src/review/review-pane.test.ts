@@ -737,6 +737,37 @@ describe('createReviewPane', () => {
     expect(text('.rv-status')).toBe('No changes in libs/gone to review')
   })
 
+  it('should list a submodule whose pointer alone moved and say there is no file to review', async () => {
+    // Arrange
+    const answer = ok({
+      kind: 'ok' as const,
+      diff: reviewDiff(
+        '/home/ana/acme',
+        'uncommitted',
+        feature,
+        [],
+        [{ path: 'libs/billing', commits: ['Round the totals'], commitCount: 1 }],
+      ),
+    })
+    const { pane, text } = setup(answer)
+
+    // Act
+    pane.open()
+    await flush()
+    pane.showModule('libs/billing')
+
+    // Assert
+    const header = pane.element.querySelector('.rv-files [data-module="libs/billing"]')
+    expect(header?.getAttribute('aria-label')).toBe(
+      'Submodule libs/billing, 0 changed files, 1 new commit',
+    )
+    expect(header?.getAttribute('aria-selected')).toBe('true')
+    expect((pane.element.querySelector('.rv-lines') as HTMLElement).hidden).toBe(true)
+    expect(text('.rv-body .rv-state strong')).toBe('No file changes to review')
+    expect(text('.rv-status')).toBe('')
+    expect(document.activeElement).toBe(pane.element.querySelector('.rv-files'))
+  })
+
   it('should open the diff on the file the panel names and say so when the scope has no such file', async () => {
     // Arrange
     const { pane, text } = setup(repository())

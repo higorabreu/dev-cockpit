@@ -258,7 +258,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     comment: (target) => startComment(target),
     onCurrentFile: (index) => list.highlight(index),
   })
-  const body = h('div', { class: 'rv-body' }, list.element, diff.element)
+  // In place of the diff when only submodule pointers moved: the index lists them with their commits
+  const pointersOnly = h('div', { class: 'rv-state', hidden: true })
+  const body = h('div', { class: 'rv-body' }, list.element, diff.element, pointersOnly)
   const message = h('div', { class: 'rv-state' })
   const hints = hintBar()
   new ResizeObserver(() => fitHints()).observe(hints)
@@ -272,6 +274,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   )
 
   const files = (): readonly DiffFile[] => (state.kind === 'ok' ? state.diff.files : [])
+  // Something for the index: a file, or a submodule whose pointer moved with no file of its own
+  const listed = () =>
+    state.kind === 'ok' && (state.diff.files.length > 0 || state.diff.modules.length > 0)
 
   const refresh = createReviewRefresh({
     load,
@@ -377,7 +382,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     if (reading) return
     pendingModule = undefined
     if (state.kind !== 'ok') return
-    if (state.diff.files.length > 0 && list.showModule(path)) {
+    if (listed() && list.showModule(path)) {
       if (deps.memory.indexHidden) diff.focus()
       else list.focus()
       return
@@ -771,7 +776,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     }
     // The second option names its base once a read found it
     drawScope()
-    if (state.diff.files.length === 0) {
+    if (!listed()) {
       const { base, upstream } = state.diff.branch
       return showMessage(
         scope === 'unpushed'
@@ -785,7 +790,14 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     body.hidden = false
     message.hidden = true
     list.show(files(), state.diff.modules, Math.max(0, list.selected()))
-    drawDiff()
+    const pointers = state.diff.files.length === 0
+    diff.element.hidden = pointers
+    pointersOnly.hidden = !pointers
+    if (!pointers) return drawDiff()
+    pointersOnly.replaceChildren(
+      h('strong', {}, t('review.pointersOnly')),
+      h('span', {}, t('review.pointersOnly.text')),
+    )
   }
 
   function draw() {
@@ -795,13 +807,12 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     const repository = state.kind !== 'not-repository' && state.kind !== 'no-folder'
     select.element.hidden = !repository
     whitespace.hidden = !repository || state.kind === 'no-base' || state.kind === 'no-upstream'
-    const withFiles = state.kind === 'ok' && state.diff.files.length > 0
-    indexToggle.hidden = !withFiles
+    indexToggle.hidden = !listed()
     drawState()
     drawHints()
     // A focused list or diff that a new state hid would leave the keys on the page's body, and the pane
     // itself, focused while it loaded, takes no review key: both hand the keys to the diff or the index
-    const resting = document.activeElement === element && withFiles
+    const resting = document.activeElement === element && listed()
     if (focusInside && (resting || !element.contains(document.activeElement))) pane.focus()
   }
 
@@ -840,7 +851,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   element.addEventListener('focusin', (event) => {
     focusInside = true
     // A click on a bare part of the pane focuses the pane itself, where the review's keys do nothing
-    if (event.target === element && state.kind === 'ok' && state.diff.files.length > 0) {
+    if (event.target === element && listed()) {
       pane.focus()
       return
     }
@@ -898,7 +909,8 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       if (!body.hidden && files().length > 0) {
         if (lastFocus === 'index' && !list.element.hidden) list.focus()
         else diff.focus()
-      } else element.focus()
+      } else if (!body.hidden && listed() && !list.element.hidden) list.focus()
+      else element.focus()
     },
     hasFocus: () => element.contains(document.activeElement),
     showModule,

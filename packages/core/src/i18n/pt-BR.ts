@@ -488,6 +488,8 @@ export const ptBR = {
   'review.module.moreTip': '+ {count} outros',
   'review.file.none': 'Nenhuma alteração em {path} a revisar',
   'review.module.none': 'Nenhuma alteração em {path} a revisar',
+  'review.pointersOnly': 'Nenhuma alteração em arquivos a revisar',
+  'review.pointersOnly.text': 'Só os submódulos listados mudaram de commit.',
   'review.a11y.module': 'Submódulo {path}, {files}, {commits}',
   'review.a11y.commits.one': '{count} commit novo',
   'review.a11y.commits.other': '{count} commits novos',

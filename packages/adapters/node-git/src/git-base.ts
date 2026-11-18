@@ -17,8 +17,9 @@ export type GitAsk = (root: string, args: readonly string[]) => Promise<string |
 
 // The HEAD reflog is long in an old clone; the move that created a branch is rarely this far back
 const HEAD_LOG_ENTRIES = 2000
-// Findings kept, one per repository, HEAD and refs; a few tabs on a few repositories fit
-const KEPT = 16
+// Findings kept, one per repository, HEAD and refs; a few tabs on a few repositories and the submodules
+// the Base scope reads inside them fit
+const KEPT = 64
 // Candidates measured at once, each with up to three short git commands
 const PARALLEL = 4
 
