@@ -7,6 +7,10 @@ export function parseHex(hex: string): Rgb {
   return [(value >> 16) & 255, (value >> 8) & 255, value & 255]
 }
 
+export function formatHex(color: Rgb): string {
+  return `#${color.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`
+}
+
 export function mix(foreground: Rgb, background: Rgb, foregroundShare: number): Rgb {
   const blend = (index: 0 | 1 | 2) =>
     Math.round(foreground[index] * foregroundShare + background[index] * (1 - foregroundShare))

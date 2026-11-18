@@ -23,6 +23,7 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
   const listSelected = mix(fg, surface, share(tokens.mix.listSelected))
   const iconIdle = mix(fg, surface, share(tokens.mix.iconIdle))
   const selectedLine = (base: string) => mix(fg, rgb(base), share(tokens.mix.lineSelected))
+  const terminalSelected = (percent: number) => mix(fg, rgb(color.bg), share(percent))
 
   const pairs: ReadonlyArray<readonly [string, Rgb, Rgb, number]> = [
     ['primary text on the window', fg, rgb(color.bg), TEXT],
@@ -61,6 +62,14 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     ['code on a selected line', fg, selectedLine(color.bg), TEXT],
     ['code on a selected added line', fg, selectedLine(color.diffAdd), TEXT],
     ['code on a selected removed line', fg, selectedLine(color.diffRemove), TEXT],
+    // Selected terminal text is always the primary text, with the terminal focused or not
+    ['selected terminal text', fg, terminalSelected(tokens.mix.terminalSelection), TEXT],
+    [
+      'selected terminal text without focus',
+      fg,
+      terminalSelected(tokens.mix.terminalSelectionInactive),
+      TEXT,
+    ],
     // A file's state is a letter (M, A, D...) in the ink of its counts, on the index (the window) and on
     // a file's header (the surface); a selected row turns it to primary text, renamed is secondary text
     ['modified file letter on the window', rgb(color.warning), rgb(color.bg), TEXT],

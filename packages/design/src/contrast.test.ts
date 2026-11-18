@@ -75,4 +75,26 @@ describe('contrastChecks', () => {
       )
     }
   })
+
+  it('should check the selected terminal text with and without focus when checking each theme', () => {
+    for (const theme of themeNames) {
+      const checks = contrastChecks(tokens, theme).filter((check) =>
+        check.name.startsWith('selected terminal text'),
+      )
+
+      expect(checks.map((check) => check.name)).toEqual([
+        'selected terminal text',
+        'selected terminal text without focus',
+      ])
+      expect(checks.every((check) => check.minimum === 4.5 && check.passes)).toBe(true)
+    }
+  })
+
+  it('should report the selected terminal text when the selection is too dark for it', () => {
+    const heavy = { ...tokens, mix: { ...tokens.mix, terminalSelection: 80 } }
+
+    const failures = contrastChecks(heavy, 'light').filter((check) => !check.passes)
+
+    expect(failures.map((check) => check.name)).toContain('selected terminal text')
+  })
 })
