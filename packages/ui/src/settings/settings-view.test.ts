@@ -766,7 +766,7 @@ describe('settings view, the settings file', () => {
 
     // Assert
     expect(strip?.querySelector('p')?.textContent).toBe(
-      'settings.json has an error at line 4, column 12. The settings in use stay as they are until it is fixed.',
+      'settings.json has an error at line 4, column 12.',
     )
     expect(strip?.nextElementSibling?.id).toBe('settings-panel')
     expect(combobox('theme').disabled).toBe(true)
