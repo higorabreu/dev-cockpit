@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { keyChords, keys } from './keys.ts'
+import { gesture, keyChords, keys } from './keys.ts'
 
 const capsOf = (label: string) => keyChords(label).map((chord) => chord.keys)
 
@@ -44,5 +44,39 @@ describe('keys', () => {
 
   it('should escape the label when it holds markup', () => {
     expect(keys('<b>').querySelector('b')).toBeNull()
+  })
+})
+
+describe('gesture', () => {
+  it('should draw only the key as a cap when the gesture has words', () => {
+    // Arrange
+    const hint = gesture('Ctrl', 'clique para abrir')
+
+    // Act
+    const caps = [...hint.querySelectorAll('kbd.key')].map((cap) => cap.textContent)
+
+    // Assert
+    expect(caps).toEqual(['Ctrl'])
+    expect(hint.lastChild?.textContent).toBe('clique para abrir')
+  })
+
+  it('should read as one sentence joined by + when the keyboard is a PC', () => {
+    expect(gesture('Ctrl', 'click to open').textContent).toBe('Ctrl+click to open')
+  })
+
+  it('should join the Mac symbol to the words with a space when the keyboard is a Mac', () => {
+    // Arrange
+    const hint = gesture('⌘', 'click to open')
+
+    // Act
+    const text = hint.textContent
+
+    // Assert
+    expect(text).toBe('⌘ click to open')
+    expect(hint.querySelector('.gesture-plus')).toBeNull()
+  })
+
+  it('should escape the words when they hold markup', () => {
+    expect(gesture('Ctrl', '<b>open</b>').querySelector('b')).toBeNull()
   })
 })

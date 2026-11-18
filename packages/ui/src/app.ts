@@ -628,12 +628,12 @@ export async function startApp(
       keymap,
       links: {
         modifier: keymap.click.modifier,
-        keyLabel: () => i18n.t('terminal.openLink', { modifier: keymap.click.label }),
+        hint: () => ({ key: keymap.click.label, gesture: i18n.t('terminal.openLink') }),
         tip: setTipRegion,
       },
       paths: {
         modifier: keymap.click.modifier,
-        keyLabel: () => i18n.t('terminal.openPath', { modifier: keymap.click.label }),
+        hint: () => ({ key: keymap.click.label, gesture: i18n.t('terminal.openPath') }),
         cwd: () => watcher.get(id)?.cwd,
         openFolder: (path, x, y) => openFolderMenu(id, path, x, y),
         tip: setTipRegion,

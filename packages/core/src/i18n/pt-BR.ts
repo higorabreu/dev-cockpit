@@ -125,8 +125,8 @@ export const ptBR = {
   'quit.cancel': 'Cancelar',
 
   'terminal.exited': '[processo encerrado]',
-  'terminal.openLink': '{modifier}+clique',
-  'terminal.openPath': '{modifier}+clique para abrir',
+  'terminal.openLink': 'clique',
+  'terminal.openPath': 'clique para abrir',
   'terminal.openInNewTab': 'Abrir em uma nova aba',
   'terminal.openInFileManager': 'Abrir no gerenciador de arquivos',
   'terminal.clear': 'Limpar terminal',

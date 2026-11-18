@@ -55,3 +55,17 @@
 .keys.compact .kplus {
   font-size: 10.5px;
 }
+
+/* A key held while the mouse acts: the cap sits on the line of the words, with its letters on their
+   baseline, and the + takes the color and size of the words */
+.gesture {
+  white-space: nowrap;
+}
+
+.gesture > .keys {
+  vertical-align: baseline;
+}
+
+.gesture-plus {
+  margin: 0 3px;
+}

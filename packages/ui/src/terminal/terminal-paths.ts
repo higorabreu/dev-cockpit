@@ -12,8 +12,7 @@ import {
 
 export interface PathLinkOptions {
   readonly modifier: LinkModifier
-  // Read on every hover: the language can change while the tab is open
-  keyLabel(): string
+  hint: LinkOptions['hint']
   // The tab's current directory, for relative paths; unknown right after the tab opens
   cwd(): string | undefined
   resolve(base: string | undefined, paths: readonly string[]): Promise<readonly ResolvedPath[]>
@@ -107,7 +106,7 @@ export function attachPaths(terminal: Terminal, options: PathLinkOptions) {
         if (target.kind === 'dir') options.openFolder(target.path, event.clientX, event.clientY)
         else options.openFile(target.path)
       },
-      hover: () => showLinkTip(terminal, options.tip, range, target.path, options.keyLabel()),
+      hover: () => showLinkTip(terminal, options.tip, range, target.path, options.hint()),
       leave: () => hideLinkTip(terminal, options.tip),
     }
     return [link]

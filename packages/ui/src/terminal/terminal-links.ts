@@ -16,10 +16,15 @@ export interface ViewportCells {
   readonly rows: number
 }
 
+export interface LinkHint {
+  readonly key: string
+  readonly gesture: string
+}
+
 export interface LinkOptions {
   readonly modifier: LinkModifier
-  // Read on every hover: the language can change while the tab is open
-  keyLabel(): string
+  // The modifier's cap and what the click does, read on every hover: the language can change while the tab is open
+  hint(): LinkHint
   open(url: string): void
   tip(owner: HTMLElement, region: TipRegion | undefined): void
 }
@@ -51,7 +56,7 @@ export function showLinkTip(
   tip: Tip,
   range: CellRange,
   text: string,
-  key: string,
+  hint: LinkHint,
 ) {
   const owner = terminal.element
   const screen = owner?.querySelector('.xterm-screen')
@@ -61,7 +66,7 @@ export function showLinkTip(
     cols: terminal.cols,
     rows: terminal.rows,
   }
-  tip(owner, { text, key, box: linkBox(range, view, screen.getBoundingClientRect()) })
+  tip(owner, { text, ...hint, box: linkBox(range, view, screen.getBoundingClientRect()) })
 }
 
 export function hideLinkTip(terminal: Terminal, tip: Tip) {
@@ -75,7 +80,7 @@ export function attachLinks(terminal: Terminal, options: LinkOptions) {
   }
   // The text of an OSC 8 link may differ from its target: the tooltip shows the target
   const hover = (_event: MouseEvent, url: string, range: CellRange) =>
-    showLinkTip(terminal, options.tip, range, url, options.keyLabel())
+    showLinkTip(terminal, options.tip, range, url, options.hint())
   const leave = () => hideLinkTip(terminal, options.tip)
 
   terminal.options.linkHandler = { activate, hover, leave }

@@ -42,6 +42,20 @@ export function keysMarkup(label: string, size: KeysSize = 'regular'): string {
   return `<kbd class="keys${size === 'compact' ? ' compact' : ''}">${chords.join(' ')}</kbd>`
 }
 
+// A key held while the mouse acts, as a sentence: caps for the key and plain words for the rest ("Ctrl" and
+// "click to open"), joined as the keyboard writes a chord, so the text still reads "Ctrl+click to open"
+// (or "⌘ click to open") for a screen reader
+function gestureMarkup(key: string, words: string): string {
+  const joiner = keyChords(key).at(-1)?.joiner === '+' ? '<span class="gesture-plus">+</span>' : ' '
+  return `<span class="gesture">${keysMarkup(key, 'compact')}${joiner}${escapeHtml(words)}</span>`
+}
+
+export function gesture(key: string, words: string): HTMLElement {
+  const holder = document.createElement('span')
+  holder.innerHTML = gestureMarkup(key, words)
+  return holder.firstElementChild as HTMLElement
+}
+
 // One cap with a name that may hold spaces ("Right Ctrl"), which `keys` would read as two keys
 export function keyCap(name: string): HTMLElement {
   const holder = document.createElement('span')
