@@ -66,6 +66,27 @@ body.full #bar {
   );
 }
 
+/* While a copy shows over the compact notice the strip ends where the full notice would end it, with its
+   own fade, so no tab sits under the copy (D74); --covered is that width */
+#tabs[data-covered] {
+  mask-image: linear-gradient(
+    to left,
+    transparent var(--covered),
+    #000 calc(var(--covered) + 24px)
+  );
+}
+
+#tabs[data-covered][data-fade="start"],
+#tabs[data-covered][data-fade="both"] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 24px,
+    #000 calc(100% - var(--covered) - 24px),
+    transparent calc(100% - var(--covered))
+  );
+}
+
 #bar-end {
   flex: none;
   display: flex;

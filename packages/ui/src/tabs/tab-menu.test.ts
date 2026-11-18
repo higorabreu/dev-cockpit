@@ -89,3 +89,98 @@ describe('createTabMenu', () => {
     expect(element.hidden).toBe(true)
   })
 })
+
+describe('createTabMenu options', () => {
+  function place(element: HTMLElement) {
+    element.getBoundingClientRect = () => new DOMRect(0, 0, 180, 100)
+  }
+
+  it('should put its right edge on the given point when it is aligned to the end', () => {
+    // Arrange
+    const { menu, element } = setup()
+    place(element)
+
+    // Act
+    menu.open(
+      [{ label: 'Update', enabled: true, run: () => undefined }],
+      700,
+      400,
+      true,
+      undefined,
+      {
+        align: 'end',
+      },
+    )
+
+    // Assert: 700 - 180 wide, and 6 above the point
+    expect(element.style.left).toBe('520px')
+    expect(element.style.top).toBe('294px')
+  })
+
+  it('should keep 4 px from the window edge when the aligned menu would overflow it', () => {
+    // Arrange
+    const { menu, element } = setup()
+    place(element)
+
+    // Act
+    menu.open(
+      [{ label: 'Update', enabled: true, run: () => undefined }],
+      100,
+      400,
+      true,
+      undefined,
+      {
+        align: 'end',
+      },
+    )
+
+    // Assert
+    expect(element.style.left).toBe('4px')
+  })
+
+  it('should show a caption the arrows skip and name the menu with it when one is given', () => {
+    // Arrange
+    const { menu, element, focused, press } = setup()
+
+    // Act
+    menu.open(
+      [
+        { label: 'Restart anyway', enabled: true, run: () => undefined },
+        { label: 'Cancel', enabled: true, run: () => undefined },
+      ],
+      100,
+      100,
+      false,
+      undefined,
+      { caption: '1 tab has an agent running' },
+    )
+    const first = focused()
+    press('ArrowDown')
+    press('ArrowDown')
+
+    // Assert
+    const caption = element.querySelector('.menu-caption')
+    expect(caption?.textContent).toBe('1 tab has an agent running')
+    expect(caption?.getAttribute('tabindex')).toBeNull()
+    expect(element.getAttribute('aria-labelledby')).toBe(caption?.id)
+    expect(first).toBe('Restart anyway')
+    expect(focused()).toBe('Restart anyway')
+  })
+
+  it('should close only its own opening when an old handle is closed', () => {
+    // Arrange
+    const { menu, element } = setup()
+    const action = { label: 'Update', enabled: true, run: () => undefined }
+    const old = menu.open([action], 100, 100, false)
+    const current = menu.open([action], 100, 100, false)
+
+    // Act
+    old.close()
+    const afterOld = element.hidden
+    current.close()
+
+    // Assert
+    expect(afterOld).toBe(false)
+    expect(element.hidden).toBe(true)
+  })
+})

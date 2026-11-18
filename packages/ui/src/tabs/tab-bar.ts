@@ -5,6 +5,10 @@ import { attentionMark, reviewMark } from './attention-mark.ts'
 export interface TabBarCallbacks {
   activate(id: string): void
   contextMenu(id: string, x: number, y: number): void
+  // Closes the tab as its menu item and the close key do
+  close(id: string): void
+  // False while the middle button opens the hold menu (D69): it keeps that meaning on a tab
+  middleClickCloses(): boolean
   reorder(ids: readonly string[]): void
   // The name typed for a tab, or undefined when the edit was cancelled
   rename(id: string, name: string | undefined): void
@@ -115,6 +119,17 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
         button.addEventListener('contextmenu', (event) => {
           event.preventDefault()
           callbacks.contextMenu(tab.id, event.clientX, event.clientY)
+        })
+        // The middle button closes the tab, as in a browser. On Linux its release would also paste the
+        // selection into the focused terminal, and its press would move the focus or start autoscroll
+        for (const type of ['mousedown', 'mouseup'] as const)
+          button.addEventListener(type, (event) => {
+            if (event.button === 1) event.preventDefault()
+          })
+        button.addEventListener('auxclick', (event) => {
+          if (event.button !== 1) return
+          event.preventDefault()
+          if (callbacks.middleClickCloses()) callbacks.close(tab.id)
         })
         button.addEventListener('dragstart', (event) => {
           dragging = button
