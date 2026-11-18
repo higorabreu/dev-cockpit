@@ -44,9 +44,10 @@
   cursor: pointer;
 }
 
+/* The same highlight as the hold menu's rows: the tab's own fill barely shows on the menu's surface */
 #tab-menu button:hover:not(:disabled),
 #tab-menu button:focus-visible {
-  background: var(--tab-active);
+  background: var(--list-selected);
 }
 
 #tab-menu button:disabled {

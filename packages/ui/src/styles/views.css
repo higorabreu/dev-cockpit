@@ -17,6 +17,14 @@
   pointer-events: auto;
 }
 
+/* Hidden once faded, so a closed overlay leaves the tab order; open, it inherits the window's visibility */
+#views:not(.open) {
+  visibility: hidden;
+  transition:
+    opacity var(--motion-fast) ease,
+    visibility 0s linear var(--motion-fast);
+}
+
 #views-box {
   width: min(860px, 100%);
   height: min(88vh, 560px);

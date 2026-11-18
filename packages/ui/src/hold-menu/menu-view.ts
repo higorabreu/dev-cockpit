@@ -39,7 +39,7 @@ interface Geometry {
 const FULL: Geometry = { size: WHEEL_SIZE, inner: 38, outer: 96, label: 68 }
 const COMPACT: Geometry = { size: COMPACT_WHEEL, inner: 26, outer: 80, label: 52 }
 const GAP = 4
-const CENTERED: WheelLayout = { size: WHEEL_SIZE, top: 0, overlap: 0 }
+const CENTERED: WheelLayout = { size: WHEEL_SIZE, top: 0, left: 0, overlap: 0 }
 
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
 const escapeHtml = (text: string) => text.replace(/[&<>"]/g, (char) => ENTITIES[char] ?? char)
@@ -113,7 +113,7 @@ function listMarkup(
 const kbd = (keys: readonly string[]) => keysMarkup(keys.join(' '), 'compact')
 
 export interface MenuMarkup {
-  readonly mode: 'wheel-mode' | 'switch-mode'
+  readonly mode: 'wheel-mode'
   readonly card: string
   readonly hint: string
 }
@@ -148,28 +148,5 @@ export function wheelMarkup(
     mode: 'wheel-mode',
     card: `<svg class="wheel" width="${fixed(layout.size)}" height="${fixed(layout.size)}" viewBox="${-half} ${-half} ${geometry.size} ${geometry.size}"><circle class="backdrop" r="${half}"/>${sectors}${hub}</svg>${list}`,
     hint: `<span>${kbd(['←', '→', '↑', '↓'])} ${escapeHtml(t('menu.hint.navigate'))}</span><span>${escapeHtml(t('menu.hint.release'))}</span><span>${kbd(['Esc'])} ${escapeHtml(t('menu.hint.cancel'))}</span>`,
-  }
-}
-
-export interface SwitcherChip {
-  readonly label: string
-  readonly note: string
-}
-
-export function switcherMarkup(
-  chips: readonly SwitcherChip[],
-  index: number,
-  t: Translate,
-): MenuMarkup {
-  const strip = chips
-    .map(
-      (chip, at) =>
-        `<div class="chip${at === index ? ' on' : ''}"><b>${escapeHtml(chip.label)}</b><small>${escapeHtml(chip.note)}</small></div>`,
-    )
-    .join('')
-  return {
-    mode: 'switch-mode',
-    card: `<div class="ttl">${escapeHtml(t('menu.switcher.title'))}</div><div class="strip">${strip}</div>`,
-    hint: `<span>${kbd([t('menu.key.space')])} ${escapeHtml(t('menu.switcher.next'))}</span><span>${kbd(['Shift', t('menu.key.space')])} ${escapeHtml(t('menu.switcher.previous'))}</span><span>${escapeHtml(t('menu.switcher.release'))}</span>`,
   }
 }

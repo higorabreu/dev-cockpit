@@ -22,8 +22,21 @@
   transition: opacity var(--motion-fast) ease;
 }
 
+/* Only the card takes the pointer: off it, the pointer stays on the terminal, so Ctrl+click on a link still
+   finds the link with the menu open over it */
 #menu.open {
   opacity: 1;
+}
+
+/* Hidden once faded, so a closed overlay leaves the tab order; open, it inherits the window's visibility */
+#menu:not(.open) {
+  visibility: hidden;
+  transition:
+    opacity var(--motion-fast) ease,
+    visibility 0s linear var(--motion-fast);
+}
+
+#menu.open #menu-card {
   pointer-events: auto;
 }
 
@@ -41,7 +54,6 @@
    needs room */
 #menu-card.wheel-mode {
   position: absolute;
-  left: calc(50% - var(--wheel, 196px) / 2);
   width: var(--wheel, 196px);
   height: var(--wheel, 196px);
 }
@@ -50,18 +62,9 @@
   #menu-card.wheel-mode[data-placed] {
     transition:
       transform var(--motion-fast) var(--motion-easing),
-      top var(--motion-normal) var(--motion-easing);
+      top var(--motion-normal) var(--motion-easing),
+      left var(--motion-normal) var(--motion-easing);
   }
-}
-
-#menu-card.switch-mode {
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-large);
 }
 
 #menu-card svg.wheel {
@@ -119,7 +122,8 @@
   position: absolute;
   width: max-content;
   min-width: 206px;
-  max-width: 340px;
+  /* A window narrower than the list cuts its labels, never the list */
+  max-width: min(340px, calc(100vw - 16px));
   padding: 6px;
   display: flex;
   flex-direction: column;
@@ -203,54 +207,25 @@ button.cue:hover {
   color: var(--muted);
 }
 
+/* On the tab bar's row, on a surface of its own: the tab names under it would read through the scrim */
 #menu-hint {
   position: fixed;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
+  max-width: calc(100% - 16px);
   display: flex;
+  align-items: center;
   gap: 14px;
+  /* As tall as a tab, so no tab shows above or below it */
+  min-height: 32px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-medium);
+  background: var(--surface);
   color: var(--muted);
   font-size: 11px;
   white-space: nowrap;
-}
-
-.strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: center;
-}
-
-.chip {
-  min-width: 116px;
-  padding: 8px 11px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-large);
-  background: var(--sector-idle);
-}
-
-.chip b {
-  font: 500 12px var(--font-mono);
-}
-
-.chip small {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.chip.on {
-  background: var(--list-selected);
-  border-color: var(--muted);
-}
-
-.ttl {
-  color: var(--muted);
-  font-size: 10.5px;
-  letter-spacing: 0.07em;
-  text-align: center;
-  text-transform: uppercase;
 }

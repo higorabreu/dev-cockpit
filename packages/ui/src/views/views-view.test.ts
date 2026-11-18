@@ -799,7 +799,7 @@ describe('views view tab groups', () => {
     expect(
       [...overlay.querySelectorAll('.vtab')].map((tab) => tab.getAttribute('data-tip')),
     ).toEqual([
-      'MRs que aguardam a sua review',
+      'MRs que aguardam a sua revisão',
       'MRs que você abriu',
       'Issues do Jira atribuídas a você',
     ])

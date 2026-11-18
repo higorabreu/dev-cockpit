@@ -17,6 +17,14 @@
   pointer-events: auto;
 }
 
+/* Hidden once faded, so a closed overlay leaves the tab order; open, it inherits the window's visibility */
+#search:not(.open) {
+  visibility: hidden;
+  transition:
+    opacity var(--motion-fast) ease,
+    visibility 0s linear var(--motion-fast);
+}
+
 #search-box {
   width: min(460px, calc(100% - 24px));
   display: flex;

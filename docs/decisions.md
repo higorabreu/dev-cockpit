@@ -835,7 +835,8 @@ delete (Delete) buttons, and its file's header counts it. "Send to agent" in the
 count, and Ctrl+Shift+Enter (⇧⌘Enter), from the review or the tab's terminal, write every pending comment to
 a Markdown file and type one line at the tab's prompt, "Address the review comments in <path>" in the
 interface language, with no Enter and no line break; the keys go to the terminal. They type only while an
-agent runs in the tab, read fresh at the moment of sending; at a shell prompt or under another program the
+agent runs in the tab (a known agent by its process, or any program that reports its state, as its marks
+say), read fresh at the moment of sending; at a shell prompt or under another program the
 button is disabled (`aria-disabled`, so its tooltip shows) with the reason, "No agent in this tab" or
 "{process} is running in this tab",
 the key shows it in the header and the comments stay; the button's state follows the tab watcher's reads
@@ -997,6 +998,18 @@ was chosen over a small dialog: it keeps the eye on the tab and costs no extra s
 terminal's current folder was offered and declined: the automatic name stays as it was.
 **How to revert:** drop `renameTab` and `autoLabel` from `core/src/tabs/tabs.ts`, `rename` from
 `ui/src/tabs/tab-bar.ts`, the `renameTab` shortcut, the menu items and the `.tab-name` styles.
+
+## D63. The hold menu has no tab switcher
+
+**Decision:** the tab switcher of D12 (Space with the trigger held, a card of tabs by most recent use) is
+gone. The tab bar is where tabs are picked; the hold menu's Tabs list keeps next, previous and next
+waiting for you, and Ctrl+Tab and Alt+digit stay.
+**Reason:** the maintainer found the switcher ugly and had never come across it (2026-11-17): it showed
+nowhere in the interface or the shortcut table, and with many tabs its card ran edge to edge, over the
+side panel, and out of a short window. The tab bar already does the job.
+**How to revert:** bring back `core/src/tab-switcher/`, `recentTabs` in `core/src/tabs/tabs.ts`, the
+switcher mode of `ui/src/hold-menu/hold-menu-controller.ts` with its Space key, `switcherMarkup` in
+`menu-view.ts`, its styles in `hold-menu.css` and the `menu.switcher.*` texts.
 
 ## D64. The tabs of the last run open again on start
 

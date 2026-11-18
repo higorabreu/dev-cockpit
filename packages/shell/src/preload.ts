@@ -10,14 +10,30 @@ function subscribe<Args extends unknown[]>(channel: string, listener: (...args: 
   }
 }
 
+// One IPC listener per channel, routed by the terminal's id: a listener per tab made Electron warn past ten
+// tabs and handed every chunk of every terminal to every tab
+function byTerminal<Arg>(channel: string) {
+  const listeners = new Map<number, (arg: Arg) => void>()
+  ipcRenderer.on(channel, (_event, id: number, arg: Arg) => listeners.get(id)?.(arg))
+  return (id: number, listener: (arg: Arg) => void) => {
+    listeners.set(id, listener)
+    return () => {
+      if (listeners.get(id) === listener) listeners.delete(id)
+    }
+  }
+}
+
+const ptyData = byTerminal<string>(hostChannels.ptyData)
+const ptyExit = byTerminal<PtyExit>(hostChannels.ptyExit)
+
 const api: HostApi = {
   pty: {
     create: (options) => ipcRenderer.invoke(hostChannels.ptyCreate, options),
     write: (id, data) => ipcRenderer.send(hostChannels.ptyWrite, id, data),
     resize: (id, cols, rows) => ipcRenderer.send(hostChannels.ptyResize, id, cols, rows),
     kill: (id) => ipcRenderer.send(hostChannels.ptyKill, id),
-    onData: (listener) => subscribe<[number, string]>(hostChannels.ptyData, listener),
-    onExit: (listener) => subscribe<[number, PtyExit]>(hostChannels.ptyExit, listener),
+    onData: ptyData,
+    onExit: ptyExit,
   },
   clipboard: {
     readText: () => ipcRenderer.invoke(hostChannels.clipboardRead),

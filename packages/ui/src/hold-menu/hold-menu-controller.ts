@@ -1,5 +1,4 @@
 import {
-  commitSwitcher,
   createHoldGesture,
   createHoldMenu,
   currentCategory,
@@ -8,13 +7,10 @@ import {
   type MenuCategory,
   type MenuItem,
   navigate,
-  openSwitcher,
   release,
   type Scheduler,
-  type SwitcherState,
   select,
   selectedIndex,
-  stepSwitcher,
   type Translate,
 } from '@dck/core'
 import { inputGate } from '../platform/input-gate.ts'
@@ -22,11 +18,13 @@ import {
   centeredLayout,
   followSelection,
   listBand,
+  type Pin,
   type Placement,
   placeWheel,
+  type Room,
   type WheelLayout,
 } from './list-fit.ts'
-import { type MenuMarkup, switcherMarkup, wheelMarkup } from './menu-view.ts'
+import { type MenuMarkup, wheelMarkup } from './menu-view.ts'
 import { createPointerIntent } from './pointer-intent.ts'
 
 // Space the list keeps from the window's top edge and from the tab bar, in CSS pixels
@@ -37,18 +35,9 @@ const FIT_PASSES = 4
 // several, so the selection stays precise; a touchpad's small deltas add up to it
 const WHEEL_STEP = 40
 
-export interface MenuTab {
-  readonly id: string
-  readonly label: string
-  readonly current: boolean
-}
-
 export interface HoldMenuActions {
   categories(): readonly MenuCategory[]
-  // Most recent to oldest
-  tabs(): readonly MenuTab[]
   run(categoryId: string, item: MenuItem): void
-  switchTo(tabId: string): void
   // Key that opens the menu while held; comes from settings and can change while the app is open
   triggerCode(): string
 }
@@ -67,14 +56,7 @@ const ARROWS: Record<string, Direction> = {
   ArrowLeft: 'left',
 }
 
-type Mode =
-  | { kind: 'closed' }
-  | { kind: 'wheel'; menu: HoldMenuState }
-  | {
-      kind: 'switcher'
-      switcher: SwitcherState
-      tabs: readonly MenuTab[]
-    }
+type Mode = { kind: 'closed' } | { kind: 'wheel'; menu: HoldMenuState }
 
 const consume = (event: Event) => {
   event.preventDefault()
@@ -94,8 +76,8 @@ export function createHoldMenuController(
   const rowsFit = new Map<number, number>()
   const firstRow = new Map<number, number>()
   const layouts = new Map<number, WheelLayout>()
-  // The wheel's top on screen, kept while the pointer moves the selection
-  let shownTop: number | undefined
+  // Where the wheel is on screen, kept while the pointer moves the selection
+  let shown: Pin | undefined
   let wheelTravel = 0
 
   const gesture = createHoldGesture({
@@ -107,7 +89,7 @@ export function createHoldMenuController(
         rowsFit.clear()
         firstRow.clear()
         layouts.clear()
-        shownTop = undefined
+        shown = undefined
         wheelTravel = 0
       }
       pointer.keysTakeOver()
@@ -126,10 +108,13 @@ export function createHoldMenuController(
   }
 
   const band = () => listBand(elements.bar.getBoundingClientRect(), window.innerHeight, EDGE)
+  const room = (): Room => ({ ...band(), left: EDGE, right: window.innerWidth - EDGE })
 
   function place(layout: WheelLayout) {
+    elements.card.style.removeProperty('max-height')
     elements.card.style.setProperty('--wheel', `${layout.size}px`)
     elements.card.style.top = `${layout.top}px`
+    elements.card.style.left = `${layout.left}px`
   }
 
   // The wheel slides between places only once it is on screen, never from where the last opening left it
@@ -144,7 +129,7 @@ export function createHoldMenuController(
     menu: HoldMenuState,
     rows: number,
     total: number,
-    pinned: number | undefined,
+    pinned: Pin | undefined,
   ): Placement | undefined {
     const list = elements.card.querySelector<HTMLElement>('.list')
     const shown = list?.querySelectorAll<HTMLElement>('.it:not(.gone)')
@@ -158,21 +143,24 @@ export function createHoldMenuController(
     if (pitch <= 0) return undefined
     let cues = 0
     for (const cue of list.querySelectorAll<HTMLElement>('.cue')) cues += cue.offsetHeight
-    const measure = { total, rows, height: list.offsetHeight, pitch, cues }
-    return placeWheel(menu.category, menu.categories.length, band(), measure, pinned)
+    const measure = { total, rows, height: list.offsetHeight, pitch, cues, width: list.offsetWidth }
+    return placeWheel(menu.category, menu.categories.length, room(), measure, pinned)
   }
 
   const sameLayout = (a: WheelLayout, b: WheelLayout) =>
-    a.size === b.size && Math.abs(a.top - b.top) < 0.5 && Math.abs(a.overlap - b.overlap) < 0.5
+    a.size === b.size &&
+    Math.abs(a.top - b.top) < 0.5 &&
+    Math.abs(a.left - b.left) < 0.5 &&
+    Math.abs(a.overlap - b.overlap) < 0.5
 
   // `still` keeps the wheel where it is, for a selection the pointer made
   function drawWheel(menu: HoldMenuState, still: boolean) {
     const category = menu.category
     const total = currentCategory(menu)?.items.length ?? 0
-    const pinned = still ? shownTop : undefined
+    const pinned = still ? shown : undefined
     let rows = Math.min(rowsFit.get(category) ?? total, total)
-    const start = layouts.get(category) ?? centeredLayout(band())
-    let layout = pinned === undefined ? start : { ...start, top: pinned }
+    const start = layouts.get(category) ?? centeredLayout(room())
+    let layout = pinned === undefined ? start : { ...start, ...pinned }
     for (let pass = 1; ; pass++) {
       const shown = followSelection(total, selectedIndex(menu), rows, firstRow.get(category))
       paint(wheelMarkup(menu, t, shown, layout))
@@ -187,21 +175,12 @@ export function createHoldMenuController(
     }
     rowsFit.set(category, rows)
     layouts.set(category, layout)
-    shownTop = layout.top
+    shown = { top: layout.top, left: layout.left }
     settle()
   }
 
   function draw(still = false) {
     if (mode.kind === 'wheel') drawWheel(mode.menu, still)
-    if (mode.kind === 'switcher') {
-      elements.card.style.removeProperty('top')
-      const { switcher, tabs } = mode
-      const chips = switcher.order.map((id) => {
-        const tab = tabs.find((entry) => entry.id === id)
-        return { label: tab?.label ?? id, note: tab?.current ? t('menu.switcher.current') : '' }
-      })
-      paint(switcherMarkup(chips, switcher.index, t))
-    }
   }
 
   function close() {
@@ -210,26 +189,12 @@ export function createHoldMenuController(
     delete elements.card.dataset.placed
   }
 
-  function stepTabs(direction: 1 | -1) {
-    if (mode.kind !== 'switcher') {
-      const tabs = actions.tabs()
-      if (tabs.length === 0) return
-      mode = { kind: 'switcher', tabs, switcher: openSwitcher(tabs.map((tab) => tab.id)) }
-    } else {
-      mode = { ...mode, switcher: stepSwitcher(mode.switcher, direction) }
-    }
-    draw()
-  }
-
   function commit() {
     const current = mode
     close()
-    if (current.kind === 'switcher') {
-      actions.switchTo(commitSwitcher(current.switcher))
-    } else if (current.kind === 'wheel') {
-      const result = release(current.menu)
-      if (result.type === 'execute') actions.run(result.categoryId, result.item)
-    }
+    if (current.kind !== 'wheel') return
+    const result = release(current.menu)
+    if (result.type === 'execute') actions.run(result.categoryId, result.item)
   }
 
   function onKeyDown(event: KeyboardEvent) {
@@ -245,18 +210,11 @@ export function createHoldMenuController(
       close()
       return
     }
-    if (event.code === 'Space') {
-      consume(event)
-      stepTabs(event.shiftKey ? -1 : 1)
-      gesture.openNow()
-      return
-    }
     const direction = ARROWS[event.key]
     if (direction) {
       if (!gesture.arrow()) return
       consume(event)
-      if (mode.kind === 'switcher') stepTabs(direction === 'left' || direction === 'up' ? -1 : 1)
-      else if (mode.kind === 'wheel') {
+      if (mode.kind === 'wheel') {
         mode = { ...mode, menu: navigate(mode.menu, direction) }
         pointer.keysTakeOver()
         draw()
@@ -321,8 +279,26 @@ export function createHoldMenuController(
 
   window.addEventListener('keydown', onKeyDown, true)
   window.addEventListener('keyup', onKeyUp, true)
-  // A click while the trigger is down is Ctrl+click on a link, not the start of the menu
-  window.addEventListener('mousedown', () => gesture.otherKey(), true)
+  const offCard = (event: Event) =>
+    mode.kind !== 'closed' &&
+    !(event.target instanceof Node && elements.card.contains(event.target))
+  // A click while the trigger is down is Ctrl+click on a link, not the start of the menu; held a little
+  // longer, the menu opened first, and a click off its card closes it and still reaches the terminal
+  window.addEventListener(
+    'mousedown',
+    (event) => {
+      gesture.otherKey()
+      if (!offCard(event)) return
+      gesture.cancel()
+      close()
+    },
+    true,
+  )
+  // The scrim lets the pointer through to the terminal, so its link stays found; the wheel stops there
+  window.addEventListener('wheel', (event) => offCard(event) && consume(event), {
+    capture: true,
+    passive: false,
+  })
   window.addEventListener('blur', () => {
     gesture.cancel()
     close()
