@@ -65,6 +65,43 @@
   background: var(--hover);
 }
 
+/* The branch line opens the review: a row like the files', so its hover and focus match theirs */
+.brow-open {
+  width: calc(100% + 12px);
+  margin-inline: -6px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.brow-open:hover {
+  background: var(--hover);
+}
+
+.brow-open:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: -2px;
+}
+
+/* A file's or a submodule's row is a button that opens the review on its changes */
+.frow-open {
+  width: calc(100% + 12px);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.frow-open:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: -2px;
+}
+
 .frow .pill {
   margin-left: 0;
 }

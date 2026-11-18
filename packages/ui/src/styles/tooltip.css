@@ -21,6 +21,18 @@
   color: var(--muted);
 }
 
+/* A list, one item a line: each line is cut by an ellipsis instead of wrapping, so it stays compact */
+#tooltip[data-lines] {
+  max-width: 400px;
+}
+
+#tooltip .tip-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 #tooltip[data-open="true"] {
   opacity: 1;
 }

@@ -46,6 +46,14 @@ describe('fileNotice', () => {
     expect(logo && fileNotice(logo, true)).toBe('binary')
   })
 
+  it('should say the content waits when an untracked file is past the reading limit', () => {
+    const [source] = files()
+    const waiting = source && { ...source, hunks: [], unloaded: true as const }
+
+    expect(waiting && fileNotice(waiting, true)).toBe('unloaded')
+    expect(isCollapsed('unloaded')).toBe(false)
+  })
+
   it('should let only a collapsed file be shown anyway', () => {
     expect(isCollapsed('generated')).toBe(true)
     expect(isCollapsed('large')).toBe(true)

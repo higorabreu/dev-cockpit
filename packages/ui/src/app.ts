@@ -418,6 +418,15 @@ export async function startApp(
               viewsView.issueProjects(JIRA_CONNECTOR.id),
             ),
           openTicket: (url) => api.external.open(url),
+          openModule(path) {
+            if (state.activeId) reviews.showModule(state.activeId, path)
+          },
+          openFile(path) {
+            if (state.activeId) reviews.showFile(state.activeId, path)
+          },
+          openReview() {
+            if (state.activeId) reviews.show(state.activeId)
+          },
         },
         i18n,
       ),

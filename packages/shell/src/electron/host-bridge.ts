@@ -118,6 +118,7 @@ const fileLinesSchema = z.object({
   root: absolutePathSchema,
   path: pathText(MAX_ABSOLUTE_LENGTH).refine((text) => !isAbsolute(text)),
 })
+const untrackedSchema = fileLinesSchema.extend({ ignoreWhitespace: z.boolean() })
 // The comments of one review: a few kilobytes, so a megabyte is a bug or abuse, not a review
 const MAX_NOTES_LENGTH = 1024 * 1024
 const notesSchema = z.object({
@@ -315,6 +316,15 @@ export function registerHostBridge(options: BridgeOptions) {
       return fail(errorBody('DCK-IPC-003', 'review file'))
     }
     return options.review.fileLines(parsed.data.root, parsed.data.path)
+  })
+  ipcMain.handle(hostChannels.reviewUntracked, (_event, payload: unknown) => {
+    const parsed = untrackedSchema.safeParse(payload)
+    if (!parsed.success || !reviewRoots.has(parsed.data.root)) {
+      logger.warn('review request refused', { kind: 'untracked' })
+      return fail(errorBody('DCK-IPC-003', 'review untracked'))
+    }
+    const { root, path, ignoreWhitespace } = parsed.data
+    return options.review.untrackedFile(root, path, ignoreWhitespace)
   })
   // The only write of the review: the comments for the agent, beside a repository a diff found
   ipcMain.handle(hostChannels.reviewNotes, async (_event, payload: unknown) => {

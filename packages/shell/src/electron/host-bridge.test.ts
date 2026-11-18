@@ -3,6 +3,8 @@ import {
   type Connector,
   type DiffRequest,
   defaultSettings,
+  errorBody,
+  fail,
   GITLAB_CONNECTOR,
   hostChannels,
   type LogContext,
@@ -113,6 +115,10 @@ function setup(picked: string | undefined = undefined) {
           kind: 'ok' as const,
           diff: reviewDiff('/srv/acme/backend', request.scope, noBranchInfo, []),
         })
+      },
+      untrackedFile: async (root, path, ignoreWhitespace) => {
+        fileReads.push(`${root}|${path}|${ignoreWhitespace ? 'w' : ''}`)
+        return fail(errorBody('DCK-GIT-001', 'untracked file not readable'))
       },
       fileLines: async (root, path) => {
         fileReads.push(`${root}|${path}`)
@@ -868,6 +874,24 @@ describe('registerHostBridge review', () => {
     expect(before).toMatchObject({ ok: false })
     expect(after).toEqual({ ok: true, value: ['one'] })
     expect(fileReads).toEqual(['/srv/acme/backend|a.ts'])
+  })
+
+  it('should read an untracked file only from a root a diff answered with and a relative path', async () => {
+    // Arrange
+    const { call, fileReads, warnings } = setup()
+    const file = { root: '/srv/acme/backend', path: 'libs/lib/new.txt', ignoreWhitespace: true }
+
+    // Act
+    const before = await call(hostChannels.reviewUntracked, file)
+    await call(hostChannels.reviewDiff, request('/srv/acme/backend'))
+    const absolute = await call(hostChannels.reviewUntracked, { ...file, path: '/etc/passwd' })
+    await call(hostChannels.reviewUntracked, file)
+
+    // Assert
+    expect(before).toMatchObject({ ok: false, error: { data: { code: 'DCK-IPC-003' } } })
+    expect(absolute).toMatchObject({ ok: false, error: { data: { code: 'DCK-IPC-003' } } })
+    expect(fileReads).toEqual(['/srv/acme/backend|libs/lib/new.txt|w'])
+    expect(warnings).toHaveLength(2)
   })
 
   it('should refuse an absolute file path even inside a known root', async () => {

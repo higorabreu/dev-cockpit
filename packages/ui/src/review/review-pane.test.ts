@@ -2,6 +2,7 @@
 import {
   type BranchInfo,
   createTranslator,
+  type DiffFile,
   type DiffOutcome,
   type DiffRequest,
   type ErrorBody,
@@ -65,6 +66,23 @@ const repository = (text = diffText(3000, 5000) + lockText, branch: BranchInfo =
 
 type Answer = Result<DiffOutcome, ErrorBody>
 
+const untrackedBlank = (path: string): DiffFile => ({
+  path,
+  oldPath: undefined,
+  status: 'added',
+  oldMode: undefined,
+  newMode: undefined,
+  binary: false,
+  nonUtf8: false,
+  submodule: false,
+  crlf: false,
+  generated: false,
+  untracked: true,
+  additions: 0,
+  deletions: 0,
+  hunks: [],
+})
+
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
 
@@ -82,6 +100,22 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
       diff: async (request: DiffRequest) => {
         requests.push(request)
         return typeof answer === 'function' ? answer() : answer
+      },
+      untrackedFile: async (root: string, path: string) => {
+        reads.push(`untracked ${root}|${path}`)
+        const [file] = parseUnifiedDiff(
+          [
+            `diff --git a/${path} b/${path}`,
+            '--- /dev/null',
+            `+++ b/${path}`,
+            '@@ -0,0 +1 @@',
+            '+hello',
+            '',
+          ].join('\n'),
+        )
+        return file
+          ? ok({ ...file, status: 'added', untracked: true })
+          : fail(errorBody('DCK-GIT-001', 'x'))
       },
       fileLines: async (root: string, path: string) => {
         reads.push(`${root}|${path}`)
@@ -210,6 +244,48 @@ describe('createReviewPane', () => {
     ])
     expect(pane.element.querySelector('.rv-show')).toBeNull()
     expect(pane.element.querySelectorAll('.rv-row[data-kind]').length).toBe(6)
+  })
+
+  it('should list a file past the reading limit and read it on a click or on Enter', async () => {
+    // Arrange
+    const waiting = (path: string): DiffFile => ({
+      ...untrackedBlank(path),
+      unloaded: true,
+    })
+    const answer = ok({
+      kind: 'ok' as const,
+      diff: reviewDiff('/home/ana/acme', 'uncommitted', feature, [
+        waiting('gen/f300.txt'),
+        waiting('gen/f301.txt'),
+      ]),
+    })
+    const { pane, reads, text, key } = setup(answer)
+    pane.open()
+    await flush()
+    const notices = [...pane.element.querySelectorAll('.rv-file .rv-wait')].map(
+      (n) => `${n.textContent} | ${n.getAttribute('data-tip')}`,
+    )
+    const header = text('.rv-filerow[data-file="0"] .rv-fhead')
+
+    // Act
+    pane.element.querySelector<HTMLElement>('.rv-file[data-index="0"]')?.click()
+    await flush()
+    const index = pane.element.querySelector('.rv-files') as HTMLElement
+    key(index, 'ArrowDown')
+    key(index, 'Enter')
+    await flush()
+
+    // Assert
+    expect(notices).toEqual(['Not loaded | Content not loaded', 'Not loaded | Content not loaded'])
+    // The header offers Load diff alone, with no sentence beside it to be cut
+    expect(header).toContain('Load diff')
+    expect(header).not.toContain('Content not loaded')
+    expect(reads).toEqual([
+      'untracked /home/ana/acme|gen/f300.txt',
+      'untracked /home/ana/acme|gen/f301.txt',
+    ])
+    expect(pane.element.querySelector('.rv-wait')).toBeNull()
+    expect(text('.rv-totals')).toBe('2 files+2−0')
   })
 
   it('should group the rows of each file under its name for a screen reader', async () => {
@@ -588,6 +664,93 @@ describe('createReviewPane', () => {
     expect(pane.element.querySelector('.rv-file-viewed')?.getAttribute('aria-label')).toBe(
       'src/billing/invoice.ts, modified, 1 added, 1 removed, viewed',
     )
+  })
+
+  it('should group a submodule in the index and set its folder apart in the diff header', async () => {
+    // Arrange
+    const [invoice, lock] = parseUnifiedDiff(diffText(3000, 5000) + lockText)
+    if (!lock || !invoice) throw new Error('invariant: two files')
+    const inside = {
+      ...invoice,
+      path: 'libs/billing/src/billing/invoice.ts',
+      module: 'libs/billing',
+    }
+    const answer = ok({
+      kind: 'ok' as const,
+      diff: reviewDiff(
+        '/home/ana/acme',
+        'uncommitted',
+        feature,
+        [lock, inside],
+        [{ path: 'libs/billing', commits: ['Round the totals'], commitCount: 1 }],
+      ),
+    })
+    const { pane, key, text } = setup(answer)
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+
+    // Act
+    key(lines, ']')
+    key(lines, 'v')
+
+    // Assert
+    expect(text('.rv-files [data-module="libs/billing"] .rv-mod-subjects')).toBe('Round the totals')
+    expect(text('.rv-files .rv-file[data-index="1"] .rv-path')).toBe('src/billing/invoice.ts')
+    const head = pane.element.querySelector('.rv-filerow[data-file="1"] .rv-path')
+    expect(head?.querySelector('.rv-modpart')?.textContent).toBe('libs/billing')
+    expect(head?.textContent).toBe('libs/billingsrc/billing/invoice.ts')
+    expect(pane.element.querySelector('.rv-file-viewed')?.getAttribute('aria-label')).toBe(
+      'libs/billing/src/billing/invoice.ts, modified, 1 added, 1 removed, viewed',
+    )
+  })
+
+  it('should stand on a submodule group when the panel asks for it during the first read', async () => {
+    // Arrange
+    const [invoice, lock] = parseUnifiedDiff(diffText(3000, 5000) + lockText)
+    if (!lock || !invoice) throw new Error('invariant: two files')
+    const inside = { ...invoice, path: 'libs/billing/invoice.ts', module: 'libs/billing' }
+    const answer = ok({
+      kind: 'ok' as const,
+      diff: reviewDiff(
+        '/home/ana/acme',
+        'uncommitted',
+        feature,
+        [lock, inside],
+        [{ path: 'libs/billing', commits: [], commitCount: 0 }],
+      ),
+    })
+    const { pane, text } = setup(answer)
+
+    // Act
+    pane.open()
+    pane.showModule('libs/billing')
+    await flush()
+    const header = pane.element.querySelector('.rv-files [aria-selected="true"]')
+    const focused = document.activeElement
+    pane.showModule('libs/gone')
+
+    // Assert
+    expect(header?.getAttribute('data-module')).toBe('libs/billing')
+    expect(focused).toBe(pane.element.querySelector('.rv-files'))
+    expect(text('.rv-status')).toBe('No changes in libs/gone to review')
+  })
+
+  it('should open the diff on the file the panel names and say so when the scope has no such file', async () => {
+    // Arrange
+    const { pane, text } = setup(repository())
+
+    // Act
+    pane.open()
+    pane.showFile('pnpm-lock.yaml')
+    await flush()
+    const selected = pane.element.querySelector('.rv-files [aria-selected="true"]')?.textContent
+    pane.showFile('src/gone.ts')
+
+    // Assert
+    expect(selected).toContain('pnpm-lock.yaml')
+    expect(text('.rv-status')).toBe('No changes in src/gone.ts to review')
   })
 
   it('should mark and unmark a file with its Viewed checkbox', async () => {

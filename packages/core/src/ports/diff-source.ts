@@ -1,4 +1,4 @@
-import type { DiffScope, ReviewDiff } from '../diff/diff.ts'
+import type { DiffFile, DiffScope, ReviewDiff } from '../diff/diff.ts'
 import type { ErrorBody } from '../ipc/protocol.ts'
 import type { Result } from '../result.ts'
 
@@ -22,6 +22,12 @@ export type DiffOutcome =
 // What changed in a repository, read only
 export interface DiffSource {
   diff(request: DiffRequest): Promise<Result<DiffOutcome, ErrorBody>>
+  // An untracked file a diff listed without its content, read as an addition; the path is from the root
+  untrackedFile(
+    root: string,
+    path: string,
+    ignoreWhitespace: boolean,
+  ): Promise<Result<DiffFile, ErrorBody>>
   // The working tree text of a file of the repository, by line, to show the lines a diff left out
   fileLines(root: string, path: string): Promise<Result<readonly string[], ErrorBody>>
   // A short text that changes when anything a diff of the folder's repository shows may have changed
