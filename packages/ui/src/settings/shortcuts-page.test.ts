@@ -288,10 +288,14 @@ describe('shortcuts page, defaults and the file', () => {
     expect(keyButton('nextTab').textContent).toBe('Ctrl+Tab')
   })
 
-  it('should remove every custom key when all defaults are restored', async () => {
+  it('should remove every custom key and the chosen keys when all defaults are restored', async () => {
     // Arrange
     const custom = mergeSettings(defaultSettings, {
-      shortcuts: { keys: { nextTab: 'F6', theme: 'F8' } },
+      shortcuts: {
+        toggleWindow: 'F9',
+        holdTrigger: 'Mouse1',
+        keys: { nextTab: 'F6', theme: 'F8' },
+      },
     })
     const { body, current } = openShortcuts(custom)
     body.querySelector<HTMLElement>('#settings-tab-system')?.click()
@@ -303,7 +307,7 @@ describe('shortcuts page, defaults and the file', () => {
     await settle()
 
     // Assert
-    expect(current().shortcuts.keys).toEqual({})
+    expect(current().shortcuts).toEqual(defaultSettings.shortcuts)
   })
 
   it('should tell under the row what the file holds when a custom key is not valid', () => {

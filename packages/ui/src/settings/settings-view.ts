@@ -817,7 +817,10 @@ export function createSettingsView(
       void commit(
         {
           ...defaultSettings,
-          ...shortcutKeysPatch(Object.fromEntries(keys)),
+          shortcuts: {
+            ...defaultSettings.shortcuts,
+            ...shortcutKeysPatch(Object.fromEntries(keys)).shortcuts,
+          },
           connections: undefined,
           extensions: undefined,
         } as SettingsPatch,
