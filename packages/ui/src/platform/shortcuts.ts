@@ -1,5 +1,5 @@
 import { inputGate } from './input-gate.ts'
-import type { Keymap, ShortcutId } from './keymap.ts'
+import type { Keymap, ShortcutId, TabTarget } from './keymap.ts'
 
 export interface ShortcutActions {
   newTab(): void
@@ -10,7 +10,7 @@ export interface ShortcutActions {
   sendReview(): void
   nextTab(): void
   previousTab(): void
-  goToTab(index: number): void
+  goToTab(target: TabTarget): void
   toggleTheme(): void
   openSettings(): void
   openViews(): void

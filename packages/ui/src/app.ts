@@ -52,7 +52,7 @@ import { createSessionsSection } from './panel/sessions-section.ts'
 import { createSplitPreferences } from './panes/split-preferences.ts'
 import { createTabView, type TabView } from './panes/tab-view.ts'
 import { applyAppearance, loadFont, terminalLook } from './platform/appearance.ts'
-import { createKeymap, keyboardFor } from './platform/keymap.ts'
+import { createKeymap, keyboardFor, type TabTarget } from './platform/keymap.ts'
 import { bindShortcuts } from './platform/shortcuts.ts'
 import { applyTheme, themeFor, watchSystemTheme } from './platform/theme.ts'
 import { createProjectSearch } from './projects/project-search.ts'
@@ -779,7 +779,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     renameTab: () => state.activeId && tabBar.rename(state.activeId),
     nextTab: () => update(stepTab(state, 1)),
     previousTab: () => update(stepTab(state, -1)),
-    goToTab: (index: number) => update(activateTabAt(state, index)),
+    goToTab: (target: TabTarget) =>
+      update(activateTabAt(state, target === 'last' ? state.tabs.length - 1 : target)),
     toggleTheme,
     openSettings: () => settingsView.open(),
     openViews: () => void viewsView.open(),

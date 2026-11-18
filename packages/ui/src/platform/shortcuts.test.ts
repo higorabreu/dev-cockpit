@@ -91,6 +91,17 @@ describe('bindShortcuts', () => {
     expect(ran).toEqual(['goToTab 2'])
   })
 
+  it('should go to the last tab when Cmd+9 is pressed on a Mac', () => {
+    // Arrange
+    const ran = bind('mac')
+
+    // Act
+    press({ key: '9', code: 'Digit9', metaKey: true })
+
+    // Assert
+    expect(ran).toEqual(['goToTab last'])
+  })
+
   it('should make the font bigger with Ctrl and plus when the keyboard is a PC one', () => {
     // Arrange
     const ran = bind('pc')

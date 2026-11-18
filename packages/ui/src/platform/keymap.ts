@@ -130,7 +130,7 @@ const CLIPBOARD: Record<Keyboard, Partial<Record<'copy' | 'paste', Chord>>> = {
 // The modifier of a key inside a panel and of a click on a link or a path; Ctrl+click is the Mac's
 // secondary click, so its terminals open links with Cmd
 const PRIMARY: Record<Keyboard, Modifiers> = { pc: C, mac: M }
-// The modifier of the digits that go to a tab
+// The modifier of the digits that go to a tab; 9 goes to the last one, as in browsers and Ghostty
 const TAB: Record<Keyboard, Modifiers> = { pc: { alt: true }, mac: M }
 // MacBook keyboards have no right Control; the right Option sits in the same corner
 const HOLD_TRIGGER: Record<Keyboard, HoldTrigger> = { pc: 'ControlRight', mac: 'AltRight' }
@@ -171,6 +171,9 @@ function modifiersLabel(modifiers: Modifiers, keyboard: Keyboard, key?: string):
     .join(keyboard === 'mac' ? '' : '+')
 }
 
+// A tab by its place, from 0, or the last one
+export type TabTarget = number | 'last'
+
 export interface Keymap {
   readonly keyboard: Keyboard
   // The hold menu key until the user picks one
@@ -185,8 +188,8 @@ export interface Keymap {
   label(id: ShortcutId): string
   // The modifiers alone, for a label that lists several keys after them
   modifiers(id: ShortcutId): string
-  // 0 for the first tab when the event is Alt+1, or Cmd+1 on the Mac
-  tabIndex(event: KeyInput): number | undefined
+  // 0 for the first tab when the event is Alt+1, or Cmd+1 on the Mac; the last tab for the 9
+  tabIndex(event: KeyInput): TabTarget | undefined
   // A key inside a panel: Ctrl and a letter, Cmd on the Mac
   command(event: KeyInput, letter: string): boolean
   commandLabel(letter: string): string
@@ -212,7 +215,8 @@ export function createKeymap(keyboard: Keyboard): Keymap {
     tabIndex(event) {
       const digit = /^[1-9]$/.exec(pressedKey(event))?.[0]
       if (digit === undefined) return undefined
-      return matchesChord(event, { ...TAB[keyboard], key: digit }) ? Number(digit) - 1 : undefined
+      if (!matchesChord(event, { ...TAB[keyboard], key: digit })) return undefined
+      return digit === '9' ? 'last' : Number(digit) - 1
     },
     command: (event, letter) => matchesChord(event, { ...primary, key: letter }),
     commandLabel: (letter) => label({ ...primary, key: letter }),

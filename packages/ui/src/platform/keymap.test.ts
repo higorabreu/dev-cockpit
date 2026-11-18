@@ -91,8 +91,16 @@ describe('createKeymap tabIndex', () => {
     expect(createKeymap('mac').tabIndex(key('¡', { altKey: true, code: 'Digit1' }))).toBeUndefined()
   })
 
-  it('should go to the ninth tab with Alt+9 when the keyboard is a PC one', () => {
-    expect(createKeymap('pc').tabIndex(key('9', { altKey: true, code: 'Digit9' }))).toBe(8)
+  it('should go to the eighth tab with Alt+8 when the keyboard is a PC one', () => {
+    expect(createKeymap('pc').tabIndex(key('8', { altKey: true, code: 'Digit8' }))).toBe(7)
+  })
+
+  it('should go to the last tab with Alt+9 when the keyboard is a PC one', () => {
+    expect(createKeymap('pc').tabIndex(key('9', { altKey: true, code: 'Digit9' }))).toBe('last')
+  })
+
+  it('should go to the last tab with Cmd+9 when the keyboard is a Mac one', () => {
+    expect(createKeymap('mac').tabIndex(key('9', { metaKey: true, code: 'Digit9' }))).toBe('last')
   })
 
   it('should read the physical key when Option on a Mac keyboard turns 1 into another character', () => {
