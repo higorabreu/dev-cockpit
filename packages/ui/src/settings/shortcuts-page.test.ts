@@ -145,9 +145,7 @@ describe('shortcuts page, recording an action key', () => {
     press('j', { code: 'KeyJ' })
 
     // Assert
-    expect(row('theme').querySelector('.serror')?.textContent).toBe(
-      'Use Ctrl or Alt with that key.',
-    )
+    expect(row('theme').querySelector('.serror')?.textContent).toBe('Add Ctrl or Alt to that key.')
     expect(keyButton('theme').dataset.recording).toBe('true')
     expect(patches).toEqual([])
   })

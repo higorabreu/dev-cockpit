@@ -493,6 +493,15 @@
   line-height: 16px;
 }
 
+/* A refusal or a note stays on one line under the name, so no state of a row moves the rows below it;
+   a longer one, such as a conflict with a long action name, ends in an ellipsis and its tooltip shows it */
+.skeys .serror,
+.skeys .snote {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* An action's keycaps are its button. Recording shows the prompt in the same box, framed like the
    global key's Change while it waits, so the row keeps its height */
 .skey {
