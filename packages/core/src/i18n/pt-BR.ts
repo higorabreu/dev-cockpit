@@ -237,7 +237,7 @@ export const ptBR = {
   'settings.cursorBlink': 'Cursor piscando',
   'settings.macOptionAsMeta': 'Option como Meta',
   'settings.macOptionAsMeta.hint':
-    'O Meta move por palavra no shell; o outro Option digita acentos e símbolos.',
+    'Meta move por palavra; o outro Option digita acentos e símbolos.',
   'settings.macOptionAsMeta.left': 'Option esquerdo',
   'settings.macOptionAsMeta.both': 'Os dois',
   'settings.macOptionAsMeta.none': 'Nenhum',

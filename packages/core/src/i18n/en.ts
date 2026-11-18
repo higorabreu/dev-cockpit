@@ -237,7 +237,7 @@ export const en: Record<MessageKey, string> = {
   'settings.cursorBlink': 'Blinking cursor',
   'settings.macOptionAsMeta': 'Option as Meta',
   'settings.macOptionAsMeta.hint':
-    'Meta moves by word in the shell; the other Option types accents and symbols.',
+    'Meta moves by word; the other Option types accents and symbols.',
   'settings.macOptionAsMeta.left': 'Left Option',
   'settings.macOptionAsMeta.both': 'Both',
   'settings.macOptionAsMeta.none': 'Neither',
