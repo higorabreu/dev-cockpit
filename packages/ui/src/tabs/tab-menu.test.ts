@@ -111,4 +111,22 @@ describe('createTabMenu', () => {
     expect(copy?.disabled).toBe(true)
     expect(document.activeElement).toBe(paste)
   })
+
+  it('should still focus the first enabled item when a pointer opens it', () => {
+    const { menu } = setup()
+
+    menu.open(
+      [
+        { label: 'Copy', enabled: false, run: () => undefined },
+        { label: 'Paste', enabled: true, run: () => undefined },
+      ],
+      100,
+      100,
+      false,
+      undefined,
+      { pointer: true },
+    )
+
+    expect(document.activeElement?.textContent).toBe('Paste')
+  })
 })

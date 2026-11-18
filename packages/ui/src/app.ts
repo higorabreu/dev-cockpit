@@ -666,6 +666,7 @@ export async function startApp(
       y,
       false,
       () => sessions.get(tabId)?.focus(),
+      { pointer: true },
     )
   }
 
@@ -698,6 +699,7 @@ export async function startApp(
       y,
       false,
       () => session.focus(),
+      { pointer: true },
     )
   }
 

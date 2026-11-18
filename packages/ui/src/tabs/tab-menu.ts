@@ -1,5 +1,11 @@
 import { keys } from '../kit/keys.ts'
 
+export interface MenuOptions {
+  // Opened by a click with the focus in the terminal: the first item takes the focus without its ring, as a
+  // right click on a tab gives it, since a text field's focus would pass its ring on to the item
+  readonly pointer?: boolean
+}
+
 export interface MenuAction {
   readonly label: string
   readonly enabled: boolean
@@ -66,6 +72,7 @@ export function createTabMenu(element: HTMLElement) {
       y: number,
       above: boolean,
       onClose?: () => void,
+      options: MenuOptions = {},
     ) {
       element.replaceChildren(
         ...actions.map((action) => {
@@ -92,7 +99,8 @@ export function createTabMenu(element: HTMLElement) {
       const fitsBelow = y + 6 + height <= window.innerHeight - 4
       element.style.left = `${Math.max(4, Math.min(x, window.innerWidth - width - 4))}px`
       element.style.top = `${Math.max(4, above || !fitsBelow ? y - height - 6 : y + 6)}px`
-      items()[0]?.focus()
+      // Otherwise the browser decides, so a menu opened from the keyboard keeps its ring
+      items()[0]?.focus(options.pointer ? { focusVisible: false } : undefined)
     },
   }
 }
