@@ -175,7 +175,6 @@ export const en: Record<MessageKey, string> = {
   'settings.language.pt': 'Português',
   'settings.language.en': 'English',
   'settings.tab.about': 'About',
-  'about.description': 'Drop-down terminal for developers.',
   'about.version': 'Version {version}',
   'about.repository': 'GitHub',
   'about.releaseNotes': "What's new in this version",

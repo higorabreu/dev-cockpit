@@ -1193,7 +1193,7 @@ host API and its channels, `ui/src/updates`, the lasting part of `ui/src/tabs/no
 
 ## D72. Settings has an About page with the version, the updates and the project's links
 
-**Decision:** a last page, About, names the cockpit and what it is, the version that runs (`about:version`
+**Decision:** a last page, About, names the cockpit (no tagline, the maintainer's choice), the version that runs (`about:version`
 from the host's `app.getVersion()`), the Updates row moved there from System, and four links: GitHub (the
 repository), What's new in this version (the release notes of the running version's tag), Report a problem
 (a blank new issue) and the AGPL-3.0 license. The window names a link (`about:open` with one of four names,

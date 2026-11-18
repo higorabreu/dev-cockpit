@@ -893,13 +893,12 @@ export function createSettingsView(
     return button
   }
 
-  // The cockpit by name, what it is, the version that runs and its pages
+  // The cockpit by name, the version that runs and its pages
   function aboutHead(): HTMLElement {
     return h(
       'section',
       { class: 'sgroup sabout' },
       h('h2', { class: 'sabout-name' }, 'Dev Cockpit'),
-      h('p', { class: 'shint' }, t('about.description')),
       h('p', { class: 'sabout-version' }, version ? t('about.version', { version }) : ''),
       h(
         'p',

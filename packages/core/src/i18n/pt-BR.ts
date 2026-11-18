@@ -175,7 +175,6 @@ export const ptBR = {
   'settings.language.pt': 'Português',
   'settings.language.en': 'English',
   'settings.tab.about': 'Sobre',
-  'about.description': 'Terminal suspenso para desenvolvedores.',
   'about.version': 'Versão {version}',
   'about.repository': 'GitHub',
   'about.releaseNotes': 'Novidades desta versão',
