@@ -121,6 +121,43 @@ describe('show', () => {
   })
 })
 
+describe('present', () => {
+  it('should focus the window where it is without hiding it when it is visible but not focused', () => {
+    const { dock, window, screen } = setup({ x: 300, y: 300 })
+    dock.show()
+    window.blur()
+    screen.cursor = { x: 4140, y: 300 }
+    const callsBefore = window.calls.length
+
+    dock.present()
+
+    expect(window.calls.slice(callsBefore)).toEqual(['focus'])
+    expect(window.isVisible()).toBe(true)
+    expect(window.isFocused()).toBe(true)
+    expect(window.bounds()).toEqual({ x: 0, y: 0, width: 1920, height: 540 })
+  })
+
+  it('should keep the window visible when it is already visible and focused', () => {
+    const { dock, window } = setup()
+    dock.show()
+
+    dock.present()
+
+    expect(window.isVisible()).toBe(true)
+    expect(window.calls).not.toContain('hide')
+  })
+
+  it('should show the window focused on the display of the cursor when it is hidden', () => {
+    const { dock, window } = setup({ x: 2220, y: 300 })
+
+    dock.present()
+
+    expect(window.isVisible()).toBe(true)
+    expect(window.isFocused()).toBe(true)
+    expect(window.bounds()).toEqual({ x: 1920, y: 32, width: 1920, height: 524 })
+  })
+})
+
 describe('toggle repeats', () => {
   it('should ignore a toggle that comes right after another when a key is held or delivered twice', () => {
     const { window, clock, dock } = setup()

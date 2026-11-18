@@ -112,7 +112,7 @@ function setup(text: string, disk: Record<string, ResolvedPath['kind']>) {
   const folders: { path: string; x: number; y: number }[] = []
   const options: PathLinkOptions = {
     modifier: 'ctrl',
-    keyLabel: () => 'Ctrl+click to open',
+    hint: () => ({ key: 'Ctrl', gesture: { click: 'left click', action: 'Open' } }),
     cwd: () => '/srv/acme',
     resolve: async (base, paths) => {
       asked.push({ base, paths })

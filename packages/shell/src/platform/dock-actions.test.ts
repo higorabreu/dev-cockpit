@@ -69,6 +69,27 @@ describe('createDockActions', () => {
     expect(window.bounds().height).toBe(434)
   })
 
+  it('should bring a visible window forward without hiding it when presenting', async () => {
+    const { window, actions } = setup([compositorArea, compositorArea])
+    await actions.show()
+    window.blur()
+    const callsBefore = window.calls.length
+
+    await actions.present()
+
+    expect(window.calls.slice(callsBefore)).toEqual(['focus'])
+    expect(window.isVisible()).toBe(true)
+  })
+
+  it('should size a hidden window from the compositor when presenting', async () => {
+    const { window, actions } = setup([compositorArea])
+
+    await actions.present()
+
+    expect(window.isVisible()).toBe(true)
+    expect(window.bounds()).toEqual({ x: 0, y: 0, width: 1600, height: 434 })
+  })
+
   it('should show the dock directly when there is no compositor to ask', async () => {
     const window = new FakeDockWindow()
     const screen = new FakeScreen([{ id: '1', bounds: monitor, workArea: monitor }], { x: 0, y: 0 })

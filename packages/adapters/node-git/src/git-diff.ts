@@ -5,6 +5,7 @@ import {
   type DiffModule,
   type DiffOutcome,
   type DiffRequest,
+  type DiffScope,
   type DiffSource,
   type ErrorBody,
   errorBody,
@@ -122,10 +123,11 @@ interface Repository {
   readonly module: string | undefined
 }
 
-// A submodule a repository's diff or status names, with the commit recorded at the scope's start
+// A submodule a repository's diff, status or list of submodules names, with the commit recorded at the
+// scope's start
 interface ModuleEntry {
   readonly path: string
-  // Undefined for a new submodule, HEAD when only untracked files changed it
+  // Undefined for a new submodule, HEAD when its pointer did not move
   readonly old: string | undefined
   // Its entry in the parent's diff, kept when the submodule cannot be read
   readonly entry: DiffFile | undefined
@@ -279,18 +281,22 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
   })
 
   // The diff of a repository from a commit to its working tree, its untracked files and, through
-  // `gatherModule`, the same for each submodule it changed; answers how many files it added
+  // `gatherModule`, the same for its submodules with the scope applied inside each; answers how many
+  // files it added. Uncommitted reads the submodules the status names; the other scopes read every
+  // checked out one, which can have commits of its own while the parent's pointer stayed
   async function gather(
     repo: Repository,
     from: string,
+    scope: DiffScope,
     whitespace: readonly string[],
     out: Gathered,
   ): Promise<Result<number, ErrorBody>> {
     const withModules = (await files.size(join(repo.dir, '.gitmodules'))) !== undefined
-    const [tracked, listed, status] = await Promise.all([
+    const [tracked, listed, status, recorded] = await Promise.all([
       run(repo.dir, ['diff', ...DIFF_FLAGS, ...whitespace, from, '--'], DIFF),
       untrackedPaths(repo.dir),
       withModules ? run(repo.dir, ['status', '--porcelain=v2', '-z'], STATUS) : undefined,
+      withModules && scope !== 'uncommitted' ? recordedModules(repo.dir) : [],
     ])
     if (!tracked.ok) return fail(failed(tracked.failure, 'diff'))
     out.bytes += tracked.stdout.length
@@ -306,12 +312,14 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       count += 1
     }
     const named = new Set(changed.map((entry) => entry.path))
-    for (const path of untrackedModules(status?.ok ? status.stdout : '')) {
-      if (!named.has(path)) changed.push({ path, old: 'HEAD', entry: undefined })
+    for (const path of [...untrackedModules(status?.ok ? status.stdout : ''), ...recorded]) {
+      if (named.has(path)) continue
+      named.add(path)
+      changed.push({ path, old: 'HEAD', entry: undefined })
     }
     for (const path of listed) out.untracked.push({ repo, path })
-    const inside = await Promise.all(
-      changed.map((entry) => gatherModule(repo, entry, whitespace, out)),
+    const inside = await inBatches(changed, PARALLEL, (entry) =>
+      gatherModule(repo, entry, scope, whitespace, out),
     )
     for (const result of inside) {
       if (!result.ok) return result
@@ -320,12 +328,14 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
     return ok(count)
   }
 
-  // A submodule read as its own repository, from the commit the parent recorded at the scope's start (the
-  // empty tree for a new one): its new commits and its edits in one diff, as `--submodule=diff` shows. One
-  // that cannot be read (not checked out, its old commit not fetched) stays the parent's single entry
+  // A submodule read as its own repository with the scope applied inside it, as VS Code does; the commits
+  // that moved it past the one the parent recorded at the scope's start (the empty tree for a new one) go
+  // to its header, not to its files. One with neither stays the parent's single entry, if it had one, as
+  // does one that cannot be read (not checked out, its recorded commit not fetched)
   async function gatherModule(
     parent: Repository,
     changed: ModuleEntry,
+    scope: DiffScope,
     whitespace: readonly string[],
     out: Gathered,
   ): Promise<Result<number, ErrorBody>> {
@@ -338,21 +348,76 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
     }
     // Not checked out, the folder belongs to the parent and git answers with the parent's top
     if ((await answer(dir, ['rev-parse', '--show-toplevel'])) !== dir) return keep()
-    const from =
+    const recorded =
       changed.old === undefined
         ? await emptyTree(dir)
         : await answer(dir, ['rev-parse', '--verify', '--quiet', `${changed.old}^{commit}`])
+    if (!recorded) return keep()
+    const moved = changed.old === undefined || changed.old === 'HEAD' ? undefined : recorded
+    const [from, commits] = await Promise.all([
+      ownStart(dir, scope, recorded),
+      newCommits(dir, moved),
+    ])
     if (!from) return keep()
     const module: Repository = { dir, prefix: `${path}/`, module: path }
-    const since = changed.old === undefined || changed.old === 'HEAD' ? undefined : from
-    const [read, commits] = await Promise.all([
-      gather(module, from, whitespace, out),
-      newCommits(dir, since),
-    ])
+    const read = await gather(module, from, scope, whitespace, out)
     if (!read.ok) return read
     if (read.value === 0 && commits.commitCount === 0) return keep()
     out.modules.push({ path, ...commits })
     return read
+  }
+
+  // Where a submodule's own review starts: its HEAD; the merge base with its upstream, else its HEAD; the
+  // merge base with the base its branch has, found as the parent's is. A branch with no base is usually
+  // the integration branch it pulls, so it falls back to Unpushed and never lists what was pulled. Only a
+  // detached HEAD, as `submodule update` leaves it, starts at the commit the parent recorded: with no
+  // branch, what the parent's branch moved it through is the nearest thing to one
+  async function ownStart(
+    dir: string,
+    scope: DiffScope,
+    recorded: string,
+  ): Promise<string | undefined> {
+    const current = await head(dir)
+    if (!current.ok) return undefined
+    if (scope === 'uncommitted') return current.value
+    const unpushed = async () =>
+      (await answer(dir, ['merge-base', 'HEAD', '@{upstream}'])) || current.value
+    if (scope === 'unpushed') return unpushed()
+    if (!(await answer(dir, ['symbolic-ref', '--quiet', 'HEAD']))) return recorded
+    const branch = await bases.find(dir, current.value, undefined)
+    const merge = branch.base && (await answer(dir, ['merge-base', 'HEAD', branch.base.name]))
+    return merge || unpushed()
+  }
+
+  // The submodules a repository records, by folder: `.gitmodules` names them and the index confirms
+  // each is still one
+  async function recordedModules(dir: string): Promise<string[]> {
+    const config = await quick(dir, [
+      'config',
+      '--file',
+      '.gitmodules',
+      '-z',
+      '--get-regexp',
+      '^submodule\\..*\\.path$',
+    ])
+    if (!config.ok) return []
+    const paths = config.stdout
+      .split('\0')
+      .flatMap((entry) => (entry.includes('\n') ? [entry.slice(entry.indexOf('\n') + 1)] : []))
+      .filter((path) => path !== '')
+    if (paths.length === 0) return []
+    const staged = await quick(dir, [
+      'ls-files',
+      '--stage',
+      '-z',
+      '--',
+      ...paths.map((path) => `:(literal)${path}`),
+    ])
+    if (!staged.ok) return []
+    return staged.stdout
+      .split('\0')
+      .filter((entry) => entry.startsWith('160000 '))
+      .map((entry) => entry.slice(entry.indexOf('\t') + 1))
   }
 
   async function emptyTree(dir: string): Promise<string | undefined> {
@@ -360,7 +425,8 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
     return empty.ok ? empty.stdout.trim() : undefined
   }
 
-  // The subjects of the commits after `since` up to the submodule's HEAD, newest first, and their count
+  // The subjects of the commits after `since` up to the submodule's HEAD, newest first, and their count:
+  // how far its pointer moved
   async function newCommits(dir: string, since: string | undefined) {
     if (since === undefined) return { commits: [], commitCount: 0 }
     const range = `${since}..HEAD`
@@ -501,7 +567,8 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
 
       const whitespace = request.ignoreWhitespace ? ['-w'] : []
       const out: Gathered = { tracked: [], untracked: [], modules: [], repos: [], bytes: 0 }
-      const read = await gather({ dir: root, prefix: '', module: undefined }, from, whitespace, out)
+      const repo: Repository = { dir: root, prefix: '', module: undefined }
+      const read = await gather(repo, from, request.scope, whitespace, out)
       if (!read.ok) return read
       if (out.bytes > DIFF.maxBytes) return fail(failed({ kind: 'too-large' }, 'diff'))
       const listed = await readFirstUntracked(out, whitespace)

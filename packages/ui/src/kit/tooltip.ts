@@ -1,5 +1,5 @@
 import { placeTooltip } from '@dck/core'
-import { keys } from './keys.ts'
+import { type Gesture, gesture, keys } from './keys.ts'
 
 const SHOW_DELAY_MS = 400
 // Moving to a neighboring element right away, the tooltip shows without waiting
@@ -14,17 +14,22 @@ export interface TipBox {
   readonly height: number
 }
 
+// The key beside the text, a shortcut; with `gesture`, the key is held for a left click, and the
+// action shows as a word after the caps, never as a cap
+interface TipHint {
+  readonly key?: string
+  readonly gesture?: Gesture
+}
+
 // A part of an element that has no node of its own, like a link drawn in the terminal
-export interface TipRegion {
+export interface TipRegion extends TipHint {
   readonly text: string
-  readonly key: string
   readonly box: TipBox
 }
 
-interface Candidate {
+interface Candidate extends TipHint {
   readonly anchor: HTMLElement
   readonly text: string
-  readonly key?: string
   readonly box?: TipBox
 }
 
@@ -48,9 +53,19 @@ function isTruncated(element: HTMLElement): boolean {
 let shortcutLabel: (id: string) => string | undefined = () => undefined
 
 const tipOf = (anchor: HTMLElement, text: string): Candidate => {
-  const action = anchor.getAttribute('data-tip-shortcut')
-  const key = anchor.getAttribute('data-tip-key') ?? (action ? shortcutLabel(action) : undefined)
-  return key ? { anchor, text, key } : { anchor, text }
+  const shortcut = anchor.getAttribute('data-tip-shortcut')
+  const key =
+    anchor.getAttribute('data-tip-key') ?? (shortcut ? shortcutLabel(shortcut) : undefined)
+  if (!key) return { anchor, text }
+  // A left click with the key held: `data-tip-gesture` is what it does, `data-tip-click` its spoken name
+  const action = anchor.getAttribute('data-tip-gesture')
+  const click = anchor.getAttribute('data-tip-click')
+  return action && click ? { anchor, text, key, gesture: { click, action } } : { anchor, text, key }
+}
+
+function hintOf({ key, gesture: held }: TipHint): HTMLElement[] {
+  if (!key) return []
+  return [held ? gesture(key, held) : keys(key, 'compact')]
 }
 
 // `data-tip` always shows the given text; text cut by an ellipsis shows its full content
@@ -111,14 +126,15 @@ export function installTooltips(options: TooltipOptions = {}) {
     tip.hidden = true
   }
 
-  function show({ anchor, text, key, box: region }: Candidate) {
+  function show(candidate: Candidate) {
+    const { anchor, text, box: region } = candidate
     // The element may have been replaced during the delay: there is nothing to anchor the tooltip to
     if (!anchor.isConnected) return
     // A text of several lines, such as a list of commits, keeps each one on its own line, cut by the width
     const lines = text.split('\n')
     const body = lines.length > 1 ? lines.map((line) => tipLine(line)) : [text]
     tip.toggleAttribute('data-lines', lines.length > 1)
-    tip.replaceChildren(...body, ...(key ? [keys(key, 'compact')] : []))
+    tip.replaceChildren(...body, ...hintOf(candidate))
     // A stale position squeezes the tooltip against the edge and wraps the text, and the measurement comes out wrong
     tip.style.left = '0'
     tip.style.top = '0'
