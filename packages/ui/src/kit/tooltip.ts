@@ -1,5 +1,5 @@
 import { placeTooltip } from '@dck/core'
-import { gesture, keys } from './keys.ts'
+import { type Gesture, gesture, keys } from './keys.ts'
 
 const SHOW_DELAY_MS = 400
 // Moving to a neighboring element right away, the tooltip shows without waiting
@@ -14,11 +14,11 @@ export interface TipBox {
   readonly height: number
 }
 
-// The key beside the text, a shortcut; with `gesture`, the words of what the key does with the mouse
-// ("click to open"), which show as text after the cap, never as caps
+// The key beside the text, a shortcut; with `gesture`, the key is held for a left click, and the
+// action shows as a word after the caps, never as a cap
 interface TipHint {
   readonly key?: string
-  readonly gesture?: string
+  readonly gesture?: Gesture
 }
 
 // A part of an element that has no node of its own, like a link drawn in the terminal
@@ -53,16 +53,19 @@ function isTruncated(element: HTMLElement): boolean {
 let shortcutLabel: (id: string) => string | undefined = () => undefined
 
 const tipOf = (anchor: HTMLElement, text: string): Candidate => {
-  const action = anchor.getAttribute('data-tip-shortcut')
-  const key = anchor.getAttribute('data-tip-key') ?? (action ? shortcutLabel(action) : undefined)
-  const words = anchor.getAttribute('data-tip-gesture')
+  const shortcut = anchor.getAttribute('data-tip-shortcut')
+  const key =
+    anchor.getAttribute('data-tip-key') ?? (shortcut ? shortcutLabel(shortcut) : undefined)
   if (!key) return { anchor, text }
-  return words ? { anchor, text, key, gesture: words } : { anchor, text, key }
+  // A left click with the key held: `data-tip-gesture` is what it does, `data-tip-click` its spoken name
+  const action = anchor.getAttribute('data-tip-gesture')
+  const click = anchor.getAttribute('data-tip-click')
+  return action && click ? { anchor, text, key, gesture: { click, action } } : { anchor, text, key }
 }
 
-function hintOf({ key, gesture: words }: TipHint): HTMLElement[] {
+function hintOf({ key, gesture: held }: TipHint): HTMLElement[] {
   if (!key) return []
-  return [words ? gesture(key, words) : keys(key, 'compact')]
+  return [held ? gesture(key, held) : keys(key, 'compact')]
 }
 
 // `data-tip` always shows the given text; text cut by an ellipsis shows its full content

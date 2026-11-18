@@ -69,13 +69,14 @@ describe('installTooltips', () => {
     expect(document.getElementById('tooltip')?.textContent).toBe('New tabCtrl+Alt+N')
   })
 
-  it('should draw only the modifier as a cap when the key is held for a click', () => {
+  it('should draw the modifier and a mouse as caps and the action as a word when the key is held for a click', () => {
     // Arrange
     vi.useFakeTimers()
     const path = document.createElement('span')
     path.dataset.tip = 'src/app.ts'
     path.dataset.tipKey = 'Ctrl'
-    path.dataset.tipGesture = 'clique para abrir'
+    path.dataset.tipGesture = 'Abrir'
+    path.dataset.tipClick = 'clique'
     document.body.append(path)
 
     // Act
@@ -84,9 +85,9 @@ describe('installTooltips', () => {
 
     // Assert
     const tip = document.getElementById('tooltip')
-    const caps = [...(tip?.querySelectorAll('kbd.key') ?? [])].map((cap) => cap.textContent)
-    expect(caps).toEqual(['Ctrl'])
-    expect(tip?.querySelector('.gesture')?.textContent).toBe('Ctrl+clique para abrir')
+    expect(tip?.querySelectorAll('kbd.key')).toHaveLength(2)
+    expect(tip?.querySelector('kbd.mouse')).not.toBeNull()
+    expect(tip?.querySelector('.gesture')?.textContent).toBe('Ctrl+clique, Abrir')
   })
 
   it('should show the gesture of a region when a link drawn in the terminal is hovered', () => {
@@ -95,15 +96,16 @@ describe('installTooltips', () => {
     const owner = document.createElement('div')
     document.body.append(owner)
     const box = { x: 10, y: 10, width: 80, height: 16 }
+    const gesture = { click: 'left click', action: 'Open' }
 
     // Act
-    setTipRegion(owner, { text: 'https://gitlab.example.com', key: '⌘', gesture: 'click', box })
+    setTipRegion(owner, { text: 'https://gitlab.example.com', key: '⌘', gesture, box })
     vi.advanceTimersByTime(500)
 
     // Assert
     const tip = document.getElementById('tooltip')
-    expect(tip?.querySelectorAll('kbd.key')).toHaveLength(1)
-    expect(tip?.textContent).toBe('https://gitlab.example.com⌘ click')
+    expect(tip?.querySelectorAll('kbd.key')).toHaveLength(2)
+    expect(tip?.textContent).toBe('https://gitlab.example.com⌘ left click, Open')
   })
 
   it('should keep one cap per key when the tip is a shortcut', () => {

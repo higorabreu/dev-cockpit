@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { gesture, keyChords, keys } from './keys.ts'
+import { gesture, keyChords, keys, MOUSE_LEFT } from './keys.ts'
 
 const capsOf = (label: string) => keyChords(label).map((chord) => chord.keys)
 
@@ -48,35 +48,62 @@ describe('keys', () => {
 })
 
 describe('gesture', () => {
-  it('should draw only the key as a cap when the gesture has words', () => {
+  const open = { click: 'left click', action: 'Open' }
+  const capsOf = (hint: HTMLElement) =>
+    [...hint.querySelectorAll('kbd.key')].map((cap) =>
+      cap.classList.contains('mouse') ? 'mouse' : cap.textContent,
+    )
+
+  it('should draw the key and a mouse as caps and the action as a word when the key is held for a click', () => {
     // Arrange
-    const hint = gesture('Ctrl', 'clique para abrir')
+    const hint = gesture('Ctrl', { click: 'clique', action: 'Abrir' })
 
     // Act
-    const caps = [...hint.querySelectorAll('kbd.key')].map((cap) => cap.textContent)
+    const caps = capsOf(hint)
 
     // Assert
-    expect(caps).toEqual(['Ctrl'])
-    expect(hint.lastChild?.textContent).toBe('clique para abrir')
+    expect(caps).toEqual(['Ctrl', 'mouse'])
+    expect(hint.querySelector('.kplus')?.textContent).toBe('+')
+    expect(hint.querySelector('.gesture-action')?.lastChild?.textContent).toBe('Abrir')
   })
 
-  it('should read as one sentence joined by + when the keyboard is a PC', () => {
-    expect(gesture('Ctrl', 'click to open').textContent).toBe('Ctrl+click to open')
-  })
-
-  it('should join the Mac symbol to the words with a space when the keyboard is a Mac', () => {
+  it('should draw the mouse with its left button filled and hide the drawing from a screen reader', () => {
     // Arrange
-    const hint = gesture('⌘', 'click to open')
+    const mouse = gesture('Ctrl', open).querySelector('kbd.mouse')
+
+    // Act
+    const svg = mouse?.querySelector('svg')
+
+    // Assert
+    expect(svg?.getAttribute('aria-hidden')).toBe('true')
+    expect(svg?.querySelector('[fill="currentColor"]')).not.toBeNull()
+  })
+
+  it('should read as a sentence when a screen reader takes the text on a PC', () => {
+    expect(gesture('Ctrl', open).textContent).toBe('Ctrl+left click, Open')
+  })
+
+  it('should join the mouse to the Mac symbol with no + when the keyboard is a Mac', () => {
+    // Arrange
+    const hint = gesture('⌘', open)
 
     // Act
     const text = hint.textContent
 
     // Assert
-    expect(text).toBe('⌘ click to open')
-    expect(hint.querySelector('.gesture-plus')).toBeNull()
+    expect(capsOf(hint)).toEqual(['⌘', 'mouse'])
+    expect(hint.querySelector('.kplus')).toBeNull()
+    expect(text).toBe('⌘ left click, Open')
   })
 
-  it('should escape the words when they hold markup', () => {
-    expect(gesture('Ctrl', '<b>open</b>').querySelector('b')).toBeNull()
+  it('should escape the action and the click name when they hold markup', () => {
+    const hint = gesture('Ctrl', { click: '<i>x</i>', action: '<b>open</b>' })
+    expect(hint.querySelector('b, i')).toBeNull()
+  })
+})
+
+describe('keys with the mouse', () => {
+  it('should draw the mouse as a cap when a chord names the left button', () => {
+    expect(keys(`Ctrl+${MOUSE_LEFT}`).querySelectorAll('kbd.mouse')).toHaveLength(1)
   })
 })

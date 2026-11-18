@@ -32,27 +32,57 @@ const escapeHtml = (text: string) =>
 
 export type KeysSize = 'regular' | 'compact'
 
+// The left mouse button as a key of a chord ("Ctrl+MouseLeft", "⌘MouseLeft"), drawn as a mouse
+export const MOUSE_LEFT = 'MouseLeft'
+
+// A mouse outline on a 1px grid with its left button filled; the stroke follows the app's icons
+const MOUSE_LEFT_ICON =
+  '<svg class="key-icon" viewBox="0 0 9 12" width="9" height="12" aria-hidden="true" fill="none" ' +
+  'stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">' +
+  '<rect x="0.5" y="0.5" width="8" height="11" rx="4"/>' +
+  '<path d="M4.5 0.5A4 4 0 0 0 0.5 4.5H4.5Z" fill="currentColor"/>' +
+  '<path d="M4.5 4.5H8.5"/></svg>'
+
+// What a screen reader says for a key drawn as an icon ("left click"), in the user's language
+export type KeyNames = Readonly<Record<string, string>>
+
+// A Mac chord writes its keys with nothing between them: the name of an icon key gets a space before it
+function capMarkup(key: string, names: KeyNames, spaced: boolean): string {
+  if (key !== MOUSE_LEFT) return `<kbd class="key">${escapeHtml(key)}</kbd>`
+  const name = `${spaced ? ' ' : ''}${names[key] ?? key}`
+  return `<kbd class="key mouse">${MOUSE_LEFT_ICON}<span class="key-name">${escapeHtml(name)}</span></kbd>`
+}
+
 // One cap per key, as VS Code shows them. The text reads as the label did ("Ctrl+Shift+D", "n p"), so
 // a screen reader and a copy keep it; the gaps come from the style
-export function keysMarkup(label: string, size: KeysSize = 'regular'): string {
+export function keysMarkup(
+  label: string,
+  size: KeysSize = 'regular',
+  names: KeyNames = {},
+): string {
   const chords = keyChords(label).map(({ keys, joiner }) => {
     const plus = joiner ? '<span class="kplus">+</span>' : ''
-    return `<span class="kchord">${keys.map((key) => `<kbd class="key">${escapeHtml(key)}</kbd>`).join(plus)}</span>`
+    const caps = keys.map((key, index) => capMarkup(key, names, !joiner && index > 0))
+    return `<span class="kchord">${caps.join(plus)}</span>`
   })
   return `<kbd class="keys${size === 'compact' ? ' compact' : ''}">${chords.join(' ')}</kbd>`
 }
 
-// A key held while the mouse acts, as a sentence: caps for the key and plain words for the rest ("Ctrl" and
-// "click to open"), joined as the keyboard writes a chord, so the text still reads "Ctrl+click to open"
-// (or "⌘ click to open") for a screen reader
-function gestureMarkup(key: string, words: string): string {
-  const joiner = keyChords(key).at(-1)?.joiner === '+' ? '<span class="gesture-plus">+</span>' : ' '
-  return `<span class="gesture">${keysMarkup(key, 'compact')}${joiner}${escapeHtml(words)}</span>`
+// A left click while a key is held, and what it does: "[Ctrl] + [mouse]  Open", or "[⌘] [mouse]  Open"
+// on a Mac. The click joins the key as the keyboard writes a chord; the action is a word apart, not a cap
+export interface Gesture {
+  // The click's name for a screen reader ("left click")
+  readonly click: string
+  readonly action: string
 }
 
-export function gesture(key: string, words: string): HTMLElement {
+export function gesture(key: string, { click, action }: Gesture): HTMLElement {
+  const joiner = keyChords(key).at(-1)?.joiner ?? '+'
+  const caps = keysMarkup(`${key}${joiner}${MOUSE_LEFT}`, 'compact', { [MOUSE_LEFT]: click })
+  // The comma is only heard: "Ctrl+left click, Open"
+  const words = `<span class="gesture-action"><span class="key-name">, </span>${escapeHtml(action)}</span>`
   const holder = document.createElement('span')
-  holder.innerHTML = gestureMarkup(key, words)
+  holder.innerHTML = `<span class="gesture">${caps}${words}</span>`
   return holder.firstElementChild as HTMLElement
 }
 

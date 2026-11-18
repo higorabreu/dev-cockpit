@@ -1,5 +1,6 @@
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import type { Terminal } from '@xterm/xterm'
+import type { Gesture } from '../kit/keys.ts'
 import type { TipBox, TipRegion } from '../kit/tooltip.ts'
 
 export type LinkModifier = 'ctrl' | 'meta'
@@ -18,12 +19,12 @@ export interface ViewportCells {
 
 export interface LinkHint {
   readonly key: string
-  readonly gesture: string
+  readonly gesture: Gesture
 }
 
 export interface LinkOptions {
   readonly modifier: LinkModifier
-  // The modifier's cap and what the click does, read on every hover: the language can change while the tab is open
+  // The modifier and what its left click does, read on every hover: the language can change while the tab is open
   hint(): LinkHint
   open(url: string): void
   tip(owner: HTMLElement, region: TipRegion | undefined): void
