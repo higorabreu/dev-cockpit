@@ -1,5 +1,7 @@
 # Agent attention
 
+**Status:** Done, shipped in 0.3.0 (D37, D39).
+
 ## Goal
 
 With several coding agents open in the cockpit's tabs, the developer knows at a glance which tab needs them

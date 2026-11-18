@@ -1,5 +1,7 @@
 # Codex
 
+**Status:** Done, shipped in 0.9.0 (D59).
+
 ## Goal
 
 A Codex CLI session in a cockpit tab gets the same marks as Claude Code (working, needs you, your turn,

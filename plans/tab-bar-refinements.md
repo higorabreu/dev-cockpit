@@ -1,5 +1,7 @@
 # Tab bar refinements: a compact update notice and middle click to close
 
+**Status:** Done, in the 0.11.0 release (D74).
+
 Two small changes to the tab bar, both decided by the maintainer (2026-11-18).
 
 Decided with the maintainer:

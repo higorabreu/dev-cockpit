@@ -1,5 +1,7 @@
 # Resize the window by dragging its bottom edge
 
+**Status:** Done, shipped in 0.9.0 (D67).
+
 People asked to change the cockpit's height with the mouse, as in Guake or Yakuake, instead of only with the
 slider in the settings (2026-11-18).
 

@@ -1,5 +1,7 @@
 # Mac: a context menu in the terminal and a confirmation on ⌘Q
 
+**Status:** Done, in the 0.11.0 release (D75).
+
 On a Mac a right click in the terminal pastes, the Linux habit: there a two-finger tap or Ctrl+click is
 the context menu gesture, and pasting is a surprise. `⌘Q` quits at once, even with an agent or a server
 running in a tab. The maintainer settled both on 2026-11-18. Recorded as D75.

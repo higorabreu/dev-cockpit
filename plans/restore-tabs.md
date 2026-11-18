@@ -1,5 +1,7 @@
 # Restore the tabs on start
 
+**Status:** Done, shipped in 0.9.0 (D62, D64).
+
 The maintainer wants the open tabs back when the cockpit starts again, each in its folder and with the
 name the user gave it; a program that ran in a tab (an agent) does not come back (2026-11-17).
 

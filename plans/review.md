@@ -1,5 +1,7 @@
 # Review: what the agent changed
 
+**Status:** Done: phases 1 and 1b shipped in 0.5.0, phase 1c in 0.8.0 and phase 2 in 0.9.0 (D47, D48, D55, D56).
+
 ## Goal
 
 The developer reads what an agent changed without leaving the cockpit: next to the terminal where the

@@ -1,5 +1,7 @@
 # Rail dots: Sessions and Work say that something waits
 
+**Status:** Done, in the 0.11.0 release (D73).
+
 ## Goal
 
 The rail says that something waits for the user without a number and without growing the tooltip. The

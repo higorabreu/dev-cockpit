@@ -1,5 +1,7 @@
 # Custom shortcuts: every interface key and the hold menu trigger
 
+**Status:** Done, shipped in 0.10.0 (D69).
+
 Until now only the global key and the hold menu key (a short list of modifiers) could be changed; the
 interface keys were fixed per keyboard (D51, D68) and the README listed key remapping as not done. The
 maintainer settled the design on 2026-11-18, on top of the Mac keys branch (PR #83). Recorded as D69.

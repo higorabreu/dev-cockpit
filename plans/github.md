@@ -1,5 +1,7 @@
 # GitHub: pull requests in the Work screen
 
+**Status:** Done, shipped in 0.9.0 (D57).
+
 ## Goal
 
 A developer whose company uses GitHub sees, in the Work screen, the pull requests waiting for their
