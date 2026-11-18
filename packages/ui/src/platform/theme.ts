@@ -28,4 +28,6 @@ export function applyTheme(name: ThemeName) {
 export const terminalTheme = (name: ThemeName) => ({
   ...buildTerminalTheme(tokens, name),
   background: tokens.themes[name].color.bg,
+  // xterm draws the letter under a block cursor in black unless told otherwise, unreadable in light
+  cursorAccent: tokens.themes[name].color.bg,
 })

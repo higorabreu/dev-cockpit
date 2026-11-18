@@ -33,6 +33,17 @@ describe('contrastChecks', () => {
     }
   })
 
+  it('should check the letter under the block cursor as text when checking each theme', () => {
+    for (const theme of themeNames) {
+      const letter = contrastChecks(tokens, theme).find(
+        (check) => check.name === 'letter under the block cursor',
+      )
+
+      expect(letter?.minimum).toBe(4.5)
+      expect(letter?.passes).toBe(true)
+    }
+  })
+
   it('should report reverse video when the window color is too close to the text', () => {
     const light = tokens.themes.light
     const close = {

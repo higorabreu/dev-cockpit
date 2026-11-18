@@ -32,6 +32,17 @@ describe('terminalTheme', () => {
     }
   })
 
+  it('should draw the letter under the block cursor in the window color when building each theme', () => {
+    for (const name of themeNames) {
+      // Act
+      const theme = terminalTheme(name)
+
+      // Assert
+      expect(theme.cursor).toBe(tokens.themes[name].color.fg)
+      expect(theme.cursorAccent).toBe(tokens.themes[name].color.bg)
+    }
+  })
+
   it('should leave every layer xterm paints its background on transparent when reading the terminal styles', () => {
     // Arrange
     const rule = [...terminalCss.matchAll(/([^{}]+)\{([^}]*)\}/g)].find((match) =>
