@@ -105,6 +105,11 @@
         },
         {
           "type": "json",
+          "path": "packages/install/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "packages/shell/package.json",
           "jsonpath": "$.version"
         },

@@ -20,3 +20,6 @@ plans/local/
 # Personal Claude Code files
 CLAUDE.local.md
 .claude/settings.local.json
+
+# Copied from the repository root by the installer build, for the npm package
+packages/install/LICENSE

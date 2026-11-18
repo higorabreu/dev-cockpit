@@ -189,6 +189,21 @@ importers:
 
   packages/design: {}
 
+  packages/install:
+    devDependencies:
+      '@dck/adapter-github':
+        specifier: workspace:^
+        version: link:../adapters/github
+      '@dck/adapter-node-fetch':
+        specifier: workspace:^
+        version: link:../adapters/node-fetch
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../core
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
+
   packages/shell:
     dependencies:
       '@dck/adapter-docker-cli':
