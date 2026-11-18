@@ -203,7 +203,7 @@ describe('review comments', () => {
     expect(find('.rv-card-body').textContent).toBe('use the constant from config')
     expect(find('.rv-send').hidden).toBe(false)
     expect(find('.rv-send').getAttribute('aria-label')).toBe('Send 1 comment to the agent')
-    expect(find('.rv-send').dataset.tipKey).toBe('Ctrl+Shift+Enter')
+    expect(find('.rv-send').dataset.tipShortcut).toBe('reviewSend')
     expect(find('.rv-fhead').textContent).toContain('1 comment')
     expect(all('.rv-row[data-selected]')).toHaveLength(0)
     expect(document.activeElement).toBe(find('.rv-lines'))

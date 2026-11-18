@@ -12,6 +12,7 @@ import {
   select,
   selectedIndex,
   type Translate,
+  triggerButton,
 } from '@dck/core'
 import { inputGate } from '../platform/input-gate.ts'
 import {
@@ -38,7 +39,8 @@ const WHEEL_STEP = 40
 export interface HoldMenuActions {
   categories(): readonly MenuCategory[]
   run(categoryId: string, item: MenuItem): void
-  // Key that opens the menu while held; comes from settings and can change while the app is open
+  // Key (KeyboardEvent.code) or mouse button (`Mouse1`) that opens the menu while held; comes from
+  // settings and can change while the app is open
   triggerCode(): string
 }
 
@@ -277,6 +279,11 @@ export function createHoldMenuController(
       draw(true)
   }
 
+  // A mouse button that is the trigger is the menu's alone: no paste, no click for a program in the
+  // terminal, no back or forward. While Settings records a key it is left to the recorder
+  const isTrigger = (event: MouseEvent) =>
+    !inputGate.blocked && event.button === triggerButton(actions.triggerCode())
+
   window.addEventListener('keydown', onKeyDown, true)
   window.addEventListener('keyup', onKeyUp, true)
   const offCard = (event: Event) =>
@@ -287,6 +294,11 @@ export function createHoldMenuController(
   window.addEventListener(
     'mousedown',
     (event) => {
+      if (isTrigger(event)) {
+        consume(event)
+        gesture.press()
+        return
+      }
       gesture.otherKey()
       if (!offCard(event)) return
       gesture.cancel()
@@ -294,6 +306,19 @@ export function createHoldMenuController(
     },
     true,
   )
+  // Released, the button runs the selected row, as the key does
+  window.addEventListener(
+    'mouseup',
+    (event) => {
+      if (!isTrigger(event)) return
+      consume(event)
+      if (gesture.release()) commit()
+      else close()
+    },
+    true,
+  )
+  for (const type of ['auxclick', 'click', 'contextmenu'] as const)
+    window.addEventListener(type, (event) => isTrigger(event) && consume(event), true)
   // The scrim lets the pointer through to the terminal, so its link stays found; the wheel stops there
   window.addEventListener('wheel', (event) => offCard(event) && consume(event), {
     capture: true,

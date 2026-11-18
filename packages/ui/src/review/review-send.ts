@@ -9,13 +9,11 @@ import {
   type Translator,
 } from '@dck/core'
 import { h } from '../panel/dom.ts'
-import type { Keymap } from '../platform/keymap.ts'
 import type { ReviewComments } from './review-comments.ts'
 
 export interface ReviewSendDeps {
   readonly api: HostApi
   readonly i18n: Translator
-  readonly keymap: Keymap
   readonly comments: ReviewComments
   // The repository the last read found, where the comments' file goes
   root(): string | undefined
@@ -50,7 +48,7 @@ export function createReviewSend(deps: ReviewSendDeps) {
     {
       type: 'button',
       class: 'vbtn rv-send',
-      'data-tip-key': deps.keymap.label('reviewSend'),
+      'data-tip-shortcut': 'reviewSend',
       hidden: true,
     },
     text,

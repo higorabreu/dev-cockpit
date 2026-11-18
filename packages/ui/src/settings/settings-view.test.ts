@@ -162,7 +162,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe('settings view selects', () => {
   it('should use the design system select for every choice when the screen is drawn', () => {
-    const { body, view, combobox } = open()
+    const { body, view } = open()
 
     const general = [...body.querySelectorAll('[role="combobox"]')].map((element) =>
       element.getAttribute('data-focus'),
@@ -179,7 +179,6 @@ describe('settings view selects', () => {
       'set-terminal.cursorStyle',
       'set-review.layout',
     ])
-    expect(combobox('shortcuts.holdTrigger').getAttribute('role')).toBe('combobox')
     view.close()
   })
 
@@ -191,10 +190,10 @@ describe('settings view selects', () => {
     body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
 
     // Assert
-    const keys = [...body.querySelectorAll('.sref .keys')].map((element) => element.textContent)
+    const keys = [...body.querySelectorAll('.skey .keys')].map((element) => element.textContent)
     expect(keys).toContain('⌘T')
     expect(keys).toContain('⌃⌘F')
-    expect(keys).toContain('⌘= − 0')
+    expect(keys).toContain('⌘=')
     view.close()
   })
 
@@ -215,39 +214,31 @@ describe('settings view selects', () => {
 
   it('should hold the right Command by default with no reset when the keyboard is a Mac one', () => {
     // Arrange
-    const { body, combobox, view } = open([], api, undefined, 'mac')
+    const { body, view } = open([], api, undefined, 'mac')
 
     // Act
     body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
 
     // Assert
-    expect(
-      combobox('shortcuts.holdTrigger').querySelector('[data-current="true"]')?.textContent,
-    ).toBe('Right Command')
-    expect(
-      body.querySelector<HTMLElement>('.sreset[data-key="shortcuts.holdTrigger"]')?.hidden,
-    ).toBe(true)
+    const row = body.querySelector<HTMLElement>('[data-setting="shortcuts.holdTrigger"]')
+    expect(row?.querySelector('.key')?.textContent).toBe('Right Command')
+    expect(row?.querySelector<HTMLElement>('.sreset')?.hidden).toBe(true)
     view.close()
   })
 
-  it('should offer the right Super only when the file already holds it on a PC keyboard', () => {
+  it('should name the right Super with its reset when the file holds it on a PC keyboard', () => {
     // Arrange
     const chosen = mergeSettings(defaultSettings, { shortcuts: { holdTrigger: 'MetaRight' } })
-    const labels = (initial?: Settings) => {
-      const { body, combobox, view } = open([], api, initial)
-      body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
-      const found = [...combobox('shortcuts.holdTrigger').querySelectorAll('.select-value > span')]
-      view.close()
-      return found.map((element) => element.textContent)
-    }
+    const { body, view } = open([], api, chosen)
 
     // Act
-    const fresh = labels()
-    const kept = labels(chosen)
+    body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
 
     // Assert
-    expect(fresh).toEqual(['Right Ctrl', 'Left Ctrl', 'Right Alt', 'Left Alt'])
-    expect(kept).toContain('Right Super')
+    const row = body.querySelector<HTMLElement>('[data-setting="shortcuts.holdTrigger"]')
+    expect(row?.querySelector('.key')?.textContent).toBe('Right Super')
+    expect(row?.querySelector<HTMLElement>('.sreset')?.hidden).toBe(false)
+    view.close()
   })
 
   it('should name each select by its row label when the screen is drawn', () => {
@@ -568,9 +559,7 @@ describe('settings view, connections', () => {
     expect(
       body.querySelector<HTMLInputElement>('[data-focus="conn-gitlab-url"]')?.placeholder,
     ).toBe('https://gitlab.example.com')
-    expect(body.textContent).toContain(
-      'read_api scope. Kept in the system keyring, never in a file.',
-    )
+    expect(body.textContent).toContain('read_api scope.')
     view.close()
   })
 
@@ -612,13 +601,23 @@ describe('settings view, connections', () => {
   it('should give GitHub a one-line read-only hint and the github.com placeholder', async () => {
     const { body, view } = await connectionsPage(connectionsHost([GITHUB_CONNECTOR]).host)
 
-    expect(body.textContent).toContain(
-      'Fine-grained, read only. Kept in the system keyring, never in a file.',
-    )
+    expect(body.textContent).toContain('Fine-grained, read-only.')
     expect(body.textContent).not.toContain('An empty address')
     expect(
       body.querySelector<HTMLInputElement>('[data-focus="conn-github-url"]')?.placeholder,
     ).toBe('https://github.com')
+    view.close()
+  })
+
+  it('should say once under the accounts that the tokens stay in the system keyring', async () => {
+    // Arrange, Act
+    const { body, view } = await connectionsPage(
+      connectionsHost([GITHUB_CONNECTOR, GITLAB_CONNECTOR]).host,
+    )
+
+    // Assert
+    const notes = [...body.querySelectorAll('.spanel .sfoot')].map((note) => note.textContent)
+    expect(notes).toEqual(['Tokens are stored in the system keyring, never in a file.'])
     view.close()
   })
 
@@ -639,7 +638,7 @@ describe('settings view, connections', () => {
       'Pull requests: Read',
       'Commit statuses: Read',
       'Metadata: Read',
-      'A classic token needs the repo scope for private repositories, and only a classic token reads their checks.',
+      'Classic token: needs the repo scope for private repositories and is the only one that reads checks.',
     ])
     expect(document.activeElement).toBe(button)
     view.close()
@@ -781,7 +780,7 @@ describe('settings view, focus around a connection', () => {
     const token = page.control('conn-gitlab-token')
     expect(page.focused()).toBe('conn-gitlab-token')
     expect(page.body.querySelector(`#${token.getAttribute('aria-describedby')}`)?.textContent).toBe(
-      'GitLab refused the token. Check that it has not expired or been revoked.',
+      'GitLab refused the token. Check whether it expired or was revoked.',
     )
     page.view.close()
   })
@@ -870,8 +869,8 @@ describe('settings view, the settings file', () => {
 
     // Assert
     expect(general).toEqual([
-      'In settings.json: "purple". Not valid, uses the default.',
-      'In settings.json: "Nope;}". Not valid, uses the default.',
+      'In settings.json: "purple". Not valid; using the default.',
+      'In settings.json: "Nope;}". Not valid; using the default.',
     ])
     expect(noteOf(body, 'system.notifyAfterSeconds')).toBe('In settings.json: 2. Adjusted to 5.')
     view.close()
@@ -887,7 +886,7 @@ describe('settings view, the settings file', () => {
     // Assert
     expect(marked).toEqual(['settings-tab-general', 'settings-tab-system'])
     expect(body.querySelector('#settings-tab-general')?.getAttribute('aria-description')).toBe(
-      'Has a setting that settings.json holds wrongly',
+      'Has an invalid value in settings.json',
     )
     view.close()
   })
@@ -954,7 +953,7 @@ describe('settings view, the settings file', () => {
 
     // Assert
     expect(body.querySelector('[data-focus="set-open-file"] .sfile-dot')).not.toBeNull()
-    expect(noteOf(body, 'theme')).toBe('In settings.json: "purple". Not valid, uses the default.')
+    expect(noteOf(body, 'theme')).toBe('In settings.json: "purple". Not valid; using the default.')
     view.close()
   })
 

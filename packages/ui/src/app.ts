@@ -52,7 +52,7 @@ import { createSessionsSection } from './panel/sessions-section.ts'
 import { createSplitPreferences } from './panes/split-preferences.ts'
 import { createTabView, type TabView } from './panes/tab-view.ts'
 import { applyAppearance, loadFont, terminalLook } from './platform/appearance.ts'
-import { createKeymap, keyboardFor, type TabTarget } from './platform/keymap.ts'
+import type { Keymap, TabTarget } from './platform/keymap.ts'
 import { bindShortcuts } from './platform/shortcuts.ts'
 import { applyTheme, themeFor, watchSystemTheme } from './platform/theme.ts'
 import { createProjectSearch } from './projects/project-search.ts'
@@ -115,7 +115,12 @@ interface OpenOptions {
 
 const PROJECT_PREFIX = 'open-project:'
 
-export async function startApp(elements: AppElements, api: HostApi, settings: SettingsClient) {
+export async function startApp(
+  elements: AppElements,
+  api: HostApi,
+  settings: SettingsClient,
+  keymap: Keymap,
+) {
   const { bar, host } = elements
   const sessions = new Map<string, TerminalSession>()
   // Each tab's panes: its terminal and, when open, the review beside or below it
@@ -131,7 +136,6 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
   const projectTabs = new Map<string, string>()
   const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
-  const keymap = createKeymap(keyboardFor(navigator.platform))
   const nativeMiddlePaste = navigator.platform.startsWith('Linux')
   const notice = createNotice(elements.notice, i18n)
   const updateNotice = createUpdateNotice({
@@ -707,6 +711,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     // The folder and depth are only read when listing: reload for the menu and the search
     if (changed.some((key) => key.startsWith('projects.'))) void refreshProjects()
     if (changed.includes('opacity')) applyOpacity(next.opacity)
+    // The keymap reads the keys by itself; what drew a key's label draws it again
+    if (changed.some((key) => key.startsWith('shortcuts.keys'))) reviews.keysChanged()
     if (changed.includes('system.agentConnectHint')) panel.render()
     // A connector was enabled or disabled: its tabs and the badge follow
     if (changed.includes('extensions.disabled')) void viewsView.warm()
@@ -775,7 +781,6 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       },
     },
     i18n.t,
-    keymap.label('review'),
   )
 
   elements.tabsNew.addEventListener('click', () => void open())

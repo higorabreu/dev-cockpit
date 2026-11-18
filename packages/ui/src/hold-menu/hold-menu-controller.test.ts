@@ -40,8 +40,15 @@ const TABS: MenuCategory = {
   items: Array.from({ length: 7 }, (_, index) => ({ id: `tab:${index}`, label: `Tab ${index}` })),
 }
 
-// A short window by default: the compact wheel, moved down, leaves room for two rows above it
-function setup(windowHeight = 340) {
+const mouse = (type: string, button: number, target: EventTarget = document.body) => {
+  const event = new MouseEvent(type, { button, bubbles: true, cancelable: true })
+  target.dispatchEvent(event)
+  return event
+}
+
+// A short window by default: the compact wheel, moved down, leaves room for two rows above it. The
+// trigger is a key or a mouse button (`Mouse1`)
+function setup(windowHeight = 340, trigger = 'ControlRight') {
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: windowHeight })
   document.body.replaceChildren()
   const [scrim, card, hint, bar] = ['div', 'div', 'div', 'div'].map((tag) =>
@@ -56,7 +63,7 @@ function setup(windowHeight = 340) {
     {
       categories: () => [TABS],
       run: (_category, item) => runs.push(item),
-      triggerCode: () => 'ControlRight',
+      triggerCode: () => trigger,
     },
     {
       after(_milliseconds, task) {
@@ -68,8 +75,10 @@ function setup(windowHeight = 340) {
   )
   const key = (type: 'keydown' | 'keyup', code: string, key = code) =>
     window.dispatchEvent(new KeyboardEvent(type, { code, key, bubbles: true, cancelable: true }))
+  const button = trigger.startsWith('Mouse') ? Number(trigger.slice(5)) : undefined
   // Hold the trigger until the menu opens, then pick the only sector
-  key('keydown', 'ControlRight')
+  if (button === undefined) key('keydown', trigger)
+  else mouse('mousedown', button)
   for (const task of tasks.splice(0)) task()
   key('keydown', 'ArrowUp')
   const list = () => {
@@ -80,7 +89,7 @@ function setup(windowHeight = 340) {
   const selected = () => list().querySelector<HTMLElement>('.it.on')?.dataset.item
   const visible = () =>
     [...list().querySelectorAll<HTMLElement>('.it:not(.gone)')].map((row) => row.dataset.item)
-  const release = () => key('keyup', 'ControlRight')
+  const release = () => (button === undefined ? key('keyup', trigger) : mouse('mouseup', button))
   return { scrim, card, list, selected, visible, release, runs }
 }
 
@@ -251,5 +260,67 @@ describe('createHoldMenuController list', () => {
     menu.release()
 
     expect(menu.runs.map((item) => item.id)).toEqual(['tab:3'])
+  })
+})
+
+describe('createHoldMenuController with a mouse button', () => {
+  it('should open the wheel and run the selected row when the middle button is held and released', () => {
+    // Arrange
+    const menu = setup(340, 'Mouse1')
+    const opened = menu.scrim.classList.contains('open')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+
+    // Act
+    menu.release()
+
+    // Assert
+    expect(opened).toBe(true)
+    expect(menu.runs.map((item) => item.id)).toEqual(['tab:1'])
+    expect(menu.scrim.classList.contains('open')).toBe(false)
+  })
+
+  it('should keep the button from the terminal when it is the trigger', () => {
+    // Arrange
+    const menu = setup(340, 'Mouse1')
+    const terminal = document.createElement('div')
+    document.body.append(terminal)
+    const reached: string[] = []
+    for (const type of ['mousedown', 'mouseup', 'auxclick'])
+      terminal.addEventListener(type, () => reached.push(type))
+
+    // Act
+    const events = ['mousedown', 'mouseup', 'auxclick'].map((type) => mouse(type, 1, terminal))
+    menu.release()
+
+    // Assert
+    expect(reached).toEqual([])
+    expect(events.every((event) => event.defaultPrevented)).toBe(true)
+  })
+
+  it('should leave the other buttons to the terminal when the trigger is the back button', () => {
+    // Arrange
+    const menu = setup(340, 'Mouse3')
+    menu.release()
+
+    // Act
+    const right = mouse('auxclick', 2)
+    const back = mouse('auxclick', 3)
+
+    // Assert
+    expect(right.defaultPrevented).toBe(false)
+    expect(back.defaultPrevented).toBe(true)
+  })
+
+  it('should close without running anything when Esc is pressed while the button is held', () => {
+    // Arrange
+    const menu = setup(340, 'Mouse4')
+
+    // Act
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    menu.release()
+
+    // Assert
+    expect(menu.runs).toEqual([])
+    expect(menu.scrim.classList.contains('open')).toBe(false)
   })
 })

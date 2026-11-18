@@ -14,7 +14,8 @@ paths:
 - **Tooltip:** only the design system's (`ui/src/kit/tooltip.ts`), never the native `title`. Text cut by an
   ellipsis shows its full content by itself; `data-tip` always shows a text (icons, counters, arrows);
   `data-tip-full` gives the whole text when the visible one is part of it; an icon with no label gets
-  `data-tip` with its name; a shortcut goes in `data-tip-key`, never in the text.
+  `data-tip` with its name; a shortcut goes in `data-tip-key`, never in the text, and a key the user can
+  change names its action in `data-tip-shortcut` so the tooltip asks the keymap (D69).
 - **Scrollbar:** only the design system's, the `scroll` class (transparent track, thin thumb that shows
   while scrolling or hovering, sizes in `size.scrollbar`). Every scrolling list carries `scroll` and touches
   the card edges (breathing room is padding inside it). The only exception is the tab strip. No

@@ -10,6 +10,7 @@ import {
   parseSettings,
   reviewBaseFor,
   reviewBasePatch,
+  shortcutKeysPatch,
   storedAccount,
 } from './settings.ts'
 
@@ -35,7 +36,7 @@ describe('parseSettings', () => {
         macOptionAsMeta: 'left',
       },
       window: { heightRatio: 0.5, panelOnFullHeight: true, restoreTabs: true },
-      shortcuts: { toggleWindow: 'F12', holdTrigger: null },
+      shortcuts: { toggleWindow: 'F12', holdTrigger: null, keys: {} },
       projects: { root: null, depth: 2 },
       connections: {},
       system: { notifyAfterSeconds: 30, agentConnectHint: true, updates: 'off' },
@@ -141,14 +142,57 @@ describe('parseSettings', () => {
     expect(parseSettings({ surprise: true })).toEqual(defaultSettings)
   })
 
-  it('should accept only the known hold triggers and leave the choice open otherwise when reading', () => {
-    expect(parseSettings({ shortcuts: { holdTrigger: 'AltRight' } }).shortcuts.holdTrigger).toBe(
-      'AltRight',
+  it('should keep a hold trigger that types nothing or a side mouse button when reading', () => {
+    const trigger = (value: unknown) =>
+      parseSettings({ shortcuts: { holdTrigger: value } }).shortcuts.holdTrigger
+
+    expect(trigger('AltRight')).toBe('AltRight')
+    expect(trigger('MetaRight')).toBe('MetaRight')
+    expect(trigger('F13')).toBe('F13')
+    expect(trigger('Mouse1')).toBe('Mouse1')
+  })
+
+  it('should leave the hold trigger open when the file holds a typing key or a main button', () => {
+    const trigger = (value: unknown) =>
+      parseSettings({ shortcuts: { holdTrigger: value } }).shortcuts.holdTrigger
+
+    expect(trigger('KeyQ')).toBeNull()
+    expect(trigger('Mouse0')).toBeNull()
+    expect(trigger(3)).toBeNull()
+  })
+})
+
+describe('parseSettings, shortcuts.keys', () => {
+  it('should keep the custom keys as written when each names an action and a chord', () => {
+    // Act
+    const settings = parseSettings({ shortcuts: { keys: { newTab: 'ctrl+t', fullHeight: 'F10' } } })
+
+    // Assert
+    expect(settings.shortcuts.keys).toEqual({ newTab: 'ctrl+t', fullHeight: 'F10' })
+  })
+
+  it('should drop an entry and keep the others when it names no action or holds no chord', () => {
+    // Act
+    const settings = parseSettings({
+      shortcuts: { keys: { newTab: 'Ctrl+T', openAll: 'Ctrl+O', closeTab: 'W', theme: 5 } },
+    })
+
+    // Assert
+    expect(settings.shortcuts.keys).toEqual({ newTab: 'Ctrl+T' })
+  })
+
+  it('should give an action its default keys back when the patch sets it to null', () => {
+    // Arrange
+    const custom = mergeSettings(
+      defaultSettings,
+      shortcutKeysPatch({ newTab: 'Ctrl+T', theme: 'F8' }),
     )
-    expect(parseSettings({ shortcuts: { holdTrigger: 'MetaRight' } }).shortcuts.holdTrigger).toBe(
-      'MetaRight',
-    )
-    expect(parseSettings({ shortcuts: { holdTrigger: 'KeyQ' } }).shortcuts.holdTrigger).toBeNull()
+
+    // Act
+    const back = mergeSettings(custom, shortcutKeysPatch({ newTab: null }))
+
+    // Assert
+    expect(back.shortcuts.keys).toEqual({ theme: 'F8' })
   })
 })
 

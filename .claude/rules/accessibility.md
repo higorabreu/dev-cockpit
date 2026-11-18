@@ -14,7 +14,7 @@ paths:
 - State is never by color alone: selection and focus also change shape, outline or weight.
 - Everything is keyboard operable with a visible focus, and motion respects `prefers-reduced-motion`.
 - Every action with a keyboard shortcut can also be done with the mouse (button, menu or click) and the
-  shortcut shows in its tooltip (`data-tip-key`). Every list scrolls with the mouse wheel. A new shortcut is
+  shortcut shows in its tooltip (`data-tip-key`, or `data-tip-shortcut` for a key the user can change). Every list scrolls with the mouse wheel. A new shortcut is
   born with its mouse path.
 - With the transparent window the guarantee holds at full opacity, the default; below it the real
   desktop background counts.

@@ -4,9 +4,11 @@ import '@fontsource-variable/jetbrains-mono/index.css'
 import '@xterm/xterm/css/xterm.css'
 import 'virtual:dck-tokens.css'
 import './styles/index.css'
+import { isShortcutId } from '@dck/core'
 import { startApp } from './app.ts'
 import { installScrollbars } from './kit/scrollbar.ts'
 import { installTooltips } from './kit/tooltip.ts'
+import { createKeymap, keyboardFor } from './platform/keymap.ts'
 import { createSettingsClient } from './settings/settings-client.ts'
 
 const element = (id: string) => {
@@ -15,9 +17,14 @@ const element = (id: string) => {
   return found
 }
 
-installTooltips()
 installScrollbars()
 const settings = await createSettingsClient(window.dck)
+// One keymap for the whole window; it reads the custom keys from the settings at each key
+const keymap = createKeymap(
+  keyboardFor(navigator.platform),
+  () => settings.current().shortcuts.keys,
+)
+installTooltips({ shortcutLabel: (id) => (isShortcutId(id) ? keymap.label(id) : undefined) })
 
 await startApp(
   {
@@ -52,4 +59,5 @@ await startApp(
   },
   window.dck,
   settings,
+  keymap,
 )

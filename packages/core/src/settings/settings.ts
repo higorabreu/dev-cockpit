@@ -7,18 +7,12 @@ import { isFontName } from '../fonts/fonts.ts'
 import { PANE_RATIO, SPLIT_PREFERENCES } from '../panes/panes.ts'
 import type { ConnectionFields } from '../ports/connections.ts'
 import { UPDATE_MODES } from '../updates/updater.ts'
+import { isHoldTrigger } from './hold-trigger.ts'
 import type { SettingsFileState } from './settings-file.ts'
+import { isShortcutId, parseChord, SHORTCUT_IDS, type ShortcutId } from './shortcut-keys.ts'
 
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
 export const THEMES = ['dark', 'light', 'system'] as const
-export const HOLD_TRIGGERS = [
-  'ControlRight',
-  'ControlLeft',
-  'AltRight',
-  'AltLeft',
-  'MetaRight',
-] as const
-export type HoldTrigger = (typeof HOLD_TRIGGERS)[number]
 
 export const LIMITS = {
   opacity: { min: 0.3, max: 1 },
@@ -104,6 +98,19 @@ const reviewBasesSchema = z.preprocess(
   z.record(z.string(), z.string()),
 )
 
+// The actions whose key the user changed, each as its chord's text, kept as written; an entry that names no
+// action or holds no chord an interface shortcut can take is dropped and the action keeps its default keys
+const shortcutKeysSchema = z.preprocess(
+  (value) =>
+    Object.fromEntries(
+      Object.entries(asObject(value)).filter(
+        ([id, text]) =>
+          isShortcutId(id) && typeof text === 'string' && parseChord(text) !== undefined,
+      ),
+    ),
+  z.partialRecord(z.enum(SHORTCUT_IDS), z.string()),
+)
+
 export const CURSOR_STYLES = ['block', 'bar', 'underline'] as const
 export type CursorStyle = (typeof CURSOR_STYLES)[number]
 // Which Option key the terminal reads as Meta on a Mac keyboard; the other one types characters
@@ -140,8 +147,10 @@ export const settingsSchema = z.preprocess(
     }),
     shortcuts: section({
       toggleWindow: z.string().trim().min(1).max(64).catch('F12'),
-      // Null until the user chooses one: the window holds its keyboard's own key (D51)
-      holdTrigger: z.enum(HOLD_TRIGGERS).nullable().catch(null),
+      // Null until the user chooses one: the window holds its keyboard's own key (D51). A key that types
+      // nothing or a side mouse button (D69)
+      holdTrigger: z.string().refine(isHoldTrigger).nullable().catch(null),
+      keys: shortcutKeysSchema,
     }),
     projects: section({
       // Null until the user chooses a folder: no folder name is assumed, and nothing is scanned
@@ -201,6 +210,12 @@ export function storedAccount(settings: Settings, id: string): ConnectionFields 
 // when the patch is merged, which a partial patch cannot say otherwise
 export function reviewBasePatch(folder: string, name: string | undefined): SettingsPatch {
   return { review: { bases: { [folder]: name ?? null } } } as unknown as SettingsPatch
+}
+
+// Custom keys to set, or null to give an action its default keys back; null removes the entry when the
+// patch is merged, as with the review bases
+export function shortcutKeysPatch(keys: Partial<Record<ShortcutId, string | null>>): SettingsPatch {
+  return { shortcuts: { keys } } as unknown as SettingsPatch
 }
 
 // The base picked for the repository that holds `cwd`: the deepest folder that contains it

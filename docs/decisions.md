@@ -316,8 +316,8 @@ file.
 theme, opacity, font), window (anchored height, panel open at full height), global shortcuts (window key
 and hold menu trigger) and projects and system (root folder, scan depth, start with the system, long
 command notification threshold).
-**Out of this round:** remapping the other shortcuts (the screen only lists them), Jira and GitLab
-connections and choosing what the panel shows.
+**Out of this round:** remapping the other shortcuts (the screen only lists them; done in D69), Jira and
+GitLab connections and choosing what the panel shows.
 **Everything applies immediately**, including the language (live translator in the core:
 `createLiveTranslator`) and the projects folder. Texts built at startup are getters or are rebuilt when
 the language changes.
@@ -759,7 +759,8 @@ with Alt reads the physical key, since Option changes the character (`⌥1` type
 does the same. MacBook keyboards have no right Control, so `shortcuts.holdTrigger` stays null until the user
 picks a key and the keymap gives each keyboard its own: the right Command on a Mac (the right Option until
 D68), the right Ctrl elsewhere; a key the user chose is kept. The keymap also gives the click modifier for
-links and paths (`⌘` on a Mac).
+links and paths (`⌘` on a Mac). Since D69 these are the defaults: the user can give any action another
+key, which the keymap reads, and every label follows it.
 **Reason:** the maintainer's choice on 2026-11-16, before MAC-T7: Terminal.app and VS Code users expect Cmd,
 and the shell needs Ctrl. Option as Meta took the accented letters away from the terminal; since D68 the
 right Option types them.
@@ -1139,8 +1140,9 @@ keyboard only. `⌥`+drag selects inside programs that use the mouse (`macOption
 `⌘K` on a Mac and `Ctrl+Shift+K` elsewhere clear the terminal, screen and scrollback, keeping the
 prompt's line, with an item in the hold menu's Tabs list. The 9 of the tab digits goes to the last tab
 (`⌘9`, `Alt+9`). The hold menu key on a Mac defaults to the right Command (`MetaRight`), which types
-nothing and leaves both Options to the terminal; the right Super is offered only on a Mac keyboard,
-since the desktop takes Super elsewhere. The global key stays F12; on a Mac keyboard Settings writes it
+nothing and leaves both Options to the terminal; the right Super was offered only on a Mac keyboard,
+since the desktop takes Super elsewhere, until D69 made the hold menu key a recorder that takes any key
+that types nothing. The global key stays F12; on a Mac keyboard Settings writes it
 in the Mac's symbols (`⌥⌘K` for `Super+Alt+K`) and says the F keys need fn unless they are standard
 function keys.
 **Reason:** the maintainer's choice on 2026-11-18. In xterm 6 on a Mac `⌘←`, `⌘→` and `⌘K` did nothing,
@@ -1153,8 +1155,49 @@ reaches a program in the alternate buffer and the PC keys are unchanged; the Opt
 the fn hint need a real Mac.
 **How to revert:** drop `line-editing.ts` and `option-key.ts` and their handlers in `terminal-session.ts`,
 `macOptionClickForcesSelection`, the `terminal.macOptionAsMeta` setting and its row, `clearTerminal`
-from the keymap with its action and hold menu item, the `'last'` tab target, `MetaRight` from
-`HOLD_TRIGGERS` (set `HOLD_TRIGGER.mac` back to `AltRight`) and `accelerator` from the keymap.
+from the keymap with its action and hold menu item, the `'last'` tab target, set `HOLD_TRIGGER.mac` back
+to `AltRight` and drop `accelerator` from the keymap.
+
+## D69. Every interface key and the hold menu trigger are the user's to change
+
+**Decision:** [plans/custom-shortcuts.md](../plans/custom-shortcuts.md). The Shortcuts page lists every
+action of the keymap (`SHORTCUT_IDS` in `core/src/settings/shortcut-keys.ts`) in four groups, Tabs,
+Review, Window and Appearance, one row each. The row's keycaps are its button: a click or Enter records
+the next chord in place, with the global key's prompt and `inputGate`; Esc cancels, a click elsewhere
+ends it, and the row keeps its height. A letter, digit, symbol or editing key needs Ctrl, Alt or Cmd
+(Shift alone only types the capital); F keys, Insert, Pause, Scroll Lock and the Menu key may stand
+alone. `settings.json` keeps only what the user changed, in `"shortcuts": { "keys": { "newTab": "Ctrl+T" } }`,
+written `Ctrl`, `Alt`, `Shift` and `Super` on a PC and `Ctrl`, `Option`, `Shift` and `Cmd` on a Mac; any
+of those names (also `Control`, `Command`, `Meta`) and Electron's key names (`Up`, `Plus`, `Space`,
+`Return`) read back the same. An entry that names no action or holds no such chord is dropped and listed
+as a settings.json warning. A custom chord replaces every default chord of its action (alternates
+included), wins over a default key and a tab digit that would match too, and works at once: the keymap
+reads the setting at each key. A chord that another action, the global key or the hold trigger answers
+to is held back with "Already used by" and Swap, which gives the other one this row's previous key when
+it can take it, and Cancel; a chord the shell reads (Ctrl and a character with no Shift or Alt on a PC,
+any Control chord on a Mac) is allowed with a note that the terminal no longer gets it. A recorded
+default saves nothing, each row has its reset and Restore all defaults removes every custom key. Labels
+come from the keymap everywhere: the rows, the hold menu, the review header, and the tooltips, which
+name the action with `data-tip-shortcut` (index.html too) and ask the keymap when they show. The hold
+menu key becomes a recorder like the global key: one key that types nothing, by its `KeyboardEvent.code`
+(modifiers, F keys, lock keys, Insert, the Menu key), or the middle, back or forward button, stored as
+`Mouse1`, `Mouse3` and `Mouse4`; a key the terminal needs and the left and right buttons are refused with
+the reason, and the earlier values stay valid. Held, a mouse trigger opens the wheel as the key does,
+moving selects, releasing runs and Esc cancels; while it is the trigger its own mousedown, mouseup,
+click, auxclick and context menu are consumed, so Linux's middle-click paste, a program's mouse report
+and back or forward do not happen. Keys inside panels (the review's single keys, arrows in lists) stay
+fixed.
+**Reason:** the maintainer's choice on 2026-11-18, on top of D68: people bring keys from other terminals
+and editors, and a MacBook or a mouse with side buttons has no right Ctrl to hold. Swap in place keeps a
+conflict a one-click choice, without a modal. Checked on Linux under Xvfb with the PC keyboard and with
+the app reloaded as a Mac keyboard, in both themes and languages: recording, refusal, Swap, reset, the
+custom key working and the old one not, the tooltip, the hold menu and the review following a change,
+the wheel on the middle button running a row on release, and the middle click no longer pasting.
+**How to revert:** drop `shortcuts.keys` and `shortcut-keys.ts` (the keymap takes its defaults again),
+`data-tip-shortcut` (back to `data-tip-key` with the keymap's label), `key-slots.ts` and the rows of
+`shortcuts-page.ts` (back to the reference list), `hold-trigger.ts` and the mouse handling of
+`hold-menu-controller.ts`, and give `shortcuts.holdTrigger` back its list of five keys and its select.
+
 
 ## D71. Updates from the project's GitHub releases, off until the user opts in
 
