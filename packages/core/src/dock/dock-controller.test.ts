@@ -257,7 +257,7 @@ describe('dragRatio', () => {
     [1200, 1],
     [508, 0.5],
     [990, 1],
-    [737, 0.74],
+    [737, 0.737],
   ])(
     'should take %i pixels of a 1000 pixel work area as %f when the edge is dragged',
     (height, ratio) => {
@@ -290,7 +290,7 @@ describe('resizeTo', () => {
     scheduler.advance(250)
 
     // Assert
-    expect(window.bounds().height).toBe(799)
+    expect(window.bounds().height).toBe(800)
   })
 
   it('should leave full height and keep the dragged height when the drag ends', () => {
@@ -304,9 +304,9 @@ describe('resizeTo', () => {
     const saved = dock.endResize(true)
 
     // Assert
-    expect(saved).toBe(0.65)
+    expect(saved).toBe(0.648)
     expect(dock.isFullHeight()).toBe(false)
-    expect(window.bounds().height).toBe(702)
+    expect(window.bounds().height).toBe(700)
   })
 
   it('should go back to full height and save nothing when the drag is dropped', () => {
@@ -330,5 +330,31 @@ describe('resizeTo', () => {
     const { dock } = setup()
 
     expect(dock.endResize(true)).toBeUndefined()
+  })
+})
+
+describe('fillsHeight', () => {
+  it('should fill the height at full height or with an anchored height of 100% and not below it', () => {
+    // Arrange
+    let ratio = 0.5
+    const { window } = setup()
+    const dock = createDockController({
+      screen: new FakeScreen([left], { x: 300, y: 300 }),
+      window,
+      scheduler: new FakeScheduler(),
+      heightRatio: () => ratio,
+    })
+    dock.show()
+
+    // Act
+    const half = dock.fillsHeight()
+    dock.toggleFullHeight()
+    const full = dock.fillsHeight()
+    dock.toggleFullHeight()
+    ratio = 1
+    const whole = dock.fillsHeight()
+
+    // Assert
+    expect([half, full, whole]).toEqual([false, true, true])
   })
 })

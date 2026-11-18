@@ -225,6 +225,15 @@ app.whenReady().then(async () => {
     clock: { now: () => Date.now() },
   })
   const dockActions = createDockActions(dock, waylandArea)
+  // The window lays out for the whole screen (tab bar on top) whenever it takes the whole height: at full
+  // height or at 100%. Sent only when that changes
+  let layoutFull = false
+  const showLayout = (full: boolean) => {
+    if (full === layoutFull) return
+    layoutFull = full
+    send(hostChannels.windowFullHeight, full)
+  }
+  const syncLayout = () => showLayout(dock.fillsHeight())
 
   // Opening the app again from the application menu shows the window of the one already running
   app.on('second-instance', showWindow)
@@ -371,23 +380,19 @@ app.whenReady().then(async () => {
     home: homedir(),
     logger,
     send,
-    toggleFullHeight: () =>
-      void dockActions
-        .toggleFullHeight()
-        .then((fullHeight) => send(hostChannels.windowFullHeight, fullHeight)),
+    toggleFullHeight: () => void dockActions.toggleFullHeight().then(syncLayout),
     // DCK_HEIGHT pins the height, so the edge moves nothing
     resizeWindow(height) {
       if (settingsStore.get().locked.includes('window.heightRatio')) return undefined
-      const wasFullHeight = dock.isFullHeight()
       const ratio = dock.resizeTo(height)
-      // The drag leaves full height at once, so the tab bar goes back under the terminals while it moves
-      if (wasFullHeight) send(hostChannels.windowFullHeight, false)
+      // While the edge moves the tab bar stays under the terminals, by the label and the edge in hand
+      showLayout(false)
       return ratio
     },
     endResizeWindow(keep) {
       const ratio = dock.endResize(keep)
-      send(hostChannels.windowFullHeight, dock.isFullHeight())
-      if (ratio !== undefined) void settingsStore.update({ window: { heightRatio: ratio } })
+      if (ratio === undefined) syncLayout()
+      else void settingsStore.update({ window: { heightRatio: ratio } }).then(syncLayout)
     },
   })
 
@@ -399,7 +404,10 @@ app.whenReady().then(async () => {
 
   settingsStore.onChange((settings, changed) => {
     send(hostChannels.settingsChanged, settings, changed)
-    if (changed.includes('window.heightRatio')) dock.refresh()
+    if (changed.includes('window.heightRatio')) {
+      dock.refresh()
+      syncLayout()
+    }
     if (changed.includes('extensions.disabled')) {
       catalog = readCatalog()
       configureViews()
@@ -498,6 +506,8 @@ app.whenReady().then(async () => {
   void window.loadFile(join(__dirname, 'ui', 'index.html'))
   window.webContents.once('did-finish-load', () => {
     if (!process.env.DCK_START_HIDDEN) showWindow()
+    // A height of 100% saved last time lays the window out for the whole screen from the start
+    syncLayout()
     logger.info('window ready', { endpoint })
   })
 

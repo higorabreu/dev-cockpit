@@ -28,6 +28,9 @@ export interface DockController {
   // Reapplies the current position and size, for example after the height changes in settings
   refresh(): void
   isFullHeight(): boolean
+  // Whether the window takes the whole height of the screen: at full height or with an anchored height of
+  // 100%. The window lays out for the whole screen then, the tab bar on top
+  fillsHeight(): boolean
   // The bottom edge dragged to `height` pixels: the window follows at once and leaves full height. Returns
   // the fraction of the work area it takes
   resizeTo(height: number): number
@@ -43,11 +46,12 @@ const TOGGLE_REPEAT_MS = 300
 const SNAP_PX = 12
 const SNAP_RATIOS = [0.5, 1] as const
 
-// The fraction of the work area a dragged edge stands for: within the limits, snapped, in whole percent
+// The fraction of the work area a dragged edge stands for: within the limits and snapped. Kept to a
+// thousandth, under a pixel on any screen, so the edge follows the pointer and does not jump on release
 export function dragRatio(workAreaHeight: number, height: number, minRatio: number): number {
   const clamped = Math.min(Math.max(height, workAreaHeight * minRatio), workAreaHeight)
   const snap = SNAP_RATIOS.find((ratio) => Math.abs(clamped - workAreaHeight * ratio) <= SNAP_PX)
-  return snap ?? Math.round((clamped / workAreaHeight) * 100) / 100
+  return snap ?? Math.round((clamped / workAreaHeight) * 1000) / 1000
 }
 
 export function dockBounds(
@@ -136,6 +140,7 @@ export function createDockController(options: DockOptions): DockController {
       if (window.isVisible()) placeInPlace()
     },
     isFullHeight: () => fullHeight,
+    fillsHeight: () => fullHeight || ratio() >= 1,
     resizeTo(height) {
       // A reapply scheduled by the last show would pull the window back to its old height
       cancelReapply?.()
