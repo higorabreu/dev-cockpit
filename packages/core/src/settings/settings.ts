@@ -12,14 +12,6 @@ import { isShortcutId, parseChord, SHORTCUT_IDS, type ShortcutId } from './short
 
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
 export const THEMES = ['dark', 'light', 'system'] as const
-// The keys the Settings list offers for the hold menu; the file takes any key or button `isHoldTrigger` allows
-export const HOLD_TRIGGERS = [
-  'ControlRight',
-  'ControlLeft',
-  'AltRight',
-  'AltLeft',
-  'MetaRight',
-] as const
 
 export const LIMITS = {
   opacity: { min: 0.3, max: 1 },
@@ -154,7 +146,8 @@ export const settingsSchema = z.preprocess(
     }),
     shortcuts: section({
       toggleWindow: z.string().trim().min(1).max(64).catch('F12'),
-      // Null until the user chooses one: the window holds its keyboard's own key (D51)
+      // Null until the user chooses one: the window holds its keyboard's own key (D51). A key that types
+      // nothing or a side mouse button (D69)
       holdTrigger: z.string().refine(isHoldTrigger).nullable().catch(null),
       keys: shortcutKeysSchema,
     }),

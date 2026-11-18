@@ -1,20 +1,23 @@
 import {
   acceleratorFromEvent,
   chordFromEvent,
-  HOLD_TRIGGERS,
+  type HoldTrigger,
+  holdTriggerProblem,
   isShellChord,
   type MessageKey,
+  mouseTrigger,
   type SettingsPatch,
   type SettingsUpdate,
   type ShortcutId,
   type Translator,
 } from '@dck/core'
-import { keys as keyCaps } from '../kit/keys.ts'
+import { keyCap, keys as keyCaps } from '../kit/keys.ts'
 import { h } from '../panel/dom.ts'
 import { inputGate } from '../platform/input-gate.ts'
 import type { Keymap } from '../platform/keymap.ts'
 import { type KeySlot, type KeySlots, place, type SlotValue } from './key-slots.ts'
 import type { SettingsClient } from './settings-client.ts'
+import { isMouseTrigger, triggerLabel } from './trigger-label.ts'
 
 type Child = Node | string | false | undefined
 
@@ -28,11 +31,6 @@ export interface ShortcutsPageContext {
   row(key: string, label: string, control: Child, hint?: string): HTMLElement
   labelId(key: string): string
   disabled(key: string): boolean
-  select(
-    key: string,
-    options: ReadonlyArray<readonly [string, string]>,
-    current: string,
-  ): HTMLElement
   commit(patch: SettingsPatch, errorKey?: string): Promise<SettingsUpdate>
   render(): void
   // Where the next drawing puts the focus, by `data-focus`
@@ -76,7 +74,19 @@ const ACTION_LABELS: Readonly<Record<ShortcutId, MessageKey>> = {
 const settingKey = (slot: KeySlot) =>
   slot === 'toggleWindow' || slot === 'holdTrigger' ? `shortcuts.${slot}` : `shortcuts.keys.${slot}`
 
-const focusId = (slot: KeySlot) => (slot === 'toggleWindow' ? 'set-record' : `set-key-${slot}`)
+const focusId = (slot: KeySlot) =>
+  slot === 'toggleWindow' ? 'set-record' : slot === 'holdTrigger' ? 'set-hold' : `set-key-${slot}`
+
+const HOLD_REFUSALS: Readonly<Record<string, MessageKey>> = {
+  terminalKey: 'settings.holdTrigger.terminalKey',
+  mainButton: 'settings.holdTrigger.mainButton',
+  unknown: 'settings.holdTrigger.unknown',
+}
+
+const consume = (event: Event) => {
+  event.preventDefault()
+  event.stopPropagation()
+}
 
 type Recorded =
   | { readonly kind: 'value'; readonly value: SlotValue }
@@ -114,19 +124,29 @@ export function createShortcutsPage(ctx: ShortcutsPageContext) {
         ? t('settings.holdTrigger')
         : t(ACTION_LABELS[slot])
 
-  function valueLabel(value: SlotValue): string {
-    if (value.kind === 'chord') return keymap.chordLabel(value.chord)
-    if (value.kind === 'accelerator') return keymap.accelerator(value.text)
-    return value.code
+  // A key as a cap; a mouse button by its name, which no cap stands for
+  function triggerView(code: HoldTrigger): HTMLElement {
+    const name = triggerLabel(code, keymap.keyboard, t)
+    return isMouseTrigger(code) ? h('span', { class: 'sbutton-name' }, name) : keyCap(name)
+  }
+
+  function valueView(value: SlotValue): HTMLElement {
+    if (value.kind === 'chord') return keyCaps(keymap.chordLabel(value.chord))
+    if (value.kind === 'accelerator') return keyCaps(keymap.accelerator(value.text))
+    return triggerView(value.code)
   }
 
   function listen(on: boolean) {
     inputGate.blocked = on
     if (on) {
       window.addEventListener('keydown', onKey, true)
+      window.addEventListener('mousedown', onMouseDown, true)
+      window.addEventListener('contextmenu', onContextMenu, true)
       window.addEventListener('click', onClickAway, true)
     } else {
       window.removeEventListener('keydown', onKey, true)
+      window.removeEventListener('mousedown', onMouseDown, true)
+      window.removeEventListener('contextmenu', onContextMenu, true)
       window.removeEventListener('click', onClickAway, true)
     }
   }
@@ -139,10 +159,16 @@ export function createShortcutsPage(ctx: ShortcutsPageContext) {
     ctx.render()
   }
 
-  function stop() {
-    if (recording === undefined) return
+  // A refusal belongs to the recording: it goes with it
+  function finish() {
+    if (recording !== undefined) ctx.errors.delete(settingKey(recording))
     recording = undefined
     listen(false)
+  }
+
+  function stop() {
+    if (recording === undefined) return
+    finish()
     ctx.render()
   }
 
@@ -153,6 +179,13 @@ export function createShortcutsPage(ctx: ShortcutsPageContext) {
   }
 
   function fromEvent(slot: KeySlot, event: KeyboardEvent): Recorded {
+    if (slot === 'holdTrigger') {
+      if (event.key === 'Escape') return { kind: 'cancel' }
+      const problem = holdTriggerProblem(event.code)
+      if (problem)
+        return { kind: 'refused', text: HOLD_REFUSALS[problem] ?? 'settings.holdTrigger.unknown' }
+      return { kind: 'value', value: { kind: 'trigger', code: event.code } }
+    }
     if (slot === 'toggleWindow') {
       const result = acceleratorFromEvent(event)
       if (result.type === 'accelerator')
@@ -187,9 +220,49 @@ export function createShortcutsPage(ctx: ShortcutsPageContext) {
       ctx.errors.set(settingKey(slot), t(recorded.text))
       return ctx.render()
     }
-    recording = undefined
-    listen(false)
+    finish()
     decide(slot, recorded.value)
+  }
+
+  // While the hold menu's trigger records, the middle, back and forward buttons are taken wherever they
+  // are pressed; the left and the right buttons are refused on the recorder and work elsewhere
+  function onMouseDown(event: MouseEvent) {
+    if (recording !== 'holdTrigger') return
+    const code = mouseTrigger(event.button)
+    const onRecorder = event.target instanceof Element && event.target.closest('[data-recording]')
+    if (holdTriggerProblem(code) === undefined) {
+      consume(event)
+      swallowRelease(event.button)
+      finish()
+      return decide('holdTrigger', { kind: 'trigger', code })
+    }
+    if (!onRecorder && event.button === 0) return
+    consume(event)
+    ctx.errors.set(settingKey('holdTrigger'), t('settings.holdTrigger.mainButton'))
+    ctx.render()
+  }
+
+  function onContextMenu(event: MouseEvent) {
+    if (recording === 'holdTrigger') consume(event)
+  }
+
+  // The rest of a click that was recorded reaches nothing, as a trigger's own click would not
+  function swallowRelease(button: number) {
+    const swallow = (event: MouseEvent) => {
+      if (event.button === button) consume(event)
+    }
+    for (const type of ['mouseup', 'click', 'auxclick'] as const)
+      window.addEventListener(type, swallow, { capture: true })
+    window.addEventListener(
+      'mouseup',
+      () => {
+        setTimeout(() => {
+          for (const type of ['mouseup', 'click', 'auxclick'] as const)
+            window.removeEventListener(type, swallow, { capture: true })
+        })
+      },
+      { capture: true, once: true },
+    )
   }
 
   // The global key can be refused by the system: its error then shows on its row
@@ -236,7 +309,7 @@ export function createShortcutsPage(ctx: ShortcutsPageContext) {
       t('settings.shortcut.cancel'),
     )
     cancel.addEventListener('click', cancelPending)
-    return h('span', { class: 'sshortcut' }, keyCaps(valueLabel(held.value)), swap, cancel)
+    return h('span', { class: 'sshortcut' }, valueView(held.value), swap, cancel)
   }
 
   // Under the row's name: the key another slot holds, or a custom key the shell no longer gets
@@ -280,14 +353,32 @@ export function createShortcutsPage(ctx: ShortcutsPageContext) {
     )
   }
 
+  // The hold menu's key or mouse button: shown as a cap or a name, with Change beside it like the global key
   function holdRow(): HTMLElement {
-    const key = settingKey('holdTrigger')
-    const current = slots().holdTrigger
-    // The desktop takes Super for itself on Linux and Windows; a value already in the file stays listed
-    const options = HOLD_TRIGGERS.filter((id) => mac || id !== 'MetaRight' || id === current).map(
-      (id) => [id, t(`settings.holdTrigger.${mac ? 'mac.' : ''}${id}` as const)] as const,
+    const slot = 'holdTrigger'
+    const key = settingKey(slot)
+    noteFor(slot)
+    const active = recording === slot
+    const button = h(
+      'button',
+      {
+        type: 'button',
+        class: 'srecord',
+        'data-focus': focusId(slot),
+        'data-recording': active ? 'true' : undefined,
+        disabled: ctx.disabled(key),
+      },
+      active ? t('settings.holdTrigger.recording') : t('settings.record'),
     )
-    return ctx.row(key, t('settings.holdTrigger'), ctx.select(key, options, current))
+    // A left click on the recorder is refused by the mousedown; only a click outside a recording starts one
+    button.addEventListener('click', () => {
+      if (!active) start(slot)
+    })
+    const control =
+      pending?.slot === slot
+        ? pendingControl(pending)
+        : h('span', { class: 'sshortcut' }, triggerView(slots().holdTrigger), button)
+    return ctx.row(key, t('settings.holdTrigger'), control)
   }
 
   // The action's keycaps are its button: a click or Enter records the next chord in their place
@@ -345,10 +436,7 @@ export function createShortcutsPage(ctx: ShortcutsPageContext) {
     // The screen closes or every setting goes back to its default: nothing stays recorded or held
     reset() {
       pending = undefined
-      if (recording !== undefined) {
-        recording = undefined
-        listen(false)
-      }
+      if (recording !== undefined) finish()
     },
   }
 }

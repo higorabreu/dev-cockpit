@@ -135,7 +135,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe('settings view selects', () => {
   it('should use the design system select for every choice when the screen is drawn', () => {
-    const { body, view, combobox } = open()
+    const { body, view } = open()
 
     const general = [...body.querySelectorAll('[role="combobox"]')].map((element) =>
       element.getAttribute('data-focus'),
@@ -152,7 +152,6 @@ describe('settings view selects', () => {
       'set-terminal.cursorStyle',
       'set-review.layout',
     ])
-    expect(combobox('shortcuts.holdTrigger').getAttribute('role')).toBe('combobox')
     view.close()
   })
 
@@ -188,39 +187,31 @@ describe('settings view selects', () => {
 
   it('should hold the right Command by default with no reset when the keyboard is a Mac one', () => {
     // Arrange
-    const { body, combobox, view } = open([], api, undefined, 'mac')
+    const { body, view } = open([], api, undefined, 'mac')
 
     // Act
     body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
 
     // Assert
-    expect(
-      combobox('shortcuts.holdTrigger').querySelector('[data-current="true"]')?.textContent,
-    ).toBe('Right Command')
-    expect(
-      body.querySelector<HTMLElement>('.sreset[data-key="shortcuts.holdTrigger"]')?.hidden,
-    ).toBe(true)
+    const row = body.querySelector<HTMLElement>('[data-setting="shortcuts.holdTrigger"]')
+    expect(row?.querySelector('.key')?.textContent).toBe('Right Command')
+    expect(row?.querySelector<HTMLElement>('.sreset')?.hidden).toBe(true)
     view.close()
   })
 
-  it('should offer the right Super only when the file already holds it on a PC keyboard', () => {
+  it('should name the right Super with its reset when the file holds it on a PC keyboard', () => {
     // Arrange
     const chosen = mergeSettings(defaultSettings, { shortcuts: { holdTrigger: 'MetaRight' } })
-    const labels = (initial?: Settings) => {
-      const { body, combobox, view } = open([], api, initial)
-      body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
-      const found = [...combobox('shortcuts.holdTrigger').querySelectorAll('.select-value > span')]
-      view.close()
-      return found.map((element) => element.textContent)
-    }
+    const { body, view } = open([], api, chosen)
 
     // Act
-    const fresh = labels()
-    const kept = labels(chosen)
+    body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
 
     // Assert
-    expect(fresh).toEqual(['Right Ctrl', 'Left Ctrl', 'Right Alt', 'Left Alt'])
-    expect(kept).toContain('Right Super')
+    const row = body.querySelector<HTMLElement>('[data-setting="shortcuts.holdTrigger"]')
+    expect(row?.querySelector('.key')?.textContent).toBe('Right Super')
+    expect(row?.querySelector<HTMLElement>('.sreset')?.hidden).toBe(false)
+    view.close()
   })
 
   it('should name each select by its row label when the screen is drawn', () => {

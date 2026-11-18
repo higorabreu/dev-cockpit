@@ -781,7 +781,6 @@ export function createSettingsView(
     row: (key, label, control, hint) => row(key, label, control, hint),
     labelId,
     disabled,
-    select,
     commit,
     render,
     focusNext: (target) => {

@@ -489,7 +489,7 @@
   padding: 2px 0;
 }
 
-.skeys-list .slabel {
+.skeys .slabel {
   line-height: 16px;
 }
 
@@ -531,6 +531,12 @@
 }
 
 .skey-wait {
+  white-space: nowrap;
+}
+
+/* A mouse button as the hold menu's trigger: its name, since no cap stands for it */
+.sbutton-name {
+  color: var(--fg);
   white-space: nowrap;
 }
 

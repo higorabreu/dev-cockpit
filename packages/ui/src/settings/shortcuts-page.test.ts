@@ -324,3 +324,119 @@ describe('shortcuts page, defaults and the file', () => {
     expect(find('#settings-tab-shortcuts .snav-mark')).not.toBeNull()
   })
 })
+
+const mouse = (type: string, button: number, target: EventTarget = document.body) => {
+  const event = new MouseEvent(type, { button, bubbles: true, cancelable: true })
+  target.dispatchEvent(event)
+  return event
+}
+
+describe('shortcuts page, the hold menu trigger', () => {
+  it('should show the keyboard own key as a cap with Change beside it when none was chosen', () => {
+    // Arrange and Act
+    const { find } = openShortcuts()
+
+    // Assert
+    const row = find('[data-setting="shortcuts.holdTrigger"]')
+    expect(row.querySelector('.key')?.textContent).toBe('Right Ctrl')
+    expect(find('[data-focus="set-hold"]').textContent).toBe('Change')
+  })
+
+  it('should save a key that types nothing when it is pressed while recording', async () => {
+    // Arrange
+    const { find, current } = openShortcuts()
+    find('[data-focus="set-hold"]').click()
+
+    // Act
+    press('F13', { code: 'F13' })
+    await settle()
+
+    // Assert
+    expect(current().shortcuts.holdTrigger).toBe('F13')
+    expect(find('[data-setting="shortcuts.holdTrigger"] .key').textContent).toBe('F13')
+  })
+
+  it('should refuse a key the terminal needs and keep recording when a letter is pressed', () => {
+    // Arrange
+    const { find, patches } = openShortcuts()
+    find('[data-focus="set-hold"]').click()
+
+    // Act
+    press('q', { code: 'KeyQ' })
+
+    // Assert
+    expect(find('[data-setting="shortcuts.holdTrigger"] .serror').textContent).toBe(
+      'The terminal needs that key.',
+    )
+    expect(find('[data-focus="set-hold"]').textContent).toBe('Press a key or button (Esc cancels)')
+    expect(patches).toEqual([])
+  })
+
+  it('should drop the refusal when a key that fits is pressed after it', async () => {
+    // Arrange
+    const { find, body } = openShortcuts()
+    find('[data-focus="set-hold"]').click()
+    press('q', { code: 'KeyQ' })
+
+    // Act
+    press('Pause', { code: 'Pause' })
+    await settle()
+
+    // Assert
+    expect(body.querySelector('[data-setting="shortcuts.holdTrigger"] .serror')).toBeNull()
+    expect(find('[data-setting="shortcuts.holdTrigger"] .key').textContent).toBe('Pause')
+  })
+
+  it('should save the middle button by its name and keep its click from the page when it is pressed', async () => {
+    // Arrange
+    const { find, current } = openShortcuts()
+    find('[data-focus="set-hold"]').click()
+
+    // Act
+    const down = mouse('mousedown', 1)
+    const up = mouse('mouseup', 1)
+    await settle()
+
+    // Assert
+    expect(current().shortcuts.holdTrigger).toBe('Mouse1')
+    expect(find('[data-setting="shortcuts.holdTrigger"] .sbutton-name').textContent).toBe(
+      'Middle button',
+    )
+    expect([down.defaultPrevented, up.defaultPrevented]).toEqual([true, true])
+  })
+
+  it('should refuse the left button on the recorder and keep recording when it is clicked', () => {
+    // Arrange
+    const { find, patches } = openShortcuts()
+    const recorder = () => find('[data-focus="set-hold"]')
+    recorder().click()
+
+    // Act
+    mouse('mousedown', 0, recorder())
+    recorder().click()
+
+    // Assert
+    expect(find('[data-setting="shortcuts.holdTrigger"] .serror').textContent).toBe(
+      'Use the middle, back or forward button.',
+    )
+    expect(recorder().dataset.recording).toBe('true')
+    expect(patches).toEqual([])
+  })
+
+  it('should offer to swap with the action that has the key when an F key is recorded', async () => {
+    // Arrange
+    const custom = mergeSettings(defaultSettings, { shortcuts: { holdTrigger: 'F13' } })
+    const { find, current } = openShortcuts(custom)
+    find('[data-focus="set-hold"]').click()
+    press('F11', { code: 'F11' })
+
+    // Act
+    const note = find('[data-setting="shortcuts.holdTrigger"] .snote').textContent
+    find('[data-focus="set-key-swap"]').click()
+    await settle()
+
+    // Assert
+    expect(note).toBe('Already used by Full height')
+    expect(current().shortcuts).toMatchObject({ holdTrigger: 'F11', keys: { fullHeight: 'F13' } })
+  })
+})
