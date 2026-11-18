@@ -1,43 +1,22 @@
-import { type HoldTrigger, type KeyInput, physicalKey } from '@dck/core'
+import {
+  type Chord,
+  type ChordModifiers,
+  eventKey,
+  formatChord,
+  type HoldTrigger,
+  type Keyboard,
+  type KeyInput,
+  matchesChord,
+  parseChord,
+  SHORTCUT_IDS,
+  type ShortcutId,
+} from '@dck/core'
 
-// Which modifier leads and what the keys are called differ between a Mac keyboard and the others
-export type Keyboard = 'mac' | 'pc'
+export type { Keyboard, ShortcutId }
 
 export const keyboardFor = (platform: string): Keyboard => (/^mac/i.test(platform) ? 'mac' : 'pc')
 
-// One key and the modifiers held with it, exactly: a chord without shift does not match with shift held
-interface Chord {
-  // KeyboardEvent.key, in lowercase for a letter
-  readonly key: string
-  readonly ctrl?: boolean
-  readonly alt?: boolean
-  readonly shift?: boolean
-  readonly meta?: boolean
-}
-
-type Modifiers = Omit<Chord, 'key'>
-
-export type ShortcutId =
-  | 'newTab'
-  | 'closeTab'
-  | 'renameTab'
-  | 'nextTab'
-  | 'previousTab'
-  | 'settings'
-  | 'review'
-  | 'reviewLayout'
-  | 'reviewSend'
-  | 'theme'
-  | 'projects'
-  | 'views'
-  | 'panel'
-  | 'fullHeight'
-  | 'opacityUp'
-  | 'opacityDown'
-  | 'fontBigger'
-  | 'fontSmaller'
-  | 'fontReset'
-  | 'clearTerminal'
+type Modifiers = ChordModifiers
 
 const C = { ctrl: true } as const
 const CS = { ctrl: true, shift: true } as const
@@ -136,18 +115,14 @@ const TAB: Record<Keyboard, Modifiers> = { pc: { alt: true }, mac: M }
 // leaves both Options to the terminal
 const HOLD_TRIGGER: Record<Keyboard, HoldTrigger> = { pc: 'ControlRight', mac: 'MetaRight' }
 
-const pressedKey = (event: KeyInput) =>
-  physicalKey(event)?.toLowerCase() ??
-  (event.key.length === 1 ? event.key.toLowerCase() : event.key)
-
-const matchesChord = (event: KeyInput, chord: Chord) =>
-  event.ctrlKey === Boolean(chord.ctrl) &&
-  event.altKey === Boolean(chord.alt) &&
-  event.shiftKey === Boolean(chord.shift) &&
-  event.metaKey === Boolean(chord.meta) &&
-  pressedKey(event) === chord.key
-
-const KEY_NAMES: Record<string, string> = { ArrowUp: '↑', ArrowDown: '↓' }
+const KEY_NAMES: Record<string, string> = {
+  ArrowUp: '↑',
+  ArrowDown: '↓',
+  ArrowLeft: '←',
+  ArrowRight: '→',
+  ' ': 'Space',
+  ContextMenu: 'Menu',
+}
 
 const keyName = (key: string) => KEY_NAMES[key] ?? (key.length === 1 ? key.toUpperCase() : key)
 
@@ -211,6 +186,9 @@ function acceleratorLabel(value: string, keyboard: Keyboard): string {
   return modifiersLabel(held, keyboard, ACCELERATOR_KEYS[key] ?? key)
 }
 
+// The actions whose key the user changed, as settings.json writes them
+export type CustomKeys = Readonly<Partial<Record<ShortcutId, string>>>
+
 export interface Keymap {
   readonly keyboard: Keyboard
   // The hold menu key until the user picks one
@@ -222,9 +200,16 @@ export interface Keymap {
     isHeld(event: Pick<MouseEvent, 'ctrlKey' | 'metaKey'>): boolean
   }
   matches(event: KeyInput, id: ShortcutId): boolean
+  // The action of a key: a custom chord before any default one, so a key the user gave wins
+  action(event: KeyInput): ShortcutId | undefined
   label(id: ShortcutId): string
-  // The modifiers alone, for a label that lists several keys after them
-  modifiers(id: ShortcutId): string
+  // The chords in use, the custom one alone when the user gave one; the first is the one the label shows
+  chords(id: ShortcutId): readonly Chord[]
+  defaults(id: ShortcutId): readonly Chord[]
+  isCustom(id: ShortcutId): boolean
+  chordLabel(chord: Chord): string
+  // The chord as settings.json keeps it on this keyboard
+  chordText(chord: Chord): string
   // 0 for the first tab when the event is Alt+1, or Cmd+1 on the Mac; the last tab for the 9
   tabIndex(event: KeyInput): TabTarget | undefined
   // A key inside a panel: Ctrl and a letter, Cmd on the Mac
@@ -235,11 +220,26 @@ export interface Keymap {
   accelerator(value: string): string
 }
 
-export function createKeymap(keyboard: Keyboard): Keymap {
-  const chords = KEYMAPS[keyboard]
+// `custom` is read at each key, so a key saved in Settings or by hand works at once
+export function createKeymap(keyboard: Keyboard, custom: () => CustomKeys = () => ({})): Keymap {
+  const defaults = KEYMAPS[keyboard]
   const primary = PRIMARY[keyboard]
   const label = (chord: Chord) => modifiersLabel(chord, keyboard, chord.key)
   const clipboard = CLIPBOARD[keyboard]
+  // Each text is read once: the keys are matched on every keydown
+  const parsed = new Map<string, Chord | undefined>()
+  const customChord = (id: ShortcutId): Chord | undefined => {
+    const text = custom()[id]
+    if (text === undefined) return undefined
+    if (!parsed.has(text)) parsed.set(text, parseChord(text))
+    return parsed.get(text)
+  }
+  const chords = (id: ShortcutId): Chords => {
+    const chosen = customChord(id)
+    return chosen ? [chosen] : defaults[id]
+  }
+  const matches = (event: KeyInput, id: ShortcutId) =>
+    chords(id).some((chord) => matchesChord(event, chord))
   return {
     keyboard,
     holdTrigger: HOLD_TRIGGER[keyboard],
@@ -248,11 +248,18 @@ export function createKeymap(keyboard: Keyboard): Keymap {
       label: modifiersLabel(primary, keyboard),
       isHeld: (event) => (primary.meta ? event.metaKey : event.ctrlKey),
     },
-    matches: (event, id) => chords[id].some((chord) => matchesChord(event, chord)),
-    label: (id) => label(chords[id][0]),
-    modifiers: (id) => modifiersLabel(chords[id][0], keyboard),
+    matches,
+    action: (event) =>
+      SHORTCUT_IDS.find((id) => customChord(id) !== undefined && matches(event, id)) ??
+      SHORTCUT_IDS.find((id) => customChord(id) === undefined && matches(event, id)),
+    label: (id) => label(chords(id)[0]),
+    chords,
+    defaults: (id) => defaults[id],
+    isCustom: (id) => customChord(id) !== undefined,
+    chordLabel: label,
+    chordText: (chord) => formatChord(chord, keyboard),
     tabIndex(event) {
-      const digit = /^[1-9]$/.exec(pressedKey(event))?.[0]
+      const digit = /^[1-9]$/.exec(eventKey(event))?.[0]
       if (digit === undefined) return undefined
       if (!matchesChord(event, { ...TAB[keyboard], key: digit })) return undefined
       return digit === '9' ? 'last' : Number(digit) - 1

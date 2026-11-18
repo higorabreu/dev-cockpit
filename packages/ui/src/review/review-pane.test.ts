@@ -559,7 +559,7 @@ describe('createReviewPane', () => {
 
   it('should offer the other layout in the header while the review shares the tab', () => {
     const { pane, layouts } = setup(repository())
-    const button = () => pane.element.querySelector('.rv-icon[data-tip-key="Ctrl+Shift+E"]')
+    const button = () => pane.element.querySelector('.rv-icon[data-tip-shortcut="reviewLayout"]')
 
     pane.setArrangement('side', false)
     const beside = [button()?.hasAttribute('hidden'), button()?.getAttribute('aria-label')]

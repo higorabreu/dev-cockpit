@@ -9,6 +9,8 @@ export interface KeyInput {
 
 const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'AltGraph', 'OS'])
 
+export const isModifierKey = (key: string) => MODIFIER_KEYS.has(key)
+
 const NAMED: Record<string, string> = {
   ' ': 'Space',
   ArrowUp: 'Up',
@@ -51,7 +53,7 @@ export type AcceleratorResult =
 // Converts what the user typed into Electron's global shortcut format, like "Ctrl+Alt+Space".
 // Letters, digits and symbols require a modifier, so normal typing is not taken over
 export function acceleratorFromEvent(event: KeyInput): AcceleratorResult {
-  if (MODIFIER_KEYS.has(event.key)) return { type: 'pending' }
+  if (isModifierKey(event.key)) return { type: 'pending' }
   if (event.key === 'Escape') return { type: 'cancel' }
   const name = keyName(event)
   const supported = isFunctionKey(name) || name in invert(NAMED) || /^[A-Z0-9]$/.test(name)

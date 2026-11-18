@@ -44,6 +44,15 @@ describe('settingsIssues', () => {
     expect(issuesOf(raw)).toEqual([{ key: 'connections.Not An Id', kind: 'dropped', found: '{…}' }])
   })
 
+  it('should report a custom key left out when it holds no chord or names no action', () => {
+    const raw = { shortcuts: { keys: { newTab: 'Ctrl+', openAll: 'Ctrl+O', theme: 'F8' } } }
+
+    expect(issuesOf(raw)).toEqual([
+      { key: 'shortcuts.keys.newTab', kind: 'dropped', found: '"Ctrl+"' },
+      { key: 'shortcuts.keys.openAll', kind: 'dropped', found: '"Ctrl+O"' },
+    ])
+  })
+
   it('should report a group that is not an object as ignored when the file has a plain value there', () => {
     expect(issuesOf({ system: 5 })).toEqual([
       { key: 'system', kind: 'ignored', found: '5', used: '{…}' },

@@ -1,12 +1,10 @@
 import {
-  acceleratorFromEvent,
   type ConnectionStatus,
   type Connector,
   connectedFirst,
   connectionErrorKey,
   type DisabledConnector,
   defaultSettings,
-  HOLD_TRIGGERS,
   type HostApi,
   LIMITS,
   type MessageKey,
@@ -15,17 +13,17 @@ import {
   type SettingsIssue,
   type SettingsPatch,
   type SystemFontsInfo,
+  shortcutKeysPatch,
   type Translator,
   terminalFamily,
 } from '@dck/core'
 import { trapFocus } from '../kit/focus-trap.ts'
-import { keys as keyCaps } from '../kit/keys.ts'
 import { closeButton } from '../kit/panel-frame.ts'
 import { createSelect } from '../kit/select.ts'
 import { h, icon } from '../panel/dom.ts'
-import { inputGate } from '../platform/input-gate.ts'
 import type { Keymap } from '../platform/keymap.ts'
 import type { SettingsClient } from './settings-client.ts'
+import { createShortcutsPage } from './shortcuts-page.ts'
 
 type Child = Node | string | false | undefined
 
@@ -55,26 +53,6 @@ function patchFor(key: string, value: unknown): SettingsPatch {
   return patch as SettingsPatch
 }
 
-const reference = (keymap: Keymap): ReadonlyArray<readonly [string, string]> => [
-  ['tabs.new', keymap.label('newTab')],
-  ['tabs.close', keymap.label('closeTab')],
-  ['tabs.next', keymap.label('nextTab')],
-  ['tabs.previous', keymap.label('previousTab')],
-  ['terminal.clear', keymap.label('clearTerminal')],
-  ['projects.search', keymap.label('projects')],
-  ['views.open', keymap.label('views')],
-  ['menu.system.panel', keymap.label('panel')],
-  ['menu.system.theme', keymap.label('theme')],
-  ['menu.system.fullHeight', keymap.label('fullHeight')],
-  ['settings.ref.opacity', `${keymap.label('opacityUp')} ↓`],
-  // The modifier with the three keys after it, which the caps show as one chord and two alternatives
-  [
-    'settings.ref.font',
-    `${keymap.modifiers('fontBigger')}${keymap.keyboard === 'mac' ? '' : '+'}= − 0`,
-  ],
-  ['settings.ref.settings', keymap.label('settings')],
-]
-
 // The shipped fonts are registered as variable fonts; the screen names them as the user knows them
 const shownFamily = (family: string) => family.replace(/ Variable$/, '')
 
@@ -89,6 +67,8 @@ const TABS = [
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
+
+const KEYS_PREFIX = 'shortcuts.keys.'
 
 export function createSettingsView(
   elements: SettingsViewElements,
@@ -105,9 +85,7 @@ export function createSettingsView(
   const { overlay, body } = elements
   const { settings, api, i18n } = deps
   const mac = deps.keymap.keyboard === 'mac'
-  const needsModifier = mac ? 'settings.needsModifier.mac' : 'settings.needsModifier'
   const t = i18n.t
-  let recording = false
   let autostart = false
   // The fonts installed, asked for each time the screen opens so a font installed since then shows up
   let fonts: SystemFontsInfo = noSystemFonts
@@ -166,6 +144,12 @@ export function createSettingsView(
   const differs = (key: string, current: Settings) =>
     getPath(current, key) !== getPath(defaultSettings, key)
 
+  // A custom key has no default value to write: removing it gives the action its default keys back
+  const defaultPatch = (key: string) =>
+    key.startsWith(KEYS_PREFIX)
+      ? shortcutKeysPatch({ [key.slice(KEYS_PREFIX.length)]: null })
+      : patchFor(key, getPath(defaultSettings, key))
+
   function resetButton(key: string): HTMLElement {
     const button = h('button', {
       type: 'button',
@@ -177,10 +161,9 @@ export function createSettingsView(
     button.textContent = '↺'
     button.hidden = !resettable(key)
     button.addEventListener('click', () => {
-      void commit(
-        patchFor(key, getPath(defaultSettings, key)),
-        key === 'shortcuts.toggleWindow' ? key : undefined,
-      ).then(render)
+      void commit(defaultPatch(key), key === 'shortcuts.toggleWindow' ? key : undefined).then(
+        render,
+      )
     })
     return button
   }
@@ -420,52 +403,6 @@ export function createSettingsView(
       if (root !== undefined) void commit(patchFor(key, root)).then(render)
     })
     return h('span', { class: 'sfolder' }, input, choose)
-  }
-
-  function shortcutControl(): HTMLElement {
-    const key = 'shortcuts.toggleWindow'
-    const current = settings.current().shortcuts.toggleWindow
-    const button = h(
-      'button',
-      { type: 'button', class: 'srecord', 'data-focus': 'set-record', disabled: disabled(key) },
-      recording ? t('settings.recording') : t('settings.record'),
-    )
-    button.addEventListener('click', () => (recording ? stopRecording() : startRecording()))
-    return h('span', { class: 'sshortcut' }, keyCaps(deps.keymap.accelerator(current)), button)
-  }
-
-  function startRecording() {
-    recording = true
-    inputGate.blocked = true
-    errors.delete('shortcuts.toggleWindow')
-    window.addEventListener('keydown', onRecordKey, true)
-    render()
-  }
-
-  function stopRecording() {
-    recording = false
-    inputGate.blocked = false
-    window.removeEventListener('keydown', onRecordKey, true)
-    render()
-  }
-
-  function onRecordKey(event: KeyboardEvent) {
-    event.preventDefault()
-    event.stopPropagation()
-    const result = acceleratorFromEvent(event)
-    if (result.type === 'pending') return
-    if (result.type === 'cancel') return stopRecording()
-    if (result.type === 'invalid') {
-      errors.set(
-        'shortcuts.toggleWindow',
-        t(result.reason === 'unsupported' ? 'settings.unsupported' : needsModifier),
-      )
-      return render()
-    }
-    recording = false
-    inputGate.blocked = false
-    window.removeEventListener('keydown', onRecordKey, true)
-    void commit(patchFor('shortcuts.toggleWindow', result.value), 'shortcuts.toggleWindow')
   }
 
   async function changeAutostart(checked: boolean) {
@@ -714,6 +651,8 @@ export function createSettingsView(
           h('div', { class: 'srow2' }, h('span', { class: 'shint' }, t('connections.empty'))),
         ),
       )
+    // Said once for every account instead of under each token
+    else sections.push(h('p', { class: 'shint sfoot' }, t('connections.keyring')))
     return sections
   }
 
@@ -759,6 +698,7 @@ export function createSettingsView(
 
   function selectTab(id: TabId, focus = false) {
     focusNext = undefined
+    shortcuts.reset()
     activeTab = id
     confirmingReset = false
     render()
@@ -834,16 +774,27 @@ export function createSettingsView(
   const group = (title: string | undefined, ...rows: Child[]) =>
     h('section', { class: 'sgroup' }, title && h('h2', {}, title), ...rows)
 
+  const shortcuts = createShortcutsPage({
+    settings,
+    keymap: deps.keymap,
+    i18n,
+    errors,
+    notes,
+    row: (key, label, control, hint) => row(key, label, control, hint),
+    labelId,
+    disabled,
+    commit,
+    render,
+    focusNext: (target) => {
+      focusNext = target
+    },
+  })
+
   function render() {
     const pending = focusNext
     const focused = pending ?? document.activeElement?.getAttribute('data-focus')
     focusNext = undefined
     const value = settings.current()
-    const holdTrigger = value.shortcuts.holdTrigger ?? deps.keymap.holdTrigger
-    // The desktop takes Super for itself on Linux and Windows; a value already in the file stays listed
-    const holdOptions = HOLD_TRIGGERS.filter(
-      (id) => mac || id !== 'MetaRight' || id === holdTrigger,
-    ).map((id) => [id, t(`settings.holdTrigger.${mac ? 'mac.' : ''}${id}` as const)] as const)
 
     const resetAll = h(
       'button',
@@ -861,9 +812,20 @@ export function createSettingsView(
         return render()
       }
       confirmingReset = false
-      // Left out: a reset must not disconnect an account or turn a disabled extension back on
+      shortcuts.reset()
+      // Left out: a reset must not disconnect an account or turn a disabled extension back on. The custom
+      // keys are removed one by one, since a patch merges a map rather than replacing it
+      const keys = Object.keys(value.shortcuts.keys).map((id) => [id, null])
       void commit(
-        { ...defaultSettings, connections: undefined, extensions: undefined } as SettingsPatch,
+        {
+          ...defaultSettings,
+          shortcuts: {
+            ...defaultSettings.shortcuts,
+            ...shortcutKeysPatch(Object.fromEntries(keys)).shortcuts,
+          },
+          connections: undefined,
+          extensions: undefined,
+        } as SettingsPatch,
         'shortcuts.toggleWindow',
       ).then(render)
     })
@@ -992,30 +954,7 @@ export function createSettingsView(
           ),
         ),
       ],
-      shortcuts: [
-        group(
-          undefined,
-          row(
-            'shortcuts.toggleWindow',
-            t('settings.toggleWindow'),
-            shortcutControl(),
-            t(mac ? 'settings.toggleWindow.hint.mac' : 'settings.toggleWindow.hint'),
-          ),
-          row(
-            'shortcuts.holdTrigger',
-            t('settings.holdTrigger'),
-            select('shortcuts.holdTrigger', holdOptions, holdTrigger),
-          ),
-        ),
-        h(
-          'section',
-          { class: 'sgroup' },
-          h('h2', {}, t('settings.group.reference')),
-          ...reference(deps.keymap).map(([label, keys]) =>
-            h('div', { class: 'sref' }, h('span', {}, t(label as never)), keyCaps(keys)),
-          ),
-        ),
-      ],
+      shortcuts: shortcuts.groups(),
       projects: [
         group(
           undefined,
@@ -1118,14 +1057,16 @@ export function createSettingsView(
 
   function closeView() {
     focusNext = undefined
-    if (recording) stopRecording()
+    shortcuts.reset()
     drafts.clear()
     overlay.classList.remove('open')
     deps.onClose()
   }
 
   overlay.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !recording) {
+    if (event.key !== 'Escape') return
+    if (shortcuts.escape()) event.preventDefault()
+    else if (!shortcuts.busy()) {
       event.preventDefault()
       event.stopPropagation()
       closeView()

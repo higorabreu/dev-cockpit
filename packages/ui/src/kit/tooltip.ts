@@ -43,8 +43,13 @@ function isTruncated(element: HTMLElement): boolean {
   return style.textOverflow === 'ellipsis' && element.scrollWidth > element.clientWidth + 1
 }
 
+// The key of an interface action for `data-tip-shortcut`, asked when the tooltip shows, so it follows a
+// key the user changed; set once by installTooltips
+let shortcutLabel: (id: string) => string | undefined = () => undefined
+
 const tipOf = (anchor: HTMLElement, text: string): Candidate => {
-  const key = anchor.getAttribute('data-tip-key')
+  const action = anchor.getAttribute('data-tip-shortcut')
+  const key = anchor.getAttribute('data-tip-key') ?? (action ? shortcutLabel(action) : undefined)
   return key ? { anchor, text, key } : { anchor, text }
 }
 
@@ -74,7 +79,12 @@ function tipLine(text: string): HTMLElement {
   return line
 }
 
-export function installTooltips() {
+export interface TooltipOptions {
+  shortcutLabel?(id: string): string | undefined
+}
+
+export function installTooltips(options: TooltipOptions = {}) {
+  shortcutLabel = options.shortcutLabel ?? (() => undefined)
   const tip = document.createElement('div')
   tip.id = 'tooltip'
   tip.setAttribute('role', 'tooltip')

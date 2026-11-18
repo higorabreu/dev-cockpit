@@ -172,11 +172,10 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     h('button', { type: 'button', class: 'rv-icon', ...extra }, icon(svg, size))
   const indexToggle = iconButton(ICONS.index, 16, { 'aria-controls': `${deps.id}-files` })
   const whitespace = iconButton(ICONS.whitespace, 16, { 'aria-pressed': 'false' })
-  const layout = iconButton(ICONS.stacked, 16, {
-    'data-tip-key': deps.keymap.label('reviewLayout'),
-  })
+  // The keys the user can change are asked of the keymap when the tooltip shows
+  const layout = iconButton(ICONS.stacked, 16, { 'data-tip-shortcut': 'reviewLayout' })
   const back = iconButton(ICONS.terminal, 16, { 'data-tip-key': 'Esc' })
-  const close = iconButton(ICONS.close, 14, { 'data-tip-key': deps.keymap.label('review') })
+  const close = iconButton(ICONS.close, 14, { 'data-tip-shortcut': 'review' })
   back.hidden = true
   layout.hidden = true
   const head = h(
@@ -217,7 +216,6 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const sender = createReviewSend({
     api,
     i18n,
-    keymap: deps.keymap,
     comments,
     root: () => root,
     cwd: deps.cwd,
@@ -587,7 +585,8 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     const withFiles = state.kind === 'ok' && state.diff.files.length > 0
     // In the comment field only its own keys apply
     const typing = document.activeElement instanceof HTMLTextAreaElement && focusInside
-    const key = `${withFiles} ${focusInside} ${typing}`
+    // The review's key is in it too: the user may have changed it since the last drawing
+    const key = `${withFiles} ${focusInside} ${typing} ${deps.keymap.label('review')}`
     if (hintsFor === key) return
     hintsFor = key
     if (!focusInside) {
@@ -933,6 +932,8 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       drawStatic()
       draw()
     },
+    // The user changed a key: the hints that show it are drawn again
+    keysChanged: () => drawHints(),
   }
   let lastFocus: 'index' | 'diff' = 'diff'
   list.element.addEventListener('focus', () => {

@@ -2,7 +2,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { installTooltips } from './tooltip.ts'
 
-installTooltips()
+// The key of the new tab action, as the keymap would give it after the user changed it
+let newTabKey = 'Ctrl+Shift+T'
+installTooltips({ shortcutLabel: (id) => (id === 'newTab' ? newTabKey : undefined) })
 
 afterEach(() => {
   vi.useRealTimers()
@@ -48,5 +50,22 @@ describe('installTooltips', () => {
     const lines = [...(tip?.querySelectorAll('.tip-line') ?? [])].map((line) => line.textContent)
     expect(lines).toEqual(['Fix the parser', 'Add a fallback', '+ 2 more'])
     expect(tip?.hasAttribute('data-lines')).toBe(true)
+  })
+
+  it('should show the key the action has now when the tooltip names an action', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const button = document.createElement('button')
+    button.dataset.tip = 'New tab'
+    button.dataset.tipShortcut = 'newTab'
+    document.body.append(button)
+    newTabKey = 'Ctrl+Alt+N'
+
+    // Act
+    button.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    vi.advanceTimersByTime(500)
+
+    // Assert
+    expect(document.getElementById('tooltip')?.textContent).toBe('New tabCtrl+Alt+N')
   })
 })

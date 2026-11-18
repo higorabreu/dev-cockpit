@@ -42,6 +42,13 @@ export function keysMarkup(label: string, size: KeysSize = 'regular'): string {
   return `<kbd class="keys${size === 'compact' ? ' compact' : ''}">${chords.join(' ')}</kbd>`
 }
 
+// One cap with a name that may hold spaces ("Right Ctrl"), which `keys` would read as two keys
+export function keyCap(name: string): HTMLElement {
+  const holder = document.createElement('span')
+  holder.innerHTML = `<kbd class="keys"><span class="kchord"><kbd class="key">${escapeHtml(name)}</kbd></span></kbd>`
+  return holder.firstElementChild as HTMLElement
+}
+
 export function keys(label: string, size: KeysSize = 'regular'): HTMLElement {
   const holder = document.createElement('span')
   holder.innerHTML = keysMarkup(label, size)

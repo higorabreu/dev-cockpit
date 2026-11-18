@@ -147,6 +147,9 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
       panes.delete(tabId)
       parked.delete(tabId)
     },
+    keysChanged() {
+      for (const pane of [...panes.values(), ...parked.values()]) pane.keysChanged()
+    },
     retranslate() {
       for (const pane of [...panes.values(), ...parked.values()]) pane.retranslate()
     },
