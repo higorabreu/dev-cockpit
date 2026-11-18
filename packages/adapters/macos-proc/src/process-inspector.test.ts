@@ -168,7 +168,7 @@ describe('createProcessInspector', () => {
   })
 
   it('should answer each batch with its own output when two batches overlap', async () => {
-    let release = () => undefined as void
+    let release: () => void = () => undefined
     const held = new Promise<void>((resolve) => {
       release = resolve
     })

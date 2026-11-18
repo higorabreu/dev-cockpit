@@ -12,7 +12,6 @@ import {
   defaultSettings,
   duplicateLabel,
   emptyTabs,
-  formatDuration,
   type HostApi,
   holdsMiddleButton,
   JIRA_CONNECTOR,
