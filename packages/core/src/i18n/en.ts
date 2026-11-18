@@ -566,4 +566,5 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-UPD-003': 'No package for this system in the release',
   'error.DCK-UPD-004': 'The download of the update failed',
   'error.DCK-UPD-005': 'Checksum mismatch, update refused',
+  'error.DCK-UPD-006': 'The update could not be installed',
 }

@@ -228,5 +228,10 @@
     "category": "internal",
     "retryable": false,
     "rpc": -32042
+  },
+  "DCK-UPD-006": {
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32043
   }
 }

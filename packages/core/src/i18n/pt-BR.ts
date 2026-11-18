@@ -567,6 +567,7 @@ export const ptBR = {
   'error.DCK-UPD-003': 'A versão não tem pacote para este sistema',
   'error.DCK-UPD-004': 'O download da atualização falhou',
   'error.DCK-UPD-005': 'Checksum não confere, atualização recusada',
+  'error.DCK-UPD-006': 'Não foi possível instalar a atualização',
 } as const
 
 export type MessageKey = keyof typeof ptBR
