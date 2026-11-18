@@ -52,7 +52,7 @@ import { createSessionsSection } from './panel/sessions-section.ts'
 import { createSplitPreferences } from './panes/split-preferences.ts'
 import { createTabView, type TabView } from './panes/tab-view.ts'
 import { applyAppearance, loadFont, terminalLook } from './platform/appearance.ts'
-import { createKeymap, keyboardFor } from './platform/keymap.ts'
+import { createKeymap, keyboardFor, type TabTarget } from './platform/keymap.ts'
 import { bindShortcuts } from './platform/shortcuts.ts'
 import { applyTheme, themeFor, watchSystemTheme } from './platform/theme.ts'
 import { createProjectSearch } from './projects/project-search.ts'
@@ -566,6 +566,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       fontSize: settings.current().fontSize,
       holdFit: () => heldFit,
       ...terminalLook(settings.current(), systemFonts),
+      macOptionAsMeta: settings.current().terminal.macOptionAsMeta,
       ...(options.cwd ? { cwd: options.cwd } : {}),
       exitedText: i18n.t('terminal.exited'),
       nativeMiddlePaste,
@@ -695,7 +696,12 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     }
     if (changed.some((key) => key.startsWith('appearance.')))
       applyAppearance(document.documentElement, next.appearance)
-    if (changed.some((key) => key.startsWith('terminal.'))) void applyTerminalLook()
+    if (changed.includes('terminal.macOptionAsMeta')) {
+      for (const session of sessions.values())
+        session.setOptionAsMeta(next.terminal.macOptionAsMeta)
+    }
+    const look = changed.filter((key) => key !== 'terminal.macOptionAsMeta')
+    if (look.some((key) => key.startsWith('terminal.'))) void applyTerminalLook()
     // The layout or a kept share changed, here or in another window; a new font changes the columns
     if (changed.includes('fontSize') || changed.some((key) => key.startsWith('review.'))) {
       for (const view of tabViews.values()) view.relayout()
@@ -784,13 +790,15 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     renameTab: () => state.activeId && tabBar.rename(state.activeId),
     nextTab: () => update(stepTab(state, 1)),
     previousTab: () => update(stepTab(state, -1)),
-    goToTab: (index: number) => update(activateTabAt(state, index)),
+    goToTab: (target: TabTarget) =>
+      update(activateTabAt(state, target === 'last' ? state.tabs.length - 1 : target)),
     toggleTheme,
     openSettings: () => settingsView.open(),
     openViews: () => void viewsView.open(),
     searchProjects,
     togglePanel,
     toggleFullHeight: () => api.window.toggleFullHeight(),
+    clearTerminal: () => activeSession()?.clear(),
     nextFinished() {
       const id = attention.nextUnseen(state.activeId)
       if (id) update(activateTab(state, id))
@@ -817,6 +825,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     'tab:finished': actions.nextFinished,
     'tab:review': actions.toggleReview,
     'tab:review-layout': actions.toggleReviewLayout,
+    'tab:clear': actions.clearTerminal,
     'agent:claude': () => activeSession()?.write('claude\r'),
     'agent:resume': () => activeSession()?.write('claude --resume\r'),
     [CONNECT_ITEM]: () => state.activeId && connectTab(state.activeId),
@@ -859,6 +868,11 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
             id: 'tab:review-layout',
             label: i18n.t('review.layout.toggle'),
             shortcut: keymap.label('reviewLayout'),
+          },
+          {
+            id: 'tab:clear',
+            label: i18n.t('terminal.clear'),
+            shortcut: keymap.label('clearTerminal'),
           },
         ],
       },

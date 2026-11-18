@@ -1,10 +1,12 @@
-import type { CursorStyle, HostApi, PaneGrid, ProgramStatus } from '@dck/core'
+import type { CursorStyle, HostApi, MacOptionAsMeta, PaneGrid, ProgramStatus } from '@dck/core'
 import type { ThemeName } from '@dck/design'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import type { Keymap } from '../platform/keymap.ts'
 import { terminalTheme } from '../platform/theme.ts'
 import { attachClipboard } from './clipboard-behavior.ts'
+import { attachLineEditing } from './line-editing.ts'
+import { attachOptionKeys } from './option-key.ts'
 import { attachProgramStatus } from './program-status.ts'
 import { attachDrop } from './terminal-drop.ts'
 import { attachLinks, type LinkOptions } from './terminal-links.ts'
@@ -28,6 +30,10 @@ export interface TerminalSession {
   // A CSS font-family list, the chosen family first
   setFontFamily(family: string): void
   setCursor(style: CursorStyle, blink: boolean): void
+  // Which Option key is Meta; xterm reads it only on a Mac
+  setOptionAsMeta(mode: MacOptionAsMeta): void
+  // Empties the screen and the scrollback, keeping the prompt's line, as VS Code's clear does
+  clear(): void
   dispose(): void
 }
 
@@ -41,6 +47,7 @@ export interface SessionOptions {
   readonly fontFamily: string
   readonly cursorStyle: CursorStyle
   readonly cursorBlink: boolean
+  readonly macOptionAsMeta: MacOptionAsMeta
   readonly cwd?: string
   readonly exitedText: string
   // How a file or folder path printed in the terminal opens; the host checks it on disk
@@ -72,8 +79,10 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     cursorStyle: options.cursorStyle,
     cursorBlink: options.cursorBlink,
     allowTransparency: true,
-    // Option+B and Option+F move by word as in the shell; xterm reads it only on a Mac
+    // Option+B and Option+F move by word as in the shell; on a Mac option-key.ts sets it for each key
     macOptionIsMeta: true,
+    // Option+drag selects text even in a program that takes the mouse (vim, htop), as in Terminal.app
+    macOptionClickForcesSelection: true,
     theme: terminalTheme(options.theme),
   })
   const fit = new FitAddon()
@@ -90,7 +99,14 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     nativeMiddlePaste: options.nativeMiddlePaste,
     keymap: options.keymap,
   })
-  terminal.attachCustomKeyEventHandler(clipboard.onKey)
+  const mac = options.keymap.keyboard === 'mac'
+  const optionKeys = mac ? attachOptionKeys(terminal, options.macOptionAsMeta) : undefined
+  if (optionKeys) terminal.textarea?.addEventListener('blur', optionKeys.reset)
+  // Each handler sees the key until one keeps it from xterm; the Option switch comes first, for every key
+  const keyHandlers = [clipboard.onKey]
+  if (optionKeys) keyHandlers.unshift(optionKeys.onKey)
+  if (mac) keyHandlers.push(attachLineEditing(terminal, () => options.onInput?.()))
+  terminal.attachCustomKeyEventHandler((event) => keyHandlers.every((handler) => handler(event)))
   const drop = attachDrop(element, {
     pathOf: (file) => api.files.pathOf(file),
     paste: (text) => terminal.paste(text),
@@ -186,6 +202,8 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
       terminal.options.cursorStyle = style
       terminal.options.cursorBlink = blink
     },
+    setOptionAsMeta: (mode) => optionKeys?.setMode(mode),
+    clear: () => terminal.clear(),
     dispose() {
       stopData()
       stopExit()

@@ -10,7 +10,13 @@ import type { SettingsFileState } from './settings-file.ts'
 
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
 export const THEMES = ['dark', 'light', 'system'] as const
-export const HOLD_TRIGGERS = ['ControlRight', 'ControlLeft', 'AltRight', 'AltLeft'] as const
+export const HOLD_TRIGGERS = [
+  'ControlRight',
+  'ControlLeft',
+  'AltRight',
+  'AltLeft',
+  'MetaRight',
+] as const
 export type HoldTrigger = (typeof HOLD_TRIGGERS)[number]
 
 export const LIMITS = {
@@ -99,6 +105,9 @@ const reviewBasesSchema = z.preprocess(
 
 export const CURSOR_STYLES = ['block', 'bar', 'underline'] as const
 export type CursorStyle = (typeof CURSOR_STYLES)[number]
+// Which Option key the terminal reads as Meta on a Mac keyboard; the other one types characters
+export const MAC_OPTION_AS_META = ['left', 'both', 'none'] as const
+export type MacOptionAsMeta = (typeof MAC_OPTION_AS_META)[number]
 
 // A family name, or null for the default; anything else goes back to the default
 const fontName = z.string().trim().refine(isFontName).nullable().catch(null)
@@ -120,6 +129,7 @@ export const settingsSchema = z.preprocess(
       fontFamily: fontName,
       cursorStyle: z.enum(CURSOR_STYLES).catch('block'),
       cursorBlink: z.boolean().catch(true),
+      macOptionAsMeta: z.enum(MAC_OPTION_AS_META).catch('left'),
     }),
     window: section({
       heightRatio: bounded(LIMITS.heightRatio.min, LIMITS.heightRatio.max, 0.5),

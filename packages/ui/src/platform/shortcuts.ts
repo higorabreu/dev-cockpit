@@ -1,5 +1,5 @@
 import { inputGate } from './input-gate.ts'
-import type { Keymap, ShortcutId } from './keymap.ts'
+import type { Keymap, ShortcutId, TabTarget } from './keymap.ts'
 
 export interface ShortcutActions {
   newTab(): void
@@ -10,7 +10,7 @@ export interface ShortcutActions {
   sendReview(): void
   nextTab(): void
   previousTab(): void
-  goToTab(index: number): void
+  goToTab(target: TabTarget): void
   toggleTheme(): void
   openSettings(): void
   openViews(): void
@@ -19,6 +19,7 @@ export interface ShortcutActions {
   toggleFullHeight(): void
   changeOpacity(direction: 1 | -1): void
   changeFontSize(delta: number | 'reset'): void
+  clearTerminal(): void
 }
 
 // Listened for in the capture phase: the app's keys never reach the shell
@@ -43,6 +44,7 @@ export function bindShortcuts(actions: ShortcutActions, keymap: Keymap): () => v
     ['fontBigger', () => actions.changeFontSize(1)],
     ['fontSmaller', () => actions.changeFontSize(-1)],
     ['fontReset', () => actions.changeFontSize('reset')],
+    ['clearTerminal', actions.clearTerminal],
   ]
   const handle = (event: KeyboardEvent) => {
     if (inputGate.blocked) return

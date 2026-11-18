@@ -18,7 +18,7 @@ make Linux worse.
 | --- | --- | --- |
 | Q1 | Where does CI on macOS run? | **Resolved:** the repository is on GitHub, so macOS CI runs on GitHub Actions |
 | Q2 | Default key on the Mac. F12 is volume or a system function on a Mac and only arrives as F12 with `fn` or with "use F1, F2 as standard function keys" on | **Resolved (D42):** `F12` on every platform, `fn+F12` on a Mac keyboard; no per-platform default |
-| Q3 | Tab and copy shortcuts: Cmd or Ctrl? | **Resolved (D51):** Cmd where Terminal.app and VS Code use it (`⌘T`, `⌘W`, `⌘C/V`, `⌘1..9`, `⌘,`), `⇧⌘` for the cockpit's own keys, `⌃⌘F` for the full height; Ctrl stays free for the shell, and the hold menu key defaults to the right Option |
+| Q3 | Tab and copy shortcuts: Cmd or Ctrl? | **Resolved (D51):** Cmd where Terminal.app and VS Code use it (`⌘T`, `⌘W`, `⌘C/V`, `⌘1..9`, `⌘,`), `⇧⌘` for the cockpit's own keys, `⌃⌘F` for the full height; Ctrl stays free for the shell, and the hold menu key defaults to the right Option (the right Command since D68) |
 | Q4 | Distribution: only the tester (ad hoc signing) or other people (Developer ID and notarization, US$ 99 a year)? | Only the tester for now. Notarization is MAC-T14, optional |
 
 Q2 and Q3 affect visible behavior, so they are settled before MAC-T4 and MAC-T7. The other tasks do not

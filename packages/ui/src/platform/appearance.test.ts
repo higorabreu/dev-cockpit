@@ -49,7 +49,12 @@ describe('terminalLook', () => {
     // Arrange
     const settings = {
       ...defaultSettings,
-      terminal: { fontFamily: 'Hack', cursorStyle: 'bar' as const, cursorBlink: false },
+      terminal: {
+        ...defaultSettings.terminal,
+        fontFamily: 'Hack',
+        cursorStyle: 'bar' as const,
+        cursorBlink: false,
+      },
     }
 
     // Act

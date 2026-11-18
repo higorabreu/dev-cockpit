@@ -73,6 +73,22 @@ describe('createLinuxSystemFonts', () => {
     })
   })
 
+  it("should name the font behind GNOME's Monospace alias when that is the system's setting", async () => {
+    // Arrange
+    const fonts = createLinuxSystemFonts(
+      system({
+        'gsettings get org.gnome.desktop.interface monospace-font-name': "'Monospace 11'\n",
+        'fc-match -f %{family[0]} monospace': 'DejaVu Sans Mono',
+      }),
+    )
+
+    // Act
+    const info = await fonts.read()
+
+    // Assert
+    expect(info.monospace).toBe('DejaVu Sans Mono')
+  })
+
   it('should know nothing when no command answers', async () => {
     expect(await createLinuxSystemFonts(async () => undefined).read()).toEqual({
       families: [],

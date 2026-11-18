@@ -171,7 +171,22 @@ describe('settings view selects', () => {
     view.close()
   })
 
-  it('should hold the right Option by default with no reset when the keyboard is a Mac one', () => {
+  it('should show the global key in the Mac symbols with the fn hint when the keyboard is a Mac one', () => {
+    // Arrange
+    const chosen = mergeSettings(defaultSettings, { shortcuts: { toggleWindow: 'Super+Alt+K' } })
+    const { body, view } = open([], api, chosen, 'mac')
+
+    // Act
+    body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
+
+    // Assert
+    const row = body.querySelector<HTMLElement>('[data-setting="shortcuts.toggleWindow"]')
+    expect(row?.querySelector('.sshortcut .keys')?.textContent).toBe('⌥⌘K')
+    expect(row?.querySelector('.shint')?.textContent).toContain('fn')
+    view.close()
+  })
+
+  it('should hold the right Command by default with no reset when the keyboard is a Mac one', () => {
     // Arrange
     const { body, combobox, view } = open([], api, undefined, 'mac')
 
@@ -181,11 +196,31 @@ describe('settings view selects', () => {
     // Assert
     expect(
       combobox('shortcuts.holdTrigger').querySelector('[data-current="true"]')?.textContent,
-    ).toBe('Right Option')
+    ).toBe('Right Command')
     expect(
       body.querySelector<HTMLElement>('.sreset[data-key="shortcuts.holdTrigger"]')?.hidden,
     ).toBe(true)
     view.close()
+  })
+
+  it('should offer the right Super only when the file already holds it on a PC keyboard', () => {
+    // Arrange
+    const chosen = mergeSettings(defaultSettings, { shortcuts: { holdTrigger: 'MetaRight' } })
+    const labels = (initial?: Settings) => {
+      const { body, combobox, view } = open([], api, initial)
+      body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
+      const found = [...combobox('shortcuts.holdTrigger').querySelectorAll('.select-value > span')]
+      view.close()
+      return found.map((element) => element.textContent)
+    }
+
+    // Act
+    const fresh = labels()
+    const kept = labels(chosen)
+
+    // Assert
+    expect(fresh).toEqual(['Right Ctrl', 'Left Ctrl', 'Right Alt', 'Left Alt'])
+    expect(kept).toContain('Right Super')
   })
 
   it('should name each select by its row label when the screen is drawn', () => {
@@ -920,6 +955,25 @@ describe('settings view fonts and cursor', () => {
     expect(combobox('terminal.fontFamily').querySelector('[data-current]')?.textContent).toBe(
       'Hack',
     )
+    view.close()
+  })
+
+  it('should save which Option is Meta from the Terminal group when the keyboard is a Mac one', async () => {
+    // Arrange
+    const { combobox, patches, view } = open([], api, undefined, 'mac')
+    const option = combobox('terminal.macOptionAsMeta')
+    const shown = option.querySelector('[data-current="true"]')?.textContent
+    option.focus()
+
+    // Act
+    press(option, 'Enter')
+    press(option, 'ArrowDown')
+    press(option, 'Enter')
+    await settle()
+
+    // Assert
+    expect(shown).toBe('Left Option')
+    expect(patches).toEqual([{ terminal: { macOptionAsMeta: 'both' } }])
     view.close()
   })
 

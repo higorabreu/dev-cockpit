@@ -28,6 +28,7 @@ describe('createKeymap labels', () => {
     ['reviewSend', 'Ctrl+Shift+Enter', '⇧⌘Enter'],
     ['fullHeight', 'F11', '⌃⌘F'],
     ['opacityUp', 'Ctrl+Shift+↑', '⇧⌘↑'],
+    ['clearTerminal', 'Ctrl+Shift+K', '⌘K'],
   ] as const)('should label %s as %s on a PC and %s on a Mac', (id, onPc, onMac) => {
     expect(pc.label(id)).toBe(onPc)
     expect(mac.label(id)).toBe(onMac)
@@ -90,8 +91,16 @@ describe('createKeymap tabIndex', () => {
     expect(createKeymap('mac').tabIndex(key('¡', { altKey: true, code: 'Digit1' }))).toBeUndefined()
   })
 
-  it('should go to the ninth tab with Alt+9 when the keyboard is a PC one', () => {
-    expect(createKeymap('pc').tabIndex(key('9', { altKey: true, code: 'Digit9' }))).toBe(8)
+  it('should go to the eighth tab with Alt+8 when the keyboard is a PC one', () => {
+    expect(createKeymap('pc').tabIndex(key('8', { altKey: true, code: 'Digit8' }))).toBe(7)
+  })
+
+  it('should go to the last tab with Alt+9 when the keyboard is a PC one', () => {
+    expect(createKeymap('pc').tabIndex(key('9', { altKey: true, code: 'Digit9' }))).toBe('last')
+  })
+
+  it('should go to the last tab with Cmd+9 when the keyboard is a Mac one', () => {
+    expect(createKeymap('mac').tabIndex(key('9', { metaKey: true, code: 'Digit9' }))).toBe('last')
   })
 
   it('should read the physical key when Option on a Mac keyboard turns 1 into another character', () => {
@@ -100,6 +109,26 @@ describe('createKeymap tabIndex', () => {
 
   it('should read the digit from the physical key when the layout types a symbol there', () => {
     expect(createKeymap('pc').tabIndex(key('&', { altKey: true, code: 'Digit1' }))).toBe(0)
+  })
+})
+
+describe('createKeymap accelerator', () => {
+  it.each([
+    ['Super+Alt+K', '⌥⌘K'],
+    ['Ctrl+Shift+Space', '⌃⇧Space'],
+    ['CommandOrControl+Option+Up', '⌥⌘↑'],
+    ['F12', 'F12'],
+    ['Super+F12', '⌘F12'],
+  ])('should write %s as %s when the keyboard is a Mac one', (value, label) => {
+    expect(createKeymap('mac').accelerator(value)).toBe(label)
+  })
+
+  it('should leave a key with a name it does not know as written when the keyboard is a Mac one', () => {
+    expect(createKeymap('mac').accelerator('Hyper+K')).toBe('Hyper+K')
+  })
+
+  it('should write the key as Electron does when the keyboard is a PC one', () => {
+    expect(createKeymap('pc').accelerator('Super+Alt+K')).toBe('Super+Alt+K')
   })
 })
 
@@ -117,7 +146,7 @@ describe('keyboardFor', () => {
 })
 
 describe('createKeymap per keyboard', () => {
-  it('should open links with Cmd and hold the right Option when the keyboard is a Mac one', () => {
+  it('should open links with Cmd and hold the right Command when the keyboard is a Mac one', () => {
     // Act
     const mac = createKeymap('mac')
 
@@ -125,7 +154,7 @@ describe('createKeymap per keyboard', () => {
     expect([mac.click.modifier, mac.click.label, mac.holdTrigger]).toEqual([
       'meta',
       '⌘',
-      'AltRight',
+      'MetaRight',
     ])
     expect(mac.click.isHeld({ ctrlKey: true, metaKey: false })).toBe(false)
   })

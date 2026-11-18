@@ -60,6 +60,7 @@ const reference = (keymap: Keymap): ReadonlyArray<readonly [string, string]> => 
   ['tabs.close', keymap.label('closeTab')],
   ['tabs.next', keymap.label('nextTab')],
   ['tabs.previous', keymap.label('previousTab')],
+  ['terminal.clear', keymap.label('clearTerminal')],
   ['projects.search', keymap.label('projects')],
   ['views.open', keymap.label('views')],
   ['menu.system.panel', keymap.label('panel')],
@@ -430,7 +431,7 @@ export function createSettingsView(
       recording ? t('settings.recording') : t('settings.record'),
     )
     button.addEventListener('click', () => (recording ? stopRecording() : startRecording()))
-    return h('span', { class: 'sshortcut' }, keyCaps(current), button)
+    return h('span', { class: 'sshortcut' }, keyCaps(deps.keymap.accelerator(current)), button)
   }
 
   function startRecording() {
@@ -838,9 +839,11 @@ export function createSettingsView(
     const focused = pending ?? document.activeElement?.getAttribute('data-focus')
     focusNext = undefined
     const value = settings.current()
-    const holdOptions = HOLD_TRIGGERS.map(
-      (id) => [id, t(`settings.holdTrigger.${mac ? 'mac.' : ''}${id}` as const)] as const,
-    )
+    const holdTrigger = value.shortcuts.holdTrigger ?? deps.keymap.holdTrigger
+    // The desktop takes Super for itself on Linux and Windows; a value already in the file stays listed
+    const holdOptions = HOLD_TRIGGERS.filter(
+      (id) => mac || id !== 'MetaRight' || id === holdTrigger,
+    ).map((id) => [id, t(`settings.holdTrigger.${mac ? 'mac.' : ''}${id}` as const)] as const)
 
     const resetAll = h(
       'button',
@@ -942,6 +945,18 @@ export function createSettingsView(
             ]),
           ),
           row('terminal.cursorBlink', t('settings.cursorBlink'), checkbox('terminal.cursorBlink')),
+          // xterm reads the switch only on a Mac, so another keyboard has nothing to choose
+          mac &&
+            row(
+              'terminal.macOptionAsMeta',
+              t('settings.macOptionAsMeta'),
+              select('terminal.macOptionAsMeta', [
+                ['left', t('settings.macOptionAsMeta.left')],
+                ['both', t('settings.macOptionAsMeta.both')],
+                ['none', t('settings.macOptionAsMeta.none')],
+              ]),
+              t('settings.macOptionAsMeta.hint'),
+            ),
         ),
         group(
           t('settings.group.window'),
@@ -984,16 +999,12 @@ export function createSettingsView(
             'shortcuts.toggleWindow',
             t('settings.toggleWindow'),
             shortcutControl(),
-            t('settings.toggleWindow.hint'),
+            t(mac ? 'settings.toggleWindow.hint.mac' : 'settings.toggleWindow.hint'),
           ),
           row(
             'shortcuts.holdTrigger',
             t('settings.holdTrigger'),
-            select(
-              'shortcuts.holdTrigger',
-              holdOptions,
-              value.shortcuts.holdTrigger ?? deps.keymap.holdTrigger,
-            ),
+            select('shortcuts.holdTrigger', holdOptions, holdTrigger),
           ),
         ),
         h(

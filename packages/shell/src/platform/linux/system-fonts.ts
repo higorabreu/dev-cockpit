@@ -63,14 +63,17 @@ async function terminalFont(run: RunCommand): Promise<string | undefined> {
   return undefined
 }
 
+// GNOME's own default names fontconfig's alias, not a font: the screen shows the font it stands for
+const ALIASES = new Set(['monospace', 'mono'])
+
 async function monospaceFont(run: RunCommand): Promise<string | undefined> {
   const gnome = unquote(
     await run('gsettings', ['get', 'org.gnome.desktop.interface', 'monospace-font-name']),
   )
   const family = gnome ? familyFromDescription(gnome) : undefined
-  if (family) return family
+  if (family && !ALIASES.has(family.toLowerCase())) return family
   const matched = (await run('fc-match', ['-f', '%{family[0]}', 'monospace']))?.trim()
-  return matched && isFontName(matched) ? matched : undefined
+  return matched && isFontName(matched) ? matched : family
 }
 
 // The fonts that draw the prompt symbols, the ones made only for that first (Symbols Nerd Font), then the

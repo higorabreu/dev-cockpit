@@ -746,21 +746,23 @@ nothing: the main process grew by what the GPU process lost.
 ## D51. On the Mac the cockpit's keys use Cmd where the Mac does, and Ctrl stays with the shell
 
 **Decision:** Q3 of [plans/macos.md](../plans/macos.md). One keymap per keyboard (`ui/src/platform/keymap.ts`,
-chosen by `keyboardFor(navigator.platform)`) both matches the keys and writes every label, so a tooltip,
-the hold menu and the reference in Settings never disagree with the key. On a Mac: `⌘T` and `⌘W` open and
-close a tab, `⌘1` to `⌘9` go to a tab, `⌃Tab` and `⌃⇧Tab` or `⇧⌘]` and `⇧⌘[` move between tabs, `⌘,`
-opens Settings, `⌘=`, `⌘−` and `⌘0` change the font, the cockpit's own keys are `⇧⌘` and the letter they
-have with `Ctrl+Shift` elsewhere (`⇧⌘D` the review, `⇧⌘P` the projects), the full height is `⌃⌘F`
-(F11 shows the desktop on a Mac) and the keys inside a panel are `⌘D`, `⌘R`, `⌘P` and `⌘C`. Labels use the
-Mac's symbols in its order (`⇧⌘D`). The app menu gains the system Edit menu, so `⌘C`, `⌘V`, `⌘X`, `⌘A`
-and `⌘Z` work in fields and in the terminal, where `Ctrl+Shift+C` and `V` stay a PC key and Ctrl goes to the
-shell; Option is Meta in the terminal (`⌥B`, `⌥F`). A chord with Alt
-reads the physical key, since Option changes the character (`⌥1` types `¡`); the global key recorder does
-the same. MacBook keyboards have no right Control, so `shortcuts.holdTrigger` stays null until the user picks
-a key and the keymap gives each keyboard its own: the right Option on a Mac, the right Ctrl elsewhere; a key
-the user chose is kept. The keymap also gives the click modifier for links and paths (`⌘` on a Mac).
+chosen by `keyboardFor(navigator.platform)`) both matches the keys and writes every label, so a tooltip, the
+hold menu and the reference in Settings never disagree with the key. On a Mac: `⌘T` and `⌘W` open and close a
+tab, `⌘1` to `⌘8` go to a tab and `⌘9` to the last one (D68), `⌃Tab` and `⌃⇧Tab` or `⇧⌘]` and `⇧⌘[` move
+between tabs, `⌘,` opens Settings, `⌘=`, `⌘−` and `⌘0` change the font, the cockpit's own keys are `⇧⌘` and
+the letter they have with `Ctrl+Shift` elsewhere (`⇧⌘D` the review, `⇧⌘P` the projects), the full height is
+`⌃⌘F` (F11 shows the desktop on a Mac) and the keys inside a panel are `⌘D`, `⌘R`, `⌘P` and `⌘C`. Labels use
+the Mac's symbols in its order (`⇧⌘D`). The app menu gains the system Edit menu, so `⌘C`, `⌘V`, `⌘X`, `⌘A` and
+`⌘Z` work in fields and in the terminal, where `Ctrl+Shift+C` and `V` stay a PC key and Ctrl goes to the
+shell; the left Option is Meta in the terminal (`⌥B`, `⌥F`) and the right one types characters (D68). A chord
+with Alt reads the physical key, since Option changes the character (`⌥1` types `¡`); the global key recorder
+does the same. MacBook keyboards have no right Control, so `shortcuts.holdTrigger` stays null until the user
+picks a key and the keymap gives each keyboard its own: the right Command on a Mac (the right Option until
+D68), the right Ctrl elsewhere; a key the user chose is kept. The keymap also gives the click modifier for
+links and paths (`⌘` on a Mac).
 **Reason:** the maintainer's choice on 2026-11-16, before MAC-T7: Terminal.app and VS Code users expect Cmd,
-and the shell needs Ctrl. Option as Meta means Option no longer types accented letters in the terminal.
+and the shell needs Ctrl. Option as Meta took the accented letters away from the terminal; since D68 the
+right Option types them.
 **How to revert:** give the `mac` table in `keymap.ts` the `pc` chords, drop `{ role: 'editMenu' }` from
 `buildAppMenu` and `macOptionIsMeta` from `terminal-session.ts`, and set `HOLD_TRIGGER.mac` to `ControlRight`.
 
@@ -1117,3 +1119,33 @@ full height.
 the `window.resize` and `window.endResize` channels, `ui/src/window/resize-edge.ts`, the `#edge` and
 `#edge-size` elements and styles, and `holdFit` in the terminal session.
 
+## D68. On a Mac the terminal edits the line with Cmd and Option, and the right Option types characters
+
+**Decision:** [plans/mac-keys.md](../plans/mac-keys.md). On a Mac keyboard, while xterm's normal buffer
+is active, the terminal sends the shell's line editing keys in place of xterm's own sequence
+(`ui/src/terminal/line-editing.ts`): `⌘←` `^A`, `⌘→` `^E`, `⌘⌫` `^U`, `⌥←` `ESC b`, `⌥→` `ESC f`, `⌥⌦`
+`ESC d`; `⌥⌫` stays xterm's `ESC DEL`. A full-screen program in the alternate buffer gets the raw key. The
+left Option is Meta and the right one types characters: xterm has a single switch, so
+`ui/src/terminal/option-key.ts` sets `macOptionIsMeta` before each key by which Option is down (`AltRight`
+in `event.code`); a key with no Option held or a lost focus puts it back. The setting
+`terminal.macOptionAsMeta` (`left`, the default, `both`, `none`) has a row in the Terminal group on a Mac
+keyboard only. `⌥`+drag selects inside programs that use the mouse (`macOptionClickForcesSelection`).
+`⌘K` on a Mac and `Ctrl+Shift+K` elsewhere clear the terminal, screen and scrollback, keeping the
+prompt's line, with an item in the hold menu's Tabs list. The 9 of the tab digits goes to the last tab
+(`⌘9`, `Alt+9`). The hold menu key on a Mac defaults to the right Command (`MetaRight`), which types
+nothing and leaves both Options to the terminal; the right Super is offered only on a Mac keyboard,
+since the desktop takes Super elsewhere. The global key stays F12; on a Mac keyboard Settings writes it
+in the Mac's symbols (`⌥⌘K` for `Super+Alt+K`) and says the F keys need fn unless they are standard
+function keys.
+**Reason:** the maintainer's choice on 2026-11-18. In xterm 6 on a Mac `⌘←`, `⌘→` and `⌘K` did nothing,
+`⌘⌫` sent a plain DEL and `⌥←` sent `CSI 1;3D`, which zsh prints as `;3D`. The sequences are VS Code's
+`sendSequence` defaults and iTerm2's Natural Text Editing preset; the clear and the last tab follow VS
+Code, browsers and Ghostty; the split Option follows iTerm2 and Ghostty
+(`macos-option-as-alt = left`), so `@`, brackets and accents work again on international layouts.
+Checked on Linux with the app reloaded as a Mac keyboard: each sequence edits a bash line, the raw key
+reaches a program in the alternate buffer and the PC keys are unchanged; the Option keys, `⌥`+drag and
+the fn hint need a real Mac.
+**How to revert:** drop `line-editing.ts` and `option-key.ts` and their handlers in `terminal-session.ts`,
+`macOptionClickForcesSelection`, the `terminal.macOptionAsMeta` setting and its row, `clearTerminal`
+from the keymap with its action and hold menu item, the `'last'` tab target, `MetaRight` from
+`HOLD_TRIGGERS` (set `HOLD_TRIGGER.mac` back to `AltRight`) and `accelerator` from the keymap.

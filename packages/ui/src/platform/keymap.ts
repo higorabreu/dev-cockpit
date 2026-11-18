@@ -37,6 +37,7 @@ export type ShortcutId =
   | 'fontBigger'
   | 'fontSmaller'
   | 'fontReset'
+  | 'clearTerminal'
 
 const C = { ctrl: true } as const
 const CS = { ctrl: true, shift: true } as const
@@ -78,6 +79,7 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     ],
     fontSmaller: [{ ...C, key: '-' }],
     fontReset: [{ ...C, key: '0' }],
+    clearTerminal: [{ ...CS, key: 'k' }],
   },
   // Cmd where Terminal.app and VS Code use it, so Ctrl stays with the shell
   mac: {
@@ -114,6 +116,8 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     ],
     fontSmaller: [{ ...M, key: '-' }],
     fontReset: [{ ...M, key: '0' }],
+    // Terminal.app, iTerm2 and VS Code clear with Cmd+K
+    clearTerminal: [{ ...M, key: 'k' }],
   },
 }
 
@@ -126,10 +130,11 @@ const CLIPBOARD: Record<Keyboard, Partial<Record<'copy' | 'paste', Chord>>> = {
 // The modifier of a key inside a panel and of a click on a link or a path; Ctrl+click is the Mac's
 // secondary click, so its terminals open links with Cmd
 const PRIMARY: Record<Keyboard, Modifiers> = { pc: C, mac: M }
-// The modifier of the digits that go to a tab
+// The modifier of the digits that go to a tab; 9 goes to the last one, as in browsers and Ghostty
 const TAB: Record<Keyboard, Modifiers> = { pc: { alt: true }, mac: M }
-// MacBook keyboards have no right Control; the right Option sits in the same corner
-const HOLD_TRIGGER: Record<Keyboard, HoldTrigger> = { pc: 'ControlRight', mac: 'AltRight' }
+// MacBook keyboards have no right Control; the right Command sits near that corner, never types text and
+// leaves both Options to the terminal
+const HOLD_TRIGGER: Record<Keyboard, HoldTrigger> = { pc: 'ControlRight', mac: 'MetaRight' }
 
 const pressedKey = (event: KeyInput) =>
   physicalKey(event)?.toLowerCase() ??
@@ -167,6 +172,45 @@ function modifiersLabel(modifiers: Modifiers, keyboard: Keyboard, key?: string):
     .join(keyboard === 'mac' ? '' : '+')
 }
 
+// A tab by its place, from 0, or the last one
+export type TabTarget = number | 'last'
+
+// Electron's names for the modifiers of a global key, hand-written ones included, by the slot they take
+const ACCELERATOR_MODIFIERS: Readonly<Record<string, keyof Modifiers>> = {
+  ctrl: 'ctrl',
+  control: 'ctrl',
+  alt: 'alt',
+  option: 'alt',
+  shift: 'shift',
+  super: 'meta',
+  meta: 'meta',
+  cmd: 'meta',
+  command: 'meta',
+  cmdorctrl: 'meta',
+  commandorcontrol: 'meta',
+}
+const ACCELERATOR_KEYS: Readonly<Record<string, string>> = {
+  Up: '↑',
+  Down: '↓',
+  Left: '←',
+  Right: '→',
+}
+
+// A global key ("Super+Alt+K") in the Mac's symbols (⌥⌘K); a PC shows it as Electron writes it, and a
+// name this does not know leaves the whole key as written
+function acceleratorLabel(value: string, keyboard: Keyboard): string {
+  const parts = value.split('+')
+  const key = parts.pop()
+  if (keyboard === 'pc' || !key) return value
+  const held: Partial<Record<keyof Modifiers, boolean>> = {}
+  for (const part of parts) {
+    const slot = ACCELERATOR_MODIFIERS[part.toLowerCase()]
+    if (!slot) return value
+    held[slot] = true
+  }
+  return modifiersLabel(held, keyboard, ACCELERATOR_KEYS[key] ?? key)
+}
+
 export interface Keymap {
   readonly keyboard: Keyboard
   // The hold menu key until the user picks one
@@ -181,12 +225,14 @@ export interface Keymap {
   label(id: ShortcutId): string
   // The modifiers alone, for a label that lists several keys after them
   modifiers(id: ShortcutId): string
-  // 0 for the first tab when the event is Alt+1, or Cmd+1 on the Mac
-  tabIndex(event: KeyInput): number | undefined
+  // 0 for the first tab when the event is Alt+1, or Cmd+1 on the Mac; the last tab for the 9
+  tabIndex(event: KeyInput): TabTarget | undefined
   // A key inside a panel: Ctrl and a letter, Cmd on the Mac
   command(event: KeyInput, letter: string): boolean
   commandLabel(letter: string): string
   clipboard(event: KeyInput): 'copy' | 'paste' | undefined
+  // The global key as this keyboard writes it
+  accelerator(value: string): string
 }
 
 export function createKeymap(keyboard: Keyboard): Keymap {
@@ -208,10 +254,12 @@ export function createKeymap(keyboard: Keyboard): Keymap {
     tabIndex(event) {
       const digit = /^[1-9]$/.exec(pressedKey(event))?.[0]
       if (digit === undefined) return undefined
-      return matchesChord(event, { ...TAB[keyboard], key: digit }) ? Number(digit) - 1 : undefined
+      if (!matchesChord(event, { ...TAB[keyboard], key: digit })) return undefined
+      return digit === '9' ? 'last' : Number(digit) - 1
     },
     command: (event, letter) => matchesChord(event, { ...primary, key: letter }),
     commandLabel: (letter) => label({ ...primary, key: letter }),
+    accelerator: (value) => acceleratorLabel(value, keyboard),
     clipboard(event) {
       if (clipboard.copy && matchesChord(event, clipboard.copy)) return 'copy'
       if (clipboard.paste && matchesChord(event, clipboard.paste)) return 'paste'
