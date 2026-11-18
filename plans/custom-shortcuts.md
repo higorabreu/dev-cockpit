@@ -45,7 +45,7 @@ Decided with the maintainer:
   header); the review hints redraw on change. Tests.
 - [x] C5. Settings: one editable row per action (record, conflict with Swap and Cancel, shell note,
   reset, settings.json warnings, Reset all), texts in both catalogs, styles with no layout shift. Tests.
-- [ ] C6. Hold menu: a mouse button as the trigger (open, select, run on release, Esc) and its own
+- [x] C6. Hold menu: a mouse button as the trigger (open, select, run on release, Esc) and its own
   behavior suppressed. Tests.
 - [ ] C7. Settings: the hold trigger recorder (key or mouse button, refusals, conflicts), labels in both
   catalogs. Tests.
