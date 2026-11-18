@@ -126,7 +126,7 @@ export const en: Record<MessageKey, string> = {
   'quit.cancel': 'Cancel',
 
   'terminal.exited': '[process exited]',
-  'terminal.openLink': 'click',
+  'terminal.openLink': 'click to open',
   'terminal.openPath': 'click to open',
   'terminal.openInNewTab': 'Open in a new tab',
   'terminal.openInFileManager': 'Open in the file manager',
