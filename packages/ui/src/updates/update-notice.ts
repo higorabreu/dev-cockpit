@@ -1,7 +1,7 @@
 import type { HostApi, MessageKey, Translator, UpdateNotice, UpdateState } from '@dck/core'
 import { h, icon } from '../panel/dom.ts'
 import type { Notice } from '../tabs/notice.ts'
-import type { MenuAction } from '../tabs/tab-menu.ts'
+import type { MenuAction, MenuHandle } from '../tabs/tab-menu.ts'
 
 export interface UpdateNoticeDeps {
   readonly notice: Notice
@@ -13,8 +13,8 @@ export interface UpdateNoticeDeps {
   saveTabs(): void
   // Gives the keys back to the terminal after a click
   done(): void
-  // The compact notice's actions, in the tab bar's small menu beside its icon
-  openMenu(actions: readonly MenuAction[], anchor: HTMLElement): void
+  // The compact notice's actions, in the tab bar's small menu beside its icon, under a caption when given
+  openMenu(actions: readonly MenuAction[], anchor: HTMLElement, caption?: string): MenuHandle
 }
 
 interface Action {
@@ -34,6 +34,8 @@ interface View {
   readonly tone: Tone
   // The whole notice in one line, for the compact icon's tooltip and name
   readonly summary: string
+  // Said above the compact menu's items when they answer a question
+  readonly caption?: string
 }
 
 const UPDATE_GLYPH = '<path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/>'
@@ -45,8 +47,9 @@ export function createUpdateNotice(deps: UpdateNoticeDeps) {
   let state: UpdateState | undefined
   // "Restart" was pressed with an agent running: the notice asks before ending it
   let confirming = 0
-  // The compact form's icon, when the last drawing had one
+  // The compact form's icon, when the last drawing had one, and its menu while open
   let compactIcon: HTMLElement | undefined
+  let menu: MenuHandle | undefined
 
   const action = ({ label, run, focus }: Action) => {
     const button = h('button', { type: 'button', class: 'notice-action', 'data-focus': focus })
@@ -140,6 +143,7 @@ export function createUpdateNotice(deps: UpdateNoticeDeps) {
             dismiss: false,
             tone: 'warning',
             summary,
+            caption: summary,
           }
         }
         const summary = t('updates.installed', { version: notice.version })
@@ -193,7 +197,13 @@ export function createUpdateNotice(deps: UpdateNoticeDeps) {
 
   function openMenu() {
     const view = state && viewFor(state.notice, state.canInstall)
-    if (view && compactIcon) deps.openMenu(menuActions(view), compactIcon)
+    if (view && compactIcon) menu = deps.openMenu(menuActions(view), compactIcon, view.caption)
+  }
+
+  // A menu drawn for another state would offer what no longer applies
+  function closeMenu() {
+    menu?.close()
+    menu = undefined
   }
 
   // One icon in place of the text and its buttons; its menu holds the same actions
@@ -220,11 +230,16 @@ export function createUpdateNotice(deps: UpdateNoticeDeps) {
 
   return {
     show(next: UpdateState) {
+      const changed = JSON.stringify(next) !== JSON.stringify(state)
       state = next
       if (next.notice.kind !== 'installed') confirming = 0
+      if (changed) closeMenu()
       render()
     },
-    retranslate: render,
+    retranslate() {
+      closeMenu()
+      render()
+    },
     current: () => state,
   }
 }

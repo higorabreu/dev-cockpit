@@ -171,6 +171,13 @@ button.notice-icon:focus-visible {
   display: none;
 }
 
+/* Why the items are offered: the items' padding, read and never focused */
+#tab-menu .menu-caption {
+  padding: 6px 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 #tab-menu button {
   padding: 6px 10px;
   border: 0;

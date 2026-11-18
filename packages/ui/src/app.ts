@@ -148,12 +148,19 @@ export async function startApp(
     agentTabs: () => state.tabs.filter((tab) => watcher.get(tab.id)?.activity === 'agent').length,
     saveTabs: () => saveTabsNow(),
     done: () => focusActive(),
-    openMenu(actions, anchor) {
-      const box = anchor.getBoundingClientRect()
+    openMenu(actions, anchor, caption) {
+      // Off the bar on the terminal's side, its right edge on the icon's
+      const right = anchor.getBoundingClientRect().right
+      const box = bar.getBoundingClientRect()
       const above = !document.body.classList.contains('full')
-      // Closed with Esc or a click elsewhere, the focus goes back to the icon as it is drawn now
-      menu.open(actions, box.left, above ? box.top : box.bottom, above, () =>
-        elements.notice.querySelector<HTMLElement>('.notice-icon')?.focus(),
+      return menu.open(
+        actions,
+        right,
+        above ? box.top : box.bottom,
+        above,
+        // Closed with Esc or a click elsewhere, the focus goes back to the icon as it is drawn now
+        () => elements.notice.querySelector<HTMLElement>('.notice-icon')?.focus(),
+        caption === undefined ? { align: 'end' } : { align: 'end', caption },
       )
     },
   })

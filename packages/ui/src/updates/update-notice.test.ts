@@ -17,7 +17,13 @@ function setup(options: { agents?: number; canInstall?: boolean; narrow?: boolea
     options.narrow ? document.createElement('div') : undefined,
   )
   const calls: string[] = []
-  const menus: { labels: string[]; actions: readonly MenuAction[]; anchor: HTMLElement }[] = []
+  const menus: {
+    labels: string[]
+    actions: readonly MenuAction[]
+    anchor: HTMLElement
+    caption: string | undefined
+    closed: boolean
+  }[] = []
   const updates = {
     install: () => void calls.push('install'),
     openRelease: () => void calls.push('openRelease'),
@@ -31,8 +37,16 @@ function setup(options: { agents?: number; canInstall?: boolean; narrow?: boolea
     agentTabs: () => options.agents ?? 0,
     saveTabs: () => void calls.push('saveTabs'),
     done: () => void calls.push('done'),
-    openMenu: (actions, anchor) =>
-      void menus.push({ labels: actions.map((action) => action.label), actions, anchor }),
+    openMenu(actions, anchor, caption) {
+      const labels = actions.map((action) => action.label)
+      const entry = { labels, actions, anchor, caption, closed: false }
+      menus.push(entry)
+      return {
+        close: () => {
+          entry.closed = true
+        },
+      }
+    },
   })
   const show = (next: UpdateNotice) =>
     update.show({ canInstall: options.canInstall ?? true, check: { kind: 'never' }, notice: next })
@@ -212,9 +226,36 @@ describe('createUpdateNotice compact', () => {
       ['Restart anyway', 'Cancel'],
     ])
     expect(menus[1]?.anchor).toBe(asked)
+    expect(menus.map((menu) => menu.caption)).toEqual([undefined, '1 tab has an agent running'])
     expect(asked?.getAttribute('data-tip')).toBe('1 tab has an agent running')
     expect(asked?.dataset.tone).toBe('warning')
     expect(calls).toEqual(['saveTabs', 'restart', 'done'])
+  })
+
+  it('should close its menu when the update state changes while it is open', () => {
+    // Arrange
+    const { element, show, menus } = setup({ narrow: true })
+    show({ kind: 'available', version: '0.10.0' })
+    icon(element)?.click()
+
+    // Act
+    show({ kind: 'downloading', version: '0.10.0', percent: 3 })
+
+    // Assert
+    expect(menus.map((menu) => menu.closed)).toEqual([true])
+  })
+
+  it('should keep its menu open when the same state comes again', () => {
+    // Arrange
+    const { element, show, menus } = setup({ narrow: true })
+    show({ kind: 'available', version: '0.10.0' })
+    icon(element)?.click()
+
+    // Act
+    show({ kind: 'available', version: '0.10.0' })
+
+    // Assert
+    expect(menus.map((menu) => menu.closed)).toEqual([false])
   })
 
   it('should name the icon in portuguese when the interface is in portuguese', () => {
@@ -230,7 +271,7 @@ describe('createUpdateNotice compact', () => {
       agentTabs: () => 0,
       saveTabs: () => undefined,
       done: () => undefined,
-      openMenu: () => undefined,
+      openMenu: () => ({ close: () => undefined }),
     })
 
     // Act
