@@ -1195,7 +1195,8 @@ moving selects, releasing runs and Esc cancels; while it is the trigger its own 
 click, auxclick and context menu are consumed, so Linux's middle-click paste, a program's mouse report
 and back or forward do not happen. The wheel is drawn above Settings, the views, the search and the tab
 list, so a trigger tried right after recording it opens in sight (it used to open under Settings, unseen);
-only the quit card and the tooltip stay above it. Keys inside panels (the review's single keys, arrows in
+only the quit card and the tooltip stay above it. A mouse that sends press and release together opens it
+with a click and leaves it open (D79). Keys inside panels (the review's single keys, arrows in
 lists) stay fixed.
 **Reason:** the maintainer's choice on 2026-11-18, on top of D68: people bring keys from other terminals
 and editors, and a MacBook or a mouse with side buttons has no right Ctrl to hold. Swap in place keeps a
@@ -1471,3 +1472,22 @@ branch" for it, and it is what the review did before.
 **How to revert:** in `gatherModule`, start the submodule's diff at the recorded commit again (drop
 `ownStart`), stop reading `recordedModules` in `gather`, and drop the pane's `pointersOnly` state and its
 two catalog entries; `moduleLabel` and `moduleHead` show the zero count again.
+
+## D79. A click of a mouse trigger opens the hold menu and leaves it open
+
+**Decision:** on top of D69. When the hold menu's trigger is the middle, back or forward button (`Mouse1`,
+`Mouse3`, `Mouse4`) and the button comes back up before the menu opened (180 ms), the menu opens and
+stays open (`releaseButton` and `isSticky` in `core/src/hold-menu/hold-gesture.ts`). A click on a sector
+or a row runs it, the mouse wheel and the arrows move the selection and Enter runs it; Esc, a click off
+the card (which still reaches the terminal) or another click of the trigger closes it, and a key that
+writes closes it and reaches the terminal, so nothing is typed under the menu (a modifier alone leaves it
+open). The hint bar says so: "Enter or click to run" and "Esc close". Held past the delay, the button
+works as before: releasing runs the selected row. A key trigger does not change: a quick tap opens
+nothing. A press on the card never takes the focus, so the terminal keeps it when the menu closes.
+**Reason:** the maintainer's choice on 2026-11-18, after `libinput debug-events` on his Ubuntu (Wayland,
+Logitech receiver) showed `BTN_SIDE` pressed and released 7 to 22 ms apart while the button was held:
+many Logitech mice (Signature M650, MX Anywhere 3, models with gestures or side-button scrolling) send
+the press and the release together, so the hold cannot be measured and the menu never opened.
+**How to revert:** have the controller's `mouseup` call `release()` again and drop `releaseButton`,
+`isSticky`, the `click` hint mode in `hold-menu/menu-view.ts` and its two catalog entries
+(`menu.hint.pick`, `menu.hint.close`).

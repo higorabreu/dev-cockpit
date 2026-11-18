@@ -51,3 +51,17 @@ Decided with the maintainer:
   catalogs. Tests.
 - [x] C8. D69, D51 and D68 where they no longer hold, the README keys and settings, the settings rule; a
   run of the real app under Xvfb (PC and Mac keyboard, dark and light, English and Portuguese).
+
+## Revision: a mouse trigger that cannot be held (D79, 2026-11-18)
+
+Some mice send the side buttons' press and release together, so the menu never opened. A quick click of a
+mouse trigger now opens the menu and leaves it open until a pick, Esc, a click off it or the button again.
+
+- [x] C9. The menu above Settings, the views, the search and the tab list, with a stacking test.
+- [x] C10. Core: the gesture's open-after-a-click state (`releaseButton`, `isSticky`), tests with the fake
+  scheduler.
+- [x] C11. Hold menu: click, wheel, arrows and Enter pick; Esc, a click off the card, the button again or a
+  key that writes close; the card never takes the focus; the hint bar for the open state in both catalogs.
+  Tests.
+- [x] C12. D79, D69 and the README; a run of the real app under Xvfb and a headless mutter with a click of
+  each button (dark and light, English and Portuguese).
