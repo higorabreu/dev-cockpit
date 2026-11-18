@@ -61,7 +61,7 @@ export function createEnvironmentSection(
       const status = source.status()
       return status?.kind === 'ok' ? i18n.plural('env.summary', status.containers.length) : ''
     },
-    badge: () => undefined,
+    waiting: () => 0,
     body() {
       const status = source.status()
       if (!status) return h('div', {})

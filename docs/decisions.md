@@ -924,6 +924,7 @@ private repositories do not show.
 **How to revert:** drop the `dck.github` candidate from `core/src/extensions/built-in.ts`, the adapter and
 the two entries in `shell/src/connections/connector-connections.ts` and `daemon/src/connector-views.ts`;
 the shared connection and views files keep working for GitLab alone.
+**Partly replaced by D73** (2026-11-18): the Work button shows a dot, and a view's `badge` is a role, not a text.
 
 
 ## D59. Codex marks its tab through the terminal's program status report, with nothing installed
@@ -1291,6 +1292,29 @@ to name no authors.
 `core/src/about/about.ts`, `shell/src/updates/about-bridge.ts` and the `about` host API, and put the
 Updates row back in System.
 
+## D73. A dot on the Sessions and Work buttons while something waits
+
+**Decision:** [plans/rail-badges.md](../plans/rail-badges.md). The rail shows no number: the Sessions
+button and the Work button get a dot while something waits for the user, the one the app already uses
+for the settings file warning and the compact update icon (6px, round, a 1.5px ring in the window color),
+at the icon's upper right and in the neutral foreground, since nothing is wrong. The tooltip stays the
+title and its keys; the label adds the count for the screen reader, "Work, 4 items waiting", "Trabalho, 4
+itens aguardando". One helper, `ui/src/kit/rail-dot.ts`, serves the panel sections and the Work button.
+A connector view's `badge` is a role instead of a plural text key: `review` counts every item (GitLab
+`review`, GitHub `github-review`) and `attention` the user's own merge requests that need them (`mine`,
+`github-mine`). A merge request needs the user while its CI failed, or when it has an open discussion and
+its `updatedAt` is newer than the version last seen (`needsAttention`, `core/src/views/attention.ts`).
+Showing an `attention` tab in the Work screen with the window visible marks what it lists as seen; the
+marks (view id, item id, `updatedAt`) live per machine in the window's `localStorage` (`dck-seen-v1`), and
+a fetched list drops the marks of items that left it. Warming refreshes the `attention` views as well as
+the `review` ones.
+**Reason:** decided with the maintainer (2026-11-18). A count capped at "9+" was built first; the
+maintainer preferred a dot and a short tooltip: the number grew the pill over the icon and the breakdown
+grew the tooltip. Without a visible text the per-service wording of D57 had nothing left to say, so the
+role replaces it.
+**How to revert:** put `badge` back as a plural catalog key in `core/src/connectors/connector.ts` with the
+`views.waiting` texts and the count in the pill, drop `kit/rail-dot.ts`, `views/seen-marks.ts` and
+`core/src/views/attention.ts`, and give the sections back a `badge()` text.
 
 ## D76. The cockpit installs from npm through a small installer, `npx @devcockpit/install`
 

@@ -1,4 +1,5 @@
-import { clampPanelWidth, PANEL_WIDTH, readPreference, type Translate } from '@dck/core'
+import { clampPanelWidth, PANEL_WIDTH, readPreference, type Translator } from '@dck/core'
+import { showRailDot } from '../kit/rail-dot.ts'
 import { h, icon } from './dom.ts'
 
 export interface PanelSection {
@@ -9,8 +10,8 @@ export interface PanelSection {
   readonly expandedByDefault: boolean
   // Short text to the right of the title, visible even with the section collapsed
   summary(): string
-  // Rail badge, only when something needs attention
-  badge(): string | undefined
+  // How many things wait for the user; above zero the rail button gets a dot
+  waiting(): number
   body(): HTMLElement
 }
 
@@ -26,7 +27,7 @@ export interface PanelOptions {
   readonly elements: PanelElements
   readonly sections: readonly PanelSection[]
   title(): string
-  t: Translate
+  i18n: Translator
   // Called after a mouse click, so the terminal receives keys again
   afterPointer?(): void
   // Loads the data of the open sections; only runs with the panel visible
@@ -99,7 +100,7 @@ export function createPanel(options: PanelOptions) {
     const signature = JSON.stringify(
       options.sections.map((section) => [
         section.id,
-        section.badge() ?? '',
+        section.waiting(),
         state.open && state.sections[section.id] === true,
       ]),
     )
@@ -107,20 +108,18 @@ export function createPanel(options: PanelOptions) {
     railSignature = signature
     rail.replaceChildren(
       ...options.sections.map((section) => {
-        const badge = section.badge()
-        return h(
+        const button = h(
           'button',
           {
             type: 'button',
             'data-section': section.id,
             'data-focus': `rail-${section.id}`,
-            'aria-label': section.label,
-            'data-tip': section.label,
             'aria-expanded': String(state.open && state.sections[section.id] === true),
           },
           icon(section.icon),
-          badge && h('span', { class: 'badge' }, badge),
         )
+        showRailDot(button, options.i18n, section.label, section.waiting())
+        return button
       }),
     )
   }
