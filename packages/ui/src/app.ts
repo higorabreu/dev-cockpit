@@ -140,7 +140,7 @@ export async function startApp(
   const nativeMiddlePaste = navigator.platform.startsWith('Linux')
   // The hold menu's key or mouse button, read at each use: Settings can change it while the window is open
   const holdTrigger = () => settings.current().shortcuts.holdTrigger ?? keymap.holdTrigger
-  const notice = createNotice(elements.notice, i18n)
+  const notice = createNotice(elements.notice, i18n, elements.tabs)
   const updateNotice = createUpdateNotice({
     notice,
     i18n,
@@ -148,6 +148,14 @@ export async function startApp(
     agentTabs: () => state.tabs.filter((tab) => watcher.get(tab.id)?.activity === 'agent').length,
     saveTabs: () => saveTabsNow(),
     done: () => focusActive(),
+    openMenu(actions, anchor) {
+      const box = anchor.getBoundingClientRect()
+      const above = !document.body.classList.contains('full')
+      // Closed with Esc or a click elsewhere, the focus goes back to the icon as it is drawn now
+      menu.open(actions, box.left, above ? box.top : box.bottom, above, () =>
+        elements.notice.querySelector<HTMLElement>('.notice-icon')?.focus(),
+      )
+    },
   })
   const menu = createTabMenu(elements.menu)
   let state: TabsState = emptyTabs

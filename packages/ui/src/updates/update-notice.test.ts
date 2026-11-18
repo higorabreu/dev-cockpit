@@ -2,15 +2,22 @@
 import { createTranslator, type HostApi, type UpdateNotice } from '@dck/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createNotice } from '../tabs/notice.ts'
+import type { MenuAction } from '../tabs/tab-menu.ts'
 import { createUpdateNotice } from './update-notice.ts'
 
-function setup(options: { agents?: number; canInstall?: boolean } = {}) {
+function setup(options: { agents?: number; canInstall?: boolean; narrow?: boolean } = {}) {
   document.body.replaceChildren()
   const element = document.createElement('div')
   document.body.append(element)
   const i18n = createTranslator('en')
-  const notice = createNotice(element, i18n)
+  // Every width reads 0 here: given a strip, the tabs never keep their room and the notice is compact
+  const notice = createNotice(
+    element,
+    i18n,
+    options.narrow ? document.createElement('div') : undefined,
+  )
   const calls: string[] = []
+  const menus: { labels: string[]; actions: readonly MenuAction[]; anchor: HTMLElement }[] = []
   const updates = {
     install: () => void calls.push('install'),
     openRelease: () => void calls.push('openRelease'),
@@ -24,6 +31,8 @@ function setup(options: { agents?: number; canInstall?: boolean } = {}) {
     agentTabs: () => options.agents ?? 0,
     saveTabs: () => void calls.push('saveTabs'),
     done: () => void calls.push('done'),
+    openMenu: (actions, anchor) =>
+      void menus.push({ labels: actions.map((action) => action.label), actions, anchor }),
   })
   const show = (next: UpdateNotice) =>
     update.show({ canInstall: options.canInstall ?? true, check: { kind: 'never' }, notice: next })
@@ -35,7 +44,7 @@ function setup(options: { agents?: number; canInstall?: boolean } = {}) {
     if (!found) throw new Error(`invariant: the notice has ${label}`)
     return found
   }
-  return { element, notice, show, calls, button }
+  return { element, notice, show, calls, button, menus }
 }
 
 const labels = (element: HTMLElement) =>
@@ -123,6 +132,116 @@ describe('createUpdateNotice', () => {
     show({ kind: 'none' })
 
     expect(element.children).toHaveLength(0)
+  })
+})
+
+describe('createUpdateNotice compact', () => {
+  const icon = (element: HTMLElement) => element.querySelector<HTMLElement>('.notice-icon')
+  const choose = (actions: readonly MenuAction[], label: string) =>
+    actions.find((action) => action.label === label)?.run()
+
+  it('should show one named icon with the whole text as its tooltip when the bar is narrow', () => {
+    // Arrange
+    const { element, show } = setup({ narrow: true })
+
+    // Act
+    show({ kind: 'available', version: '0.10.0' })
+
+    // Assert
+    const shown = icon(element)
+    expect(element.children).toHaveLength(1)
+    expect(shown?.tagName).toBe('BUTTON')
+    expect(shown?.getAttribute('data-tip')).toBe('Version 0.10.0 available')
+    expect(shown?.getAttribute('aria-label')).toBe('Version 0.10.0 available')
+    expect(shown?.getAttribute('aria-haspopup')).toBe('menu')
+    expect(shown?.dataset.tone).toBe('news')
+    expect(shown?.querySelector('svg')?.getAttribute('width')).toBe('17')
+  })
+
+  it('should open a menu with the same actions as the full notice when the icon is pressed', () => {
+    // Arrange
+    const { element, show, menus, calls } = setup({ narrow: true })
+    show({ kind: 'available', version: '0.10.0' })
+    const shown = icon(element)
+
+    // Act
+    shown?.click()
+    choose(menus[0]?.actions ?? [], 'Update')
+
+    // Assert
+    expect(menus.map((menu) => menu.labels)).toEqual([['Update', "What's new", 'Dismiss']])
+    expect(menus[0]?.anchor).toBe(shown)
+    expect(calls).toEqual(['install', 'done'])
+  })
+
+  it('should offer only Dismiss in the menu when the install failed', () => {
+    const { element, show, menus } = setup({ narrow: true })
+    show({ kind: 'failed', version: '0.10.0', code: 'DCK-UPD-005' })
+
+    icon(element)?.click()
+
+    expect(icon(element)?.dataset.tone).toBe('critical')
+    expect(menus.map((menu) => menu.labels)).toEqual([['Dismiss']])
+  })
+
+  it('should show a plain image with the percent in its tooltip while downloading', () => {
+    const { element, show } = setup({ narrow: true })
+
+    show({ kind: 'downloading', version: '0.10.0', percent: 42 })
+
+    const shown = icon(element)
+    expect(shown?.tagName).toBe('SPAN')
+    expect(shown?.getAttribute('role')).toBe('img')
+    expect(shown?.getAttribute('data-tip')).toBe('Downloading 0.10.0, 42%')
+  })
+
+  it('should bring the menu back with the question when Restart is chosen with an agent running', () => {
+    // Arrange
+    const { element, show, menus, calls } = setup({ narrow: true, agents: 1 })
+    show({ kind: 'installed', version: '0.10.0' })
+    icon(element)?.click()
+
+    // Act
+    choose(menus[0]?.actions ?? [], 'Restart')
+    const asked = icon(element)
+    choose(menus[1]?.actions ?? [], 'Restart anyway')
+
+    // Assert
+    expect(menus.map((menu) => menu.labels)).toEqual([
+      ['Restart', 'Dismiss'],
+      ['Restart anyway', 'Cancel'],
+    ])
+    expect(menus[1]?.anchor).toBe(asked)
+    expect(asked?.getAttribute('data-tip')).toBe('1 tab has an agent running')
+    expect(asked?.dataset.tone).toBe('warning')
+    expect(calls).toEqual(['saveTabs', 'restart', 'done'])
+  })
+
+  it('should name the icon in portuguese when the interface is in portuguese', () => {
+    // Arrange
+    document.body.replaceChildren()
+    const element = document.createElement('div')
+    document.body.append(element)
+    const i18n = createTranslator('pt-BR')
+    const update = createUpdateNotice({
+      notice: createNotice(element, i18n, document.createElement('div')),
+      i18n,
+      updates: {} as HostApi['updates'],
+      agentTabs: () => 0,
+      saveTabs: () => undefined,
+      done: () => undefined,
+      openMenu: () => undefined,
+    })
+
+    // Act
+    update.show({
+      canInstall: true,
+      check: { kind: 'never' },
+      notice: { kind: 'downloading', version: '0.10.0', percent: 7 },
+    })
+
+    // Assert
+    expect(icon(element)?.getAttribute('aria-label')).toBe('Baixando 0.10.0, 7%')
   })
 })
 

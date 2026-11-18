@@ -81,6 +81,79 @@
   outline-offset: 1px;
 }
 
+/* The compact form: one icon the size of the bar's own buttons, its words in the tooltip (D74) */
+#notice.compact {
+  position: relative;
+}
+
+.notice-icon {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--fg);
+}
+
+button.notice-icon:hover {
+  background: var(--hover);
+}
+
+button.notice-icon:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
+/* News to act on has a dot; a question, a diamond; a failure, its own glyph in the critical color */
+.notice-icon[data-tone="news"]::after,
+.notice-icon[data-tone="warning"]::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fg);
+}
+
+.notice-icon[data-tone="warning"]::after {
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 0;
+  background: var(--warning);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.notice-icon[data-tone="busy"] {
+  color: var(--muted);
+}
+
+.notice-icon[data-tone="critical"] {
+  color: var(--critical);
+}
+
+/* A copy over the compact form lies over the end of the tab strip, out of the flow, so no tab moves; the
+   tabs under it fade as the strip's own edge does */
+.notice-over {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-left: 24px;
+  background: rgb(var(--bg-rgb));
+  mask-image: linear-gradient(to right, transparent, #000 24px);
+}
+
 #tab-menu {
   position: fixed;
   z-index: 40;
