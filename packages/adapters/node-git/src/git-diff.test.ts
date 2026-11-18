@@ -318,7 +318,7 @@ async function nested() {
 }
 
 describe('submodules', () => {
-  it('should read inside each changed submodule, nested ones too, with commits and untracked files', async () => {
+  it('should read the own edits of each changed submodule, nested ones too, with its commits apart', async () => {
     // Arrange
     const acme = await nested()
     const lib = join(acme, 'libs/lib')
@@ -339,7 +339,6 @@ describe('submodules', () => {
       ['app.ts', undefined, false],
       ['libs/lib/src/util.ts', 'libs/lib', false],
       ['libs/lib/untracked.txt', 'libs/lib', true],
-      ['libs/lib/x.txt', 'libs/lib', false],
       ['libs/lib/vendor/deep/src/deep.txt', 'libs/lib/vendor/deep', false],
       ['libs/other/only.txt', 'libs/other', true],
     ])
@@ -348,28 +347,34 @@ describe('submodules', () => {
       { path: 'libs/lib/vendor/deep', commits: [], commitCount: 0 },
       { path: 'libs/other', commits: [], commitCount: 0 },
     ])
-    const x = diff.files.find((file) => file.path === 'libs/lib/x.txt')
-    expect(x).toMatchObject({ additions: 3, deletions: 3, newLineCount: 3 })
+    const util = diff.files.find((file) => file.path === 'libs/lib/src/util.ts')
+    expect(util).toMatchObject({ additions: 1, deletions: 0, newLineCount: 4 })
   })
 
-  it('should read the submodule from the commit recorded at the base when the scope is the branch', async () => {
+  it('should read a submodule on a branch with no base from its upstream, else its HEAD, in Base', async () => {
     // Arrange
     const acme = await nested()
     const lib = join(acme, 'libs/lib')
     run(acme, 'checkout', '-q', '-b', 'feat/bump')
+    await pulled(acme, 'libs/lib', 'lib', 2)
     await writeFile(join(lib, 'x.txt'), numbered(4))
     run(lib, 'commit', '-q', '-am', 'Grow x')
     run(acme, 'commit', '-q', '-am', 'Bump lib')
+    await writeFile(join(lib, 'src/util.ts'), `${numbered(3)}edit\n`)
     const source = createGitDiffSource()
+    const scope = request(acme, { scope: 'branch', base: 'main' })
 
     // Act
-    const branch = okDiff(await source.diff(request(acme, { scope: 'branch', base: 'main' })))
-    const uncommitted = okDiff(await source.diff(request(acme)))
+    const tracked = okDiff(await source.diff(scope))
+    run(lib, 'branch', '-q', '--unset-upstream')
+    const alone = okDiff(await source.diff(scope))
 
     // Assert
-    expect(branch.files.map((file) => file.path)).toEqual(['libs/lib/x.txt'])
-    expect(branch.modules).toEqual([{ path: 'libs/lib', commits: ['Grow x'], commitCount: 1 }])
-    expect(uncommitted.files).toEqual([])
+    expect(shown(tracked)).toEqual(['libs/lib/src/util.ts', 'libs/lib/x.txt'])
+    expect(tracked.modules).toEqual([
+      { path: 'libs/lib', commits: ['Grow x', 'Upstream 2', 'Upstream 1'], commitCount: 3 },
+    ])
+    expect(shown(alone)).toEqual(['libs/lib/src/util.ts'])
   })
 
   it('should keep the single entry of a submodule whose recorded commit it does not have', async () => {
@@ -405,6 +410,183 @@ describe('submodules', () => {
     expect(diff.files).toHaveLength(301)
     expect(diff.files.filter((file) => file.unloaded).map((file) => file.path)).toEqual([
       'libs/lib/b.txt',
+    ])
+  })
+})
+
+// Commits the submodule's source gets and the submodule pulls: on its upstream, none of them the user's
+async function pulled(acme: string, module: string, source: string, count: number) {
+  for (let index = 1; index <= count; index++) {
+    await writeFile(join(directory, source, `upstream-${index}.txt`), `${index}\n`)
+    run(join(directory, source), 'add', '.')
+    run(join(directory, source), 'commit', '-q', '-m', `Upstream ${index}`)
+  }
+  // A detached submodule, as `submodule update` leaves it, moves the same way
+  run(join(acme, module), '-c', 'protocol.file.allow=always', 'fetch', '-q', 'origin')
+  run(join(acme, module), 'reset', '-q', '--keep', 'origin/main')
+}
+
+// The parent gets an upstream of its own, so its Unpushed scope has something to compare with
+function publish(acme: string) {
+  const remote = join(directory, 'acme-remote.git')
+  run(directory, 'init', '-q', '--bare', remote)
+  run(acme, 'remote', 'add', 'origin', remote)
+  run(acme, 'push', '-q', '-u', 'origin', 'main')
+}
+
+const shown = (diff: ReturnType<typeof okDiff>) => diff.files.map((file) => file.path)
+
+describe('submodules in their own scope', () => {
+  it('should list only the edits of a submodule whose HEAD moved past the recorded commit in Uncommitted', async () => {
+    // Arrange
+    const acme = await nested()
+    await pulled(acme, 'libs/lib', 'lib', 3)
+    await writeFile(join(acme, 'libs/lib/x.txt'), `${numbered(3)}edit\n`)
+
+    // Act
+    const diff = okDiff(await createGitDiffSource().diff(request(acme)))
+
+    // Assert
+    expect(shown(diff)).toEqual(['libs/lib/x.txt'])
+    expect(diff.modules).toEqual([
+      { path: 'libs/lib', commits: ['Upstream 3', 'Upstream 2', 'Upstream 1'], commitCount: 3 },
+    ])
+  })
+
+  it('should show the header with no files when only the pointer moved', async () => {
+    // Arrange
+    const acme = await nested()
+    await pulled(acme, 'libs/other', 'other', 2)
+
+    // Act
+    const diff = okDiff(await createGitDiffSource().diff(request(acme)))
+
+    // Assert
+    expect(diff.files).toEqual([])
+    expect(diff.modules).toEqual([
+      { path: 'libs/other', commits: ['Upstream 2', 'Upstream 1'], commitCount: 2 },
+    ])
+  })
+
+  it('should list the unpushed commits and edits of a submodule against its own upstream', async () => {
+    // Arrange
+    const acme = await nested()
+    publish(acme)
+    const lib = join(acme, 'libs/lib')
+    await pulled(acme, 'libs/lib', 'lib', 2)
+    await writeFile(join(lib, 'x.txt'), numbered(4))
+    run(lib, 'commit', '-q', '-am', 'Grow x')
+    await writeFile(join(lib, 'src/util.ts'), `${numbered(3)}edit\n`)
+
+    // Act
+    const diff = okDiff(await createGitDiffSource().diff(request(acme, { scope: 'unpushed' })))
+
+    // Assert
+    expect(shown(diff)).toEqual(['libs/lib/src/util.ts', 'libs/lib/x.txt'])
+    expect(diff.modules).toEqual([
+      { path: 'libs/lib', commits: ['Grow x', 'Upstream 2', 'Upstream 1'], commitCount: 3 },
+    ])
+  })
+
+  it('should read a submodule with an unpushed commit when the parent already recorded it', async () => {
+    // Arrange
+    const acme = await nested()
+    const lib = join(acme, 'libs/lib')
+    await writeFile(join(lib, 'x.txt'), numbered(4))
+    run(lib, 'commit', '-q', '-am', 'Grow x')
+    run(acme, 'commit', '-q', '-am', 'Bump lib')
+    publish(acme)
+
+    // Act
+    const unpushed = okDiff(await createGitDiffSource().diff(request(acme, { scope: 'unpushed' })))
+    const uncommitted = okDiff(await createGitDiffSource().diff(request(acme)))
+
+    // Assert
+    expect(shown(unpushed)).toEqual(['libs/lib/x.txt'])
+    expect(unpushed.modules).toEqual([{ path: 'libs/lib', commits: [], commitCount: 0 }])
+    expect(uncommitted.files).toEqual([])
+    expect(uncommitted.modules).toEqual([])
+  })
+
+  it('should list only the edits of a submodule with no upstream when the scope is Unpushed', async () => {
+    // Arrange
+    const acme = await nested()
+    publish(acme)
+    const other = join(acme, 'libs/other')
+    run(other, 'branch', '-q', '--unset-upstream')
+    await writeFile(join(other, 'docs/guide.md'), numbered(4))
+    run(other, 'commit', '-q', '-am', 'Grow the guide')
+    await writeFile(join(other, 'notes.md'), 'notes\n')
+
+    // Act
+    const result = await createGitDiffSource().diff(request(acme, { scope: 'unpushed' }))
+
+    // Assert
+    const diff = okDiff(result)
+    expect(shown(diff)).toEqual(['libs/other/notes.md'])
+    expect(diff.modules).toEqual([
+      { path: 'libs/other', commits: ['Grow the guide'], commitCount: 1 },
+    ])
+  })
+
+  it("should compare a submodule's branch with its own base when the scope is Base", async () => {
+    // Arrange
+    const acme = await nested()
+    const lib = join(acme, 'libs/lib')
+    run(acme, 'checkout', '-q', '-b', 'feat/bump')
+    await pulled(acme, 'libs/lib', 'lib', 2)
+    run(lib, 'checkout', '-q', '-b', 'feat/parser')
+    await writeFile(join(lib, 'x.txt'), numbered(4))
+    run(lib, 'commit', '-q', '-am', 'Grow x')
+    run(acme, 'commit', '-q', '-am', 'Bump lib')
+
+    // Act
+    const diff = okDiff(
+      await createGitDiffSource().diff(request(acme, { scope: 'branch', base: 'main' })),
+    )
+
+    // Assert
+    expect(shown(diff)).toEqual(['libs/lib/x.txt'])
+    expect(diff.modules).toEqual([
+      { path: 'libs/lib', commits: ['Grow x', 'Upstream 2', 'Upstream 1'], commitCount: 3 },
+    ])
+  })
+
+  it('should compare a detached submodule from the commit recorded at the base when the scope is Base', async () => {
+    // Arrange
+    const acme = await nested()
+    const lib = join(acme, 'libs/lib')
+    run(acme, 'checkout', '-q', '-b', 'feat/bump')
+    await pulled(acme, 'libs/lib', 'lib', 2)
+    run(lib, 'checkout', '-q', '--detach')
+    run(acme, 'commit', '-q', '-am', 'Bump lib')
+
+    // Act
+    const diff = okDiff(
+      await createGitDiffSource().diff(request(acme, { scope: 'branch', base: 'main' })),
+    )
+
+    // Assert
+    expect(shown(diff)).toEqual(['libs/lib/upstream-1.txt', 'libs/lib/upstream-2.txt'])
+    expect(diff.modules).toEqual([
+      { path: 'libs/lib', commits: ['Upstream 2', 'Upstream 1'], commitCount: 2 },
+    ])
+  })
+
+  it('should apply the scope inside a nested submodule the same way', async () => {
+    // Arrange
+    const acme = await nested()
+    await pulled(join(acme, 'libs/lib'), 'vendor/deep', 'deep', 2)
+    await writeFile(join(acme, 'libs/lib/vendor/deep/src/deep.txt'), `${numbered(3)}deep\n`)
+
+    // Act
+    const diff = okDiff(await createGitDiffSource().diff(request(acme)))
+
+    // Assert
+    expect(shown(diff)).toEqual(['libs/lib/vendor/deep/src/deep.txt'])
+    expect(diff.modules).toEqual([
+      { path: 'libs/lib', commits: [], commitCount: 0 },
+      { path: 'libs/lib/vendor/deep', commits: ['Upstream 2', 'Upstream 1'], commitCount: 2 },
     ])
   })
 })
@@ -529,6 +711,25 @@ describe('fingerprint', () => {
 
     // Assert
     expect(after).not.toBe(first)
+  })
+  it('should change when a submodule stages an edit, commits it and gets another commit', async () => {
+    // Arrange
+    const acme = await nested()
+    const lib = join(acme, 'libs/lib')
+    await writeFile(join(lib, 'x.txt'), numbered(4))
+    const source = createGitDiffSource()
+    const edited = await source.fingerprint(acme)
+
+    // Act
+    run(lib, 'add', 'x.txt')
+    const staged = await source.fingerprint(acme)
+    run(lib, 'commit', '-q', '-m', 'Grow x')
+    const committed = await source.fingerprint(acme)
+    run(lib, 'commit', '-q', '--allow-empty', '-m', 'Note x')
+    const moved = await source.fingerprint(acme)
+
+    // Assert
+    expect(new Set([edited, staged, committed, moved]).size).toBe(4)
   })
 })
 

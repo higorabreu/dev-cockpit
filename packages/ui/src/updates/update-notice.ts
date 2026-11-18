@@ -136,9 +136,10 @@ export function createUpdateNotice(deps: UpdateNoticeDeps) {
           const summary = i18n.plural('updates.agents', confirming)
           return {
             texts: [[summary, 'notice-text warning']],
+            // Cancel first, so the menu's first focus and a stray Enter never end a running agent
             actions: [
-              { label: 'updates.restartAnyway', run: restart, focus: 'update-restart-anyway' },
               { label: 'updates.cancel', run: cancel, focus: 'update-cancel' },
+              { label: 'updates.restartAnyway', run: restart, focus: 'update-restart-anyway' },
             ],
             dismiss: false,
             tone: 'warning',

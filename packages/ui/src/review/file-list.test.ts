@@ -8,7 +8,7 @@ import {
 } from '@dck/core'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createFileList } from './file-list.ts'
-import { commitsTip, cutSubject } from './module-row.ts'
+import { commitsTip, cutSubject, moduleHead, moduleLabel } from './module-row.ts'
 
 const changed = (path: string, module?: string): DiffFile => {
   const [file] = parseUnifiedDiff(
@@ -97,6 +97,24 @@ describe('createFileList', () => {
     expect(header?.getAttribute('aria-label')).toBe(
       'Submodule libs/lib, 2 changed files, 4 new commits',
     )
+  })
+
+  it('should leave a zero out of the count and the name of a header when it has no files or commits', () => {
+    // Arrange
+    const i18n = createTranslator('pt-BR')
+    const moved: DiffModule = { path: 'frontend', commits: ['Fix the cart'], commitCount: 1 }
+    const edited: DiffModule = { path: 'shared', commits: [], commitCount: 0 }
+
+    // Act
+    const [line] = moduleHead(moved, 'frontend', 0, i18n)
+    const names = [moduleLabel(moved, 0, i18n), moduleLabel(edited, 1, i18n)]
+
+    // Assert
+    expect(line?.querySelector('.rv-mod-count')).toBeNull()
+    expect(names).toEqual([
+      'Submódulo frontend, 1 commit novo',
+      'Submódulo shared, 1 arquivo alterado',
+    ])
   })
 
   it('should fold a group with a click and open it again with the right arrow', () => {

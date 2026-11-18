@@ -15,7 +15,10 @@ paths:
   ellipsis shows its full content by itself; `data-tip` always shows a text (icons, counters, arrows);
   `data-tip-full` gives the whole text when the visible one is part of it; an icon with no label gets
   `data-tip` with its name; a shortcut goes in `data-tip-key`, never in the text, and a key the user can
-  change names its action in `data-tip-shortcut` so the tooltip asks the keymap (D69).
+  change names its action in `data-tip-shortcut` so the tooltip asks the keymap (D69). A left
+  click with a key held (Ctrl+click) puts only the key in `data-tip-key`, the action ("Open") in
+  `data-tip-gesture` and the click's spoken name in `data-tip-click`: the tooltip draws the key and a mouse
+  cap, then the action as a word, never as a cap.
 - **Scrollbar:** only the design system's, the `scroll` class (transparent track, thin thumb that shows
   while scrolling or hovering, sizes in `size.scrollbar`). Every scrolling list carries `scroll` and touches
   the card edges (breathing room is padding inside it). The only exception is the tab strip. No

@@ -88,3 +88,28 @@ panel lists submodules with rows that do nothing. Untracked files past the 300th
   a folded group, the commits tooltip (10 lines and "+ 3 more"), "Not loaded" rows read with Enter, the
   panel's row and the review it opens, stacked (index beside the diff) and side by side (index above it).
   A narrow header cut the submodule's box by a fraction of a pixel; the reason now takes the shrink.
+
+## Revision: each submodule in its own scope (D78, 2026-11-18)
+
+The maintainer found `backend` with 446 files and "+169 commits" under Uncommitted on a real repository:
+diffing a submodule from the commit the parent recorded folded every pulled commit into the review. Like
+VS Code, a submodule is now reviewed as its own repository with the same scope inside it; the commits its
+pointer moved through stay in the header only.
+
+| Id | Criterion | Verification |
+| --- | --- | --- |
+| S9 | Uncommitted shows a submodule's own working tree against its HEAD; the commits past the recorded one only in its header; a moved pointer alone keeps the header with no files | Tests against real repositories, screenshots |
+| S10 | Unpushed shows its commits not on its own upstream and its edits, only its edits with no upstream; Base its branch against its own base, its Unpushed when its branch has no base, from the recorded commit only when detached | Tests against real repositories, screenshots |
+| S11 | Unpushed and Base read every checked out submodule, nested ones the same way; the fingerprint moves with a submodule's HEAD, index and working tree | Tests |
+
+- [x] SM-T8. `node-git`: `ownStart` applies the scope inside each submodule, `recordedModules` lists the
+  checked out ones for Unpushed and Base, the header keeps `log recorded..HEAD`; tests for each scope, the
+  detached fallback, a submodule with no upstream, a nested one and the fingerprint. (S9, S10, S11)
+- [x] SM-T9. `ui`: with only moved pointers the index lists their headers and the diff's place says "No
+  file changes to review", both catalogs; the panel's row opens that header. (S9)
+- [x] SM-T10. D78, D70 marked, the README; checked in the real app under Xvfb in each scope, both themes
+  and both languages, with three submodules: one 12 commits past the recorded one with two edits, one with
+  only a moved pointer, one unmoved with an unpushed commit of its own.
+- [x] SM-T11. QA from the maintainer: a branch with no base (its integration branch) reads from its own
+  upstream in Base, else its HEAD; a header with no files shows no count and its name leaves zeros out
+  ("0 arquivo alterado" read badly); the arrows' hint shows whenever the index can be walked. (S9, S10)
