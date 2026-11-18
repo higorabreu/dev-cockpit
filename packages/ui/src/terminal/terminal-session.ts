@@ -5,6 +5,7 @@ import { Terminal } from '@xterm/xterm'
 import type { Keymap } from '../platform/keymap.ts'
 import { terminalTheme } from '../platform/theme.ts'
 import { attachClipboard } from './clipboard-behavior.ts'
+import { attachLineEditing } from './line-editing.ts'
 import { attachProgramStatus } from './program-status.ts'
 import { attachDrop } from './terminal-drop.ts'
 import { attachLinks, type LinkOptions } from './terminal-links.ts'
@@ -88,7 +89,12 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     nativeMiddlePaste: options.nativeMiddlePaste,
     keymap: options.keymap,
   })
-  terminal.attachCustomKeyEventHandler(clipboard.onKey)
+  // Each handler sees the key until one keeps it from xterm
+  const keyHandlers = [clipboard.onKey]
+  if (options.keymap.keyboard === 'mac') {
+    keyHandlers.push(attachLineEditing(terminal, () => options.onInput?.()))
+  }
+  terminal.attachCustomKeyEventHandler((event) => keyHandlers.every((handler) => handler(event)))
   const drop = attachDrop(element, {
     pathOf: (file) => api.files.pathOf(file),
     paste: (text) => terminal.paste(text),
