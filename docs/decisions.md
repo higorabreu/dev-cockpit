@@ -1359,12 +1359,15 @@ Unpushed commits: its commits not on its own upstream and its working tree, as t
 the merge base with its upstream to the working tree; a submodule with no upstream shows its uncommitted
 edits only, never the parent's "No upstream" state. Base: its branch against its own base, found in its
 repository the way the parent's is (D49: VS Code's merge base, the branch's creation, the nearest branch;
-the user's pick names a branch of the parent and does not apply inside). Detached, or with no base found,
-it starts at the commit the parent recorded at the scope's start, as D70 did. The commits between that
+the user's pick names a branch of the parent and does not apply inside). A branch with no base found,
+usually the integration branch the submodule pulls (`develop`, `main`), falls back to its Unpushed: the
+merge base with its own upstream, else its HEAD, so pulled commits never fill the review. Only a detached
+HEAD starts at the commit the parent recorded at the scope's start, as D70 did. The commits between that
 recorded commit and the submodule's HEAD (a pull, a branch switch inside it) stay in the group's header,
 "+ N commits" with at most 5 subjects in the tooltip, but their files are no longer listed. A submodule
-whose pointer alone moved keeps its header with no files; when nothing else changed, the diff's place
-says "No file changes to review" beside the index, which lists the headers. Uncommitted reads the
+whose pointer alone moved keeps its header with no files and no count (its screen reader name leaves a
+zero out too); when nothing else changed, the diff's place says "No file changes to review" beside the
+index, which lists the headers and keeps the arrows' hint in the hint bar. Uncommitted reads the
 submodules the parent's status names (moved pointer, modified content, untracked files); Unpushed and Base
 read every checked out submodule the parent records (`.gitmodules`, confirmed by the index), since one
 can have commits of its own while the parent's pointer stayed, and skip one with nothing to show and no
@@ -1375,10 +1378,13 @@ the next read (Ctrl+R, the agent, any other change). The base finder keeps 64 fi
 the submodules of a Base read do not push the parent's out on every refresh.
 **Reason:** the maintainer's decision (2026-11-18), after a real repository showed `backend` with 446
 files and "+169 commits" under Uncommitted: diffing from the recorded commit folded every pulled commit
-into a scope meant for what the user did. A detached HEAD, the usual state of a submodule that
+into a scope meant for what the user did. A submodule on the branch it pulls has no base by D48's rule
+(on the remote's default branch the nearest is not a base), and the recorded commit would bring every
+pulled commit back under Base; its unpushed work is what the user did there. A detached HEAD, the usual
+state of a submodule that
 `git submodule update` checked out, has no branch whose base could be found; starting from the parent's
 recorded commit then shows what the parent's branch moved it through, the nearest meaning of "this
 branch" for it, and it is what the review did before.
 **How to revert:** in `gatherModule`, start the submodule's diff at the recorded commit again (drop
 `ownStart`), stop reading `recordedModules` in `gather`, and drop the pane's `pointersOnly` state and its
-two catalog entries.
+two catalog entries; `moduleLabel` and `moduleHead` show the zero count again.
