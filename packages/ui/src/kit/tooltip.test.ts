@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { installTooltips } from './tooltip.ts'
+import { installTooltips, setTipRegion } from './tooltip.ts'
 
 // The key of the new tab action, as the keymap would give it after the user changed it
 let newTabKey = 'Ctrl+Shift+T'
@@ -67,5 +67,59 @@ describe('installTooltips', () => {
 
     // Assert
     expect(document.getElementById('tooltip')?.textContent).toBe('New tabCtrl+Alt+N')
+  })
+
+  it('should draw the modifier and a mouse as caps and the action as a word when the key is held for a click', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const path = document.createElement('span')
+    path.dataset.tip = 'src/app.ts'
+    path.dataset.tipKey = 'Ctrl'
+    path.dataset.tipGesture = 'Abrir'
+    path.dataset.tipClick = 'clique'
+    document.body.append(path)
+
+    // Act
+    path.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    vi.advanceTimersByTime(500)
+
+    // Assert
+    const tip = document.getElementById('tooltip')
+    expect(tip?.querySelectorAll('kbd.key')).toHaveLength(2)
+    expect(tip?.querySelector('kbd.mouse')).not.toBeNull()
+    expect(tip?.querySelector('.gesture')?.textContent).toBe('Ctrl+clique, Abrir')
+  })
+
+  it('should show the gesture of a region when a link drawn in the terminal is hovered', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const owner = document.createElement('div')
+    document.body.append(owner)
+    const box = { x: 10, y: 10, width: 80, height: 16 }
+    const gesture = { click: 'left click', action: 'Open' }
+
+    // Act
+    setTipRegion(owner, { text: 'https://gitlab.example.com', key: '⌘', gesture, box })
+    vi.advanceTimersByTime(500)
+
+    // Assert
+    const tip = document.getElementById('tooltip')
+    expect(tip?.querySelectorAll('kbd.key')).toHaveLength(2)
+    expect(tip?.textContent).toBe('https://gitlab.example.com⌘ left click, Open')
+  })
+
+  it('should keep one cap per key when the tip is a shortcut', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const holder = iconWithTip()
+
+    // Act
+    holder.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    vi.advanceTimersByTime(500)
+
+    // Assert
+    const tip = document.getElementById('tooltip')
+    expect(tip?.querySelectorAll('kbd.key')).toHaveLength(3)
+    expect(tip?.querySelector('.gesture')).toBeNull()
   })
 })

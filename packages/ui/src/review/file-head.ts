@@ -127,7 +127,9 @@ export function fileHead(
   const path = filePathLabel(file)
   path.classList.add('rv-open')
   path.dataset.tip = file.path
-  path.dataset.tipKey = i18n.t('terminal.openPath', { modifier: deps.modifier })
+  path.dataset.tipKey = deps.modifier
+  path.dataset.tipClick = i18n.t('terminal.leftClick')
+  path.dataset.tipGesture = i18n.t('terminal.openPath')
   path.addEventListener('click', (event) => {
     if (deps.isModified(event)) deps.open(file.path)
   })

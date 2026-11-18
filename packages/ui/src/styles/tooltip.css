@@ -21,6 +21,13 @@
   color: var(--muted);
 }
 
+/* What a held key does with the mouse reads as a sentence on its own line, below the path or link */
+#tooltip > .gesture {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+}
+
 /* A list, one item a line: each line is cut by an ellipsis instead of wrapping, so it stays compact */
 #tooltip[data-lines] {
   max-width: 400px;

@@ -55,3 +55,31 @@
 .keys.compact .kplus {
   font-size: 10.5px;
 }
+
+/* A key drawn as an icon (the mouse) says its name only to a screen reader */
+.key-icon {
+  display: block;
+}
+
+.key-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A left click with a key held: the caps sit on the line of the action, their letters on its baseline,
+   and the action stands apart from them by more than the gap of a chord */
+.gesture {
+  white-space: nowrap;
+}
+
+.gesture > .keys {
+  vertical-align: baseline;
+}
+
+.gesture-action {
+  margin-left: 8px;
+}
