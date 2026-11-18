@@ -493,8 +493,8 @@
   line-height: 16px;
 }
 
-/* An action's keycaps are its button. Recording shows the prompt in the same box: the row keeps its
-   height, and the dashed edge says it waits for a key */
+/* An action's keycaps are its button. Recording shows the prompt in the same box, framed like the
+   global key's Change while it waits, so the row keeps its height */
 .skey {
   box-sizing: border-box;
   height: 32px;
@@ -521,7 +521,6 @@
 .skey[data-recording="true"] {
   padding: 0 10px;
   border-color: var(--control-line);
-  border-style: dashed;
 }
 
 .skey:disabled {
