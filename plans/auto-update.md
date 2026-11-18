@@ -48,7 +48,7 @@ packaged app ignores the variable. `pkexec` is found on `PATH`, so a check puts 
 
 ## Tasks
 
-- [ ] U1. Core: semver compare, package name per architecture, `SHA256SUMS` parser and the `ReleaseSource`
+- [x] U1. Core: semver compare, package name per architecture, `SHA256SUMS` parser and the `ReleaseSource`
   and `UpdateInstaller` ports, with tests.
 - [ ] U2. Adapter: the latest GitHub release with zod, skipping drafts and prereleases, with tests.
 - [ ] U3. Core: the updater state machine (modes, 12 hour timer, dismissal, install steps, failures) with a
