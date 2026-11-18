@@ -390,7 +390,8 @@ app.whenReady().then(async () => {
           }
         },
       },
-      (tabId) => void dockActions.show().then(() => send(hostChannels.notificationsClick, tabId)),
+      (tabId) =>
+        void dockActions.present().then(() => send(hostChannels.notificationsClick, tabId)),
     ),
     shell: platform.terminal,
     home: homedir(),

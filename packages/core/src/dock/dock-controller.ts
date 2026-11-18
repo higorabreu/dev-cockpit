@@ -23,6 +23,9 @@ export interface DockOptions {
 export interface DockController {
   toggle(): void
   show(point?: Point): void
+  // Brings a visible window forward where it is, or shows a hidden one. Unlike show it never maps a visible
+  // window again: mapped again without the focus, it opens behind the focused app (no always on top on Wayland)
+  present(): void
   hide(): void
   toggleFullHeight(): void
   // Reapplies the current position and size, for example after the height changes in settings
@@ -118,6 +121,10 @@ export function createDockController(options: DockOptions): DockController {
 
   return {
     show,
+    present() {
+      if (window.isVisible()) window.focus()
+      else show()
+    },
     hide,
     toggle() {
       const now = options.clock?.now()
