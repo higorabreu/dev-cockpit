@@ -10,7 +10,13 @@ import type { SettingsFileState } from './settings-file.ts'
 
 export const LANGUAGES = ['auto', 'pt-BR', 'en'] as const
 export const THEMES = ['dark', 'light', 'system'] as const
-export const HOLD_TRIGGERS = ['ControlRight', 'ControlLeft', 'AltRight', 'AltLeft'] as const
+export const HOLD_TRIGGERS = [
+  'ControlRight',
+  'ControlLeft',
+  'AltRight',
+  'AltLeft',
+  'MetaRight',
+] as const
 export type HoldTrigger = (typeof HOLD_TRIGGERS)[number]
 
 export const LIMITS = {

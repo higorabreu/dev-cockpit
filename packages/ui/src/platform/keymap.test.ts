@@ -126,7 +126,7 @@ describe('keyboardFor', () => {
 })
 
 describe('createKeymap per keyboard', () => {
-  it('should open links with Cmd and hold the right Option when the keyboard is a Mac one', () => {
+  it('should open links with Cmd and hold the right Command when the keyboard is a Mac one', () => {
     // Act
     const mac = createKeymap('mac')
 
@@ -134,7 +134,7 @@ describe('createKeymap per keyboard', () => {
     expect([mac.click.modifier, mac.click.label, mac.holdTrigger]).toEqual([
       'meta',
       '⌘',
-      'AltRight',
+      'MetaRight',
     ])
     expect(mac.click.isHeld({ ctrlKey: true, metaKey: false })).toBe(false)
   })

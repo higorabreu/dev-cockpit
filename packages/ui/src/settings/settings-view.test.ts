@@ -171,7 +171,7 @@ describe('settings view selects', () => {
     view.close()
   })
 
-  it('should hold the right Option by default with no reset when the keyboard is a Mac one', () => {
+  it('should hold the right Command by default with no reset when the keyboard is a Mac one', () => {
     // Arrange
     const { body, combobox, view } = open([], api, undefined, 'mac')
 
@@ -181,11 +181,31 @@ describe('settings view selects', () => {
     // Assert
     expect(
       combobox('shortcuts.holdTrigger').querySelector('[data-current="true"]')?.textContent,
-    ).toBe('Right Option')
+    ).toBe('Right Command')
     expect(
       body.querySelector<HTMLElement>('.sreset[data-key="shortcuts.holdTrigger"]')?.hidden,
     ).toBe(true)
     view.close()
+  })
+
+  it('should offer the right Super only when the file already holds it on a PC keyboard', () => {
+    // Arrange
+    const chosen = mergeSettings(defaultSettings, { shortcuts: { holdTrigger: 'MetaRight' } })
+    const labels = (initial?: Settings) => {
+      const { body, combobox, view } = open([], api, initial)
+      body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
+      const found = [...combobox('shortcuts.holdTrigger').querySelectorAll('.select-value > span')]
+      view.close()
+      return found.map((element) => element.textContent)
+    }
+
+    // Act
+    const fresh = labels()
+    const kept = labels(chosen)
+
+    // Assert
+    expect(fresh).toEqual(['Right Ctrl', 'Left Ctrl', 'Right Alt', 'Left Alt'])
+    expect(kept).toContain('Right Super')
   })
 
   it('should name each select by its row label when the screen is drawn', () => {

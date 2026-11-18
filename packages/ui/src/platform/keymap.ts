@@ -132,8 +132,9 @@ const CLIPBOARD: Record<Keyboard, Partial<Record<'copy' | 'paste', Chord>>> = {
 const PRIMARY: Record<Keyboard, Modifiers> = { pc: C, mac: M }
 // The modifier of the digits that go to a tab; 9 goes to the last one, as in browsers and Ghostty
 const TAB: Record<Keyboard, Modifiers> = { pc: { alt: true }, mac: M }
-// MacBook keyboards have no right Control; the right Option sits in the same corner
-const HOLD_TRIGGER: Record<Keyboard, HoldTrigger> = { pc: 'ControlRight', mac: 'AltRight' }
+// MacBook keyboards have no right Control; the right Command sits near that corner, never types text and
+// leaves both Options to the terminal
+const HOLD_TRIGGER: Record<Keyboard, HoldTrigger> = { pc: 'ControlRight', mac: 'MetaRight' }
 
 const pressedKey = (event: KeyInput) =>
   physicalKey(event)?.toLowerCase() ??

@@ -839,9 +839,11 @@ export function createSettingsView(
     const focused = pending ?? document.activeElement?.getAttribute('data-focus')
     focusNext = undefined
     const value = settings.current()
-    const holdOptions = HOLD_TRIGGERS.map(
-      (id) => [id, t(`settings.holdTrigger.${mac ? 'mac.' : ''}${id}` as const)] as const,
-    )
+    const holdTrigger = value.shortcuts.holdTrigger ?? deps.keymap.holdTrigger
+    // The desktop takes Super for itself on Linux and Windows; a value already in the file stays listed
+    const holdOptions = HOLD_TRIGGERS.filter(
+      (id) => mac || id !== 'MetaRight' || id === holdTrigger,
+    ).map((id) => [id, t(`settings.holdTrigger.${mac ? 'mac.' : ''}${id}` as const)] as const)
 
     const resetAll = h(
       'button',
@@ -1002,11 +1004,7 @@ export function createSettingsView(
           row(
             'shortcuts.holdTrigger',
             t('settings.holdTrigger'),
-            select(
-              'shortcuts.holdTrigger',
-              holdOptions,
-              value.shortcuts.holdTrigger ?? deps.keymap.holdTrigger,
-            ),
+            select('shortcuts.holdTrigger', holdOptions, holdTrigger),
           ),
         ),
         h(

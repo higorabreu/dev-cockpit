@@ -139,6 +139,9 @@ describe('parseSettings', () => {
     expect(parseSettings({ shortcuts: { holdTrigger: 'AltRight' } }).shortcuts.holdTrigger).toBe(
       'AltRight',
     )
+    expect(parseSettings({ shortcuts: { holdTrigger: 'MetaRight' } }).shortcuts.holdTrigger).toBe(
+      'MetaRight',
+    )
     expect(parseSettings({ shortcuts: { holdTrigger: 'KeyQ' } }).shortcuts.holdTrigger).toBeNull()
   })
 })
