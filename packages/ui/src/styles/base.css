@@ -11,6 +11,7 @@ label:has(> input[type="radio"]),
 [role="button"],
 [role="tab"],
 [role="option"],
+[role="treeitem"],
 [role="menuitem"],
 [role="switch"],
 [role="link"] {

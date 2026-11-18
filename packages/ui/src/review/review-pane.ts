@@ -347,9 +347,13 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   function replaced(found: ReviewDiff, read: ReadonlyMap<string, DiffFile>): ReviewDiff {
     const next = found.files.map((file) => {
       const content = file.unloaded ? read.get(file.path) : undefined
-      return content ? { ...content, generated: content.generated || file.generated } : file
+      if (!content) return file
+      const generated = content.generated || file.generated
+      return file.module === undefined
+        ? { ...content, generated }
+        : { ...content, generated, module: file.module }
     })
-    return reviewDiff(found.root, found.scope, found.branch, next)
+    return reviewDiff(found.root, found.scope, found.branch, next, found.modules)
   }
 
   async function readUntracked(repository: string, file: DiffFile) {
@@ -737,7 +741,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
     }
     body.hidden = false
     message.hidden = true
-    list.show(files(), Math.max(0, list.selected()))
+    list.show(files(), state.diff.modules, Math.max(0, list.selected()))
     drawDiff()
   }
 
@@ -779,7 +783,8 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       diff.nextHunk(key === 'n' ? 1 : -1)
       if (where === 'index') diff.focus()
     } else if (key === 'v') {
-      const file = files()[where === 'index' ? list.selected() : diff.currentFile()]
+      const index = where === 'index' ? list.selectedFile() : diff.currentFile()
+      const file = index === undefined ? undefined : files()[index]
       if (file) toggleViewed(file)
     } else if (key === 'c' && where === 'diff') {
       const target = diff.commentTarget()

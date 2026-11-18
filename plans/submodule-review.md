@@ -62,8 +62,13 @@ panel lists submodules with rows that do nothing. Untracked files past the 300th
   the shared limits; tests against real repositories with a nested submodule. (S1, S6) The commits are
   those after the recorded one up to the submodule's HEAD (`log old..HEAD`); a submodule moved back
   shows its files and no commit. The 32 MB limit counts the diffs of every repository together.
-- [ ] SM-T3. `ui`: the groups in the index, the submodule part in the diff headers, the commits line and its
-  tooltip, both catalogs. (S2, S3, S4, S8)
+- [x] SM-T3. `ui`: the groups in the index, the submodule part in the diff headers, the commits line and its
+  tooltip, both catalogs. (S2, S3, S4, S8) The index is a `tree`: ↑↓ along the rows, ← folds or climbs to
+  the header, → opens, Enter or a click folds a header; a header takes the diff to its group's first file.
+  A nested header names its folder from the submodule that holds it. The tooltip kit draws a text of
+  several lines one per line, each cut by an ellipsis. In the index a file past the reading limit says
+  "Not loaded" (the whole "Content not loaded" in its tooltip with Enter): the long form cut the file
+  name in a 240px index.
 - [x] SM-T4. Every untracked file listed, "Content not loaded" and the diff loaded on demand through a host
   channel. (S6) The listing reads with the status's 8 MB budget instead of 1 MB, a file git cannot diff
   stays listed as not loaded, and the on-demand read is `review:untracked`, only for a known root and a

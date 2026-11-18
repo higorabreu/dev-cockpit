@@ -31,4 +31,22 @@ describe('installTooltips', () => {
     expect(tip?.textContent).toBe('Review openCtrl+Shift+D')
     expect(holder.getAttribute('aria-describedby')).toBe('tooltip')
   })
+
+  it('should put each line on its own when the tip has several lines', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const holder = document.createElement('span')
+    holder.dataset.tip = 'Fix the parser\nAdd a fallback\n+ 2 more'
+    document.body.append(holder)
+
+    // Act
+    holder.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    vi.advanceTimersByTime(500)
+
+    // Assert
+    const tip = document.getElementById('tooltip')
+    const lines = [...(tip?.querySelectorAll('.tip-line') ?? [])].map((line) => line.textContent)
+    expect(lines).toEqual(['Fix the parser', 'Add a fallback', '+ 2 more'])
+    expect(tip?.hasAttribute('data-lines')).toBe(true)
+  })
 })

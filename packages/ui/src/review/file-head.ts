@@ -1,6 +1,6 @@
 import { type DiffFile, type FileNotice, isCollapsed, type Translator } from '@dck/core'
 import { h, icon } from '../panel/dom.ts'
-import { counts, fileLetter, pathLabel, statusKey } from './file-list.ts'
+import { counts, fileLetter, filePathLabel, statusKey } from './file-list.ts'
 
 export function sizeText(i18n: Translator, bytes: number): string {
   if (bytes < 1024) return i18n.t('review.size.b', { value: bytes })
@@ -124,7 +124,7 @@ export function fileHead(
 ): HTMLElement {
   const { i18n } = deps
   const letter = fileLetter(file, i18n)
-  const path = pathLabel(file.path)
+  const path = filePathLabel(file)
   path.classList.add('rv-open')
   path.dataset.tip = file.path
   path.dataset.tipKey = i18n.t('terminal.openPath', { modifier: deps.modifier })

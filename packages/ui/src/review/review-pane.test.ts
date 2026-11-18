@@ -263,7 +263,7 @@ describe('createReviewPane', () => {
     pane.open()
     await flush()
     const notices = [...pane.element.querySelectorAll('.rv-file .rv-wait')].map(
-      (n) => n.textContent,
+      (n) => `${n.textContent} | ${n.getAttribute('data-tip')}`,
     )
     const header = text('.rv-filerow[data-file="0"] .rv-why')
 
@@ -276,7 +276,7 @@ describe('createReviewPane', () => {
     await flush()
 
     // Assert
-    expect(notices).toEqual(['Content not loaded', 'Content not loaded'])
+    expect(notices).toEqual(['Not loaded | Content not loaded', 'Not loaded | Content not loaded'])
     expect(header).toBe('Content not loaded')
     expect(reads).toEqual([
       'untracked /home/ana/acme|gen/f300.txt',
@@ -661,6 +661,46 @@ describe('createReviewPane', () => {
     expect(lines.getAttribute('aria-activedescendant')).toBe('review-tab-1-row-0')
     expect(pane.element.querySelector('.rv-file-viewed')?.getAttribute('aria-label')).toBe(
       'src/billing/invoice.ts, modified, 1 added, 1 removed, viewed',
+    )
+  })
+
+  it('should group a submodule in the index and set its folder apart in the diff header', async () => {
+    // Arrange
+    const [invoice, lock] = parseUnifiedDiff(diffText(3000, 5000) + lockText)
+    if (!lock || !invoice) throw new Error('invariant: two files')
+    const inside = {
+      ...invoice,
+      path: 'libs/billing/src/billing/invoice.ts',
+      module: 'libs/billing',
+    }
+    const answer = ok({
+      kind: 'ok' as const,
+      diff: reviewDiff(
+        '/home/ana/acme',
+        'uncommitted',
+        feature,
+        [lock, inside],
+        [{ path: 'libs/billing', commits: ['Round the totals'], commitCount: 1 }],
+      ),
+    })
+    const { pane, key, text } = setup(answer)
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+
+    // Act
+    key(lines, ']')
+    key(lines, 'v')
+
+    // Assert
+    expect(text('.rv-files [data-module="libs/billing"] .rv-mod-subjects')).toBe('Round the totals')
+    expect(text('.rv-files .rv-file[data-index="1"] .rv-path')).toBe('src/billing/invoice.ts')
+    const head = pane.element.querySelector('.rv-filerow[data-file="1"] .rv-path')
+    expect(head?.querySelector('.rv-modpart')?.textContent).toBe('libs/billing')
+    expect(head?.textContent).toBe('libs/billingsrc/billing/invoice.ts')
+    expect(pane.element.querySelector('.rv-file-viewed')?.getAttribute('aria-label')).toBe(
+      'libs/billing/src/billing/invoice.ts, modified, 1 added, 1 removed, viewed',
     )
   })
 
