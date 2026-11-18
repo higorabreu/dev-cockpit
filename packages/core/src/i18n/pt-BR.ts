@@ -562,6 +562,8 @@ export const ptBR = {
   'error.DCK-GHB-005': 'O GitHub não está respondendo',
   'error.DCK-GHB-006': 'Resposta inesperada do GitHub',
   'error.DCK-GHB-007': 'Endereço do GitHub inválido',
+  'error.DCK-UPD-001': 'Não foi possível verificar atualizações',
+  'error.DCK-UPD-002': 'Resposta inesperada sobre as versões',
 } as const
 
 export type MessageKey = keyof typeof ptBR

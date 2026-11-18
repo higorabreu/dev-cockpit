@@ -203,5 +203,15 @@
     "category": "invalid_argument",
     "retryable": false,
     "rpc": -32037
+  },
+  "DCK-UPD-001": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32038
+  },
+  "DCK-UPD-002": {
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32039
   }
 }

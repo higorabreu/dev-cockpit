@@ -561,4 +561,6 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-GHB-005': 'GitHub is not responding',
   'error.DCK-GHB-006': 'Unexpected GitHub response',
   'error.DCK-GHB-007': 'Invalid GitHub address',
+  'error.DCK-UPD-001': 'Could not check for updates',
+  'error.DCK-UPD-002': 'Unexpected answer about the releases',
 }
