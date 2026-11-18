@@ -1,0 +1,51 @@
+/* Over everything but the tooltip: the question holds the window until it is answered */
+#quit {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 18vh;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+
+#quit[hidden] {
+  display: none;
+}
+
+.quit-card {
+  width: min(340px, calc(100% - 24px));
+  box-sizing: border-box;
+  /* The same 16px from the border to the title's line box and to the buttons' edges */
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-large);
+}
+
+.quit-title {
+  margin: 0;
+  color: var(--fg);
+  font: inherit;
+  font-weight: 600;
+}
+
+.quit-text {
+  margin: 0;
+  color: var(--muted);
+}
+
+.quit-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.quit-actions .vbtn {
+  padding: 4px 12px;
+}

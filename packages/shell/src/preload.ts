@@ -132,6 +132,10 @@ const api: HostApi = {
     restart: () => ipcRenderer.send(hostChannels.updatesRestart),
     onChange: (listener) => subscribe<[UpdateState]>(hostChannels.updatesChanged, listener),
   },
+  quit: {
+    onAsk: (listener) => subscribe<[number]>(hostChannels.quitAsk, listener),
+    answer: (quit) => ipcRenderer.send(hostChannels.quitAnswer, quit),
+  },
   window: {
     toggleFullHeight: () => ipcRenderer.send(hostChannels.windowToggleFullHeight),
     resize: (height) => ipcRenderer.invoke(hostChannels.windowResize, height),

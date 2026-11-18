@@ -34,6 +34,11 @@ export interface TerminalSession {
   setOptionAsMeta(mode: MacOptionAsMeta): void
   // Empties the screen and the scrollback, keeping the prompt's line, as VS Code's clear does
   clear(): void
+  // What the Mac's context menu does: copy the selection, paste the clipboard, select everything
+  hasSelection(): boolean
+  copySelection(): void
+  pasteClipboard(): void
+  selectAll(): void
   dispose(): void
 }
 
@@ -56,6 +61,8 @@ export interface SessionOptions {
   readonly links: Omit<LinkOptions, 'open'>
   readonly nativeMiddlePaste: boolean
   readonly keymap: Keymap
+  // A Mac's secondary click in the terminal, at the pointer; elsewhere it pastes
+  openMenu(x: number, y: number): void
   onCopied(text: string): void
   onExit(): void
   // A key the user typed, not the replies xterm sends by itself (focus and cursor reports)
@@ -83,6 +90,9 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     macOptionIsMeta: true,
     // Option+drag selects text even in a program that takes the mouse (vim, htop), as in Terminal.app
     macOptionClickForcesSelection: true,
+    // xterm selects the word under a Mac's right click; here selecting copies, so it would replace the
+    // clipboard before Paste
+    rightClickSelectsWord: false,
     theme: terminalTheme(options.theme),
   })
   const fit = new FitAddon()
@@ -98,6 +108,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   const clipboard = attachClipboard(terminal, element, api.clipboard, options.onCopied, {
     nativeMiddlePaste: options.nativeMiddlePaste,
     keymap: options.keymap,
+    openMenu: options.openMenu,
   })
   const mac = options.keymap.keyboard === 'mac'
   const optionKeys = mac ? attachOptionKeys(terminal, options.macOptionAsMeta) : undefined
@@ -204,6 +215,10 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     },
     setOptionAsMeta: (mode) => optionKeys?.setMode(mode),
     clear: () => terminal.clear(),
+    hasSelection: () => terminal.hasSelection(),
+    copySelection: clipboard.copySelection,
+    pasteClipboard: () => void clipboard.paste(),
+    selectAll: () => terminal.selectAll(),
     dispose() {
       stopData()
       stopExit()
