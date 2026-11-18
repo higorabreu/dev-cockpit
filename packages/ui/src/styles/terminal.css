@@ -1,3 +1,4 @@
+/* The body paints the window color with the opacity; xterm's opaque theme background stays unpainted */
 .xterm,
 .xterm .xterm-viewport,
 .xterm .xterm-scrollable-element {

@@ -6,7 +6,6 @@ import { createTabBar } from './tab-bar.ts'
 function setup(language: 'en' | 'pt-BR' = 'en', middleClickCloses = true) {
   const container = document.createElement('div')
   document.body.append(container)
-  const hidden: (string | undefined)[] = []
   const renames: [string, string | undefined][] = []
   const closed: string[] = []
   const bar = createTabBar(
@@ -18,7 +17,6 @@ function setup(language: 'en' | 'pt-BR' = 'en', middleClickCloses = true) {
       middleClickCloses: () => middleClickCloses,
       reorder: () => undefined,
       rename: (id, name) => void renames.push([id, name]),
-      hiddenAttention: (kind) => void hidden.push(kind),
     },
     createTranslator(language).t,
   )
@@ -26,7 +24,7 @@ function setup(language: 'en' | 'pt-BR' = 'en', middleClickCloses = true) {
     id: 'tab-2',
     label: 'shell 2',
   })
-  return { container, bar, state, hidden, renames, closed }
+  return { container, bar, state, renames, closed }
 }
 
 afterEach(() => {
@@ -56,14 +54,6 @@ describe('createTabBar review mark', () => {
     expect(
       container.querySelector('[data-id="tab-2"] .pip.review')?.getAttribute('aria-label'),
     ).toBe('Revisão aberta')
-  })
-
-  it('should not count the review mark as attention when it sits out of view', () => {
-    const { bar, state, hidden } = setup()
-
-    bar.render(state, new Map(), new Set(['tab-1', 'tab-2']))
-
-    expect(hidden.filter((kind) => kind !== undefined)).toEqual([])
   })
 
   it('should keep both marks when the tab also needs the user', () => {

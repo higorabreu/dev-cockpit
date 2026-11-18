@@ -62,7 +62,6 @@ import { createReviewTabs } from './review/review-tabs.ts'
 import { applyOpacity } from './settings/preferences.ts'
 import type { SettingsClient } from './settings/settings-client.ts'
 import { createSettingsView } from './settings/settings-view.ts'
-import { attentionMark } from './tabs/attention-mark.ts'
 import { createNotice } from './tabs/notice.ts'
 import { createSessionWatcher } from './tabs/sessions-watcher.ts'
 import { createTabBar } from './tabs/tab-bar.ts'
@@ -767,15 +766,6 @@ export async function startApp(
   const tabBar = createTabBar(
     elements.tabs,
     {
-      hiddenAttention(kind) {
-        if (kind) elements.tabsAll.dataset.attention = kind
-        else delete elements.tabsAll.dataset.attention
-        const label = kind
-          ? `${i18n.t('tabs.all')}, ${attentionMark(kind, i18n.t).label}`
-          : i18n.t('tabs.all')
-        elements.tabsAll.setAttribute('aria-label', label)
-        elements.tabsAll.setAttribute('data-tip', label)
-      },
       activate: (id) => update(activateTab(state, id)),
       close,
       middleClickCloses: () => !holdsMiddleButton(holdTrigger()),
