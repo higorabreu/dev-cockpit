@@ -758,14 +758,14 @@ describe('createReviewPane', () => {
 
     // Assert
     const header = pane.element.querySelector('.rv-files [data-module="libs/billing"]')
-    expect(header?.getAttribute('aria-label')).toBe(
-      'Submodule libs/billing, 0 changed files, 1 new commit',
-    )
+    expect(header?.getAttribute('aria-label')).toBe('Submodule libs/billing, 1 new commit')
+    expect(header?.querySelector('.rv-mod-count')).toBeNull()
     expect(header?.getAttribute('aria-selected')).toBe('true')
     expect((pane.element.querySelector('.rv-lines') as HTMLElement).hidden).toBe(true)
     expect(text('.rv-body .rv-state strong')).toBe('No file changes to review')
     expect(text('.rv-status')).toBe('')
     expect(document.activeElement).toBe(pane.element.querySelector('.rv-files'))
+    expect(text('.phint')).toBe('↑↓ navigateEsc terminalCtrl+R Refresh')
   })
 
   it('should open the diff on the file the panel names and say so when the scope has no such file', async () => {

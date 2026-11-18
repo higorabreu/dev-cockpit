@@ -30,13 +30,16 @@ export function commitsTip(module: DiffModule, i18n: Translator): string {
   return lines.join('\n')
 }
 
-// How a screen reader names a submodule's header: its path, its files and its new commits
+// How a screen reader names a submodule's header: its path, then its files and its new commits when it
+// has any; a zero is left out, as the eye sees no count either
 export function moduleLabel(module: DiffModule, count: number, i18n: Translator): string {
-  return i18n.t('review.a11y.module', {
-    path: module.path,
-    files: i18n.plural('review.module.files', count),
-    commits: i18n.plural('review.a11y.commits', module.commitCount),
-  })
+  return [
+    i18n.t('review.a11y.module', { path: module.path }),
+    count > 0 && i18n.plural('review.module.files', count),
+    module.commitCount > 0 && i18n.plural('review.a11y.commits', module.commitCount),
+  ]
+    .filter(Boolean)
+    .join(', ')
 }
 
 // The line of new commits: up to INLINE_SUBJECTS subjects, then how many more, the list in the tooltip
@@ -55,7 +58,8 @@ function commitsLine(module: DiffModule, i18n: Translator): HTMLElement {
 }
 
 // A submodule's header in the index: a chevron that turns when it opens, its path from the one that
-// holds it, the "Submodule" tag and its file count, and its new commits on a second line
+// holds it, the "Submodule" tag and its file count (none when only its pointer moved), and its new
+// commits on a second line
 export function moduleHead(
   module: DiffModule,
   label: string,
@@ -68,11 +72,12 @@ export function moduleHead(
     icon(CHEVRON, 12, 'rv-chev'),
     h('span', { class: 'rv-mod-path', 'data-tip-full': module.path }, label),
     h('span', { class: 'rv-tag' }, i18n.t('review.submodule')),
-    h(
-      'span',
-      { class: 'rv-mod-count', 'data-tip': i18n.plural('review.module.files', count) },
-      String(count),
-    ),
+    count > 0 &&
+      h(
+        'span',
+        { class: 'rv-mod-count', 'data-tip': i18n.plural('review.module.files', count) },
+        String(count),
+      ),
   )
   return module.commitCount > 0 ? [line, commitsLine(module, i18n)] : [line]
 }

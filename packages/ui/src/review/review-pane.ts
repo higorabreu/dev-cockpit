@@ -588,10 +588,12 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   let hintsFor: string | undefined
   function drawHints() {
     const withFiles = state.kind === 'ok' && state.diff.files.length > 0
+    // The arrows walk the index even when it lists only submodules whose pointer moved
+    const navigable = withFiles || (listed() && !deps.memory.indexHidden)
     // In the comment field only its own keys apply
     const typing = document.activeElement instanceof HTMLTextAreaElement && focusInside
     // The review's key is in it too: the user may have changed it since the last drawing
-    const key = `${withFiles} ${focusInside} ${typing} ${deps.keymap.label('review')}`
+    const key = `${withFiles} ${navigable} ${focusInside} ${typing} ${deps.keymap.label('review')}`
     if (hintsFor === key) return
     hintsFor = key
     if (!focusInside) {
@@ -615,9 +617,9 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       return hint
     }
     hints.replaceChildren(
+      ...(navigable ? [droppable(keyHint('↑↓', t('review.hint.navigate')), 5)] : []),
       ...(withFiles
         ? [
-            droppable(keyHint('↑↓', t('review.hint.navigate')), 5),
             droppable(keyHint('[ ]', t('review.hint.file')), 3),
             droppable(keyHint('n p', t('review.hint.hunk')), 2),
             droppable(keyHint('c', t('review.hint.comment')), 4),
@@ -874,6 +876,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   indexToggle.addEventListener('click', () => {
     deps.memory.indexHidden = !deps.memory.indexHidden
     drawIndexToggle()
+    drawHints()
     diff.redraw()
   })
   layout.addEventListener('click', () => deps.onToggleLayout())

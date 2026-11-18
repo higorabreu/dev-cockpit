@@ -487,7 +487,7 @@ export const en: Record<MessageKey, string> = {
   'review.module.none': 'No changes in {path} to review',
   'review.pointersOnly': 'No file changes to review',
   'review.pointersOnly.text': 'Only the listed submodules moved to other commits.',
-  'review.a11y.module': 'Submodule {path}, {files}, {commits}',
+  'review.a11y.module': 'Submodule {path}',
   'review.a11y.commits.one': '{count} new commit',
   'review.a11y.commits.other': '{count} new commits',
   'review.showLines.one': 'Expand {count} line',
