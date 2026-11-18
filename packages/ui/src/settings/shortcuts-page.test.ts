@@ -373,6 +373,7 @@ describe('shortcuts page, the hold menu trigger', () => {
       'The terminal needs that key.',
     )
     expect(find('[data-focus="set-hold"]').textContent).toBe('Press a key or button (Esc cancels)')
+    expect(find('[data-setting="shortcuts.holdTrigger"]').querySelector('.key')).toBeNull()
     expect(patches).toEqual([])
   })
 

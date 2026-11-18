@@ -265,7 +265,7 @@ export const ptBR = {
   'settings.shortcut.swap': 'Trocar',
   'settings.shortcut.cancel': 'Cancelar',
   'settings.shortcut.shell': '{key} não chega mais ao terminal.',
-  'settings.holdTrigger': 'Tecla ou botão do menu de segurar',
+  'settings.holdTrigger': 'Tecla do menu de segurar',
   'settings.holdTrigger.recording': 'Pressione uma tecla ou botão (Esc cancela)',
   'settings.holdTrigger.left': '{key} esquerdo',
   'settings.holdTrigger.right': '{key} direito',

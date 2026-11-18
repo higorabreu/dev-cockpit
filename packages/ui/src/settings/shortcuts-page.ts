@@ -374,10 +374,11 @@ export function createShortcutsPage(ctx: ShortcutsPageContext) {
     button.addEventListener('click', () => {
       if (!active) start(slot)
     })
+    // While it records, the prompt stands alone: beside the cap it would push the row's name onto more lines
     const control =
       pending?.slot === slot
         ? pendingControl(pending)
-        : h('span', { class: 'sshortcut' }, triggerView(slots().holdTrigger), button)
+        : h('span', { class: 'sshortcut' }, !active && triggerView(slots().holdTrigger), button)
     return ctx.row(key, t('settings.holdTrigger'), control)
   }
 

@@ -265,7 +265,7 @@ export const en: Record<MessageKey, string> = {
   'settings.shortcut.swap': 'Swap',
   'settings.shortcut.cancel': 'Cancel',
   'settings.shortcut.shell': '{key} no longer reaches the terminal.',
-  'settings.holdTrigger': 'Hold menu key or button',
+  'settings.holdTrigger': 'Hold menu key',
   'settings.holdTrigger.recording': 'Press a key or button (Esc cancels)',
   'settings.holdTrigger.left': 'Left {key}',
   'settings.holdTrigger.right': 'Right {key}',
