@@ -28,5 +28,15 @@ Decided with the maintainer:
 - [x] T4. Decision D74, a check in the real app (several widths, both themes, both languages, tooltip,
   menu, keyboard, many tabs, Copied) and the gate.
 
+## After review
+
+- [x] T5. The copy over the compact form: the strip is masked to end where the full form would end it,
+  so the copy reads as it does over the full form (same gap before it, to the pixel, and no tab text under
+  or against it). Tests.
+- [x] T6. `tab-menu.ts` takes an alignment (`end`: its right edge on the point) and an optional caption;
+  `open` returns a handle that closes only that opening. The compact menu sits on its icon's right edge,
+  6 px above the bar; the Restart anyway and Cancel menu says why in its caption; a new update state
+  closes the compact menu. Tests.
+
 The shortcuts page lists only keys the user can record and the tabs have no tooltip of their own, so the
 middle click is not listed anywhere new.

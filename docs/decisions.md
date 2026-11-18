@@ -1293,12 +1293,17 @@ arrow drawn like the rail icons, with a dot for news to act on, a diamond in the
 restart asks about running agents, a failure glyph in the critical color, and no dot and no menu while the
 download or the install runs. Its tooltip and name are the full notice's text; a click, Enter or Space
 opens the tab bar's own small menu (`tabs/tab-menu.ts`) with the same actions as the full notice in that
-state, and Esc gives the focus back to the icon. Restart chosen there with an agent running brings the menu
-back with Restart anyway and Cancel; nothing restarts by itself. The rule is measured, not a window
+state, its right edge on the icon's (4 px from the window only if it would overflow) and 6 px off the bar,
+and Esc gives the focus back to the icon. Restart chosen there with an agent running brings the menu back
+with Restart anyway and Cancel under a caption that says why (muted, one line, never focused, the menu's
+name); nothing restarts by itself. A new update state closes the menu, so it never offers what no longer
+applies. The rule is measured, not a window
 breakpoint: the notice measures its full form whenever it changes and compares the room the strip would
 keep, so it follows the language, the state and the window's width, and never the number of tabs (opening a
-tab never changes the notice's form). A copy over the compact notice holds its box and shows over the end
-of the strip, out of the flow, fading the tabs under it like the strip's edge, so no tab moves. A middle
+tab never changes the notice's form). A copy over the compact notice holds its box and shows where it
+would show over the full notice, out of the flow; meanwhile the strip is masked to end where the full
+notice would end it, with its own 24 px fade (`#tabs[data-covered]`), so no tab moves, no tab text sits
+under or against the copy, and the gap before it is the full notice's to the pixel. A middle
 click on a tab closes it with no question, the same path as the menu's Close and the close key; its press
 and release are cancelled, so Linux pastes no primary selection and nothing scrolls or takes the focus.
 When the middle button is the hold menu's trigger (`Mouse1`, D69) the click keeps that meaning.
@@ -1307,5 +1312,6 @@ tabs more than 900; at 900 px it would leave them less than 480, and in the narr
 nothing. A fixed window width would break with the language and the state; a rule on the tabs' own width
 would make the notice change form as tabs open. Middle click to close is what browsers and terminals do.
 **How to revert:** drop the compact form from `ui/src/tabs/notice.ts` and `ui/src/updates/update-notice.ts`
-with its styles in `tab-notice-and-menu.css` and the `updates.downloadingPercent` text; drop the middle
+with its styles in `tab-notice-and-menu.css` and `#tabs[data-covered]`, the `updates.downloadingPercent`
+text and the `align` and `caption` options of `tab-menu.ts`; drop the middle
 click listeners in `ui/src/tabs/tab-bar.ts` and `holdsMiddleButton` in `core/src/settings/hold-trigger.ts`.
