@@ -1,0 +1,354 @@
+import {
+  acceleratorFromEvent,
+  chordFromEvent,
+  HOLD_TRIGGERS,
+  isShellChord,
+  type MessageKey,
+  type SettingsPatch,
+  type SettingsUpdate,
+  type ShortcutId,
+  type Translator,
+} from '@dck/core'
+import { keys as keyCaps } from '../kit/keys.ts'
+import { h } from '../panel/dom.ts'
+import { inputGate } from '../platform/input-gate.ts'
+import type { Keymap } from '../platform/keymap.ts'
+import { type KeySlot, type KeySlots, place, type SlotValue } from './key-slots.ts'
+import type { SettingsClient } from './settings-client.ts'
+
+type Child = Node | string | false | undefined
+
+export interface ShortcutsPageContext {
+  readonly settings: SettingsClient
+  readonly keymap: Keymap
+  readonly i18n: Translator
+  // Per setting key, shown under the row's name: a recording's refusal, and a calmer note
+  readonly errors: Map<string, string>
+  readonly notes: Map<string, string>
+  row(key: string, label: string, control: Child, hint?: string): HTMLElement
+  labelId(key: string): string
+  disabled(key: string): boolean
+  select(
+    key: string,
+    options: ReadonlyArray<readonly [string, string]>,
+    current: string,
+  ): HTMLElement
+  commit(patch: SettingsPatch, errorKey?: string): Promise<SettingsUpdate>
+  render(): void
+  // Where the next drawing puts the focus, by `data-focus`
+  focusNext(target: string): void
+}
+
+// The actions in the order the page lists them, under the group of the settings they belong with
+const GROUPS: ReadonlyArray<readonly [MessageKey, readonly ShortcutId[]]> = [
+  ['menu.cat.tabs', ['newTab', 'closeTab', 'renameTab', 'nextTab', 'previousTab', 'clearTerminal']],
+  ['settings.group.review', ['review', 'reviewLayout', 'reviewSend']],
+  ['settings.group.window', ['projects', 'views', 'panel', 'settings', 'fullHeight']],
+  [
+    'settings.group.appearance',
+    ['theme', 'opacityUp', 'opacityDown', 'fontBigger', 'fontSmaller', 'fontReset'],
+  ],
+]
+
+const ACTION_LABELS: Readonly<Record<ShortcutId, MessageKey>> = {
+  newTab: 'tabs.new',
+  closeTab: 'tabs.close',
+  renameTab: 'tabs.rename',
+  nextTab: 'tabs.next',
+  previousTab: 'tabs.previous',
+  clearTerminal: 'terminal.clear',
+  review: 'review.toggle',
+  reviewLayout: 'review.layout.toggle',
+  reviewSend: 'review.send',
+  projects: 'projects.search',
+  views: 'views.open',
+  panel: 'menu.system.panel',
+  settings: 'settings.ref.settings',
+  theme: 'menu.system.theme',
+  fullHeight: 'menu.system.fullHeight',
+  opacityUp: 'settings.ref.opacityUp',
+  opacityDown: 'settings.ref.opacityDown',
+  fontBigger: 'settings.ref.fontBigger',
+  fontSmaller: 'settings.ref.fontSmaller',
+  fontReset: 'settings.ref.fontReset',
+}
+
+const settingKey = (slot: KeySlot) =>
+  slot === 'toggleWindow' || slot === 'holdTrigger' ? `shortcuts.${slot}` : `shortcuts.keys.${slot}`
+
+const focusId = (slot: KeySlot) => (slot === 'toggleWindow' ? 'set-record' : `set-key-${slot}`)
+
+type Recorded =
+  | { readonly kind: 'value'; readonly value: SlotValue }
+  | { readonly kind: 'pending' }
+  | { readonly kind: 'cancel' }
+  | { readonly kind: 'refused'; readonly text: MessageKey }
+
+// A chord recorded and held back because another slot answers to it, until Swap or Cancel
+interface Pending {
+  readonly slot: KeySlot
+  readonly value: SlotValue
+  readonly owner: KeySlot
+  readonly swap?: SettingsPatch
+}
+
+// The Shortcuts page: the global key, the hold menu key and one row per interface action, each recorded
+// in place (D69)
+export function createShortcutsPage(ctx: ShortcutsPageContext) {
+  const { settings, keymap } = ctx
+  const t = ctx.i18n.t
+  const mac = keymap.keyboard === 'mac'
+  let recording: KeySlot | undefined
+  let pending: Pending | undefined
+
+  const slots = (): KeySlots => ({
+    keymap,
+    toggleWindow: settings.current().shortcuts.toggleWindow,
+    holdTrigger: settings.current().shortcuts.holdTrigger ?? keymap.holdTrigger,
+  })
+
+  const slotName = (slot: KeySlot) =>
+    slot === 'toggleWindow'
+      ? t('settings.toggleWindow')
+      : slot === 'holdTrigger'
+        ? t('settings.holdTrigger')
+        : t(ACTION_LABELS[slot])
+
+  function valueLabel(value: SlotValue): string {
+    if (value.kind === 'chord') return keymap.chordLabel(value.chord)
+    if (value.kind === 'accelerator') return keymap.accelerator(value.text)
+    return value.code
+  }
+
+  function listen(on: boolean) {
+    inputGate.blocked = on
+    if (on) {
+      window.addEventListener('keydown', onKey, true)
+      window.addEventListener('click', onClickAway, true)
+    } else {
+      window.removeEventListener('keydown', onKey, true)
+      window.removeEventListener('click', onClickAway, true)
+    }
+  }
+
+  function start(slot: KeySlot) {
+    pending = undefined
+    recording = slot
+    ctx.errors.delete(settingKey(slot))
+    listen(true)
+    ctx.render()
+  }
+
+  function stop() {
+    if (recording === undefined) return
+    recording = undefined
+    listen(false)
+    ctx.render()
+  }
+
+  // A click anywhere else ends the recording and goes on to what it was for
+  function onClickAway(event: MouseEvent) {
+    if (event.target instanceof Element && event.target.closest('[data-recording]')) return
+    stop()
+  }
+
+  function fromEvent(slot: KeySlot, event: KeyboardEvent): Recorded {
+    if (slot === 'toggleWindow') {
+      const result = acceleratorFromEvent(event)
+      if (result.type === 'accelerator')
+        return { kind: 'value', value: { kind: 'accelerator', text: result.value } }
+      if (result.type === 'invalid') {
+        const modifier = mac ? 'settings.needsModifier.mac' : 'settings.needsModifier'
+        const text = result.reason === 'unsupported' ? 'settings.unsupported' : modifier
+        return { kind: 'refused', text }
+      }
+      return { kind: result.type }
+    }
+    const result = chordFromEvent(event)
+    if (result.type === 'chord')
+      return { kind: 'value', value: { kind: 'chord', chord: result.chord } }
+    if (result.type === 'invalid') {
+      const modifier = mac ? 'settings.needsModifier.app.mac' : 'settings.needsModifier.app'
+      const text = result.reason === 'unsupported' ? 'settings.shortcut.unsupported' : modifier
+      return { kind: 'refused', text }
+    }
+    return { kind: result.type }
+  }
+
+  function onKey(event: KeyboardEvent) {
+    const slot = recording
+    if (slot === undefined) return
+    event.preventDefault()
+    event.stopPropagation()
+    const recorded = fromEvent(slot, event)
+    if (recorded.kind === 'pending') return
+    if (recorded.kind === 'cancel') return stop()
+    if (recorded.kind === 'refused') {
+      ctx.errors.set(settingKey(slot), t(recorded.text))
+      return ctx.render()
+    }
+    recording = undefined
+    listen(false)
+    decide(slot, recorded.value)
+  }
+
+  // The global key can be refused by the system: its error then shows on its row
+  const errorKey = (patch: SettingsPatch) =>
+    patch.shortcuts?.toggleWindow === undefined ? undefined : 'shortcuts.toggleWindow'
+
+  function save(slot: KeySlot, patch: SettingsPatch) {
+    ctx.focusNext(focusId(slot))
+    void ctx.commit(patch, errorKey(patch)).then(() => ctx.render())
+  }
+
+  function decide(slot: KeySlot, value: SlotValue) {
+    const placement = place(slots(), slot, value)
+    if (placement.kind === 'same') return ctx.render()
+    if (placement.kind === 'save') return save(slot, placement.patch)
+    pending = { slot, value, owner: placement.owner, swap: placement.swap }
+    ctx.focusNext(placement.swap ? 'set-key-swap' : 'set-key-cancel')
+    ctx.render()
+  }
+
+  function cancelPending() {
+    const slot = pending?.slot
+    pending = undefined
+    if (slot !== undefined) ctx.focusNext(focusId(slot))
+    ctx.render()
+  }
+
+  // The recorded key with Swap and Cancel, in place of the row's own control
+  function pendingControl(held: Pending): HTMLElement {
+    const swap =
+      held.swap &&
+      h(
+        'button',
+        { type: 'button', class: 'srecord', 'data-focus': 'set-key-swap' },
+        t('settings.shortcut.swap'),
+      )
+    swap?.addEventListener('click', () => {
+      pending = undefined
+      if (held.swap) save(held.slot, held.swap)
+    })
+    const cancel = h(
+      'button',
+      { type: 'button', class: 'srecord', 'data-focus': 'set-key-cancel' },
+      t('settings.shortcut.cancel'),
+    )
+    cancel.addEventListener('click', cancelPending)
+    return h('span', { class: 'sshortcut' }, keyCaps(valueLabel(held.value)), swap, cancel)
+  }
+
+  // Under the row's name: the key another slot holds, or a custom key the shell no longer gets
+  function noteFor(slot: KeySlot) {
+    const key = settingKey(slot)
+    const custom = slot !== 'toggleWindow' && slot !== 'holdTrigger' && keymap.isCustom(slot)
+    const chord = custom ? keymap.chords(slot)[0] : undefined
+    if (pending?.slot === slot)
+      ctx.notes.set(key, t('settings.shortcut.used', { action: slotName(pending.owner) }))
+    else if (chord && isShellChord(chord, keymap.keyboard))
+      ctx.notes.set(key, t('settings.shortcut.shell', { key: keymap.chordLabel(chord) }))
+    else ctx.notes.delete(key)
+  }
+
+  function globalRow(): HTMLElement {
+    const slot = 'toggleWindow'
+    const key = settingKey(slot)
+    noteFor(slot)
+    const button = h(
+      'button',
+      {
+        type: 'button',
+        class: 'srecord',
+        'data-focus': focusId(slot),
+        'data-recording': recording === slot ? 'true' : undefined,
+        disabled: ctx.disabled(key),
+      },
+      recording === slot ? t('settings.recording') : t('settings.record'),
+    )
+    button.addEventListener('click', () => (recording === slot ? stop() : start(slot)))
+    const current = settings.current().shortcuts.toggleWindow
+    const control =
+      pending?.slot === slot
+        ? pendingControl(pending)
+        : h('span', { class: 'sshortcut' }, keyCaps(keymap.accelerator(current)), button)
+    return ctx.row(
+      key,
+      t('settings.toggleWindow'),
+      control,
+      t(mac ? 'settings.toggleWindow.hint.mac' : 'settings.toggleWindow.hint'),
+    )
+  }
+
+  function holdRow(): HTMLElement {
+    const key = settingKey('holdTrigger')
+    const current = slots().holdTrigger
+    // The desktop takes Super for itself on Linux and Windows; a value already in the file stays listed
+    const options = HOLD_TRIGGERS.filter((id) => mac || id !== 'MetaRight' || id === current).map(
+      (id) => [id, t(`settings.holdTrigger.${mac ? 'mac.' : ''}${id}` as const)] as const,
+    )
+    return ctx.row(key, t('settings.holdTrigger'), ctx.select(key, options, current))
+  }
+
+  // The action's keycaps are its button: a click or Enter records the next chord in their place
+  function actionRow(id: ShortcutId): HTMLElement {
+    const key = settingKey(id)
+    noteFor(id)
+    const active = recording === id
+    const buttonId = focusId(id)
+    const button = h(
+      'button',
+      {
+        type: 'button',
+        class: 'skey',
+        id: buttonId,
+        'data-focus': buttonId,
+        'data-recording': active ? 'true' : undefined,
+        'data-tip': active ? undefined : t('settings.record'),
+        'aria-labelledby': `${ctx.labelId(key)} ${buttonId}`,
+        disabled: ctx.disabled(key),
+      },
+      active
+        ? h('span', { class: 'skey-wait' }, t('settings.recording'))
+        : keyCaps(keymap.label(id)),
+    )
+    button.addEventListener('click', () => (recording === id ? stop() : start(id)))
+    return ctx.row(
+      key,
+      t(ACTION_LABELS[id]),
+      pending?.slot === id ? pendingControl(pending) : button,
+    )
+  }
+
+  return {
+    groups(): HTMLElement[] {
+      return [
+        h('section', { class: 'sgroup skeys' }, globalRow(), holdRow()),
+        ...GROUPS.map(([title, ids]) =>
+          h(
+            'section',
+            { class: 'sgroup skeys skeys-list' },
+            h('h2', {}, t(title)),
+            ...ids.map(actionRow),
+          ),
+        ),
+      ]
+    },
+    // True while a recording or a held-back key is on screen, so Esc does not close the screen
+    busy: () => recording !== undefined || pending !== undefined,
+    // Esc with a key held back cancels it; true when it did
+    escape(): boolean {
+      if (pending === undefined) return false
+      cancelPending()
+      return true
+    },
+    // The screen closes or every setting goes back to its default: nothing stays recorded or held
+    reset() {
+      pending = undefined
+      if (recording !== undefined) {
+        recording = undefined
+        listen(false)
+      }
+    },
+  }
+}

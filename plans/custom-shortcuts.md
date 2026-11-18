@@ -43,7 +43,7 @@ Decided with the maintainer:
 - [x] C4. Keymap: reads the custom keys live, a custom chord wins over the defaults and the tab digits,
   labels follow; tooltips resolve `data-tip-shortcut` through the keymap (index.html, tab bar, review
   header); the review hints redraw on change. Tests.
-- [ ] C5. Settings: one editable row per action (record, conflict with Swap and Cancel, shell note,
+- [x] C5. Settings: one editable row per action (record, conflict with Swap and Cancel, shell note,
   reset, settings.json warnings, Reset all), texts in both catalogs, styles with no layout shift. Tests.
 - [ ] C6. Hold menu: a mouse button as the trigger (open, select, run on release, Esc) and its own
   behavior suppressed. Tests.

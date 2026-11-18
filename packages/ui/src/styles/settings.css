@@ -476,13 +476,62 @@
   display: none;
 }
 
-.sref {
+/* On the Shortcuts page the reset keeps its place while hidden, so a key saved or reset moves nothing */
+.skeys .sreset[hidden] {
+  display: inline-block;
+  visibility: hidden;
+}
+
+/* The actions' rows: denser than a setting with a hint. A note under the name fits in the row's own
+   height, so a key held back or a note that comes and goes moves no other row */
+.skeys-list .srow2 {
+  min-height: 32px;
   padding: 2px 0;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+}
+
+.skeys-list .slabel {
+  line-height: 16px;
+}
+
+/* An action's keycaps are its button. Recording shows the prompt in the same box: the row keeps its
+   height, and the dashed edge says it waits for a key */
+.skey {
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+}
+
+.skey:hover {
+  border-color: var(--control-line);
+  background: var(--hover);
+}
+
+.skey:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
+.skey[data-recording="true"] {
+  padding: 0 10px;
+  border-color: var(--control-line);
+  border-style: dashed;
+}
+
+.skey:disabled {
+  border-color: transparent;
+  background: none;
   color: var(--muted);
-  font-size: 12px;
+}
+
+.skey-wait {
+  white-space: nowrap;
 }
 
 /* A checked box uses the design system's accent, not the browser's blue */
