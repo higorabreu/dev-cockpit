@@ -17,6 +17,14 @@
   pointer-events: auto;
 }
 
+/* Hidden once faded, so a closed overlay leaves the tab order; open, it inherits the window's visibility */
+#settings:not(.open) {
+  visibility: hidden;
+  transition:
+    opacity var(--motion-fast) ease,
+    visibility 0s linear var(--motion-fast);
+}
+
 #settings-box {
   width: min(760px, 100%);
   height: min(88vh, 560px);
@@ -329,8 +337,10 @@
   gap: 8px;
 }
 
-.srow2[data-locked="true"] .scontrol {
-  opacity: 0.6;
+/* A locked setting's controls are disabled: they read so in solid colors, as the design system's select */
+.scontrol input:disabled {
+  border-style: dashed;
+  color: var(--muted);
 }
 
 .scontrol input[type="text"],

@@ -38,8 +38,9 @@ export interface HostApi {
     write(id: number, data: string): void
     resize(id: number, cols: number, rows: number): void
     kill(id: number): void
-    onData(listener: (id: number, data: string) => void): Unsubscribe
-    onExit(listener: (id: number, exit: PtyExit) => void): Unsubscribe
+    // Only the output and the exit of the terminal with this id
+    onData(id: number, listener: (data: string) => void): Unsubscribe
+    onExit(id: number, listener: (exit: PtyExit) => void): Unsubscribe
   }
   readonly clipboard: {
     readText(): Promise<string>

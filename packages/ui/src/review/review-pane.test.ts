@@ -284,6 +284,66 @@ describe('createReviewPane', () => {
     expect(reads).toEqual(['/home/ana/acme|src/billing/invoice.ts'])
   })
 
+  it('should keep an expanded gap open and read its text again when an edit elsewhere moves the hunks', async () => {
+    // Arrange: the agent then changes line 15 too, which adds a hunk after the gap that is open
+    let edited = false
+    const moved = diffText(3000, 5000).replace(
+      ' return base\n',
+      [' return base', '@@ -15,1 +15,2 @@', '-x', '+y', '+z', ''].join('\n'),
+    )
+    const { pane, reads, labels, key } = setup(() =>
+      edited ? repository(moved + lockText) : repository(),
+    )
+    pane.open()
+    await flush()
+    pane.element.querySelector<HTMLElement>('.rv-expand')?.click()
+    await flush()
+
+    // Act
+    edited = true
+    key(pane.element, 'r', { ctrlKey: true })
+    await flush()
+
+    // Assert: the gap above line 10 is still open, from a fresh read of the file
+    expect(labels('.rv-row[data-kind="context"]')[0]).toBe('Line 1: text 1')
+    expect(reads).toHaveLength(2)
+  })
+
+  it('should hand the keys to the diff when the files arrive while the pane itself has the focus', async () => {
+    // Arrange: opened by its key, the pane takes the focus before the change is read
+    const { pane } = setup(repository())
+    pane.open()
+    pane.focus()
+    const before = document.activeElement
+
+    // Act
+    await flush()
+
+    // Assert
+    expect(before).toBe(pane.element)
+    expect(document.activeElement).toBe(pane.element.querySelector('.rv-lines'))
+  })
+
+  it('should leave the focus where it went when a redraw removed the focused element first', async () => {
+    // Arrange: a field of the review lost the focus to nothing, then the terminal took it
+    const { pane } = setup(repository())
+    pane.open()
+    await flush()
+    const field = document.createElement('textarea')
+    pane.element.append(field)
+    field.focus()
+    field.remove()
+    const terminal = document.createElement('textarea')
+    document.body.append(terminal)
+    terminal.focus()
+
+    // Act: any later draw, such as a refresh
+    pane.retranslate()
+
+    // Assert
+    expect(document.activeElement).toBe(terminal)
+  })
+
   it('should cross files with n and p and land on file headers with ] and [', async () => {
     const { pane, key } = setup(repository())
     pane.open()
@@ -582,6 +642,31 @@ describe('createReviewPane', () => {
 
     expect(text('.rv-totals')).toContain('1 / 2 files viewed')
     expect(pane.element.querySelector('.rv-changed')).toBeNull()
+  })
+
+  it('should offer the viewed count as numbers alone with the sentence in the tooltip when a file is viewed', async () => {
+    // Arrange
+    const { pane, key } = setup(repository())
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+
+    // Act
+    key(lines, 'v')
+
+    // Assert: a narrow review shows the short form, by a container query
+    const short = pane.element.querySelector<HTMLElement>('.rv-tally-short')
+    expect(short?.textContent).toBe('1 / 2')
+    expect(short?.dataset.tip).toBe('1 / 2 files viewed')
+  })
+
+  it('should show no short count when no file is viewed', async () => {
+    const { pane } = setup(repository())
+    pane.open()
+    await flush()
+
+    expect(pane.element.querySelector('.rv-tally-short')).toBeNull()
   })
 
   it('should give the keys back to the terminal on Esc and read again on Ctrl+R', async () => {

@@ -110,7 +110,7 @@
   gap: 8px;
 }
 
-/* Its own class: the hold menu's .chip is a different, larger thing */
+/* A ticket's key, as a pill beside the branch */
 .ticket {
   flex: none;
   padding: 0 8px;

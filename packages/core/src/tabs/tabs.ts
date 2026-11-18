@@ -71,13 +71,6 @@ export function reorderTabs(state: TabsState, ids: readonly string[]): TabsState
   return { ...state, tabs }
 }
 
-// Most recent to oldest, with never-used tabs at the end
-export function recentTabs(state: TabsState): readonly TabInfo[] {
-  const byId = new Map(state.tabs.map((tab) => [tab.id, tab]))
-  const used = state.recent.flatMap((id) => byId.get(id) ?? [])
-  return [...used, ...state.tabs.filter((tab) => !state.recent.includes(tab.id))]
-}
-
 // A typed name replaces the label; an empty one, or the automatic name itself, brings that name back
 export function renameTab(state: TabsState, id: string, name: string): TabsState {
   const tab = state.tabs.find((entry) => entry.id === id)

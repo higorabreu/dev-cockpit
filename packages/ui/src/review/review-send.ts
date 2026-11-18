@@ -35,15 +35,16 @@ export interface ReviewSendDeps {
 export function createReviewSend(deps: ReviewSendDeps) {
   const { i18n, comments } = deps
   const t = i18n.t
-  // The tab's activity from the watcher's last read
+  // The tab's activity from the watcher's last read, and whether its program reports its state
   let activity: SessionActivityInfo | undefined
+  let reporting = false
   // A send waits for the file to be written; a second press meanwhile would write it twice
   let sending = false
   // The reason the header shows for the last refused send, until the tab no longer gives it
   let told: string | undefined
 
   const count = h('span', { class: 'rv-send-count' })
-  const text = h('span', {})
+  const text = h('span', { class: 'rv-send-text' })
   const button = h(
     'button',
     {
@@ -58,7 +59,7 @@ export function createReviewSend(deps: ReviewSendDeps) {
 
   function draw() {
     const pending = comments.count()
-    const reason = reviewSendBlock(t, activity)
+    const reason = reviewSendBlock(t, activity, reporting)
     button.hidden = pending === 0
     count.textContent = String(pending)
     text.textContent = t('review.send')
@@ -96,7 +97,7 @@ export function createReviewSend(deps: ReviewSendDeps) {
     try {
       activity = (await deps.activity()) ?? activity
       draw()
-      const reason = reviewSendBlock(t, activity)
+      const reason = reviewSendBlock(t, activity, reporting)
       if (reason) {
         told = reason
         deps.notice(reason)
@@ -115,9 +116,10 @@ export function createReviewSend(deps: ReviewSendDeps) {
     draw,
     send,
     // The watcher read the tab again: the button follows what runs in its terminal
-    sync(next: SessionActivityInfo | undefined) {
+    sync(next: SessionActivityInfo | undefined, reports = false) {
       activity = next
-      if (told !== undefined && reviewSendBlock(t, activity) !== told) forget()
+      reporting = reports
+      if (told !== undefined && reviewSendBlock(t, activity, reporting) !== told) forget()
       draw()
     },
   }

@@ -19,11 +19,11 @@ import {
   localeFor,
   type MenuCategory,
   noSystemFonts,
+  notificationText,
   openTab,
   type PluralKey,
   type ProgramStatus,
   type Project,
-  recentTabs,
   renameTab,
   reorderTabs,
   reviewBaseFor,
@@ -287,13 +287,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     if (!event.notify || !tab) return
     api.notifications.show({
       title: i18n.t('notify.title'),
-      body:
-        event.kind === 'needs-you'
-          ? i18n.t('notify.needsYou', { tab: tab.label })
-          : i18n.t('notify.agentAnswered', {
-              tab: tab.label,
-              duration: formatDuration(event.durationMs),
-            }),
+      body: notificationText(event, tab.label, i18n.t),
       tabId: tab.id,
     })
   }
@@ -586,7 +580,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
       onCopied: (text) => notice.copied(text),
       onExit: () => close(id),
       onInput() {
-        attention.input(id)
+        // Only the key that answers a waiting agent redraws: the rest echo with no extra work
+        if (attention.input(id)) showAttention()
         watchQuiet()
       },
       onProgramStatus: (status) => applyAgentStatus(id, status),
@@ -744,6 +739,8 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
           x,
           y,
           !document.body.classList.contains('full'),
+          // Closed with Esc or a click elsewhere, the keys go back to the terminal
+          () => focusActive(),
         )
       },
     },
@@ -925,17 +922,10 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
         void refreshProjects()
         return categories()
       },
-      tabs: () =>
-        recentTabs(state).map((tab) => ({
-          id: tab.id,
-          label: tab.label,
-          current: tab.id === state.activeId,
-        })),
       run(_categoryId, item) {
         if (item.id.startsWith(PROJECT_PREFIX)) openProject(item.id.slice(PROJECT_PREFIX.length))
         else commands[item.id]?.()
       },
-      switchTo: (id) => update(activateTab(state, id)),
       triggerCode: () => settings.current().shortcuts.holdTrigger ?? keymap.holdTrigger,
     },
     {

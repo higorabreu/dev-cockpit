@@ -48,6 +48,26 @@ export function diffGaps(file: DiffFile): readonly DiffGap[] {
   return gaps
 }
 
+// The gaps opened in a file's last read, found again in its new read by where they start on the old side:
+// an edit elsewhere in the file moves the new line numbers and the gaps' ids, never the old lines
+export function carryGaps(
+  before: DiffFile,
+  after: DiffFile,
+  opened: ReadonlySet<number>,
+): ReadonlySet<number> {
+  const oldStart = (gap: DiffGap) => gap.from + gap.offset
+  const starts = new Set(
+    diffGaps(before)
+      .filter((gap) => opened.has(gap.id))
+      .map(oldStart),
+  )
+  return new Set(
+    diffGaps(after)
+      .filter((gap) => starts.has(oldStart(gap)))
+      .map((gap) => gap.id),
+  )
+}
+
 // The rows a file draws: each hunk's header and lines, with a collapsed gap carried by the header below it
 // (or by an end row) until it is expanded and its text is known
 export function diffRows(

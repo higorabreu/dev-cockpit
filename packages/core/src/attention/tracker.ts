@@ -9,6 +9,8 @@ export interface FinishedCommand {
 
 export interface FinishedEvent extends FinishedCommand {
   readonly tabId: string
+  // An agent's turn, or a command the shell ran
+  readonly source: 'agent' | 'command'
   // Long enough to deserve a system notification
   readonly notify: boolean
 }
@@ -96,7 +98,8 @@ export function createAttentionTracker(options: AttentionOptions) {
     if (durationMs < markAfter) return undefined
     const process = state.process ?? state.foreground ?? ''
     mark(tabId, { kind: 'finished', command: { process, durationMs } })
-    return { kind: 'finished', tabId, process, durationMs, notify: durationMs >= notifyAfter() }
+    const notify = durationMs >= notifyAfter()
+    return { kind: 'finished', tabId, source: 'agent', process, durationMs, notify }
   }
 
   return {
@@ -119,7 +122,8 @@ export function createAttentionTracker(options: AttentionOptions) {
         const process = state.process ?? current.process
         if (!seen && durationMs >= markAfter) {
           mark(tabId, { kind: 'finished', command: { process, durationMs } })
-          event = { tabId, process, durationMs, notify: durationMs >= notifyAfter() }
+          const notify = durationMs >= notifyAfter()
+          event = { tabId, source: 'command', process, durationMs, notify }
         }
         state.startedAt = undefined
         state.process = undefined
@@ -154,12 +158,14 @@ export function createAttentionTracker(options: AttentionOptions) {
       return undefined
     },
     // The user typing into the tab answers the agent, which then goes back to work
-    input(tabId: string) {
+    // True when the key answered an agent that needed the user, so its mark has to go
+    input(tabId: string): boolean {
       const state = tabs.get(tabId)
-      if (state?.agent !== 'needs-you') return
+      if (state?.agent !== 'needs-you') return false
       state.agent = 'working'
       state.workingAt = options.clock.now()
       clearNeedsYou(tabId)
+      return true
     },
     // The agent says it rests with no answer, as after Esc: a turn in progress ends, silently like settle
     rest(tabId: string) {
