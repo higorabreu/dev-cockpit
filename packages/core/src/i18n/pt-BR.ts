@@ -97,6 +97,8 @@ export const ptBR = {
   'menu.hint.navigate': 'navegar',
   'menu.hint.release': 'soltar executa',
   'menu.hint.cancel': 'cancela',
+  'menu.hint.pick': 'ou clique executa',
+  'menu.hint.close': 'fecha',
 
   'notice.copied': 'Copiado',
   'notice.chars.one': '{count} caractere',

@@ -112,4 +112,107 @@ describe('createHoldGesture', () => {
     expect(gesture.isOpen()).toBe(false)
     expect(opened()).toBe(1)
   })
+
+  describe('mouse trigger', () => {
+    it('should open and stay open when the button is released before the threshold', () => {
+      const { gesture, scheduler, opened } = setup()
+      gesture.press()
+      scheduler.advance(10)
+
+      const outcome = gesture.releaseButton()
+      scheduler.advance(500)
+
+      expect(outcome).toBe('stay')
+      expect(opened()).toBe(1)
+      expect(gesture.isOpen()).toBe(true)
+      expect(gesture.isSticky()).toBe(true)
+      expect(gesture.isHeld()).toBe(false)
+    })
+
+    it('should run the selected row when the button is released after the menu opened while held', () => {
+      const { gesture, scheduler, opened } = setup()
+      gesture.press()
+      scheduler.advance(180)
+
+      const outcome = gesture.releaseButton()
+
+      expect(outcome).toBe('run')
+      expect(opened()).toBe(1)
+      expect(gesture.isOpen()).toBe(false)
+      expect(gesture.isSticky()).toBe(false)
+    })
+
+    it('should close without opening when another click came while the button was down', () => {
+      const { gesture, scheduler, opened } = setup()
+      gesture.press()
+      gesture.otherKey()
+
+      const outcome = gesture.releaseButton()
+      scheduler.advance(500)
+
+      expect(outcome).toBe('close')
+      expect(opened()).toBe(0)
+      expect(gesture.isSticky()).toBe(false)
+    })
+
+    it('should close the menu that stayed open when the button is clicked again', () => {
+      const { gesture, scheduler, opened } = setup()
+      gesture.press()
+      gesture.releaseButton()
+
+      const held = gesture.press()
+      scheduler.advance(500)
+      const outcome = gesture.releaseButton()
+
+      expect(held).toBe(false)
+      expect(outcome).toBe('close')
+      expect(opened()).toBe(1)
+      expect(gesture.isOpen()).toBe(false)
+      expect(gesture.isSticky()).toBe(false)
+    })
+
+    it('should give the arrows to the menu when it stayed open after a click', () => {
+      const { gesture } = setup()
+      gesture.press()
+      gesture.releaseButton()
+
+      expect(gesture.arrow()).toBe(true)
+    })
+
+    it('should keep the menu open when a key other than the trigger comes while it stayed open', () => {
+      const { gesture } = setup()
+      gesture.press()
+      gesture.releaseButton()
+
+      gesture.otherKey()
+
+      expect(gesture.isOpen()).toBe(true)
+      expect(gesture.isSticky()).toBe(true)
+    })
+
+    it('should forget the menu that stayed open when cancelled', () => {
+      const { gesture } = setup()
+      gesture.press()
+      gesture.releaseButton()
+
+      gesture.cancel()
+
+      expect(gesture.isOpen()).toBe(false)
+      expect(gesture.isSticky()).toBe(false)
+      expect(gesture.arrow()).toBe(false)
+    })
+  })
+
+  it('should drop the menu when a key trigger is released before the threshold, as before', () => {
+    const { gesture, scheduler, opened } = setup()
+    gesture.press()
+    scheduler.advance(10)
+
+    const wasOpen = gesture.release()
+    scheduler.advance(500)
+
+    expect(wasOpen).toBe(false)
+    expect(opened()).toBe(0)
+    expect(gesture.isSticky()).toBe(false)
+  })
 })
