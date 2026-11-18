@@ -205,6 +205,11 @@ async function main() {
       '--method',
       'org.example.MediaNotifications.Click',
     ])
+  // Whether a window with this title is mapped on the display
+  const windowShown = async (title) => {
+    const tree = execFileSync('xwininfo', ['-root', '-tree']).toString()
+    return tree.split('\n').some((line) => line.includes(`"${title}"`) && !/\b1x1\+/.test(line))
+  }
   // The page the fake xdg-open showed goes away, as a closed browser window would
   const closeBrowser = () => spawn('pkill', ['-f', path.join(work, 'pages')]).on('error', () => {})
 
@@ -261,6 +266,7 @@ async function main() {
     panel,
     clickNotification,
     closeBrowser,
+    windowShown,
     mark,
   }
   await current.setup(c)

@@ -4,11 +4,12 @@ FULL = (0, 0, 1280, 720)
 
 
 def hero(e):
-    rail = (800, 260, 480, 270)
-    work = (190, 10, 900, 506)
-    wheel = (290, 50, 700, 394)
-    prompt = (0, 110, 860, 484)
-    tests = (0, 30, 860, 484)
+    # Every zoom stays inside the cockpit, which takes the top 504 pixels: no sliver of the desktop
+    rail = (800, 234, 480, 270)
+    work = (190, 0, 896, 504)
+    wheel = (200, 0, 896, 504)
+    prompt = (0, 96, 726, 408)
+    tests = (0, 20, 860, 484)
     notice = (740, 0, 540, 304)
     return {
         'segments': [
@@ -19,7 +20,7 @@ def hero(e):
             (e['claude-ready'], e['prompt-sent'], 2.4), (e['prompt-sent'], e['other-tab'], 2.5),
             (e['other-tab'], e['other-tab'] + 3.5, 1.5), (e['other-tab'] + 3.5, e['needs-you'], 4),
             (e['needs-you'], e['clicked'], 1.4), (e['clicked'], e['approve'] + 0.3, 1.5),
-            (e['approve'] + 0.3, e['hide'], 2), (e['hide'], e['end'], 1.6),
+            (e['approve'] + 0.3, e['hide'], 2), (e['hide'], e['show'], 1.6), (e['show'], e['end'], 1),
         ],
         'camera': [
             # Quick moves and cuts: every step of a pan is a whole new GIF frame
@@ -92,17 +93,18 @@ def dropdown(e):
 
 
 def work(e):
-    rail = (800, 260, 480, 270)
-    dialog = (190, 10, 900, 506)
-    page = (120, 30, 1040, 585)
+    rail = (800, 234, 480, 270)
+    dialog = (190, 0, 896, 504)
+    page = (140, 40, 1000, 562)
     return {
         'segments': [
             (0.0, e['hover'], 1.4), (e['hover'], e['views'], 1.2), (e['views'], e['filter'], 1.5),
-            (e['filter'], e['open'], 1.2), (e['open'], e['closed'], 1.3), (e['closed'], e['end'], 1.2),
+            (e['filter'], e['open'], 1.2), (e['open'], e['page'], 4), (e['page'], e['closed'], 1.2),
+            (e['closed'], e['end'], 1),
         ],
         'camera': [
             (0, FULL), (e['hover'] - 0.5, FULL), (e['hover'] - 0.1, rail), (e['views'] - 0.1, rail),
-            (e['views'] + 0.25, dialog), (e['open'] + 0.2, dialog), (e['open'] + 0.25, page), (e['closed'], page),
+            (e['views'] + 0.25, dialog), (e['page'] - 0.05, dialog), (e['page'], page), (e['closed'], page),
             (e['closed'] + 0.05, FULL), (e['end'] + 5, FULL),
         ],
         'captions': [

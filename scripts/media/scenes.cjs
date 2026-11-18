@@ -296,16 +296,20 @@ module.exports = {
       await shot('filter')
       await page.keyboard.press('Enter')
       mark('open')
-      await sleep(2600)
+      // The clip cuts to the page once its window is on screen and painted
+      await c.waitFor(() => c.windowShown('browser'), 10000, 'browser page')
+      await sleep(700)
+      mark('page')
+      await sleep(2200)
       await shot('open')
       // The browser closes and the Work screen with it, so the clip loops back to where it started
       c.closeBrowser()
-      await sleep(400)
+      mark('closed')
+      await sleep(600)
       // The first Escape clears the filter, the second closes the Work screen
       await page.keyboard.press('Escape')
       await sleep(150)
       await page.keyboard.press('Escape')
-      mark('closed')
       await sleep(1200)
     },
   },

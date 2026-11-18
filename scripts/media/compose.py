@@ -68,7 +68,7 @@ def caption_layer(text, keys, alpha, top):
     w = 16 + tw + (12 + kw if keys else 0) + 16
     h = 38
     x0 = round((OUT_W - w) / 2)
-    y0 = 14 if top else OUT_H - h - 14
+    y0 = 8 if top else OUT_H - h - 8
     d.rounded_rectangle((x0, y0, x0 + w, y0 + h), 8, fill=DARK['surface'] + (246,), outline=DARK['line'])
     d.text((x0 + 16, y0 + 8), text, font=TEXT, fill=DARK['fg'])
     if keys:
