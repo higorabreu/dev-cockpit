@@ -9,10 +9,12 @@
   }
 }
 
+/* Above Settings, the views, the search and the tab list: the trigger opens the menu over them, and under
+   one the wheel opened out of sight. Only the quit card and the tooltip stay on top */
 #menu {
   position: fixed;
   inset: 0;
-  z-index: 30;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;

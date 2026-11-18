@@ -324,3 +324,219 @@ describe('createHoldMenuController with a mouse button', () => {
     expect(menu.scrim.classList.contains('open')).toBe(false)
   })
 })
+
+// A mouse whose button sends press and release together: the trigger is clicked, never held
+function clickSetup(trigger = 'Mouse3') {
+  const button = Number(trigger.slice(5))
+  document.body.replaceChildren()
+  const [scrim, card, hint, bar, terminal] = ['div', 'div', 'div', 'div', 'textarea'].map((tag) =>
+    document.createElement(tag),
+  ) as [HTMLElement, HTMLElement, HTMLElement, HTMLElement, HTMLTextAreaElement]
+  scrim.append(card, hint)
+  document.body.append(scrim, bar, terminal)
+  terminal.focus()
+  const tasks: (() => void)[] = []
+  const runs: MenuItem[] = []
+  createHoldMenuController(
+    { scrim, card, hint, bar },
+    {
+      categories: () => [TABS],
+      run: (_category, item) => runs.push(item),
+      triggerCode: () => trigger,
+    },
+    {
+      after(_milliseconds, task) {
+        tasks.push(task)
+        return () => {
+          const index = tasks.indexOf(task)
+          if (index >= 0) tasks.splice(index, 1)
+        }
+      },
+    },
+    createTranslator('en').t,
+  )
+  const click = (target: EventTarget = terminal) =>
+    ['mousedown', 'mouseup', 'auxclick'].map((type) => mouse(type, button, target))
+  const key = (name: string) => {
+    const event = new KeyboardEvent('keydown', {
+      key: name,
+      code: name,
+      bubbles: true,
+      cancelable: true,
+    })
+    terminal.dispatchEvent(event)
+    return event
+  }
+  const isOpen = () => scrim.classList.contains('open')
+  const row = (index: number) => {
+    const found = card.querySelector<HTMLElement>(`[data-item="${index}"]`)
+    if (!found) throw new Error('invariant: the open sector shows the row')
+    return found
+  }
+  return { hint, terminal, tasks, runs, click, key, isOpen, row }
+}
+
+describe('createHoldMenuController after a click of a mouse trigger', () => {
+  it('should open the menu and keep it open when the button is released at once', () => {
+    // Arrange
+    const menu = clickSetup()
+
+    // Act
+    const events = menu.click()
+
+    // Assert
+    expect(menu.isOpen()).toBe(true)
+    expect(menu.tasks).toEqual([])
+    expect(menu.runs).toEqual([])
+    expect(events.every((event) => event.defaultPrevented)).toBe(true)
+  })
+
+  it('should say a click or Enter runs and Esc closes when the menu stays open', () => {
+    // Arrange
+    const menu = clickSetup()
+
+    // Act
+    menu.click()
+
+    // Assert
+    expect(menu.hint.textContent).toContain('or click to run')
+    expect(menu.hint.textContent).toContain('close')
+    expect(menu.hint.textContent).not.toContain('release to run')
+  })
+
+  it('should run a row and close when it is clicked', () => {
+    // Arrange
+    const menu = clickSetup()
+    menu.click()
+    menu.key('ArrowUp')
+
+    // Act
+    menu.row(2).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    // Assert
+    expect(menu.runs.map((item) => item.id)).toEqual(['tab:2'])
+    expect(menu.isOpen()).toBe(false)
+  })
+
+  it('should run the selected row when Enter is pressed after the arrows', () => {
+    // Arrange
+    const menu = clickSetup()
+    menu.click()
+    menu.key('ArrowUp')
+    menu.key('ArrowDown')
+
+    // Act
+    const enter = menu.key('Enter')
+
+    // Assert
+    expect(enter.defaultPrevented).toBe(true)
+    expect(menu.runs.map((item) => item.id)).toEqual(['tab:1'])
+    expect(menu.isOpen()).toBe(false)
+  })
+
+  it('should close without running anything when Esc is pressed', () => {
+    // Arrange
+    const menu = clickSetup()
+    menu.click()
+    menu.key('ArrowUp')
+
+    // Act
+    const esc = menu.key('Escape')
+
+    // Assert
+    expect(esc.defaultPrevented).toBe(true)
+    expect(menu.isOpen()).toBe(false)
+    expect(menu.runs).toEqual([])
+  })
+
+  it('should close and let the click reach the terminal when it lands off the card', () => {
+    // Arrange
+    const menu = clickSetup()
+    menu.click()
+
+    // Act
+    const press = mouse('mousedown', 0, menu.terminal)
+
+    // Assert
+    expect(menu.isOpen()).toBe(false)
+    expect(press.defaultPrevented).toBe(false)
+    expect(menu.runs).toEqual([])
+  })
+
+  it('should close without running anything when the button is clicked again', () => {
+    // Arrange
+    const menu = clickSetup()
+    menu.click()
+    menu.key('ArrowUp')
+
+    // Act
+    const events = menu.click()
+
+    // Assert
+    expect(menu.isOpen()).toBe(false)
+    expect(menu.tasks).toEqual([])
+    expect(menu.runs).toEqual([])
+    expect(events.every((event) => event.defaultPrevented)).toBe(true)
+  })
+
+  it('should open again when the button is clicked after the menu closed', () => {
+    // Arrange
+    const menu = clickSetup()
+    menu.click()
+    menu.click()
+
+    // Act
+    menu.click()
+
+    // Assert
+    expect(menu.isOpen()).toBe(true)
+  })
+
+  it('should close and let the key reach the terminal when a key that writes is pressed', () => {
+    // Arrange
+    const menu = clickSetup()
+    menu.click()
+
+    // Act
+    const shift = menu.key('Shift')
+    const openAfterShift = menu.isOpen()
+    const letter = menu.key('a')
+
+    // Assert
+    expect(openAfterShift).toBe(true)
+    expect(shift.defaultPrevented).toBe(false)
+    expect(menu.isOpen()).toBe(false)
+    expect(letter.defaultPrevented).toBe(false)
+    expect(menu.runs).toEqual([])
+  })
+
+  it('should keep the focus on the terminal when a row of the card is pressed', () => {
+    // Arrange
+    const menu = clickSetup()
+    menu.click()
+    menu.key('ArrowUp')
+
+    // Act
+    const press = new MouseEvent('mousedown', { button: 0, bubbles: true, cancelable: true })
+    menu.row(1).dispatchEvent(press)
+
+    // Assert
+    expect(press.defaultPrevented).toBe(true)
+    expect(document.activeElement).toBe(menu.terminal)
+  })
+
+  it('should not open when a key trigger is tapped and released at once', () => {
+    // Arrange
+    const menu = clickSetup('ControlRight')
+    const tap = (type: 'keydown' | 'keyup') =>
+      window.dispatchEvent(new KeyboardEvent(type, { code: 'ControlRight', key: 'Control' }))
+
+    // Act
+    tap('keydown')
+    tap('keyup')
+    for (const task of menu.tasks.splice(0)) task()
+
+    // Assert
+    expect(menu.isOpen()).toBe(false)
+  })
+})

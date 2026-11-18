@@ -169,7 +169,9 @@ allowed with a note that the terminal no longer gets it. `settings.json` keeps o
 
 The action wheel opens with any key that types nothing (a modifier, an F key, Caps Lock, Pause) or with
 the middle, back or forward mouse button: hold it, move the mouse to an item, release to run it, Esc
-cancels. While a mouse button opens the wheel, its click does nothing else (no middle-click paste).
+cancels. A quick click of the mouse button opens the wheel and leaves it open, for mice that send press and
+release together: click an item or press Enter to run it, and Esc, a click elsewhere or the button again
+closes it. While a mouse button opens the wheel, its click does nothing else (no middle-click paste).
 
 The `dck` command controls the window from outside (`dck toggle`, `dck ping`): useful to bind to a system
 shortcut if the global key is refused.
