@@ -623,6 +623,12 @@ export const ptBR = {
   'error.DCK-UPD-004': 'Falha no download da atualização',
   'error.DCK-UPD-005': 'Download corrompido; atualização cancelada',
   'error.DCK-UPD-006': 'Não foi possível instalar a atualização',
+  'error.DCK-INS-001': 'Ainda não há instalador para este sistema',
+  'error.DCK-INS-002': 'Não foi possível ler a versão no GitHub',
+  'error.DCK-INS-003': 'Versão não encontrada',
+  'error.DCK-INS-004': 'Falha no download',
+  'error.DCK-INS-005': 'Download corrompido; nada foi instalado',
+  'error.DCK-INS-006': 'A instalação falhou',
 } as const
 
 export type MessageKey = keyof typeof ptBR

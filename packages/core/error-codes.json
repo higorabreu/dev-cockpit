@@ -233,5 +233,35 @@
     "category": "internal",
     "retryable": false,
     "rpc": -32043
+  },
+  "DCK-INS-001": {
+    "category": "unavailable",
+    "retryable": false,
+    "rpc": -32044
+  },
+  "DCK-INS-002": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32045
+  },
+  "DCK-INS-003": {
+    "category": "not_found",
+    "retryable": false,
+    "rpc": -32046
+  },
+  "DCK-INS-004": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32047
+  },
+  "DCK-INS-005": {
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32048
+  },
+  "DCK-INS-006": {
+    "category": "internal",
+    "retryable": false,
+    "rpc": -32049
   }
 }

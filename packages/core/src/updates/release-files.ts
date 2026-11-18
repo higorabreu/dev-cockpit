@@ -11,6 +11,11 @@ export function debPackageName(version: string, arch: string): string | undefine
   return deb ? `dev-cockpit_${version}_${deb}.deb` : undefined
 }
 
+// The Mac image the release workflow builds, named with Node's name for the processor; Apple Silicon only
+export function macImageName(version: string, arch: string): string | undefined {
+  return arch === 'arm64' ? `dev-cockpit_${version}_${arch}.dmg` : undefined
+}
+
 // `sha256sum` writes `<hash>  <name>`, or `<hash> *<name>` in binary mode; any other line is skipped
 const CHECKSUM_LINE = /^([0-9a-fA-F]{64}) [ *](.+)$/
 
@@ -28,9 +33,8 @@ export interface ReleaseFiles {
   readonly checksums: ReleaseAsset
 }
 
-// The package for this processor and the checksums beside it; both, or nothing to install
-export function releaseFiles(release: Release, arch: string): ReleaseFiles | undefined {
-  const name = debPackageName(release.version, arch)
+// The named package and the checksums beside it; both, or nothing to install
+export function releaseFiles(release: Release, name: string | undefined): ReleaseFiles | undefined {
   const found = release.assets.find((asset) => asset.name === name)
   const checksums = release.assets.find((asset) => asset.name === CHECKSUMS_FILE)
   return found && checksums ? { package: found, checksums } : undefined

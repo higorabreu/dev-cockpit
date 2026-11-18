@@ -119,7 +119,7 @@ for a failed check.
 | --- | --- | --- |
 | **0. Foundation** | Manifest v1, a contribution point registry, extension sources with precedence, the extensions folder, `dck ext list`, the built-in extension | Pure `core` plus a files adapter |
 | **1. Harness** | The `standards` contribution point: standards files, `.dck/`, `dck init`, `dck standards`, `dck render`, `dck check`, built-in examples | Phase 0 |
-| **1b. Packs** | `dck ext install\|enable\|disable\|remove\|dev` and packs as the first installable extension kind | Phase 1 |
+| **1b. Packs** | `dck ext install\|enable\|disable\|remove\|dev`, from a folder, a git URL or npm (D77), and packs as the first installable extension kind | Phase 1 |
 | 2. Agent tools | Harness and project context as MCP tools (the old M2-T13), so an agent queries the same engine | An MCP server, planned in the roadmap |
 | 3. Connectors | An **extension host** (a dedicated Node process) that loads JavaScript or TypeScript extensions written against a dck API, permissions shown and approved at install, GitLab and Jira as the two reference connectors | The provider-neutral refactor of the core ports |
 | 4. Interface | Declarative contributions (panel sections, hold menu items, settings fields, themes as token overrides) drawn by the host | Phase 3 |
@@ -164,9 +164,18 @@ Three small, shared pieces, all in the pure `core` with the file access behind a
 
 A **pack** is an extension whose only contribution is `standards`, so the manifest above is already a pack.
 
-- Installed in the user's extensions folder (`<config dir>/extensions/<id>/`), from a local folder or a git
-  URL. Because a pack holds no code, installing it needs no permissions; the install shows what it contains
-  and asks for approval before writing.
+- Installed in the user's extensions folder (`<config dir>/extensions/<id>/`), from a local folder, a git
+  URL or an npm package (D77). Because a pack holds no code, installing it needs no permissions; the install
+  shows what it contains and asks for approval before writing.
+- **npm as a source (D77).** `dck ext install <package>[@version]` reads the package from the npm registry,
+  checks the tarball against the registry's `integrity` (SHA-512), unpacks it into the extensions folder and
+  reads its `dck-extension.json` like any other. It never runs npm: no lifecycle script (`preinstall`,
+  `postinstall`) runs and no dependency is installed, so the user needs no Node or npm, and a package that
+  declares dependencies is refused until phase 3 decides how code extensions bring theirs. `dck ext update`
+  checks the registry for a newer version within the manifest's `engines.dck`. Official extensions are
+  published under the `@devcockpit` npm scope, which only its members can publish to; third parties publish
+  under their own name with the keyword `dck-extension`. The registry address is a setting with the public
+  registry as default, so a company can point at its own.
 - `dck ext dev <folder>` links a folder under development so the author edits and uses it right away.
 - The refusal rules from phase 0 apply: a pack that declares anything this version cannot run is refused.
 

@@ -1381,6 +1381,56 @@ Ctrl+click guard, `openTerminalMenu` in `app.ts`, `key` in the tab menu, the ses
 `shell/src/quit`, `ui/src/quit` and its style, the `quit` host API and channels, `pids` in the bridge and
 `asksBeforeQuit`, and give the menus `app.quit` again.
 
+## D76. The cockpit installs from npm through a small installer, `npx @devcockpit/install`
+
+**Decision:** [plans/npm-installer.md](../plans/npm-installer.md). The npm package `@devcockpit/install`
+(organization `devcockpit`, since D9's `dev-cockpit` is taken on npm) is an installer, not the app: one
+esbuild bundle with no runtime dependencies, for Node 18 or newer. It reads the latest stable release of
+`higorabreu/dev-cockpit` (or `--version x.y.z`) through the GitHub adapter of D71, with only its version
+in the User-Agent, picks the file for the system with core's `releaseFiles`, checks it against
+`SHA256SUMS` in a private temporary folder and installs it, so the result is the manual install's. Debian
+and Ubuntu (x64, arm64): `sudo apt install -y` after a line saying sudo may ask for the password (root
+runs apt directly; an older release named with `--version` passes `--allow-downgrades`). An Apple Silicon
+Mac: the `.dmg` mounted read only inside that folder, the app copied with `ditto` beside the old one and
+swapped in only after the copy, the image detached, `Contents/Resources/bin/dck` linked into the first
+writable of `/usr/local/bin`, `~/.local/bin`, `~/bin` and `/opt/homebrew/bin` on the PATH (a `dck` that is
+not ours is left alone and the line to replace it printed); sudo only when `/Applications` is not
+writable. A file downloaded by Node carries no quarantine attribute, so the ad hoc signed app opens without
+Gatekeeper's prompt; the installer strips no attribute. Other Linux systems, Intel Macs and Windows get a
+message pointing to the Releases page and exit 1. `--download-only` stops after the checksum. The same
+installed version says so and exits 0; a newer installed version is kept. Failures are `DCK-INS-001` to
+`006` (and `DCK-UPD-003`). The output is English only: the installer runs before any setting exists. The
+release download moved from the shell into `@dck/adapter-node-fetch` so the updater and the installer
+share it. The package's version bumps with the app through release-please, and the release workflow's
+`publish-npm` job publishes it with npm trusted publishing (OIDC, provenance, no stored token) once the
+packages are attached, only while the repository variable `NPM_PUBLISH` is `true`.
+**Reason:** the maintainer's choice on 2026-11-18, to install like the Claude Code CLI. An installer
+rather than the app on npm keeps the package small and the result identical to the `.deb` (menu entry,
+global key, updates of D71). The bundle is about 870 kB, most of it zod, kept because the adapters check
+GitHub's answer with it; it is not minified so it can be read before it runs with sudo.
+**How to revert:** drop `packages/install`, its release-please extra file, the `publish-npm` job, the
+`DCK-INS-*` codes, `macImageName` and `tagged()` if nothing else uses them, the npx paragraph of the
+README, and deprecate the package on npm.
+
+## D77. Extensions can be installed from npm, without running npm
+
+**Decision:** besides a local folder and a git URL, `dck ext install` takes an npm package
+(`dck ext install @devcockpit/<name>[@version]`). The cockpit reads the package from the registry itself,
+checks the tarball against the registry's SHA-512 `integrity`, unpacks it into the extensions folder and
+loads its `dck-extension.json` through the same rules as any installed extension. No lifecycle script runs
+and no dependency is installed; a package that declares dependencies is refused until the extension host
+(phase 3) settles how code extensions bring theirs. Official extensions live under the `@devcockpit` scope,
+which only its members can publish to, so the scope marks what the project ships; third parties publish
+under their own name with the keyword `dck-extension`. The registry address is a setting, the public
+registry by default. `npm install -g` is not a way to install an extension: the cockpit never looks in
+Node's global folder.
+**Reason:** the maintainer's choice on 2026-11-18, after creating the `devcockpit` npm organization for the
+installer (D76). npm already gives versions, a name space, integrity hashes and hosting, and authors
+already know how to publish there. Unpacking the tarball instead of calling npm keeps the install free of
+the scripts that make npm packages a common attack path, and leaves Node and npm optional for users.
+**How to revert:** drop the npm source from `dck ext install` and `dck ext update` and its setting; folder
+and git installs stay.
+
 ## D78. Each submodule is reviewed as its own repository, with the same scope inside it
 
 **Decision:** partly replaces D70. Like VS Code, the review reads each submodule as its own repository and
