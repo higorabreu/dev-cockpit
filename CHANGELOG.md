@@ -3,6 +3,33 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.11.0](https://github.com/higorabreu/dev-cockpit/compare/v0.10.0...v0.11.0) (2026-11-18)
+
+
+### Features
+
+* a dot on the Sessions and Work rail buttons when something waits ([#96](https://github.com/higorabreu/dev-cockpit/issues/96)) ([b01d68f](https://github.com/higorabreu/dev-cockpit/commit/b01d68fd2ae81cf0818e3a58a572895d61d5166d))
+* compact update notice on a narrow window, and middle click closes a tab ([#92](https://github.com/higorabreu/dev-cockpit/issues/92)) ([fa180d7](https://github.com/higorabreu/dev-cockpit/commit/fa180d7ea95cc3e3b8add90db81f9bc5327ea423))
+* install the cockpit from npm with npx @devcockpit/install ([#94](https://github.com/higorabreu/dev-cockpit/issues/94)) ([bb04707](https://github.com/higorabreu/dev-cockpit/commit/bb0470707280dc53f65112a2e7367144bd92f74d))
+* Mac right click menu in the terminal, and Cmd+Q asks while a tab runs a program ([#93](https://github.com/higorabreu/dev-cockpit/issues/93)) ([3b6791e](https://github.com/higorabreu/dev-cockpit/commit/3b6791e50de4654d8a66042b7590087ed9be1208))
+
+
+### Bug Fixes
+
+* bring the cockpit forward in place on a notification click, the quit question, settings and a reopen ([#103](https://github.com/higorabreu/dev-cockpit/issues/103)) ([641f47e](https://github.com/higorabreu/dev-cockpit/commit/641f47e5cf386bea2ca354b0ba61c076552226a1))
+* draw only the modifier as a keycap in click hints ([#102](https://github.com/higorabreu/dev-cockpit/issues/102)) ([beb1bb8](https://github.com/higorabreu/dev-cockpit/commit/beb1bb8f37d100fc604082ef8bd86e92ece4cd26))
+* give the terminal its real background color, so reverse video and OSC 11 follow the theme ([#98](https://github.com/higorabreu/dev-cockpit/issues/98)) ([1863773](https://github.com/higorabreu/dev-cockpit/commit/1863773fe8255b41ea90b943b8d1d27de6d0ffc9))
+* keep attention marks on the tabs only, not on the All tabs button ([#91](https://github.com/higorabreu/dev-cockpit/issues/91)) ([c614330](https://github.com/higorabreu/dev-cockpit/commit/c6143300339fa24da31c3ea048fdfd070e378631))
+* open the hold menu with a click of a mouse trigger, and draw it above Settings ([#104](https://github.com/higorabreu/dev-cockpit/issues/104)) ([662c590](https://github.com/higorabreu/dev-cockpit/commit/662c590f14021e9b9a26223e45e1c3e9edfe686a))
+* paint a readable terminal selection in the light theme ([#90](https://github.com/higorabreu/dev-cockpit/issues/90)) ([8e53de4](https://github.com/higorabreu/dev-cockpit/commit/8e53de43c5fc1363ecb73f32ffac331ee934a7e5))
+* put Cancel first when a restart would end a running agent ([#101](https://github.com/higorabreu/dev-cockpit/issues/101)) ([66fa2ed](https://github.com/higorabreu/dev-cockpit/commit/66fa2ed685e23692952b2031f71b6b7594d4c2f9))
+* review each submodule in its own scope, as VS Code does ([#100](https://github.com/higorabreu/dev-cockpit/issues/100)) ([19a825e](https://github.com/higorabreu/dev-cockpit/commit/19a825e5a1e86a37b5ef0904cd5215d562da8d53))
+
+
+### Performance Improvements
+
+* read untracked files for the review in process instead of one git process each ([#97](https://github.com/higorabreu/dev-cockpit/issues/97)) ([bca6912](https://github.com/higorabreu/dev-cockpit/commit/bca6912bc23a87ede4cde3cf2a7cd2b4bd772426))
+
 ## [0.10.0](https://github.com/higorabreu/dev-cockpit/compare/v0.9.0...v0.10.0) (2026-11-18)
 
 
