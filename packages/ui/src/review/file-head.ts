@@ -145,7 +145,9 @@ export function fileHead(
       else deps.showAnyway(file)
     })
   }
-  const unreadable = isCollapsed(notice) ? undefined : noticeText(file, notice, i18n)
+  // A file whose content waits says so with its Load diff button alone: beside it the sentence only got cut
+  const unreadable =
+    isCollapsed(notice) || notice === 'unloaded' ? undefined : noticeText(file, notice, i18n)
   const changed = deps.viewed(file).changed
   const comments = deps.commentCount(file)
   return h(

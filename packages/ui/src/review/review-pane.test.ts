@@ -265,7 +265,7 @@ describe('createReviewPane', () => {
     const notices = [...pane.element.querySelectorAll('.rv-file .rv-wait')].map(
       (n) => `${n.textContent} | ${n.getAttribute('data-tip')}`,
     )
-    const header = text('.rv-filerow[data-file="0"] .rv-why')
+    const header = text('.rv-filerow[data-file="0"] .rv-fhead')
 
     // Act
     pane.element.querySelector<HTMLElement>('.rv-file[data-index="0"]')?.click()
@@ -277,7 +277,9 @@ describe('createReviewPane', () => {
 
     // Assert
     expect(notices).toEqual(['Not loaded | Content not loaded', 'Not loaded | Content not loaded'])
-    expect(header).toBe('Content not loaded')
+    // The header offers Load diff alone, with no sentence beside it to be cut
+    expect(header).toContain('Load diff')
+    expect(header).not.toContain('Content not loaded')
     expect(reads).toEqual([
       'untracked /home/ana/acme|gen/f300.txt',
       'untracked /home/ana/acme|gen/f301.txt',
