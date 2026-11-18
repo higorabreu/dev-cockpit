@@ -23,3 +23,6 @@ CLAUDE.local.md
 
 # Copied from the repository root by the installer build, for the npm package
 packages/install/LICENSE
+
+# Python bytecode from the media scripts
+__pycache__/

@@ -39,9 +39,10 @@ packages/
   ui/         the app: DOM, xterm, styles
   daemon/     local process: IPC server, views, cache
   cli/        the dck command (toggle, ping, daemon, agent signal, ext)
-  shell/      Electron: window, global shortcut, PTY host
-  adapters/   node-pty, node-git, node-net, node-fetch, github, gitlab, jira, docker-cli, secret-tool,
-              gnome-shortcuts, linux-proc, extension-files, jsonc
+  shell/      Electron: window, global shortcut, PTY host, updates
+  install/    the npm installer, `npx @devcockpit/install` (D76)
+  adapters/   node-pty, node-git, node-net, node-fetch, github, gitlab, jira, docker-cli, jsonc,
+              extension-files, gnome-shortcuts, secret-tool, linux-proc, macos-keychain, macos-proc
 ```
 
 ## How the pieces fit
@@ -55,7 +56,7 @@ packages/
   clients of the daemon over JSON-RPC 2.0 (a Unix socket, a named pipe on Windows), so the app can be
   closed while the daemon keeps working. The daemon is versioned and the shell replaces an outdated one.
 - **The shell hosts the window.** `shell` is the Electron main process: the anchored window, the global
-  shortcut, the PTY host, settings storage and the bridge to the UI. It composes adapters at startup
+  shortcut, the PTY host, settings storage, the opt-in updater (D71) and the bridge to the UI. It composes adapters at startup
   (`shell/src/main.ts`) and passes them to the code that needs them.
 - **The UI is plain TypeScript on the DOM.** It talks only to the shell, through a typed host API exposed
   by the preload script; the shell talks to the daemon and validates what comes back.
@@ -67,7 +68,8 @@ packages/
   so the terminal and the panel share one palette.
 - **Portability.** No Unix assumption: paths through a library, no fixed `~/.config`, IPC behind an
   interface. The global shortcut has a plan B: `dck toggle`, which the user can bind to any system
-  shortcut. macOS and Windows arrive as new adapters ([plans/macos.md](../plans/macos.md)).
+  shortcut. macOS runs through its own adapters (Keychain, process inspection, launchd, the panel window)
+  and is still being tested ([plans/macos.md](../plans/macos.md)); Windows arrives the same way.
 - **Modules are a code boundary at first.** An external plugin contract only after two real connectors.
 
 ## Source layout
@@ -75,10 +77,10 @@ packages/
 Source folders in `ui` and `shell` are grouped by feature or area, with tests beside the code:
 
 ```
-ui/src/        main.ts, app.ts, then terminal/ tabs/ hold-menu/ panel/ projects/ views/
-               settings/ kit/ platform/ styles/ types/
-shell/src/     main.ts, preload.ts, then electron/ daemon/ projects/ settings/ inspectors/
-               connections/ platform/linux/
+ui/src/        main.ts, app.ts, then terminal/ tabs/ panes/ review/ hold-menu/ panel/ projects/
+               views/ agents/ settings/ updates/ quit/ window/ kit/ platform/ styles/ types/
+shell/src/     main.ts, preload.ts, then electron/ daemon/ tabs/ projects/ settings/ inspectors/
+               connections/ updates/ quit/ platform/linux/ platform/darwin/
 ```
 
 A folder holds at most 12 source files and file names are lowercase kebab case; a test enforces both.

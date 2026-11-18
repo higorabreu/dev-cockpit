@@ -1,5 +1,7 @@
 # Install from npm
 
+**Status:** Done, in the 0.11.0 release (D76); the package reaches npm once the repository variable `NPM_PUBLISH` is `true`.
+
 Installing meant downloading the `.deb` from the Releases page, checking it and installing it by hand. The
 maintainer asked for a command line install like the Claude Code CLI's (2026-11-18):
 

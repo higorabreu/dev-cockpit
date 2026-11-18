@@ -1,5 +1,7 @@
 # Review: the changes inside submodules
 
+**Status:** Done, shipped in 0.10.0 (D70).
+
 ## Goal
 
 Today the review shows a changed submodule as one file whose diff is `Subproject commit <old>` /

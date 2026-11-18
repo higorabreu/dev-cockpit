@@ -1,5 +1,7 @@
 # Updates from GitHub releases
 
+**Status:** Done, shipped in 0.10.0 (D71, D72).
+
 Today a new version means downloading the `.deb` from the Releases page, checking it and installing it by
 hand. The maintainer asked for opt-in updates from the project's own GitHub releases (2026-11-18).
 

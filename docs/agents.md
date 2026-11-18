@@ -15,7 +15,8 @@ one command and one terminal report; it does not know which agent sent them. The
 
 "Needs you" stays on the tab while the agent waits, even after a look at it, and is notified only when
 the tab is out of sight. Typing in the tab, a new `working` signal or the agent leaving the terminal clears
-it. "Next waiting for you" visits the tabs that need you first. Without an integration nothing changes:
+it. While any tab carries a mark, the Sessions button in the side panel's rail shows a dot (D73); the
+screen reader hears how many. "Next waiting for you" visits the tabs that need you first. Without an integration nothing changes:
 the tabs, marks and notifications behave as they always did.
 
 ## How you find it

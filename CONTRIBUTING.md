@@ -15,7 +15,8 @@ By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Set up
 
-Requirements: Node 24 (`nvm use`), pnpm 9, Linux with X11 to run the app (the tests run anywhere).
+Requirements: Node 24 (`nvm use`), pnpm 9, and Linux (X11 or Wayland) or macOS to run the app (the tests
+run anywhere).
 
 ```bash
 pnpm install
@@ -69,12 +70,14 @@ By contributing you agree that your contribution is licensed under the
 ## Releases (maintainers)
 
 Releases are automated with [release-please](https://github.com/googleapis/release-please). Every push to
-`main` updates a pull request named `chore: release x.y.z` with the version and the changelog computed
-from the Conventional Commits since the last release. Merging that pull request creates the tag and the
-GitHub release, and the workflow then builds the `.deb` packages and, on a macOS runner, the arm64 `.dmg`,
-and attaches them with `SHA256SUMS` and a build provenance attestation. A failed Mac build does not hold
-the `.deb` packages back: the release goes out without its image. While the version is 0.x, a breaking change bumps the minor number and
-nothing goes to 1.0 by itself.
+`main` updates a pull request named `chore(main): release x.y.z` with the version and the changelog
+computed from the Conventional Commits since the last release. Merging that pull request creates the tag
+and the GitHub release, and the workflow then builds the `.deb` packages and, on a macOS runner, the arm64
+`.dmg`, and attaches them with `SHA256SUMS` and a build provenance attestation. A failed Mac build does not
+hold the `.deb` packages back: the release goes out without its image. Once the packages are attached, the
+`publish-npm` job publishes the installer `@devcockpit/install` with npm trusted publishing (no stored
+token), only while the repository variable `NPM_PUBLISH` is `true`. While the version is 0.x, a breaking
+change bumps the minor number and nothing goes to 1.0 by itself.
 
 The release pull request is opened by a bot, and pull requests opened with the default `GITHUB_TOKEN` do
 not trigger CI. Add a personal access token (or a GitHub App token) as the repository secret

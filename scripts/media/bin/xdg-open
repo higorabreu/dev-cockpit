@@ -1,0 +1,6 @@
+#!/bin/bash
+# Stand-in for xdg-open in the recordings: shows the mock browser page drawn for the address, on top
+url="$1"
+page="$MEDIA_WORK/pages/$(printf '%s' "$url" | sed 's#^[a-z]*://[^/]*/##; s#[^A-Za-z0-9]#-#g').png"
+[ -f "$page" ] || exit 0
+display -borderwidth 0 -geometry +140+40 -title browser "$page" >/dev/null 2>&1 &

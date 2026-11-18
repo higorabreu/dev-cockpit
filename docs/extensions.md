@@ -16,7 +16,7 @@ app reads the manifests, validates them, decides which ones win and reports the 
 | Contribution points as a mechanism, with one registered: `connectors` | Connectors from installed extensions (phase 3) |
 | Four sources with precedence and shadowing | Interface contributions and a shared index (phases 4 and 5) |
 | The built-in extensions: `dck.built-in` (empty), `dck.github`, `dck.gitlab` and `dck.jira` | |
-| The `extensions.disabled` setting | |
+| The `extensions.disabled` setting | `dck ext install` from a folder, a git URL or an npm package, without running npm (D77) |
 | `dck ext list`, `dck ext enable`, `dck ext disable` | |
 
 ## The manifest

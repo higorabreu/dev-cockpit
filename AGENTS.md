@@ -41,7 +41,8 @@ packages/design     tokens.json and the CSS, terminal theme and contrast checks 
 packages/ui         the app: DOM, xterm, styles
 packages/daemon     local process: IPC server, views, cache
 packages/cli        the dck command
-packages/shell      Electron: window, global shortcut, PTY host
+packages/shell      Electron: window, global shortcut, PTY host, updates
+packages/install    the npm installer, published as @devcockpit/install (npx @devcockpit/install)
 packages/adapters   one package per technology: node-pty, node-git, gitlab, secret-tool, ...
 docs/               architecture, decisions, roadmap        plans/   active plans (plans/local is git-ignored)
 ```

@@ -1,5 +1,7 @@
 # Personalization: appearance, terminal, and a settings file like VS Code's
 
+**Status:** Done, shipped in 0.9.0 (D65, D66).
+
 A colleague's zsh prompt showed boxes in the terminal (its Powerline glyphs are not in the fonts the
 cockpit asks for), some people prefer a bar cursor, and the maintainer wants the user to shape the cockpit
 to their taste (2026-11-17).

@@ -26,14 +26,14 @@ body:
     id: version
     attributes:
       label: Dev Cockpit version
-      description: From `dpkg -s dev-cockpit` or the name of the package you installed.
+      description: From Settings, About, `dpkg -s dev-cockpit` or the name of the package you installed.
     validations:
       required: true
   - type: input
     id: system
     attributes:
-      label: Distribution and desktop environment
-      placeholder: Ubuntu 24.04, GNOME 46 on X11
+      label: System and desktop environment
+      placeholder: Ubuntu 24.04, GNOME 46 on X11 (or macOS 26 on Apple Silicon)
     validations:
       required: true
   - type: textarea

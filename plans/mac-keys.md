@@ -1,5 +1,7 @@
 # Mac keyboard: line editing, clear, last tab and the Option keys
 
+**Status:** Done, shipped in 0.9.0 (D68).
+
 On a Mac the terminal ignores keys a Mac user reaches for: in xterm 6 `⌘←` and `⌘→` send nothing, `⌘⌫`
 sends a plain DEL, `⌥←` and `⌥→` send `CSI 1;3D` and `C` (zsh prints `;3D`) and `⌘K` does nothing. Option
 as Meta (D51) also takes the accents and the `@` and brackets of international layouts away. The

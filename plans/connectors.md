@@ -1,5 +1,7 @@
 # Connectors: GitLab and Jira as extensions
 
+**Status:** Done, shipped in 0.4.0 (D41, D43, D44); GitHub followed in [github.md](github.md).
+
 ## Goal
 
 The Work screen shows the developer's work from the services their company uses, and nothing from the
