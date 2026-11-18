@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/hero.gif" alt="Dev Cockpit drops down with F12, opens a project, starts Claude Code from the action wheel, marks the tab and the Sessions button when the agent needs approval while another tab is in front, and shows the agent's changes beside the terminal" width="960">
+  <img src="docs/media/hero.gif" alt="A morning with Dev Cockpit over a desktop with an editor and a browser: the Work button's dot opens a pull request to review and the Jira tasks, a task's key is copied, the action wheel opens the acme-api project and starts Claude Code on the task, the developer runs the tests in another tab, the agent's tab is marked and a desktop notification says the agent needs you, a click on it brings the cockpit to that tab, the command is approved, and F12 hides the cockpit and brings it back" width="960">
 </p>
 
 `dck` lives behind a global key, like Guake or Quake's console: press `F12` and it drops over whatever
@@ -40,9 +40,9 @@ changed, and your pull requests, merge requests and tasks. The clips show exampl
   row opens the review on it.
 - **Coding agents.** A tab running an agent is marked when the agent needs you, the panel's Sessions
   button shows a dot, and a notification comes when the tab is out of sight, so you can keep working in
-  another tab. Claude
-  Code connects with its plugin in two commands, Codex (0.163 or newer) needs nothing because it reports
-  its state to the terminal, and any agent that runs a command on its own events can send the same signals
+  another tab; a click on the notification brings the cockpit forward on that tab. Claude Code connects
+  with its plugin in two commands, Codex (0.163 or newer) needs nothing because it reports its state to
+  the terminal, and any agent that runs a command on its own events can send the same signals
   ([docs/agents.md](docs/agents.md)).
 - **Review.** What changed in the tab's repository, beside or below its terminal, with comments that go
   back to the agent (below).
@@ -52,10 +52,14 @@ changed, and your pull requests, merge requests and tasks. The clips show exampl
   right or middle button pastes (`Ctrl+Shift+C` and `Ctrl+Shift+V` also work). On a Mac the right click
   opens a menu with Copy, Paste and Select all, and `⌘Q` asks first while a tab runs a program.
 
+<p align="center">
+  <img src="docs/media/dropdown.gif" alt="The cockpit over a desktop, its bottom edge dragged down for more room and then to the bottom of the screen, where the tab bar moves to the top, dragged back, hidden with F12 and shown again" width="960">
+</p>
+
 ## Review
 
 <p align="center">
-  <img src="docs/media/review.gif" alt="The review beside Claude Code: the file index with a libs/billing submodule group and its commits in a tooltip, two lines of a submodule file selected and commented, and the comments sent to the agent as one line typed at its prompt" width="960">
+  <img src="docs/media/review.gif" alt="The review beside Claude Code after it finished: the file index with a libs/billing submodule group and its new commits in a tooltip, two lines of a submodule file selected and commented, the comment sent to the agent as one line at its prompt, and the file's diff updating in the review once the agent changed it" width="960">
 </p>
 
 `Ctrl+Shift+D` shows what changed in the tab's repository beside or below its terminal, in one scroll:
@@ -75,7 +79,7 @@ waits and says so, and the comments stay.
 ## Connectors
 
 <p align="center">
-  <img src="docs/media/work.gif" alt="A dot on the Work button, then the work screen with GitHub pull requests to review with conflict and checks badges, a typed filter, your own pull requests, GitLab merge requests with pipeline and discussion badges, and Jira tasks grouped by progress" width="960">
+  <img src="docs/media/work.gif" alt="The Work button's dot, then the work screen with GitHub pull requests to review and Jira tasks, a filter that leaves one pull request flagged with a conflict and failed checks, and that pull request opened in the browser with Enter" width="960">
 </p>
 
 `Ctrl+Shift+M` opens the work screen. **GitHub** (github.com or GitHub Enterprise Server) lists the pull
@@ -124,10 +128,6 @@ link it into a folder on your PATH, for example
 `~/Library/Application Support/Dev Cockpit`.
 
 ## Updates
-
-<p align="center">
-  <img src="docs/media/update.gif" alt="The update notice at the end of the tab bar: Version 0.11.0 available with Update and What's new, then the download's percentage, then Updated to 0.11.0 with Restart" width="880">
-</p>
 
 Off by default: the cockpit makes no network call of its own. **Updates** in Settings, About chooses:
 
@@ -193,10 +193,6 @@ Meta (`⌥B`, `⌥F`) and the right one types accents and symbols (Settings, Opt
 selects inside programs that use the mouse. `F12` needs `fn` unless the F keys are set as standard
 function keys.
 
-<p align="center">
-  <img src="docs/media/shortcuts.gif" alt="Settings, Shortcuts: New tab recorded as Ctrl+Alt+N, Ctrl+Shift+R refused for Clear terminal because Rename tab has it, with Swap and Cancel, and the hold menu key set to the middle mouse button" width="960">
-</p>
-
 These are the defaults: Settings, Shortcuts changes any of them. Click a key, or press Enter on it, and
 press the new one; Esc cancels. A letter or digit needs Ctrl, Alt or `⌘`, an F key can stand alone. A key
 another action already has asks first (Swap or Cancel), and a Ctrl key the shell uses (`Ctrl+R`) is
@@ -251,7 +247,8 @@ pnpm lint && pnpm typecheck && pnpm test
 
 The development build uses `~/.config/dev-cockpit-dev` and the `dck-dev` socket, so it lives beside the
 installed one. Read [CONTRIBUTING.md](CONTRIBUTING.md) before sending a change, [docs/](docs/) for the
-architecture, decisions and roadmap, and [AGENTS.md](AGENTS.md) for the coding standards.
+architecture, decisions and roadmap, and [AGENTS.md](AGENTS.md) for the coding standards. The clips in
+this README are recorded from the built app by [scripts/media](scripts/media/README.md).
 
 ## Known limits
 
