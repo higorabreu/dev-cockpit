@@ -1,4 +1,4 @@
-import { readFile, realpath, stat } from 'node:fs/promises'
+import { readFile, readlink, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, join, normalize, relative, sep } from 'node:path'
 import {
   type DiffFile,
@@ -21,6 +21,13 @@ import {
 } from '@dck/core'
 import { createBaseFinder } from './git-base.ts'
 import { type GitAnswer, type GitFailure, type GitRun, inBatches, runGit } from './git-run.ts'
+import {
+  addedFile,
+  needsGit,
+  UNTRACKED_ATTRIBUTES,
+  type UntrackedPlan,
+  untrackedPlans,
+} from './untracked-file.ts'
 
 const QUICK = { timeoutMs: 5000, maxBytes: 1024 * 1024 }
 // The whole diff of a scope; past this the review says it is too large instead of freezing
@@ -45,6 +52,8 @@ export interface DiffFiles {
   readFile(path: string): Promise<Buffer>
   size(path: string): Promise<number | undefined>
   realpath(path: string): Promise<string>
+  // The target of a symbolic link as bytes, which git diffs as its content; undefined for anything else
+  readLink(path: string): Promise<Buffer | undefined>
   // Size and modification time, which change when a file is written; undefined when it is gone
   stamp(path: string): Promise<string | undefined>
 }
@@ -62,6 +71,7 @@ const nodeFiles: DiffFiles = {
       () => undefined,
     ),
   realpath: (path) => realpath(path),
+  readLink: (path) => readlink(path, { encoding: 'buffer' }).catch(() => undefined),
   stamp: (path) =>
     stat(path).then(
       (stats) => `${stats.size}:${stats.mtimeMs}`,
@@ -189,16 +199,58 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
     return listing.stdout.split('\0').filter((path) => path !== '' && !path.endsWith('/'))
   }
 
-  // An untracked file as an addition; past 1 MB only its size, and one git cannot read stays listed
-  // with its content not loaded
+  // How git's diff would take each of these untracked files of a repository: one check of their
+  // attributes and one of the settings instead of a git process per file
+  async function plansFor(dir: string, paths: readonly string[]) {
+    const [attributes, config] = await Promise.all([
+      run(dir, ['check-attr', '-z', '--stdin', ...UNTRACKED_ATTRIBUTES], {
+        ...STATUS,
+        input: `${paths.join('\0')}\0`,
+      }),
+      quick(dir, ['config', '--get-regexp', '^core\\.(autocrlf|bigfilethreshold)$']),
+    ])
+    return untrackedPlans(
+      attributes.ok ? attributes.stdout : undefined,
+      config.ok ? config.stdout : '',
+    )
+  }
+
+  // An untracked file as an addition, built from its bytes as git would show it; past 1 MB only its size,
+  // and one that cannot be read stays listed with its content not loaded
   async function readUntracked(
     dir: string,
     path: string,
     whitespace: readonly string[],
+    plan: UntrackedPlan,
   ): Promise<DiffFile> {
-    const size = await files.size(join(dir, path))
+    const full = join(dir, path)
+    const size = await files.size(full)
     if (size !== undefined && size > UNTRACKED_MAX_BYTES)
       return { ...untrackedEntry(path), size, omitted: true }
+    if (plan.git) return diffUntracked(dir, path, whitespace)
+    const unloaded: DiffFile = { ...untrackedEntry(path), unloaded: true }
+    const link = await files.readLink(full)
+    // Gone, a folder, a pipe or a link to a folder: git cannot compare it with /dev/null, and reading a
+    // pipe would wait forever; a dangling link still shows its target
+    if (size === undefined && (link === undefined || (await reaches(full)))) return unloaded
+    const content = link ?? (await files.readFile(full).catch(() => undefined))
+    if (content === undefined) return unloaded
+    if (!needsGit(plan, content)) return addedFile(path, content, plan, link !== undefined)
+    return diffUntracked(dir, path, whitespace)
+  }
+
+  const reaches = (path: string) =>
+    files.realpath(path).then(
+      () => true,
+      () => false,
+    )
+
+  // The few files whose attributes or settings make git transform them before comparing
+  async function diffUntracked(
+    dir: string,
+    path: string,
+    whitespace: readonly string[],
+  ): Promise<DiffFile> {
     const result = await run(
       dir,
       ['diff', ...DIFF_FLAGS, ...whitespace, '--no-index', '--', '/dev/null', path],
@@ -371,13 +423,26 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       return file
     })
     const ordered = orderModuleFiles([...out.tracked, ...waiting], out.modules)
-    const first = ordered.filter((file) => file.unloaded).slice(0, UNTRACKED_LIMIT)
+    const first = ordered
+      .filter((file) => file.unloaded)
+      .slice(0, UNTRACKED_LIMIT)
+      .flatMap((file) => where.get(file.path) ?? [])
+    const repos = [...new Set(first.map((entry) => entry.repo))]
+    const plans = new Map(
+      await Promise.all(
+        repos.map(async (repo) => {
+          const paths = first.filter((entry) => entry.repo === repo).map((entry) => entry.path)
+          return [repo, await plansFor(repo.dir, paths)] as const
+        }),
+      ),
+    )
     const read = new Map<string, DiffFile>()
-    await inBatches(first, PARALLEL, async (file) => {
-      const entry = where.get(file.path)
-      if (!entry) return
-      const content = await readUntracked(entry.repo.dir, entry.path, whitespace)
-      read.set(file.path, inRepo(entry.repo, content))
+    await inBatches(first, PARALLEL, async (entry) => {
+      const plan = plans.get(entry.repo)?.(entry.path)
+      if (!plan) return
+      const content = await readUntracked(entry.repo.dir, entry.path, whitespace, plan)
+      const file = inRepo(entry.repo, content)
+      read.set(file.path, file)
     })
     return ordered.map((file) => read.get(file.path) ?? file)
   }
@@ -479,7 +544,8 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       const resolved = await insideRoot(root, path)
       if (!resolved.ok) return resolved
       const inside = normalize(path)
-      const file = await readUntracked(root, inside, ignoreWhitespace ? ['-w'] : [])
+      const plan = (await plansFor(root, [inside]))(inside)
+      const file = await readUntracked(root, inside, ignoreWhitespace ? ['-w'] : [], plan)
       if (file.unloaded) return fail(errorBody('DCK-GIT-001', 'untracked file not readable'))
       return ok(await complete(root, file, false))
     },
