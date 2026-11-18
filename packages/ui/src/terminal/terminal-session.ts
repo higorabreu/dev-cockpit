@@ -75,6 +75,8 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     allowTransparency: true,
     // Option+B and Option+F move by word as in the shell; xterm reads it only on a Mac
     macOptionIsMeta: true,
+    // Option+drag selects text even in a program that takes the mouse (vim, htop), as in Terminal.app
+    macOptionClickForcesSelection: true,
     theme: terminalTheme(options.theme),
   })
   const fit = new FitAddon()
