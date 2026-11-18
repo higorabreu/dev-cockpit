@@ -3,16 +3,19 @@ import { createTranslator, emptyTabs, openTab } from '@dck/core'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createTabBar } from './tab-bar.ts'
 
-function setup(language: 'en' | 'pt-BR' = 'en') {
+function setup(language: 'en' | 'pt-BR' = 'en', middleClickCloses = true) {
   const container = document.createElement('div')
   document.body.append(container)
   const hidden: (string | undefined)[] = []
   const renames: [string, string | undefined][] = []
+  const closed: string[] = []
   const bar = createTabBar(
     container,
     {
       activate: () => undefined,
       contextMenu: () => undefined,
+      close: (id) => void closed.push(id),
+      middleClickCloses: () => middleClickCloses,
       reorder: () => undefined,
       rename: (id, name) => void renames.push([id, name]),
       hiddenAttention: (kind) => void hidden.push(kind),
@@ -23,7 +26,7 @@ function setup(language: 'en' | 'pt-BR' = 'en') {
     id: 'tab-2',
     label: 'shell 2',
   })
-  return { container, bar, state, hidden, renames }
+  return { container, bar, state, hidden, renames, closed }
 }
 
 afterEach(() => {
@@ -210,5 +213,54 @@ describe('createTabBar redraw', () => {
 
     // Assert
     expect((document.activeElement as HTMLElement | null)?.dataset.id).toBe('tab-1')
+  })
+})
+
+describe('createTabBar middle click', () => {
+  const press = (container: HTMLElement, id: string, type: string, button: number) => {
+    const event = new MouseEvent(type, { button, bubbles: true, cancelable: true })
+    container.querySelector(`[data-id="${id}"]`)?.dispatchEvent(event)
+    return event
+  }
+
+  it('should close the tab with no question when the middle button clicks it', () => {
+    // Arrange
+    const { container, bar, state, closed } = setup()
+    bar.render(state)
+
+    // Act
+    const down = press(container, 'tab-2', 'mousedown', 1)
+    const up = press(container, 'tab-2', 'mouseup', 1)
+    const click = press(container, 'tab-2', 'auxclick', 1)
+
+    // Assert: no focus move, autoscroll or paste of the selection on Linux
+    expect(closed).toEqual(['tab-2'])
+    expect([down, up, click].map((event) => event.defaultPrevented)).toEqual([true, true, true])
+  })
+
+  it('should keep the tab when the middle button opens the hold menu', () => {
+    // Arrange
+    const { container, bar, state, closed } = setup('en', false)
+    bar.render(state)
+
+    // Act
+    press(container, 'tab-2', 'auxclick', 1)
+
+    // Assert
+    expect(closed).toEqual([])
+  })
+
+  it('should keep the tab when another side button clicks it', () => {
+    // Arrange
+    const { container, bar, state, closed } = setup()
+    bar.render(state)
+
+    // Act
+    const down = press(container, 'tab-1', 'mousedown', 3)
+    press(container, 'tab-1', 'auxclick', 3)
+
+    // Assert
+    expect(closed).toEqual([])
+    expect(down.defaultPrevented).toBe(false)
   })
 })

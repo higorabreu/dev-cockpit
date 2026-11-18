@@ -14,6 +14,7 @@ import {
   emptyTabs,
   formatDuration,
   type HostApi,
+  holdsMiddleButton,
   JIRA_CONNECTOR,
   jiraTicketLink,
   localeFor,
@@ -137,6 +138,8 @@ export async function startApp(
   const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
   const nativeMiddlePaste = navigator.platform.startsWith('Linux')
+  // The hold menu's key or mouse button, read at each use: Settings can change it while the window is open
+  const holdTrigger = () => settings.current().shortcuts.holdTrigger ?? keymap.holdTrigger
   const notice = createNotice(elements.notice, i18n)
   const updateNotice = createUpdateNotice({
     notice,
@@ -759,6 +762,8 @@ export async function startApp(
         elements.tabsAll.setAttribute('data-tip', label)
       },
       activate: (id) => update(activateTab(state, id)),
+      close,
+      middleClickCloses: () => !holdsMiddleButton(holdTrigger()),
       reorder: (ids) => {
         state = reorderTabs(state, ids)
         render()
@@ -990,7 +995,7 @@ export async function startApp(
         if (item.id.startsWith(PROJECT_PREFIX)) openProject(item.id.slice(PROJECT_PREFIX.length))
         else commands[item.id]?.()
       },
-      triggerCode: () => settings.current().shortcuts.holdTrigger ?? keymap.holdTrigger,
+      triggerCode: holdTrigger,
     },
     {
       after(milliseconds, task) {
