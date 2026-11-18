@@ -38,7 +38,7 @@ Out of scope: the Ctrl+click and right click paste, a confirmation on `⌘Q`, th
 - [x] T7. Hold menu key: `MetaRight` in `HOLD_TRIGGERS`, the Mac default in `HOLD_TRIGGER`, labels in
   both catalogs; offered only on a Mac keyboard.
 - [x] T8. Global key on a Mac: the recorded accelerator in the Mac's symbols and the fn hint.
-- [ ] T9. D68, D51 where it no longer holds, the README keys, a run of the real app on Linux.
+- [x] T9. D68, D51 where it no longer holds, the README keys, a run of the real app on Linux.
 
 ## Only a real Mac can confirm
 

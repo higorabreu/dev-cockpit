@@ -106,7 +106,8 @@ next launch, `--yes` restarts without asking and `--skip-build` installs the `.d
 | `Ctrl+Shift+T` / `W` | New tab / close tab |
 | `Ctrl+Shift+R` | Rename the tab in place (also a double-click on it); an empty name brings back the automatic one. The tabs, with their folders and names, open again on the next start |
 | `Ctrl+Tab`, `Ctrl+Shift+Tab` | Next / previous tab |
-| `Alt+1` to `9` | Go to tab |
+| `Alt+1` to `8`, `Alt+9` | Go to tab; `Alt+9` goes to the last one |
+| `Ctrl+Shift+K` | Clear the terminal and its scrollback (`Ctrl+K` stays with the shell) |
 | Hold the right `Ctrl` | Action wheel: tabs, projects, agent, system. Releasing runs the item |
 | `Ctrl+Shift+P` | Project search (`Ctrl+D` pins or unpins a favorite) |
 | `Ctrl+Shift+M` | Work screen: merge requests and tasks |
@@ -119,13 +120,21 @@ next launch, `--yes` restarts without asking and `--skip-build` installs the `.d
 | `Ctrl+Shift+L` | Switch between light and dark theme |
 | `Ctrl+,` | Settings (also through the gear in the panel) |
 
+On a Mac the cockpit's keys use `⌘` where the Mac does and leave Ctrl to the shell: `⌘T`, `⌘W`, `⌘1` to
+`⌘8` and `⌘9` for the last tab, `⌘K` clears, `⌘,` opens Settings and the cockpit's own keys are `⇧⌘` and
+the same letter (`⇧⌘D` the review). Hold the right `⌘` for the action wheel. At the prompt `⌘←` and `⌘→`
+go to the ends of the line, `⌘⌫` deletes to its start, `⌥←` and `⌥→` move by word and `⌥⌦` deletes the
+next word; a full-screen program gets the raw key. The left Option is Meta (`⌥B`, `⌥F`) and the right one
+types accents and symbols (Settings, Option as Meta), and `⌥`+drag selects inside programs that use the
+mouse. `F12` needs `fn` unless the F keys are set as standard function keys.
+
 The `dck` command controls the window from outside (`dck toggle`, `dck ping`): useful to bind to a system
 shortcut if the global key is refused.
 
 ## Settings
 
 `Ctrl+,` opens the screen: language, theme, opacity, the interface and code fonts, the terminal's font,
-size and cursor (block, bar or underline, blinking or not), window height, global key, hold menu key,
+size and cursor (block, bar or underline, blinking or not), which Option is Meta on a Mac, window height, global key, hold menu key,
 projects folder, start with the system, the threshold to notify a long command, the review layout and
 the GitLab and Jira connections. Everything applies at once. Settings live in a `settings.json` that can also be edited by
 hand, like VS Code's: the button beside the screen's close (or Open the settings file in the hold menu's
