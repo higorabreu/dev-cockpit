@@ -1102,15 +1102,21 @@ system's Inter and JetBrains Mono.
 **Decision:** the bottom edge of the window is a handle, a 6 pixel strip with no visible grip: the resize
 cursor and a thin line on hover, no tooltip (it would cover the tab names whenever the pointer brushes the
 edge). Dragging it moves the window's bottom while its top stays, a label as tall as a tab, centered on the
-tab bar and on the line of the tab names, shows the height in percent of the work area, and on release the height is saved as `window.heightRatio`, so the next opening keeps it and the
-slider in the settings follows. The limits are those of the setting (30% to 100%), the edge snaps to 50% and
-100% within 12 pixels, and Esc while dragging puts the window back. At full height a drag leaves it at once (the tab bar goes back
-under the terminals as the drag starts) and sets the anchored height where it is released; a double click on the edge switches full height. While the
-edge moves, the terminals keep their grid and fit when the pointer rests 150 ms and on release, so a shell
-or a TUI redraws once instead of on every frame. With the height locked by `DCK_HEIGHT` the edge is not
-offered. The window asks the host for each height (`window:resize`, one request at a time, validated with
-zod) and ends with `window:resize-end`; the host moves the window through the dock controller, which drops
-a reapply left by the last show so it does not pull the window back.
+tab bar and on the line of the tab names, shows the height in percent of the work area, and on release the
+height is saved as `window.heightRatio`, so the next opening keeps it and the slider in the settings
+follows. The limits are those of the setting (30% to 100%), the window follows the pointer to the pixel (the
+height is kept to a thousandth, so release does not jump), the edge snaps to 50% and 100% within 12 pixels,
+and Esc while dragging puts the window back. At full height a drag leaves it at once (the tab bar goes back
+under the terminals as the drag starts) and sets the anchored height where it is released; a double click on
+the edge switches full height. While the edge moves, the terminals keep their grid and fit when the pointer
+rests 150 ms and on release, so a shell or a TUI redraws once instead of on every frame. With the height
+locked by `DCK_HEIGHT` the edge is not offered. The window asks the host for each height (`window:resize`,
+one request at a time, validated with zod) and ends with `window:resize-end`; the host moves the window
+through the dock controller, which drops a reapply left by the last show so it does not pull the window
+back. Whenever the window takes the whole height, at full height or with an anchored height of 100% (dragged
+there or set in the settings), it lays out for the whole screen as full height does: the tab bar on top and
+the panel opened if the setting asks; below 100% the bar goes back down (while dragging it stays down, by
+the label).
 **Reason:** people asked to change the height with the mouse, as in Guake or Yakuake (2026-11-18). The
 window manager's own resize was left out: it would also change the width and the top of an anchored
 window, and a frameless window has no edge to grab under Wayland. The maintainer chose that a drag leaves
