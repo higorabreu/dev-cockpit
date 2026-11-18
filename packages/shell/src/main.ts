@@ -73,6 +73,7 @@ import {
 } from './platform/linux/wayland-bounds.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
 import { nativeWayland, selectPlatform, usesGpu } from './platform/select-platform.ts'
+import { createWindowRequests } from './platform/window-requests.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
@@ -237,6 +238,7 @@ app.whenReady().then(async () => {
     clock: { now: () => Date.now() },
   })
   const dockActions = createDockActions(dock, waylandArea)
+  const windowRequests = createWindowRequests(dockActions, send)
   // The window lays out for the whole screen (tab bar on top) whenever it takes the whole height: at full
   // height or at 100%. Sent only when that changes
   let layoutFull = false
@@ -248,7 +250,7 @@ app.whenReady().then(async () => {
   const syncLayout = () => showLayout(dock.fillsHeight())
 
   // Opening the app again from the application menu shows the window of the one already running
-  app.on('second-instance', showWindow)
+  app.on('second-instance', windowRequests.reopen)
 
   logger.info('notifications available', { supported: Notification.isSupported() })
 
@@ -390,8 +392,7 @@ app.whenReady().then(async () => {
           }
         },
       },
-      (tabId) =>
-        void dockActions.present().then(() => send(hostChannels.notificationsClick, tabId)),
+      windowRequests.notificationClick,
     ),
     shell: platform.terminal,
     home: homedir(),
@@ -459,7 +460,7 @@ app.whenReady().then(async () => {
     pids: () => bridge.pids(),
     activity: (pid) => sessionInspector.activity(pid),
     // The question is a card in the window, so the window shows first, even from the menu bar icon
-    ask: (running) => void dockActions.show().then(() => send(hostChannels.quitAsk, running)),
+    ask: windowRequests.askQuit,
     quit: () => app.quit(),
   })
   registerQuitBridge({ ipcMain: ipc, guard: quitGuard })
@@ -609,8 +610,7 @@ app.whenReady().then(async () => {
     const { language } = settingsStore.get().settings
     return createTranslator(localeFor(language, app.getPreferredSystemLanguages())).t(key, params)
   }) as Translate
-  const openSettings = () =>
-    void dockActions.show().then(() => send(hostChannels.windowOpenSettings))
+  const openSettings = windowRequests.openSettings
 
   const appMenu = platform.window.menu
   if (appMenu) {
