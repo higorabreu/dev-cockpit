@@ -60,6 +60,7 @@ const reference = (keymap: Keymap): ReadonlyArray<readonly [string, string]> => 
   ['tabs.close', keymap.label('closeTab')],
   ['tabs.next', keymap.label('nextTab')],
   ['tabs.previous', keymap.label('previousTab')],
+  ['terminal.clear', keymap.label('clearTerminal')],
   ['projects.search', keymap.label('projects')],
   ['views.open', keymap.label('views')],
   ['menu.system.panel', keymap.label('panel')],

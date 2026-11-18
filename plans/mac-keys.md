@@ -28,7 +28,7 @@ Out of scope: the Ctrl+click and right click paste, a confirmation on `⌘Q`, th
 - [x] T1. This plan.
 - [x] T2. Line editing: a pure `lineEditSequence(event)` in `ui/src/terminal/line-editing.ts` with tests,
   wired in `terminal-session.ts` through `terminal.input` and only in the normal buffer.
-- [ ] T3. Clear: `clearTerminal` in both keymaps (`Ctrl+Shift+K` is free), the session's `clear()`, the
+- [x] T3. Clear: `clearTerminal` in both keymaps (`Ctrl+Shift+K` is free), the session's `clear()`, the
   action, a `tab:clear` item in the hold menu with the key, texts in both catalogs.
 - [ ] T4. Last tab: the digit 9 of `TAB` goes to the last tab on both keyboards.
 - [ ] T5. `macOptionClickForcesSelection: true`.

@@ -105,6 +105,7 @@ export const ptBR = {
   'terminal.openPath': '{modifier}+clique para abrir',
   'terminal.openInNewTab': 'Abrir em uma nova aba',
   'terminal.openInFileManager': 'Abrir no gerenciador de arquivos',
+  'terminal.clear': 'Limpar terminal',
 
   'projects.search': 'Buscar projeto',
   'projects.none': 'Nenhum projeto encontrado',

@@ -786,6 +786,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     searchProjects,
     togglePanel,
     toggleFullHeight: () => api.window.toggleFullHeight(),
+    clearTerminal: () => activeSession()?.clear(),
     nextFinished() {
       const id = attention.nextUnseen(state.activeId)
       if (id) update(activateTab(state, id))
@@ -812,6 +813,7 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
     'tab:finished': actions.nextFinished,
     'tab:review': actions.toggleReview,
     'tab:review-layout': actions.toggleReviewLayout,
+    'tab:clear': actions.clearTerminal,
     'agent:claude': () => activeSession()?.write('claude\r'),
     'agent:resume': () => activeSession()?.write('claude --resume\r'),
     [CONNECT_ITEM]: () => state.activeId && connectTab(state.activeId),
@@ -854,6 +856,11 @@ export async function startApp(elements: AppElements, api: HostApi, settings: Se
             id: 'tab:review-layout',
             label: i18n.t('review.layout.toggle'),
             shortcut: keymap.label('reviewLayout'),
+          },
+          {
+            id: 'tab:clear',
+            label: i18n.t('terminal.clear'),
+            shortcut: keymap.label('clearTerminal'),
           },
         ],
       },

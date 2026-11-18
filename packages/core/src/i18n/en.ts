@@ -106,6 +106,7 @@ export const en: Record<MessageKey, string> = {
   'terminal.openPath': '{modifier}+click to open',
   'terminal.openInNewTab': 'Open in a new tab',
   'terminal.openInFileManager': 'Open in the file manager',
+  'terminal.clear': 'Clear terminal',
 
   'projects.search': 'Search project',
   'projects.none': 'No project found',

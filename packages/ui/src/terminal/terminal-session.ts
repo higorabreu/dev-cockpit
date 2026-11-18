@@ -29,6 +29,8 @@ export interface TerminalSession {
   // A CSS font-family list, the chosen family first
   setFontFamily(family: string): void
   setCursor(style: CursorStyle, blink: boolean): void
+  // Empties the screen and the scrollback, keeping the prompt's line, as VS Code's clear does
+  clear(): void
   dispose(): void
 }
 
@@ -187,6 +189,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
       terminal.options.cursorStyle = style
       terminal.options.cursorBlink = blink
     },
+    clear: () => terminal.clear(),
     dispose() {
       stopData()
       stopExit()

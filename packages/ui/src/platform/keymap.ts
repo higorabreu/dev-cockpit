@@ -37,6 +37,7 @@ export type ShortcutId =
   | 'fontBigger'
   | 'fontSmaller'
   | 'fontReset'
+  | 'clearTerminal'
 
 const C = { ctrl: true } as const
 const CS = { ctrl: true, shift: true } as const
@@ -78,6 +79,7 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     ],
     fontSmaller: [{ ...C, key: '-' }],
     fontReset: [{ ...C, key: '0' }],
+    clearTerminal: [{ ...CS, key: 'k' }],
   },
   // Cmd where Terminal.app and VS Code use it, so Ctrl stays with the shell
   mac: {
@@ -114,6 +116,8 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     ],
     fontSmaller: [{ ...M, key: '-' }],
     fontReset: [{ ...M, key: '0' }],
+    // Terminal.app, iTerm2 and VS Code clear with Cmd+K
+    clearTerminal: [{ ...M, key: 'k' }],
   },
 }
 

@@ -31,6 +31,7 @@ function bind(keyboard: Keyboard) {
     toggleFullHeight: record('toggleFullHeight'),
     changeOpacity: record('changeOpacity'),
     changeFontSize: record('changeFontSize'),
+    clearTerminal: record('clearTerminal'),
   }
   unbind = bindShortcuts(actions, createKeymap(keyboard))
   return ran
@@ -99,6 +100,31 @@ describe('bindShortcuts', () => {
 
     // Assert
     expect(ran).toEqual(['changeFontSize 1'])
+  })
+
+  it('should clear the terminal and keep the key from the shell when Cmd+K is pressed on a Mac', () => {
+    // Arrange
+    const ran = bind('mac')
+
+    // Act
+    const event = press({ key: 'k', code: 'KeyK', metaKey: true })
+
+    // Assert
+    expect(ran).toEqual(['clearTerminal'])
+    expect(event.defaultPrevented).toBe(true)
+  })
+
+  it('should clear the terminal with Ctrl+Shift+K and leave Ctrl+K to the shell when the keyboard is a PC one', () => {
+    // Arrange
+    const ran = bind('pc')
+
+    // Act
+    press({ key: 'K', code: 'KeyK', ctrlKey: true, shiftKey: true })
+    const plain = press({ key: 'k', code: 'KeyK', ctrlKey: true })
+
+    // Assert
+    expect(ran).toEqual(['clearTerminal'])
+    expect(plain.defaultPrevented).toBe(false)
   })
 
   it('should open a tab with Ctrl+Shift+T when the keyboard is a PC one', () => {
