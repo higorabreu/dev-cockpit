@@ -73,7 +73,10 @@ panel lists submodules with rows that do nothing. Untracked files past the 300th
   channel. (S6) The listing reads with the status's 8 MB budget instead of 1 MB, a file git cannot diff
   stays listed as not loaded, and the on-demand read is `review:untracked`, only for a known root and a
   path that stays inside it.
-- [ ] SM-T5. The fingerprint reads inside changed submodules, bounded. (S7)
+- [x] SM-T5. The fingerprint reads inside changed submodules, bounded. (S7) It adds the status of each
+  submodule the parent's status lists as changed, nested ones too, at most 16 and one at a time, with the
+  2000 stamped paths shared. It also stamps paths from the repository's top: the status names them from
+  there, so a review opened from a subfolder never saw a second edit of a file.
 - [ ] SM-T6. The panel's submodule rows open the review on their group. (S5)
 - [ ] SM-T7. D70, the README's review section, the roadmap; checked in the real app under Xvfb in both
   themes, both languages and both layouts. (S8)

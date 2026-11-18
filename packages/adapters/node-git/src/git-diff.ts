@@ -34,6 +34,10 @@ const READ_MAX_BYTES = 8 * 1024 * 1024
 const PARALLEL = 8
 // The status of a huge repository can be long; past this many changed paths only the status counts
 const STAMP_LIMIT = 2000
+// The changed submodules whose own status a fingerprint reads, nested ones counted; past it only the
+// parent's line for them counts, which misses a second edit of a file already changed inside
+const MODULE_STATUS_LIMIT = 16
+const PRINT_STATUS = ['status', '--porcelain=v2', '-z', '--branch', '--untracked-files=all']
 const STATUS = { timeoutMs: 5000, maxBytes: 8 * 1024 * 1024 }
 const DIFF_FLAGS = ['--no-color', '--no-ext-diff', '-M'] as const
 
@@ -81,6 +85,14 @@ export function statusPaths(output: string): string[] {
     else if (entry.startsWith('? ')) paths.push(entry.slice(2))
   }
   return paths
+}
+
+// The submodules `git status --porcelain=v2 -z` lists as changed in any way (`S` and its flags)
+export function statusModules(output: string): string[] {
+  return output
+    .split('\0')
+    .filter((entry) => entry.startsWith('1 ') && (entry.split(' ')[2] ?? '').startsWith('S'))
+    .map((entry) => entry.split(' ').slice(8).join(' '))
 }
 
 // The submodules `git status --porcelain=v2 -z` marks as holding untracked files (`S..U`): `git diff`
@@ -151,6 +163,16 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
     return result.ok ? result.stdout.trim() : undefined
   }
   const bases = createBaseFinder(answer)
+
+  // The status names paths from the repository's top, whatever folder it runs in; a folder keeps its top
+  const tops = new Map<string, string>()
+  async function topOf(cwd: string): Promise<string | undefined> {
+    const known = tops.get(cwd)
+    if (known !== undefined) return known
+    const top = await answer(cwd, ['rev-parse', '--show-toplevel'])
+    if (top) tops.set(cwd, top)
+    return top || undefined
+  }
 
   // HEAD, or the empty tree in a repository without commits, so its files read as added
   async function head(root: string): Promise<Result<string, ErrorBody>> {
@@ -426,16 +448,31 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       return ok({ kind: 'ok', diff: reviewDiff(root, request.scope, branch, completed, modules) })
     },
 
+    // The status of the repository and, within the limits, of each changed submodule inside it, plus the
+    // size and time of every path they name: an edit inside a submodule moves it too
     async fingerprint(cwd) {
-      const status = await run(
-        cwd,
-        ['status', '--porcelain=v2', '-z', '--branch', '--untracked-files=all'],
-        STATUS,
-      )
-      if (!status.ok) return undefined
-      const paths = statusPaths(status.stdout).slice(0, STAMP_LIMIT)
-      const stamps = await inBatches(paths, PARALLEL * 2, (path) => files.stamp(join(cwd, path)))
-      return hashText(`${status.stdout}\0${stamps.map((stamp) => stamp ?? '-').join('\0')}`)
+      const root = await topOf(cwd)
+      if (root === undefined) return undefined
+      const parts: string[] = []
+      let stamps = STAMP_LIMIT
+      let modules = MODULE_STATUS_LIMIT
+      const visit = async (dir: string): Promise<boolean> => {
+        const status = await run(dir, PRINT_STATUS, STATUS)
+        if (!status.ok) return false
+        const paths = statusPaths(status.stdout).slice(0, stamps)
+        stamps -= paths.length
+        const stamped = await inBatches(paths, PARALLEL * 2, (path) => files.stamp(join(dir, path)))
+        parts.push(status.stdout, stamped.map((stamp) => stamp ?? '-').join('\0'))
+        // One at a time, so the limits fall on the same submodules every time
+        for (const path of statusModules(status.stdout)) {
+          if (modules === 0) break
+          modules -= 1
+          await visit(join(dir, path))
+        }
+        return true
+      }
+      if (!(await visit(root))) return undefined
+      return hashText(parts.join('\0'))
     },
 
     async untrackedFile(root, path, ignoreWhitespace): Promise<Result<DiffFile, ErrorBody>> {

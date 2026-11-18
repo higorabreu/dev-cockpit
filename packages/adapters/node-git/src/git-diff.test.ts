@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { DiffOutcome, DiffRequest, ErrorBody, Result } from '@dck/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createGitDiffSource, statusPaths, untrackedModules } from './git-diff.ts'
+import { createGitDiffSource, statusModules, statusPaths, untrackedModules } from './git-diff.ts'
 import type { GitAnswer } from './git-run.ts'
 
 let directory = ''
@@ -480,5 +480,68 @@ describe('fingerprint', () => {
 
   it('should give nothing when the folder is not inside a repository', async () => {
     expect(await createGitDiffSource().fingerprint(directory)).toBeUndefined()
+  })
+
+  it('should change when a file already changed is written again from a subfolder', async () => {
+    // Arrange
+    const path = await repo('acme', { 'main.ts': 'one\n', 'src/app.ts': 'app\n' })
+    await writeFile(join(path, 'main.ts'), 'two\n')
+    const source = createGitDiffSource()
+    const first = await source.fingerprint(join(path, 'src'))
+
+    // Act
+    await writeFile(join(path, 'main.ts'), 'three, longer\n')
+    const after = await source.fingerprint(join(path, 'src'))
+
+    // Assert
+    expect(after).not.toBe(first)
+  })
+
+  it('should change when a file already changed inside a nested submodule is written again', async () => {
+    // Arrange
+    const acme = await nested()
+    const deep = join(acme, 'libs/lib/vendor/deep/src/deep.txt')
+    await writeFile(deep, `${numbered(3)}deep\n`)
+    const source = createGitDiffSource()
+    const first = await source.fingerprint(acme)
+    const again = await source.fingerprint(acme)
+
+    // Act
+    await writeFile(deep, `${numbered(3)}deep, written again\n`)
+    const after = await source.fingerprint(acme)
+
+    // Assert
+    expect(again).toBe(first)
+    expect(after).not.toBe(first)
+  })
+
+  it('should change when a submodule gets a new commit while it already had one', async () => {
+    // Arrange
+    const acme = await nested()
+    const lib = join(acme, 'libs/lib')
+    run(lib, 'commit', '-q', '--allow-empty', '-m', 'One')
+    const source = createGitDiffSource()
+    const first = await source.fingerprint(acme)
+
+    // Act
+    run(lib, 'commit', '-q', '--allow-empty', '-m', 'Two')
+    const after = await source.fingerprint(acme)
+
+    // Assert
+    expect(after).not.toBe(first)
+  })
+})
+
+describe('statusModules', () => {
+  it('should name every changed submodule when the status lists them', () => {
+    const output = [
+      '1 .M S..U 160000 160000 160000 aaa aaa libs/other',
+      '1 .M SC.. 160000 160000 160000 aaa aaa libs/lib',
+      '1 .M N... 100644 100644 100644 aaa bbb app.ts',
+      '? notes.txt',
+      '',
+    ].join('\0')
+
+    expect(statusModules(output)).toEqual(['libs/other', 'libs/lib'])
   })
 })
