@@ -113,7 +113,7 @@ describe('createUpdateNotice', () => {
 
     show({ kind: 'failed', version: '0.10.0', code: 'DCK-UPD-005' })
 
-    expect(labels(element)).toEqual(['Checksum mismatch, update refused', 'Dismiss'])
+    expect(labels(element)).toEqual(['Corrupted download; update canceled', 'Dismiss'])
   })
 
   it('should empty the notice when there is nothing to show', () => {

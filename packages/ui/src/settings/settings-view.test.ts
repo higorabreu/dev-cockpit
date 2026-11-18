@@ -360,7 +360,7 @@ describe('settings view, updates', () => {
     const { row, check, view } = systemPage(defaultSettings, withUpdates(fake))
     await settle()
 
-    expect(row.textContent).toContain('The cockpit never contacts GitHub')
+    expect(row.textContent).toContain('GitHub is never contacted.')
     expect(check.disabled).toBe(true)
     view.close()
   })
@@ -410,7 +410,7 @@ describe('settings view, updates', () => {
     await settle()
 
     expect(body.querySelector('[data-setting="system.updates"]')?.textContent).toContain(
-      'Tells and opens the release page to install by hand',
+      'Tells and opens the release page to install it.',
     )
     view.close()
   })
