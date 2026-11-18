@@ -239,9 +239,10 @@ export function createSettingsView(
     return file.issues.find((issue) => issue.key === key || issue.key.startsWith(`${key}.`))
   }
 
-  // A setting whose default is null (a font) has no value worth showing: the default is named instead
+  // A value that went back to its default says so: the file's form of it (1 for 100%, null for a font)
+  // reads as a riddle beside the control
   const issueText = (issue: SettingsIssue) =>
-    issue.kind === 'ignored' && issue.used === 'null'
+    issue.kind === 'ignored' && issue.used === JSON.stringify(getPath(defaultSettings, issue.key))
       ? t('settings.issue.ignoredDefault')
       : t(`settings.issue.${issue.kind}`, { used: issue.used ?? '' })
 

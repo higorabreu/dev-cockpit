@@ -720,7 +720,7 @@ describe('settings view, the settings file', () => {
 
     // Assert
     expect(general).toEqual([
-      'In settings.json: "purple". Not valid, uses "dark".',
+      'In settings.json: "purple". Not valid, uses the default.',
       'In settings.json: "Nope;}". Not valid, uses the default.',
     ])
     expect(noteOf(body, 'system.notifyAfterSeconds')).toBe('In settings.json: 2. Adjusted to 5.')
@@ -804,7 +804,7 @@ describe('settings view, the settings file', () => {
 
     // Assert
     expect(body.querySelector('.sfile-status')?.textContent).toBe('3 warnings')
-    expect(noteOf(body, 'theme')).toBe('In settings.json: "purple". Not valid, uses "dark".')
+    expect(noteOf(body, 'theme')).toBe('In settings.json: "purple". Not valid, uses the default.')
     view.close()
   })
 

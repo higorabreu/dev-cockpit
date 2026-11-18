@@ -337,12 +337,6 @@
   gap: 8px;
 }
 
-/* A locked setting's controls are disabled: they read so in solid colors, as the design system's select */
-.scontrol input:disabled {
-  border-style: dashed;
-  color: var(--muted);
-}
-
 .scontrol input[type="text"],
 .scontrol input[type="password"],
 .scontrol input[type="number"] {
@@ -352,6 +346,12 @@
   background: var(--bg);
   color: var(--fg);
   font: inherit;
+}
+
+/* A locked setting's controls are disabled: they read so in solid colors, as the design system's select */
+.scontrol input:disabled {
+  border-style: dashed;
+  color: var(--muted);
 }
 
 .scontrol input[type="text"],
