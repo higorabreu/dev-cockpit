@@ -22,6 +22,29 @@ describe('contrastChecks', () => {
     expect(names).not.toContain('terminal black on the window')
   })
 
+  it('should check reverse video as text when checking each theme', () => {
+    for (const theme of themeNames) {
+      const reverse = contrastChecks(tokens, theme).find(
+        (check) => check.name === 'reverse video in the terminal',
+      )
+
+      expect(reverse?.minimum).toBe(4.5)
+      expect(reverse?.passes).toBe(true)
+    }
+  })
+
+  it('should report reverse video when the window color is too close to the text', () => {
+    const light = tokens.themes.light
+    const close = {
+      ...tokens,
+      themes: { ...tokens.themes, light: { ...light, color: { ...light.color, bg: '#2a2a2a' } } },
+    }
+
+    const failures = contrastChecks(close, 'light').filter((check) => !check.passes)
+
+    expect(failures.map((check) => check.name)).toContain('reverse video in the terminal')
+  })
+
   it('should report a failure when a color does not reach the minimum', () => {
     const weak = {
       ...tokens,

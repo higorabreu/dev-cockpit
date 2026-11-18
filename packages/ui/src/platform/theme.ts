@@ -24,8 +24,8 @@ export function applyTheme(name: ThemeName) {
   document.documentElement.dataset.theme = name
 }
 
-// The background is transparent: the page body paints it, with the window opacity
+// xterm derives reverse video and OSC 11 replies from it; terminal.css leaves it unpainted for the opacity
 export const terminalTheme = (name: ThemeName) => ({
-  background: 'rgba(0, 0, 0, 0)',
   ...buildTerminalTheme(tokens, name),
+  background: tokens.themes[name].color.bg,
 })

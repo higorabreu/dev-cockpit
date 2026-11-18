@@ -26,6 +26,8 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
 
   const pairs: ReadonlyArray<readonly [string, Rgb, Rgb, number]> = [
     ['primary text on the window', fg, rgb(color.bg), TEXT],
+    // Reverse video (pager and editor status lines) swaps them: the window color on a cell of text color
+    ['reverse video in the terminal', rgb(color.bg), fg, TEXT],
     ['primary text on the surface', fg, surface, TEXT],
     ['secondary text on the window', rgb(color.muted), rgb(color.bg), TEXT],
     ['secondary text on the surface', rgb(color.muted), surface, TEXT],
