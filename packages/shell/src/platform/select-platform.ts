@@ -52,6 +52,8 @@ export interface Platform {
   readonly fonts: SystemFonts
   // Undefined where the cockpit cannot replace itself: it then only points to the release page
   readonly updateInstaller: UpdateInstaller | undefined
+  // ⌘Q asks first while a tab runs a program (D75); Linux quits at once from the tray
+  readonly asksBeforeQuit: boolean
 }
 
 // Exported so a test can check which adapter a platform gets without inspecting the system
@@ -146,5 +148,6 @@ export function selectPlatform(context: PlatformContext): Platform {
           logger,
         })
       : undefined,
+    asksBeforeQuit: platform === 'darwin',
   }
 }

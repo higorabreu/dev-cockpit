@@ -165,6 +165,12 @@ export interface HostApi {
     restart(): void
     onChange(listener: (state: UpdateState) => void): Unsubscribe
   }
+  // ⌘Q on a Mac while a tab runs a program: the host shows the window and asks it to confirm
+  readonly quit: {
+    onAsk(listener: (running: number) => void): Unsubscribe
+    // True quits; false keeps the cockpit open
+    answer(quit: boolean): void
+  }
   readonly window: {
     toggleFullHeight(): void
     // The bottom edge dragged to this height in pixels; the fraction of the screen it takes, or undefined
@@ -236,6 +242,8 @@ export const hostChannels = {
   updatesOpenRelease: 'updates:open-release',
   updatesRestart: 'updates:restart',
   updatesChanged: 'updates:changed',
+  quitAsk: 'quit:ask',
+  quitAnswer: 'quit:answer',
   windowToggleFullHeight: 'window:toggle-full-height',
   windowResize: 'window:resize',
   windowResizeEnd: 'window:resize-end',
