@@ -2,6 +2,7 @@ import type { AboutLink } from '../about/about.ts'
 import type { AgentSignal } from '../attention/agent-signal.ts'
 import type { Connector } from '../connectors/connector.ts'
 import type { DiffFile } from '../diff/diff.ts'
+import type { EditorConfigFile } from '../files/editorconfig.ts'
 import type { OpenedFile } from '../files/file-opener.ts'
 import type { SystemFontsInfo } from '../fonts/fonts.ts'
 import type { ErrorBody } from '../ipc/protocol.ts'
@@ -68,6 +69,10 @@ export interface HostApi {
     watch(path: string, since: FileStamp | undefined): Promise<Result<null, ErrorBody>>
     unwatch(path: string): void
     onChange(listener: (path: string, change: FileChange) => void): Unsubscribe
+    // The `.editorconfig` files above a file opened before, the nearest first, up to one marked root
+    editorConfig(path: string): Promise<readonly EditorConfigFile[]>
+    // Whether git leaves a file opened before out; false outside a repository
+    ignored(path: string): Promise<boolean>
   }
   readonly notifications: {
     show(notification: TabNotification): void
@@ -215,6 +220,8 @@ export const hostChannels = {
   filesWatch: 'files:watch',
   filesUnwatch: 'files:unwatch',
   filesChanged: 'files:changed',
+  filesEditorConfig: 'files:editorconfig',
+  filesIgnored: 'files:ignored',
   notificationsShow: 'notifications:show',
   notificationsClick: 'notifications:click',
   environmentInspect: 'environment:inspect',

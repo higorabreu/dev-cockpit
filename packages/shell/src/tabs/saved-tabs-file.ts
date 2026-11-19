@@ -14,6 +14,7 @@ export const savedTabsSchema = z.object({
         label: text(256).optional(),
         project: text(4096).optional(),
         name: text(MAX_TAB_NAME).optional(),
+        file: text(4096).optional(),
       }),
     )
     .max(200),

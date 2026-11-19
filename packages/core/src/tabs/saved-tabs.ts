@@ -7,6 +7,8 @@ export interface SavedTab {
   readonly label?: string
   readonly project?: string
   readonly name?: string
+  // The file open over the tab (paths only, never what it holds), opened again on start if it still exists
+  readonly file?: string
 }
 
 export interface SavedTabs {
@@ -19,19 +21,21 @@ export interface SavedTabs {
 export interface TabFacts {
   readonly cwd?: string
   readonly project?: string
+  readonly file?: string
   // It opened with a name of its own (a project's), not the counter's, which the next run gives again
   readonly named: boolean
 }
 
 export function tabsToSave(state: TabsState, facts: (id: string) => TabFacts): SavedTabs {
   const tabs = state.tabs.map((tab): SavedTab => {
-    const { cwd, project, named } = facts(tab.id)
+    const { cwd, project, file, named } = facts(tab.id)
     const automatic = tab.autoLabel ?? tab.label
     return {
       ...(cwd ? { cwd } : {}),
       ...(named ? { label: automatic } : {}),
       ...(project ? { project } : {}),
       ...(tab.autoLabel === undefined ? {} : { name: tab.label }),
+      ...(file ? { file } : {}),
     }
   })
   return {

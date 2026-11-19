@@ -10,6 +10,7 @@ import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import { createNodeFileStore } from '@dck/adapter-node-fs'
 import {
   createGitDiffSource,
+  createGitIgnoreCheck,
   createGitInspector,
   createGitReviewNotes,
 } from '@dck/adapter-node-git'
@@ -431,7 +432,13 @@ app.whenReady().then(async () => {
   })
 
   const fileStore = createNodeFileStore({ logger })
-  const files = registerFilesBridge({ ipcMain: ipc, store: fileStore, logger, send })
+  const files = registerFilesBridge({
+    ipcMain: ipc,
+    store: fileStore,
+    ignore: createGitIgnoreCheck(),
+    logger,
+    send,
+  })
   protocol.handle(
     FILE_SCHEME,
     createFileProtocol({ pathOf: files.mediaPath, store: fileStore, logger }),

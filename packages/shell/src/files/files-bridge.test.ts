@@ -20,6 +20,7 @@ function setup() {
   const files = registerFilesBridge({
     ipcMain,
     store,
+    ignore: { isIgnored: async (path: string) => path.endsWith('.env') },
     logger: silentLogger,
     send: (...args) => void sent.push(args),
     newId: () => ID,
@@ -224,5 +225,50 @@ describe('file protocol', () => {
     // Assert
     expect(posted.status).toBe(404)
     expect(store.calls.filter((call) => call.startsWith('read'))).toEqual([])
+  })
+})
+
+describe('registerFilesBridge editorconfig and ignored', () => {
+  it('should list the editorconfig files above an opened file up to the one marked root', async () => {
+    // Arrange
+    const { call, store } = setup()
+    store.put('/home/ana/acme/src/login.ts', 'x\n')
+    store.put('/home/ana/acme/src/.editorconfig', '[*.ts]\nindent_size = 4\n')
+    store.put('/home/ana/acme/.editorconfig', 'root = true\n[*]\nindent_size = 2\n')
+    store.put('/home/ana/.editorconfig', '[*]\nindent_style = tab\n')
+    await call(hostChannels.filesOpen, '/home/ana/acme/src/login.ts')
+
+    // Act
+    const files = await call(hostChannels.filesEditorConfig, '/home/ana/acme/src/login.ts')
+
+    // Assert
+    expect(files).toEqual([
+      { dir: '/home/ana/acme/src', text: '[*.ts]\nindent_size = 4\n' },
+      { dir: '/home/ana/acme', text: 'root = true\n[*]\nindent_size = 2\n' },
+    ])
+  })
+
+  it('should answer nothing for a file that was not opened when asked for its settings', async () => {
+    const { call, store } = setup()
+    store.put('/home/ana/.editorconfig', '[*]\nindent_style = tab\n')
+
+    expect(await call(hostChannels.filesEditorConfig, '/home/ana/notes.txt')).toEqual([])
+    expect(await call(hostChannels.filesIgnored, '/home/ana/.env')).toBe(false)
+  })
+
+  it('should ask git whether an opened file is ignored when the window asks', async () => {
+    // Arrange
+    const { call, store } = setup()
+    store.put('/home/ana/acme/.env', 'TOKEN=x\n')
+    store.put('/home/ana/acme/app.ts', 'x\n')
+    await call(hostChannels.filesOpen, '/home/ana/acme/.env')
+    await call(hostChannels.filesOpen, '/home/ana/acme/app.ts')
+
+    // Act
+    const env = await call(hostChannels.filesIgnored, '/home/ana/acme/.env')
+    const app = await call(hostChannels.filesIgnored, '/home/ana/acme/app.ts')
+
+    // Assert
+    expect([env, app]).toEqual([true, false])
   })
 })

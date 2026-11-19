@@ -55,6 +55,8 @@ const api: HostApi = {
     watch: (path, since) => ipcRenderer.invoke(hostChannels.filesWatch, { path, since }),
     unwatch: (path) => ipcRenderer.send(hostChannels.filesUnwatch, path),
     onChange: (listener) => subscribe<[string, FileChange]>(hostChannels.filesChanged, listener),
+    editorConfig: (path) => ipcRenderer.invoke(hostChannels.filesEditorConfig, path),
+    ignored: (path) => ipcRenderer.invoke(hostChannels.filesIgnored, path),
   },
   notifications: {
     show: (notification) => ipcRenderer.send(hostChannels.notificationsShow, notification),

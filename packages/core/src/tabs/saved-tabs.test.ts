@@ -44,6 +44,14 @@ describe('tabsToSave', () => {
     })
   })
 
+  it('should keep the file open over a tab when the tab has one', () => {
+    const saved = tabsToSave(state(), (id) =>
+      id === 'c' ? { named: false, file: '/home/ana/ops/deploy.sh' } : facts(id),
+    )
+
+    expect(saved.tabs[2]).toEqual({ name: 'deploys', file: '/home/ana/ops/deploy.sh' })
+  })
+
   it('should leave the folder out when the watcher has not read the tab yet', () => {
     const saved = tabsToSave(openTab(emptyTabs, { id: 'x', label: 'shell 1' }), () => ({
       named: false,
