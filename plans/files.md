@@ -122,7 +122,7 @@ before it is kept.
 - [ ] F0. Spike: measure each kind of the table with the perf script; decide which kinds stay.
 - [ ] F1. Core: file opening model (kinds, limits, recent list per tab), the conflict rule, tests.
 - [ ] F2. Adapter and bridge: read, watch, atomic save with the change check, the protocol for non-text.
-- [ ] F3. File search: the project's files (`git ls-files`, else a bounded walk), fuzzy match, the ignored
+- [x] F3. File search: the project's files (`git ls-files`, else a bounded walk), fuzzy match, the ignored
   group and the step into an ignored folder, key.
 - [ ] F4. File view over the tab: editor, image, Markdown, PDF, card; switch key; recent list.
 - [ ] F5. Entries: Ctrl+click on a path (amends D40), the review's button.
