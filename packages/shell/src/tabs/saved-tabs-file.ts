@@ -15,7 +15,12 @@ export const savedTabsSchema = z.object({
         project: text(4096).optional(),
         name: text(MAX_TAB_NAME).optional(),
         file: text(4096).optional(),
-        recent: z.array(text(4096)).max(MAX_RECENT_FILES).optional(),
+        // A list saved when the limit was larger keeps its newest files
+        recent: z
+          .array(text(4096))
+          .max(50)
+          .transform((paths) => paths.slice(0, MAX_RECENT_FILES))
+          .optional(),
       }),
     )
     .max(200),

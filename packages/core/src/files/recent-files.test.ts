@@ -12,8 +12,9 @@ describe('recent files', () => {
     recent = rememberFile(recent, '/home/ana/acme/5.ts')
 
     // Assert
+    expect(MAX_RECENT_FILES).toBe(5)
     expect(recent).toHaveLength(MAX_RECENT_FILES)
-    expect(recent.slice(0, 2)).toEqual(['/home/ana/acme/5.ts', '/home/ana/acme/11.ts'])
+    expect(recent.slice(0, 2)).toEqual(['/home/ana/acme/5.ts', '/home/ana/acme/6.ts'])
     expect(recent.filter((path) => path === '/home/ana/acme/5.ts')).toHaveLength(1)
   })
 
