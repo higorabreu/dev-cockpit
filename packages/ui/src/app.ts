@@ -1,6 +1,7 @@
 import {
   type AgentEvent,
   type AgentProfile,
+  absolutePath,
   activateTab,
   activateTabAt,
   type ComposeStatus,
@@ -23,6 +24,8 @@ import {
   openTab,
   type ProgramStatus,
   type Project,
+  relativePath,
+  rememberFile,
   renameTab,
   reorderTabs,
   reviewBaseFor,
@@ -39,6 +42,8 @@ import {
   tabsToSave,
 } from '@dck/core'
 import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
+import { createFileRanker, startRankWorker } from './file-search/file-ranker.ts'
+import { createFileSearch } from './file-search/file-search.ts'
 import { createHoldMenuController } from './hold-menu/hold-menu-controller.ts'
 import { setFullHeight } from './kit/layout-mode.ts'
 import { showRailDot } from './kit/rail-dot.ts'
@@ -101,6 +106,10 @@ export interface AppElements {
   readonly searchInput: HTMLInputElement
   readonly searchResults: HTMLElement
   readonly searchHint: HTMLElement
+  readonly files: HTMLElement
+  readonly filesInput: HTMLInputElement
+  readonly filesResults: HTMLElement
+  readonly filesHint: HTMLElement
   readonly views: HTMLElement
   readonly settings: HTMLElement
   readonly settingsBody: HTMLElement
@@ -212,7 +221,58 @@ export async function startApp(
       favorite: project.favorite === true,
     }))
 
+  // The files each tab opened from the search, newest first, paths only and only in memory
+  const recentFiles = new Map<string, readonly string[]>()
+
+  // Until the file view exists (F4, which replaces this function), a picked file opens as a Ctrl+click
+  // on a path does: in the system's app (D40)
+  function openPickedFile(root: string, path: string) {
+    const file = absolutePath(root, path)
+    const id = state.activeId
+    if (id !== undefined) recentFiles.set(id, rememberFile(recentFiles.get(id) ?? [], file))
+    api.paths.openFile(file)
+  }
+
+  const fileSearch = createFileSearch(
+    {
+      overlay: elements.files,
+      input: elements.filesInput,
+      results: elements.filesResults,
+      hint: elements.filesHint,
+    },
+    {
+      list: (cwd) => api.fileSearch.list(cwd),
+      others: (root) => api.fileSearch.others(root),
+      expand: (root, folder) => api.fileSearch.expand(root, folder),
+      ranker: createFileRanker(startRankWorker),
+      onPick: openPickedFile,
+      onClose: () => focusActive(),
+      i18n,
+      keymap,
+    },
+  )
+
+  // The tab's folder as the shell has it now: the user may have just run cd
+  async function tabFolder(): Promise<string | undefined> {
+    const id = state.activeId
+    if (id === undefined) return undefined
+    const ptyId = sessions.get(id)?.ptyId
+    const fresh = ptyId === undefined ? undefined : await api.session.activity(ptyId)
+    return fresh?.cwd ?? watcher.get(id)?.cwd
+  }
+
+  // The same key again, with the search open, widens it to the files git ignores
+  function searchFiles() {
+    if (fileSearch.isOpen()) return fileSearch.toggleWiden()
+    if (search.isOpen()) search.close()
+    const recent = state.activeId === undefined ? [] : (recentFiles.get(state.activeId) ?? [])
+    void fileSearch.open(tabFolder(), (root) =>
+      recent.flatMap((file) => relativePath(root, file) ?? []),
+    )
+  }
+
   function searchProjects() {
+    fileSearch.close()
     if (rootChooser.needed()) search.askForRoot()
     else void refreshProjects().then(() => search.open(searchEntries()))
   }
@@ -587,6 +647,7 @@ export async function startApp(
     connectHint.forget(id)
     for (const [path, tabId] of projectTabs) if (tabId === id) projectTabs.delete(path)
     namedTabs.delete(id)
+    recentFiles.delete(id)
   }
 
   function close(id: string) {
@@ -773,6 +834,7 @@ export async function startApp(
       translateStatic(i18n)
       panel.retranslate()
       search.retranslate()
+      fileSearch.retranslate()
       viewsView.retranslate()
       reviews.retranslate()
       for (const view of tabViews.values()) view.retranslate()
@@ -887,6 +949,7 @@ export async function startApp(
     openSettings: () => settingsView.open(),
     openViews: () => void viewsView.open(),
     searchProjects,
+    searchFiles,
     togglePanel,
     toggleFullHeight: () => api.window.toggleFullHeight(),
     clearTerminal: () => activeSession()?.clear(),
@@ -929,6 +992,7 @@ export async function startApp(
     'system:update': () =>
       updateNotice.current()?.canInstall ? api.updates.install() : api.updates.openRelease(),
     'project:search': searchProjects,
+    'file:search': searchFiles,
     'views:open': () => void viewsView.open(),
   }
 
@@ -979,6 +1043,11 @@ export async function startApp(
             id: 'project:search',
             label: `${i18n.t('projects.search')}…`,
             shortcut: keymap.label('projects'),
+          },
+          {
+            id: 'file:search',
+            label: `${i18n.t('fileSearch.search')}…`,
+            shortcut: keymap.label('fileSearch'),
           },
           { id: 'views:open', label: i18n.t('views.open'), shortcut: keymap.label('views') },
           ...projects.map((project) => ({

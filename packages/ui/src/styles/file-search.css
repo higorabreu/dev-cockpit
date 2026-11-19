@@ -1,0 +1,62 @@
+/* The file search over the project search's overlay (project-search.css): wider, for paths */
+#files-box {
+  width: min(600px, calc(100% - 24px));
+}
+
+/* Widened: the header says the ignored files are in the search */
+.fwide {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-small);
+  color: var(--fg);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.fwide[hidden] {
+  display: none;
+}
+
+/* The ignored group's heading over a rule, never mixed with the project's rows */
+.fgroup {
+  margin-top: 4px;
+  /* Its text starts where the rows' names do */
+  padding: 8px 10px 4px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.fgroup:first-child {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.fmark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+#files-results .it.on .fmark {
+  color: var(--fg);
+}
+
+#files-results .it.fmore {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#files-results .it.fmore.on,
+#files-results .it.fmore:hover {
+  color: var(--fg);
+}
+
+.fnote {
+  padding: 6px 10px;
+  color: var(--muted);
+  font-size: 11px;
+}

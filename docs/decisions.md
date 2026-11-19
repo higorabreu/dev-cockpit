@@ -1589,3 +1589,50 @@ editors; the watcher then shows that write as a change.
 **How to revert:** drop `core/src/files`, the `FileStore` port, `packages/adapters/node-fs`,
 `shell/src/files`, the `files` channels in `host-api.ts` and `preload.ts`, the protocol in `main.ts`, the
 `files` settings with their rows and catalog entries, and the `DCK-FIL-*` codes.
+
+
+## D82. A file search on Ctrl+Shift+O lists the project's files and keeps the ignored ones apart
+
+**Decision:** F3 of [plans/files.md](../plans/files.md). `Ctrl+Shift+O` (`⌘P` on a Mac) opens a file search
+over the tab's folder, the project search's overlay, list and keys in a wider box; the action is
+`fileSearch` in `SHORTCUT_IDS`, in the Window group of the Shortcuts page and in the hold menu's Projects
+category. Ctrl+P stays with the shell (D13); on a PC the Shortcuts page offers it under the row in one click
+("Use Ctrl+P, as in VS Code"), saved like a recorded key, and D69's note then says the terminal no longer
+gets it. Inside a repository `git ls-files --cached --recurse-submodules` names the tracked files first (git
+takes `--recurse-submodules` only with `--cached` alone, so it is its own call); `--others
+--exclude-standard` (the untracked files) and `--others --ignored --exclude-standard --directory
+--no-empty-directory` (ignored files one by one, wholly ignored folders closed, `node_modules/` once) follow
+in a second request, and the list grows when they arrive. Names stream with a cap (200 000 files, 20 000
+ignored) and a time limit (5 s, 3 s). Outside a repository a walk (`@dck/adapter-node-walk`) reads the
+first 20 000 entries within 2 s, breadth first, 16 folders at a time, skipping `node_modules`, `.git`,
+`dist`, `build`, `target`, `.venv` and `__pycache__` and never entering a link to a folder. Enter on a
+closed folder, or typing a path into it, steps in: two levels, 2000 entries, 300 ms, deeper folders closed
+again. The ranking is in `core/src/file-search`: project files match fuzzily (letters in order; points
+for word starts, camelCase, runs, the file's name, a name that starts with the query and an exact name;
+smart case; the shorter path breaks a tie); an ignored file shows only when the query, three characters or
+more, a leading dot dropped, appears whole in its name, in a group headed "Ignored by git" after the
+project's rows, five rows at most and "N more", which widens. The search key again widens to every listed
+ignored file with the fuzzy rule and says so in the header; a query the project does not match does it
+by itself. An empty query lists the files the tab picked before, then the project. Each ignored row has an
+eye struck through (with its tooltip), a closed folder a chevron. The channels `file-search:list`,
+`file-search:others` and `file-search:expand` validate with zod; `others` answers only for a root a listing
+named and `expand` only a folder a listing closed, relative and never climbing out. Names only cross the
+bridge, never content. Until the file view (F4) exists, a picked file opens in the system's app as a
+Ctrl+click on a path does (D40), in one function of `app.ts`.
+**Reason:** the plan agreed with the maintainer on 2026-11-19. Measured on Linux under Xvfb: this
+repository (761 files) lists in 9 to 15 ms and its untracked and ignored files in 9 to 11 ms; a synthetic
+repository of 100 000 tracked files with a 150 000 file ignored `node_modules` lists its tracked files in 82
+to 111 ms through the bridge and the rest in 670 to 810 ms, the same as `rg --files` (750 ms) since both walk
+the tree, hence the two steps. Ranking 100 000 paths took 5 to 35 ms per key on one thread, over the
+8 ms a frame allows, so it runs in a module worker (4 KB) started when the search opens and ended when it
+closes, each key ranking only what the previous one matched; the window's thread is busy 0.1 to 0.5 ms per
+key and the list redraws 7 to 50 ms after the key on 100 000 files, 1 to 9 ms on this repository. Open, the
+search adds about 28 MB to the renderer's working set on 100 000 files and 24 MB on this repository,
+most of it the worker itself; closed, the window's heap is back where it was and the worker is gone,
+though the process returns the pages to the system only later. The bounded walk reads 20 000 entries in about 320 ms; a step into
+`node_modules` 16 to 34 ms.
+**How to revert:** drop `core/src/file-search`, `ports/project-files.ts`, `git-files.ts` in node-git,
+`packages/adapters/node-walk`, `shell/src/file-search`, the `fileSearch` channels in `host-api.ts` and
+`preload.ts`, `ui/src/file-search` and `styles/file-search.css`, the `#files` overlay in `index.html`, the
+`fileSearch` action with its keys, Shortcuts row, offer and hold menu item, and the `fileSearch.*`
+catalog entries.

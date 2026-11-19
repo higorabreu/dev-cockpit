@@ -174,6 +174,7 @@ Mac, `pnpm package:mac` builds the `.app` and the `.dmg` in `release/`.
 | `Ctrl+Shift+C` / `V` | Copy / paste in the terminal |
 | Hold the right `Ctrl` (configurable) | Action wheel: tabs, projects, agent, system. Releasing runs the item |
 | `Ctrl+Shift+P` | Project search (`Ctrl+D` pins or unpins a favorite) |
+| `Ctrl+Shift+O` | File search in the tab's project, `⌘P` on a Mac; the files git ignores show when what you type finds them, and the same key again includes them all. Settings, Shortcuts offers `Ctrl+P` in one click |
 | `Ctrl+Shift+M` | Work screen: pull requests, merge requests and tasks |
 | `Ctrl+Shift+B` | Side panel |
 | `Ctrl+Shift+D` | Review what changed in the tab's repository beside or below its terminal; from the terminal it goes back to an open review, from the review it closes it (`Esc` back to the terminal; inside it `↑↓`, `Enter`, `←` `→` fold a submodule in the file list, `[` `]` file, `n` `p` hunk, `v` viewed, `Shift+↑↓` or `Shift`+click select lines, `c` comment, `Ctrl+Enter` save it, `Ctrl+R` refresh) |

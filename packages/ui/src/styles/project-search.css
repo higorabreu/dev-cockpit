@@ -1,4 +1,6 @@
-#search {
+/* The project search and the file search are one family: the same overlay, field and list */
+#search,
+#files {
   position: fixed;
   inset: 0;
   z-index: 35;
@@ -12,20 +14,23 @@
   transition: opacity var(--motion-fast) ease;
 }
 
-#search.open {
+#search.open,
+#files.open {
   opacity: 1;
   pointer-events: auto;
 }
 
 /* Hidden once faded, so a closed overlay leaves the tab order; open, it inherits the window's visibility */
-#search:not(.open) {
+#search:not(.open),
+#files:not(.open) {
   visibility: hidden;
   transition:
     opacity var(--motion-fast) ease,
     visibility 0s linear var(--motion-fast);
 }
 
-#search-box {
+#search-box,
+#files-box {
   width: min(460px, calc(100% - 24px));
   display: flex;
   flex-direction: column;
@@ -35,8 +40,9 @@
   border-radius: var(--radius-large);
 }
 
+/* The divider spans what the selected row's highlight does: the list's scrollbar strip on each side */
 .prow {
-  margin: 6px 6px 4px;
+  margin: 6px var(--size-scrollbar) 4px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -47,7 +53,8 @@
   border-bottom-color: var(--fg);
 }
 
-#search-input {
+#search-input,
+#files-input {
   flex: 1;
   min-width: 0;
   padding: 8px 10px;
@@ -58,18 +65,20 @@
   outline: none;
 }
 
-#search-input::placeholder {
+#search-input::placeholder,
+#files-input::placeholder {
   color: var(--muted);
 }
 
-/* Without the id's weight, so the scroll list's overflow padding applies */
-:where(#search-results) {
+/* The list reserves the scrollbar strip on both sides (`scroll-edges`), scrolling or not, so the
+   highlight keeps equal sides and the names stay under the field's text */
+:where(#search-results, #files-results) {
   display: flex;
   flex-direction: column;
   gap: 1px;
   max-height: 296px;
   /* The last row keeps the same 4px from the hint bar as the first one has from the field */
-  padding: 0 6px 4px;
+  padding: 0 0 4px;
   overflow-y: auto;
 }
 

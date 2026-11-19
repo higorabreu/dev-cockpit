@@ -115,6 +115,11 @@ const api: HostApi = {
     onSignal: (listener) => subscribe<[AgentSignal]>(hostChannels.agentSignal, listener),
     profiles: () => ipcRenderer.invoke(hostChannels.agentProfiles),
   },
+  fileSearch: {
+    list: (cwd) => ipcRenderer.invoke(hostChannels.fileSearchList, cwd),
+    others: (root) => ipcRenderer.invoke(hostChannels.fileSearchOthers, root),
+    expand: (root, folder) => ipcRenderer.invoke(hostChannels.fileSearchExpand, { root, folder }),
+  },
   projects: {
     list: () => ipcRenderer.invoke(hostChannels.projectsList),
     touch: (path) => ipcRenderer.send(hostChannels.projectsTouch, path),
