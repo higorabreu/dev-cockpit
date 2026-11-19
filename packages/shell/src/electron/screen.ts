@@ -14,7 +14,6 @@ export type WorkAreaSource = 'electron' | 'gtk' | 'wayland'
 
 // What the dock log needs to tell where a work area came from
 export interface SystemDisplay extends Display {
-  readonly scaleFactor?: number
   readonly source: WorkAreaSource
 }
 

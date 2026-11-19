@@ -267,6 +267,8 @@ export function createNodeFileStore(options: NodeFileStoreOptions = {}): FileSto
       } catch (error) {
         return fail(errorBody('DCK-FIL-004', `${target}: ${codeOf(error)}`))
       }
+      // macOS's file events can miss a change made while the folder watch starts: one more look after it
+      schedule()
       return ok(() => {
         closed = true
         clearTimeout(timer)

@@ -32,13 +32,13 @@
 
 .md-preview h1 {
   padding-bottom: 6px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--size-hairline) solid var(--line);
   font-size: 24px;
 }
 
 .md-preview h2 {
   padding-bottom: 4px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--size-hairline) solid var(--line);
   font-size: 19px;
 }
 
@@ -91,7 +91,7 @@
 
 .md-preview pre {
   padding: 10px 12px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-medium);
   background: var(--surface);
   overflow: auto;
@@ -113,7 +113,7 @@
   height: 0;
   margin: 20px 0;
   border: 0;
-  border-top: 1px solid var(--line);
+  border-top: var(--size-hairline) solid var(--line);
 }
 
 .md-preview table {
@@ -125,7 +125,7 @@
 .md-preview th,
 .md-preview td {
   padding: 4px 10px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
 }
 
 .md-preview th {
@@ -201,7 +201,7 @@
 .md-remote-load {
   flex: none;
   padding: 2px 8px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-medium);
   background: none;
   color: var(--fg);

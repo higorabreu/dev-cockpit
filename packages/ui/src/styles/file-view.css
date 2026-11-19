@@ -18,23 +18,30 @@
   visibility: hidden;
 }
 
+/* The panel's header beside it has the same height, divider included, so their lines meet in one */
 .fv-head {
   flex: none;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
-  height: 30px;
+  height: var(--size-header);
   padding: 0 8px 0 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--size-hairline) solid var(--line);
   color: var(--muted);
   font-size: 12px;
   white-space: nowrap;
 }
 
+/* Trimmed to its x-height and centered by the row, as the panel's path beside it, so the two share a
+   baseline; the padding, given back by the margin, keeps ascenders and descenders inside the clip */
 .fv-path {
   min-width: 0;
+  margin-block: -1ex;
+  padding-block: 1ex;
   overflow: hidden;
+  text-box: trim-both ex alphabetic;
   text-overflow: ellipsis;
 }
 
@@ -60,7 +67,7 @@
 .fv-link {
   flex: none;
   padding: 3px 8px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-medium);
   background: none;
   color: var(--fg);
@@ -111,7 +118,7 @@
   gap: 8px;
   min-width: 0;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--size-hairline) solid var(--line);
   font-size: 12px;
 }
 
@@ -151,7 +158,7 @@
 .fv-action {
   flex: none;
   padding: 3px 8px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-medium);
   background: none;
   color: var(--fg);

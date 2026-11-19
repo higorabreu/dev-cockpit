@@ -168,9 +168,18 @@ export function boundedScreen(screen: SystemScreen, area: () => Size | undefined
     cursorPoint: () => screen.cursorPoint(),
     displayNearest(point) {
       const size = area()
-      if (!size) return screen.displayNearest(point)
+      const display = screen.displayNearest(point)
+      if (!size) return display
       const rectangle = { x: 0, y: 0, ...size }
-      return { id: 'wayland', bounds: rectangle, workArea: rectangle, source: 'wayland' }
+      // The compositor gives no scale with the size; the monitor's, as Electron reads it, keeps the
+      // window's height on whole device pixels
+      return {
+        id: 'wayland',
+        bounds: rectangle,
+        workArea: rectangle,
+        scaleFactor: display.scaleFactor,
+        source: 'wayland',
+      }
     },
   }
 }

@@ -25,7 +25,7 @@
   gap: 6px;
   /* A line apart from the bar's own buttons, so its dismiss is not read as one of them */
   padding-right: 10px;
-  border-right: 1px solid var(--line);
+  border-right: var(--size-hairline) solid var(--line);
 }
 
 .notice-text {
@@ -162,7 +162,7 @@ button.notice-icon:focus-visible {
   flex-direction: column;
   overflow: hidden;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-large);
 }
 
@@ -196,8 +196,7 @@ button.notice-icon:focus-visible {
 
 #tab-menu .menu-divider {
   flex: none;
-  height: 1px;
-  background: var(--line);
+  border-top: var(--size-hairline) solid var(--line);
 }
 
 /* The folder that tells two files of one name apart, after the name as the file search writes it */

@@ -23,20 +23,25 @@ body {
   flex-direction: column;
 }
 
+/* A fixed height, divider included, in whole device pixels: the tabs' own height (the font's line, a file
+   tab's snapped outline) never moves the line or anything under it */
 #bar {
   order: 2;
+  flex: none;
+  box-sizing: border-box;
+  height: var(--size-bar);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
-  border-top: 1px solid var(--line);
+  padding: 0 8px;
+  border-top: var(--size-hairline) solid var(--line);
   overflow: hidden;
 }
 
 body.full #bar {
   order: 0;
   border-top: 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--size-hairline) solid var(--line);
 }
 
 #tabs {
@@ -206,7 +211,7 @@ body.full #main {
   flex: none;
   position: relative;
   display: flex;
-  border-left: 1px solid var(--line);
+  border-left: var(--size-hairline) solid var(--line);
 }
 
 #split {
@@ -284,7 +289,7 @@ body[data-resizing="true"] * {
   z-index: 20;
   min-width: 5ch;
   padding: 4px 10px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-medium);
   background: var(--surface);
   color: var(--fg);

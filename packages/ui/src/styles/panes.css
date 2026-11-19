@@ -59,7 +59,8 @@
   outline-offset: -2px;
 }
 
-/* 1px of line between the panes; the grip around it is 9px. Under the mouse and while dragging the line
+/* A hairline between the panes, drawn as a border like every other line so it snaps to one device pixel
+   (a 1px box took two at 150%); the grip around it is 9px. Under the mouse and while dragging the line
    becomes 2px of muted, like the panel's; only the keyboard focus (`:focus-visible`, never a click or a
    drag) draws it in the foreground, 2px like every other focus ring. A vertical line splits side by side,
    a horizontal one splits stacked */
@@ -67,15 +68,17 @@
   position: relative;
   z-index: 2;
   flex: none;
-  width: 1px;
-  background: var(--line);
+  width: 0;
+  border-left: var(--size-hairline) solid var(--line);
   outline: none;
   cursor: col-resize;
 }
 
 .pane-divider[aria-orientation="horizontal"] {
   width: auto;
-  height: 1px;
+  height: 0;
+  border-left: 0;
+  border-top: var(--size-hairline) solid var(--line);
   cursor: row-resize;
 }
 
@@ -83,14 +86,15 @@
   display: none;
 }
 
+/* Children are placed from the padding box, which starts after the border: the offsets add it back */
 .pane-divider::before {
   content: "";
   position: absolute;
-  inset: 0 -4px;
+  inset: 0 -4px 0 calc(-4px - var(--size-hairline));
 }
 
 .pane-divider[aria-orientation="horizontal"]::before {
-  inset: -4px 0;
+  inset: calc(-4px - var(--size-hairline)) 0 -4px;
 }
 
 .pane-divider::after {
@@ -98,14 +102,14 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: -1px;
+  left: calc(-1px - var(--size-hairline));
   width: 2px;
   background: transparent;
   transition: background var(--motion-fast);
 }
 
 .pane-divider[aria-orientation="horizontal"]::after {
-  top: -1px;
+  top: calc(-1px - var(--size-hairline));
   bottom: auto;
   left: 0;
   right: 0;

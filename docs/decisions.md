@@ -1945,3 +1945,28 @@ links resolved, as the plan asked.
 protocol, the `filePreview` action, the `files.image.*`, `files.markdown.*`, `files.svg.*`,
 `files.pdf.*` and `files.merge.*` entries, `marked`, `dompurify` and `@codemirror/lang-markdown`, the page
 policy's new sources, and give `load` its card for every kind but text again.
+
+## D86. Hairlines are borders of one token, and the bars and the side by side headers sit on whole device pixels
+
+**Decision:** every 1px line in the line color is a border of `--size-hairline` (1px), never a filled box,
+a box shadow or a box moved by a half translate: Chromium snaps a border to whole device pixels (one at
+125% and 150%, two at 200%) wherever it lands, while a 1px box took two pixels at 150% (the pane divider)
+and a translate of -50% spread the hold menu hint's side lines over two. The tab bar is `--size-bar` (44px)
+and the headers that sit side by side, the panel's path, the file view's and the review's, are
+`--size-header` (36px), each with its divider inside (`box-sizing: border-box`); both are steps of 4, whole
+device pixels at 100%, 125%, 150%, 175% and 200%, so the lines below the bar land on a pixel at full
+height and the three header lines meet in one. The panel header draws its own divider and the first
+section drops its line. The panel's mono path and the file view's Inter path keep their fonts; both are
+trimmed to their x-height (`text-box: trim-both ex alphabetic`) and centered, which puts their baselines
+within half a device pixel at every scale (their x-heights are 6.5px and 6.6px). The dock controller
+takes, for an anchored or dragged height, the nearest height in DIPs that is a whole number of device
+pixels at the display's scale (`deviceHeight`, within 4 DIPs, never past the work area; the whole work
+area is kept as it is): at 125% a window of 557 DIPs is 696.25 pixels, and a compositor that fits the
+window's 697 rows into that box spreads the lines near the bottom over two rows. `styles/hairlines.test.ts`
+keeps the rules.
+**Reason:** reported by the maintainer on 2026-11-19 on Ubuntu at a fractional scale: the lines were not
+the same thickness and changed with the window's height, and the panel's header and the file view's did
+not meet. Measured in the real app at scales 1, 1.25, 1.5 and 2 and six heights (`plans/hairlines.md`).
+**How to revert:** drop `deviceHeight` and the `scaleFactor` of `Display` from the dock controller and the
+screen port, the `hairline`, `bar` and `header` size tokens and their uses in `ui/src/styles`, the panel
+header's divider and `text-box` trims, and `styles/hairlines.test.ts`.
