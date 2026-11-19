@@ -41,7 +41,7 @@ packages/
   cli/        the dck command (toggle, ping, daemon, agent signal, ext)
   shell/      Electron: window, global shortcut, PTY host, updates
   install/    the npm installer, `npx @devcockpit/install` (D76)
-  adapters/   node-pty, node-git, node-net, node-fetch, github, gitlab, jira, docker-cli, jsonc,
+  adapters/   node-pty, node-git, node-fs, node-net, node-fetch, github, gitlab, jira, docker-cli, jsonc,
               extension-files, gnome-shortcuts, secret-tool, linux-proc, macos-keychain, macos-proc
 ```
 

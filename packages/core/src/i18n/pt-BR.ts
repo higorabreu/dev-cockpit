@@ -578,6 +578,12 @@ export const ptBR = {
   'settings.reviewLayout.auto': 'Automático',
   'settings.reviewLayout.side': 'Lado a lado',
   'settings.reviewLayout.stacked': 'Empilhado',
+  'settings.group.files': 'Arquivos',
+  'settings.autoSave': 'Salvar arquivos automaticamente',
+  'settings.autoSave.hint': 'Após uma pausa na digitação e ao sair do arquivo.',
+  'settings.autoMerge': 'Mesclar mudanças feitas no disco',
+  'settings.autoMerge.hint':
+    'Linhas que outro programa mudou longe das suas se juntam às suas edições.',
 
   'error.DCK-IPC-001': 'Método desconhecido',
   'error.DCK-IPC-002': 'O método falhou',
@@ -632,6 +638,10 @@ export const ptBR = {
   'error.DCK-INS-004': 'Falha no download',
   'error.DCK-INS-005': 'Download corrompido; nada foi instalado',
   'error.DCK-INS-006': 'A instalação falhou',
+  'error.DCK-FIL-001': 'O arquivo não existe',
+  'error.DCK-FIL-002': 'Não foi possível ler o arquivo',
+  'error.DCK-FIL-003': 'Não foi possível salvar o arquivo',
+  'error.DCK-FIL-004': 'Não é possível acompanhar as mudanças do arquivo no disco',
 } as const
 
 export type MessageKey = keyof typeof ptBR

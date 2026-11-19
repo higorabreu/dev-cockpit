@@ -263,5 +263,25 @@
     "category": "internal",
     "retryable": false,
     "rpc": -32049
+  },
+  "DCK-FIL-001": {
+    "category": "not_found",
+    "retryable": false,
+    "rpc": -32050
+  },
+  "DCK-FIL-002": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32051
+  },
+  "DCK-FIL-003": {
+    "category": "unavailable",
+    "retryable": true,
+    "rpc": -32052
+  },
+  "DCK-FIL-004": {
+    "category": "unavailable",
+    "retryable": false,
+    "rpc": -32053
   }
 }
