@@ -40,8 +40,9 @@
   border-radius: var(--radius-large);
 }
 
+/* The divider spans what the selected row's highlight does: the list's scrollbar strip on each side */
 .prow {
-  margin: 6px 6px 4px;
+  margin: 6px var(--size-scrollbar) 4px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -69,14 +70,15 @@
   color: var(--muted);
 }
 
-/* Without the id's weight, so the scroll list's overflow padding applies */
+/* The list reserves the scrollbar strip on both sides (`scroll-edges`), scrolling or not, so the
+   highlight keeps equal sides and the names stay under the field's text */
 :where(#search-results, #files-results) {
   display: flex;
   flex-direction: column;
   gap: 1px;
   max-height: 296px;
   /* The last row keeps the same 4px from the hint bar as the first one has from the field */
-  padding: 0 6px 4px;
+  padding: 0 0 4px;
   overflow-y: auto;
 }
 

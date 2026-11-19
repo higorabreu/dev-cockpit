@@ -22,7 +22,7 @@
 .fgroup {
   margin-top: 4px;
   /* Its text starts where the rows' names do */
-  padding: 8px 0 4px;
+  padding: 8px 10px 4px;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 11px;
@@ -56,7 +56,7 @@
 }
 
 .fnote {
-  padding: 6px 0;
+  padding: 6px 10px;
   color: var(--muted);
   font-size: 11px;
 }

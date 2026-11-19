@@ -9,7 +9,6 @@ import {
   type WalkResult,
 } from '@dck/core'
 import { actionHint, closeButton } from '../kit/panel-frame.ts'
-import { watchOverflow } from '../kit/scrollbar.ts'
 import { h } from '../panel/dom.ts'
 import type { Keymap } from '../platform/keymap.ts'
 import type { FileRanker } from './file-ranker.ts'
@@ -55,7 +54,6 @@ export function createFileSearch(elements: FileSearchElements, deps: FileSearchD
     wide,
     closeButton(t, () => close()),
   )
-  watchOverflow(results)
 
   let stage: Stage = { kind: 'idle' }
   let widened = false

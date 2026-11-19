@@ -43,7 +43,7 @@ function option(row: FileRow, index: number, options: RowsOptions): string {
   const folder = folderOf(row.path)
   const shown = inside && folder.startsWith(inside) ? folder.slice(inside.length) : folder
   return [
-    `<button type="button" class="it frow${on ? ' on' : ''}" role="option" aria-selected="${on}" data-index="${index}"${row.ignored ? ` aria-description="${ignored}"` : ''}>`,
+    `<button type="button" class="it${on ? ' on' : ''}" role="option" aria-selected="${on}" data-index="${index}"${row.ignored ? ` aria-description="${ignored}"` : ''}>`,
     `<span class="l">${escapeHtml(nameOf(row.path))}</span>`,
     `<span class="p">${escapeHtml(shown)}</span>`,
     row.folder
