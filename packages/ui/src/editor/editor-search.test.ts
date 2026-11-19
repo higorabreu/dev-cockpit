@@ -3,7 +3,7 @@ import { closeSearchPanel, getSearchQuery, SearchQuery } from '@codemirror/searc
 import { EditorSelection, EditorState } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { afterEach, describe, expect, it } from 'vitest'
-import { openGoToLine } from './editor-goto.ts'
+import { type GoToTexts, goToLineBar, openGoToLine } from './editor-goto.ts'
 import {
   countMatches,
   MAX_COUNTED,
@@ -221,5 +221,71 @@ describe('the search bar keys', () => {
 
     // Assert
     expect(field('search')).toBeNull()
+  })
+})
+
+const goToTexts: GoToTexts = {
+  label: 'Go to line',
+  placeholder: 'Line, or line:column',
+  invalid: 'Not a line number',
+  go: 'Go',
+  close: 'Close go to line',
+  position: (total) => `of ${total}`,
+}
+
+describe('the keys between find and go to line', () => {
+  function setUpBoth() {
+    const parent = document.createElement('div')
+    document.body.append(parent)
+    const view = new EditorView({
+      parent,
+      state: EditorState.create({
+        doc: 'alpha beta\ngamma beta\n',
+        extensions: [searchBar(false, () => texts), goToLineBar(() => goToTexts)],
+      }),
+    })
+    views.push(view)
+    const live = (selector: string) =>
+      view.dom.querySelector<HTMLInputElement>(`${LIVE} ${selector}`)
+    const press = (input: HTMLInputElement | null, key: string) => {
+      if (!input) throw new Error('expected a field to press the key in')
+      const event = new KeyboardEvent('keydown', {
+        key,
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+      input.dispatchEvent(event)
+      return event
+    }
+    return { view, live, press }
+  }
+
+  it('should swap the find widget for go to line when Ctrl+G is pressed in the find field', () => {
+    // Arrange
+    const { view, live, press } = setUpBoth()
+    openFind(view)
+
+    // Act
+    const event = press(live('.fv-find-field[name="search"]'), 'g')
+
+    // Assert
+    expect(event.defaultPrevented).toBe(true)
+    expect(live('.fv-find-field[name="search"]')).toBeNull()
+    expect(document.activeElement).toBe(live('.fv-goto-field'))
+  })
+
+  it('should swap go to line for the find widget when Ctrl+F is pressed in the line field', () => {
+    // Arrange
+    const { view, live, press } = setUpBoth()
+    openGoToLine(view)
+
+    // Act
+    const event = press(live('.fv-goto-field'), 'f')
+
+    // Assert
+    expect(event.defaultPrevented).toBe(true)
+    expect(live('.fv-goto-field')).toBeNull()
+    expect(document.activeElement).toBe(live('.fv-find-field[name="search"]'))
   })
 })
