@@ -3,6 +3,31 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.13.0](https://github.com/higorabreu/dev-cockpit/compare/v0.12.0...v0.13.0) (2026-11-19)
+
+
+### Features
+
+* open a file over its tab in an editor that saves by itself ([#116](https://github.com/higorabreu/dev-cockpit/issues/116)) ([8a86a79](https://github.com/higorabreu/dev-cockpit/commit/8a86a79c2b05b7d4c619e57ed94c06127fc1c7af))
+* open files from a terminal path and from the review, at the line ([#118](https://github.com/higorabreu/dev-cockpit/issues/118)) ([2d3179b](https://github.com/higorabreu/dev-cockpit/commit/2d3179b55ebb3e7f34bbfaa64c41900de98bf5df))
+* open, save, watch and merge files through a file store port ([#113](https://github.com/higorabreu/dev-cockpit/issues/113)) ([ba6d524](https://github.com/higorabreu/dev-cockpit/commit/ba6d524bbd4d93204d0771b1a9e026a5b4650850))
+* search a project's files on Ctrl+Shift+O ([#115](https://github.com/higorabreu/dev-cockpit/issues/115)) ([00d6706](https://github.com/higorabreu/dev-cockpit/commit/00d6706203e431f0aa99ed97c662f9322a0f276d))
+* show images, SVG, Markdown previews and PDF over the tab, and pick per conflict in Compare ([#119](https://github.com/higorabreu/dev-cockpit/issues/119)) ([504f7d2](https://github.com/higorabreu/dev-cockpit/commit/504f7d294166197d497d96023c18514c5112470f))
+
+
+### Bug Fixes
+
+* closer to VS Code search highlights, and no empty recent files in the file menu ([#123](https://github.com/higorabreu/dev-cockpit/issues/123)) ([28ec7b8](https://github.com/higorabreu/dev-cockpit/commit/28ec7b8d4ed02e3721dd067a21c389b722d7d73b))
+* keep every hairline one device pixel and line up the side by side headers ([#120](https://github.com/higorabreu/dev-cockpit/issues/120)) ([155f80f](https://github.com/higorabreu/dev-cockpit/commit/155f80f3f8309d168816d257f41b000a390b8e7a))
+* keep the text under the line numbers when a long line scrolls sideways ([#122](https://github.com/higorabreu/dev-cockpit/issues/122)) ([9183370](https://github.com/higorabreu/dev-cockpit/commit/918337053de1d62bef5c8e12daf02c80dd75ea31))
+* let Ctrl+G and Ctrl+F swap the file's drawers from inside their fields ([#121](https://github.com/higorabreu/dev-cockpit/issues/121)) ([c99c856](https://github.com/higorabreu/dev-cockpit/commit/c99c8563a633d581780c1e4a25663a1f0b2dbae6))
+* shorten the hint under the terminal paths setting ([#124](https://github.com/higorabreu/dev-cockpit/issues/124)) ([6b8efa0](https://github.com/higorabreu/dev-cockpit/commit/6b8efa086da0583b3954220c532a7eea87d41724))
+
+
+### Performance Improvements
+
+* load only the socket code when dck toggle, ping or agent signal runs ([#112](https://github.com/higorabreu/dev-cockpit/issues/112)) ([c9fc098](https://github.com/higorabreu/dev-cockpit/commit/c9fc0981cba6bf6ad8b8482026611b671e28e4e5))
+
 ## [0.12.0](https://github.com/higorabreu/dev-cockpit/compare/v0.11.0...v0.12.0) (2026-11-19)
 
 
