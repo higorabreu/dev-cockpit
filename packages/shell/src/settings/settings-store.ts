@@ -81,7 +81,13 @@ export function createSettingsStore(options: SettingsStoreOptions) {
   let lastRaw: Readonly<Record<string, unknown>> = {}
   // Keys of the file the system refused (a taken shortcut), with the value written there
   const refused = new Map<string, unknown>()
-  let view: SettingsView = { settings: defaultSettings, locked: [], fresh: true, file: fileState }
+  let view: SettingsView = {
+    settings: defaultSettings,
+    locked: [],
+    fresh: true,
+    file: fileState,
+    path: file,
+  }
   // A reload and an update never interleave: each reads the file the other may have just written
   let queue: Promise<unknown> = Promise.resolve()
   const serial = <T>(task: () => Promise<T>): Promise<T> => {
@@ -92,7 +98,7 @@ export function createSettingsStore(options: SettingsStoreOptions) {
 
   function recompute() {
     const { settings, locked } = applyEnvOverrides(stored, env)
-    view = { settings, locked, fresh, file: fileState }
+    view = { settings, locked, fresh, file: fileState, path: file }
   }
 
   function setFileState(next: SettingsFileState) {
@@ -232,7 +238,7 @@ export function createSettingsStore(options: SettingsStoreOptions) {
         return { ...view, rejected }
       })
     },
-    // Writes the file when there is none yet, so there is something to open in an editor
+    // Writes the file when there is none yet, so there is something to open in a tab
     ensureFile(): Promise<boolean> {
       return serial(async () => {
         if ((await readText()) !== undefined) return true

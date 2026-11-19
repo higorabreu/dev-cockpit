@@ -82,6 +82,8 @@ export function createSettingsView(
     readonly api: HostApi
     readonly i18n: Translator
     onClose(): void
+    // settings.json in a tab of its own, which closes this screen; false when there was none to open
+    openFile(): Promise<boolean>
     // Shows the opacity while the control is dragged, before saving
     previewOpacity(value: number): void
     readonly keymap: Keymap
@@ -99,7 +101,7 @@ export function createSettingsView(
   // The fonts installed, asked for each time the screen opens so a font installed since then shows up
   let fonts: SystemFontsInfo = noSystemFonts
   let confirmingReset = false
-  // The last "Open the settings file" found no app to open it; cleared when the screen opens again
+  // The last "Open the settings file" found no file to open; cleared when the screen opens again
   let openFailed = false
   let activeTab: TabId = TABS[0].id
   // The enabled connectors, each with its own section on the Connections page
@@ -247,7 +249,7 @@ export function createSettingsView(
     return t('settings.file.rowNote', { found: issue.found, reason: issueText(issue) })
   }
 
-  // Only when no app opened the file: the button alone gives no sign that nothing happened
+  // Only when there was no file to open: the button alone gives no sign that nothing happened
   const openFailedText = () =>
     openFailed &&
     h('span', { class: 'sfile-failed', role: 'status' }, t('settings.file.openFailed'))
@@ -272,7 +274,7 @@ export function createSettingsView(
   }
 
   async function openFile() {
-    openFailed = !(await settings.openFile())
+    openFailed = !(await deps.openFile())
     if (isOpen()) render()
   }
 

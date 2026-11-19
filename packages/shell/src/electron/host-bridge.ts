@@ -24,6 +24,7 @@ import {
   type SavedTabs,
   type SessionActivityInfo,
   type SessionSnapshot,
+  type SettingsFileLocation,
   type SettingsPatch,
   type SettingsUpdate,
   type SettingsView,
@@ -129,6 +130,12 @@ const notesSchema = z.object({
 // The picker's answer becomes `projects.root`, so it must fit the setting and be an absolute folder
 const chosenRootSchema = pathText(LIMITS.projectsRoot.max).refine((text) => isAbsolute(text))
 
+// The window opens this path in a tab, so it leaves here only as two absolute paths
+const settingsLocationSchema = z.object({
+  path: absolutePathSchema,
+  folder: absolutePathSchema,
+})
+
 export interface IpcMainApi {
   handle(channel: string, listener: (event: unknown, ...args: never[]) => unknown): void
   on(channel: string, listener: (event: unknown, ...args: never[]) => void): void
@@ -151,7 +158,7 @@ export interface BridgeOptions {
   readonly settings: {
     get(): SettingsView
     update(patch: SettingsPatch): Promise<SettingsUpdate>
-    openFile(): Promise<boolean>
+    openFile(): Promise<SettingsFileLocation | undefined>
   }
   readonly autostart: Autostart
   readonly connections: Connections
@@ -235,7 +242,13 @@ export function registerHostBridge(options: BridgeOptions) {
     options.settings.update(patchSchema.parse(patch) as SettingsPatch),
   )
   // Takes no argument on purpose: the host knows the one file it opens
-  ipcMain.handle(hostChannels.settingsOpenFile, () => options.settings.openFile())
+  ipcMain.handle(hostChannels.settingsOpenFile, async () => {
+    const location = await options.settings.openFile()
+    if (location === undefined) return undefined
+    const parsed = settingsLocationSchema.safeParse(location)
+    if (!parsed.success) logger.warn('settings file location refused', { file: location.path })
+    return parsed.success ? parsed.data : undefined
+  })
   const { connections } = options
   const byId =
     (action: (id: string) => Promise<ConnectionStatus>) => (_event: unknown, id: unknown) => {

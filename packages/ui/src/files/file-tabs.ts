@@ -65,7 +65,8 @@ export interface FileTabsDeps {
   host(tabId: string): HTMLElement | undefined
   // The tab's folder, for the header's path
   cwd(tabId: string): string | undefined
-  autoSave(): boolean
+  // Per file: settings.json waits for Ctrl+S whatever the setting says
+  autoSave(path: string): boolean
   autoMerge(): boolean
   // With auto save off, a file with edits about to close or be replaced: save, discard or cancel
   ask(tabId: string, name: string): Promise<LeaveAnswer>
@@ -277,7 +278,7 @@ export function createFileTabs(deps: FileTabsDeps) {
       readOnly,
       editor,
       files: api.files,
-      autoSave: deps.autoSave,
+      autoSave: () => deps.autoSave(file.path),
       autoMerge: deps.autoMerge,
       after: deps.after,
       onChange() {
@@ -426,7 +427,7 @@ export function createFileTabs(deps: FileTabsDeps) {
   async function leave(tabId: string, entry: Entry): Promise<boolean> {
     const session = entry.session
     if (!session?.isDirty()) return true
-    if (deps.autoSave() && session.mark() === 'unsaved') {
+    if (deps.autoSave(entry.path) && session.mark() === 'unsaved') {
       await session.flush()
       if (!session.isDirty()) return true
     }

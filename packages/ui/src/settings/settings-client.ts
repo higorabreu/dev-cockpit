@@ -1,6 +1,7 @@
 import {
   type HostApi,
   type Settings,
+  type SettingsFileLocation,
   type SettingsFileState,
   type SettingsPatch,
   type SettingsUpdate,
@@ -17,7 +18,10 @@ export interface SettingsClient {
   // Whether settings.json reads and which of its values it did not use as written
   file(): SettingsFileState
   onFile(listener: (file: SettingsFileState) => void): Unsubscribe
-  openFile(): Promise<boolean>
+  // Where settings.json is, which is never auto saved
+  path(): string
+  // Writes the file when there is none; undefined when the host could not
+  openFile(): Promise<SettingsFileLocation | undefined>
 }
 
 const LEGACY_KEYS = ['dck-theme', 'dck-opacity', 'dck-font-size', 'dck-locale'] as const
@@ -99,6 +103,7 @@ export async function createSettingsClient(api: HostApi): Promise<SettingsClient
       fileListeners.add(listener)
       return () => void fileListeners.delete(listener)
     },
+    path: () => view.path,
     openFile: () => api.settings.openFile(),
   }
 }

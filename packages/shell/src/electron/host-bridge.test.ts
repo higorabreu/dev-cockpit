@@ -12,6 +12,7 @@ import {
   ok,
   reviewDiff,
   type SavedTabs,
+  type SettingsFileLocation,
   settingsFileOk,
   type TabNotification,
 } from '@dck/core'
@@ -59,6 +60,10 @@ function setup(picked: string | undefined = undefined) {
   const touched: string[] = []
   let autostartOn = false
   let settingsFileOpens = 0
+  let settingsLocation: SettingsFileLocation | undefined = {
+    path: '/home/usuario/.config/dck/settings.json',
+    folder: '/home/usuario/.config/dck',
+  }
   const notified: TabNotification[] = []
   const connects: { id: string; fields: ConnectionFields; token: string }[] = []
   let connectors: readonly Connector[] = [GITLAB_CONNECTOR]
@@ -134,17 +139,24 @@ function setup(picked: string | undefined = undefined) {
       },
     },
     settings: {
-      get: () => ({ settings: defaultSettings, locked: [], fresh: true, file: settingsFileOk }),
+      get: () => ({
+        settings: defaultSettings,
+        locked: [],
+        fresh: true,
+        file: settingsFileOk,
+        path: '/home/usuario/.config/dck/settings.json',
+      }),
       update: async (patch) => ({
         settings: { ...defaultSettings, theme: (patch as { theme?: 'light' }).theme ?? 'dark' },
         locked: [],
         fresh: false,
         file: settingsFileOk,
+        path: '/home/usuario/.config/dck/settings.json',
         rejected: [],
       }),
       openFile: async () => {
         settingsFileOpens += 1
-        return true
+        return settingsLocation
       },
     },
     autostart: {
@@ -228,6 +240,9 @@ function setup(picked: string | undefined = undefined) {
     clipboard,
     sent,
     settingsFileOpens: () => settingsFileOpens,
+    setSettingsLocation: (location: SettingsFileLocation | undefined) => {
+      settingsLocation = location
+    },
     call,
     bridge,
     touched,
@@ -511,13 +526,44 @@ describe('registerHostBridge clipboard and window', () => {
     expect(result.settings.theme).toBe('light')
   })
 
-  it('should open the one settings file whatever the interface passes when it asks to open it', async () => {
+  it('should return the one settings file and its folder whatever the interface passes when it asks to open it', async () => {
+    // Arrange
     const { call, settingsFileOpens } = setup()
 
+    // Act
     const opened = await call(hostChannels.settingsOpenFile, '/etc/passwd')
 
-    expect(opened).toBe(true)
+    // Assert
+    expect(opened).toEqual({
+      path: '/home/usuario/.config/dck/settings.json',
+      folder: '/home/usuario/.config/dck',
+    })
     expect(settingsFileOpens()).toBe(1)
+  })
+
+  it('should return nothing when the host could not write the settings file to open', async () => {
+    // Arrange
+    const { call, setSettingsLocation } = setup()
+    setSettingsLocation(undefined)
+
+    // Act
+    const opened = await call(hostChannels.settingsOpenFile)
+
+    // Assert
+    expect(opened).toBeUndefined()
+  })
+
+  it('should refuse a settings file location that is not two absolute paths when the host answers one', async () => {
+    // Arrange
+    const { call, setSettingsLocation, warnings } = setup()
+    setSettingsLocation({ path: 'settings.json', folder: '.' })
+
+    // Act
+    const opened = await call(hostChannels.settingsOpenFile)
+
+    // Assert
+    expect(opened).toBeUndefined()
+    expect(warnings.map((warning) => warning.message)).toEqual(['settings file location refused'])
   })
 
   it('should refuse a patch that is not an object when the interface updates settings', () => {

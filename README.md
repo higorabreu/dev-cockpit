@@ -239,13 +239,14 @@ terminal opens, start with the system, the threshold to notify a long command, t
 and the GitHub, GitLab and Jira connections; an About page shows the version, the updates and the
 project's links. Everything applies at once. Settings live in a `settings.json` that can also be edited by
 hand, like VS Code's: the button beside the screen's close (or Open the settings file in the hold menu's
-System list) opens it in your editor, it takes comments and trailing commas, and whatever you save
-applies at once while the screen's own changes keep your comments and layout. A value it cannot use goes
-back to its default or to the nearest limit: the screen marks the file button (its tooltip counts the
-warnings) and the pages that have one and says under each setting what the file holds and what is used
-instead, and its reset writes the right value back; a file that is not valid JSON keeps the last good
-settings, the controls wait, and a line above the page says the line and column to fix. The `DCK_KEY`,
-`DCK_HEIGHT` and `DCK_PROJECTS_ROOT` variables win over the file.
+System list) opens it in a tab of its own, at its folder, where only Ctrl+S (⌘S on a Mac) saves it, so a
+half-typed edit never applies; it takes comments and trailing commas, and whatever you save applies at
+once while the screen's own changes keep your comments and layout. A value it cannot use goes back to its
+default or to the nearest limit: the screen marks the file button (its tooltip counts the warnings) and
+the pages that have one and says under each setting what the file holds and what is used instead, and its
+reset writes the right value back; a file that is not valid JSON keeps the last good settings, the controls
+wait, and a line above the page says the line and column to fix. The `DCK_KEY`, `DCK_HEIGHT` and
+`DCK_PROJECTS_ROOT` variables win over the file.
 
 The interface draws with Inter and JetBrains Mono, which ship with the cockpit. The terminal draws, by
 default, with the font of your own terminal (the GNOME Terminal or Ptyxis profile, else the system's

@@ -2,6 +2,7 @@
 import {
   createFileOpener,
   createTranslator,
+  defaultSettings,
   encodeText,
   FILE_LIMITS,
   type FileChange,
@@ -12,11 +13,13 @@ import {
 import { MemoryFileStore } from '@dck/core/testing'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { CodeEditor, CodeEditorOptions } from '../editor/code-editor.ts'
+import { autoSaveOf } from '../settings/settings-file-tab.ts'
 import { createFileTabs, type FileTabsDeps, type LeaveAnswer } from './file-tabs.ts'
 
 const ROOT = '/home/ana/acme'
 const LOGIN = `${ROOT}/src/login.ts`
 const NOTES = `${ROOT}/notes.md`
+const SETTINGS = '/home/ana/.config/dck/settings.json'
 
 const settled = () => new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -66,9 +69,17 @@ function fakeEditors() {
 }
 
 function setup(options: { autoSave?: boolean; answer?: LeaveAnswer } = {}) {
+  const settings = {
+    current: () => ({
+      ...defaultSettings,
+      files: { ...defaultSettings.files, autoSave: options.autoSave ?? true },
+    }),
+    path: () => SETTINGS,
+  }
   const store = new MemoryFileStore()
   store.put(LOGIN, 'export const a = 1\n')
   store.put(NOTES, '# Notes\n')
+  store.put(SETTINGS, '{}\n')
   store.put(`${ROOT}/.env`, 'TOKEN=x\n')
   store.put(`${ROOT}/logo.bin`, new Uint8Array([1, 0, 2]))
   store.put(`${ROOT}/.editorconfig`, '[*.ts]\nindent_style = space\nindent_size = 4\n')
@@ -114,7 +125,7 @@ function setup(options: { autoSave?: boolean; answer?: LeaveAnswer } = {}) {
     editorKeys: { find: 'Ctrl+F', goToLine: 'Ctrl+G', done: 'Ctrl+Enter' },
     host: () => host,
     cwd: () => ROOT,
-    autoSave: () => options.autoSave ?? true,
+    autoSave: autoSaveOf(settings),
     autoMerge: () => true,
     async ask(_tabId, name) {
       asked.push(name)
@@ -204,6 +215,33 @@ describe('file tabs', () => {
     expect(host.hasAttribute('data-file-shown')).toBe(false)
     expect(disk(LOGIN)).toBe('export const a = 2\n')
     expect(terminals).toEqual(['tab-1'])
+    expect(tabs.appendix('tab-1')?.mark).toBeUndefined()
+  })
+
+  it('should keep settings.json unsaved until Ctrl+S when auto save is on while another file still saves', async () => {
+    // Arrange
+    const { tabs, editors, disk, asked } = setup({ answer: 'cancel' })
+    await tabs.openFile('tab-1', SETTINGS)
+    editors.made[0]?.type('{ "theme": "li\n')
+    await tabs.openFile('tab-2', LOGIN)
+    editors.made[1]?.type('export const a = 2\n')
+
+    // Act
+    tabs.toggle('tab-1')
+    tabs.toggle('tab-2')
+    await settled()
+    const kept = await tabs.confirmClose('tab-1')
+    const unsaved = { disk: disk(SETTINGS), mark: tabs.appendix('tab-1')?.mark }
+    tabs.save('tab-1')
+    await settled()
+
+    // Assert
+    expect(unsaved).toEqual({ disk: '{}\n', mark: 'unsaved' })
+    expect(kept).toBe(false)
+    expect(asked).toEqual(['settings.json'])
+    expect(disk(LOGIN)).toBe('export const a = 2\n')
+    expect(tabs.appendix('tab-2')?.mark).toBeUndefined()
+    expect(disk(SETTINGS)).toBe('{ "theme": "li\n')
     expect(tabs.appendix('tab-1')?.mark).toBeUndefined()
   })
 
