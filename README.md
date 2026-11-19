@@ -265,7 +265,8 @@ this README are recorded from the built app by [scripts/media](scripts/media/REA
   instead (D37).
 - Connectors are built in (GitHub, GitLab and Jira Cloud); third-party connectors are not done. The keys
   inside a panel (the review's single keys, the arrows of a list) cannot be changed.
-- No file editor: the review reads and comments, and files are edited in the terminal or your editor.
+- The file view is a light editor (CodeMirror): no language servers, completion or multi-file tabs;
+  images, Markdown previews and PDFs arrive with its next part.
 - The GNOME tray icon opens the menu and does not toggle the window directly.
 
 ## License
