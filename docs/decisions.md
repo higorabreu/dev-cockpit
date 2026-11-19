@@ -926,6 +926,21 @@ the two entries in `shell/src/connections/connector-connections.ts` and `daemon/
 the shared connection and views files keep working for GitLab alone.
 **Partly replaced by D73** (2026-11-18): the Work button shows a dot, and a view's `badge` is a role, not a text.
 
+## D58. The terminal cursor blinks by a timer, not by xterm's animation
+
+**Decision:** xterm still decides which cursor blinks (the setting, DECSCUSR and mode 12) and adds its
+blink class only while it has the focus, but its infinite CSS animation is turned off
+(`ui/src/styles/terminal.css`) and the session hides that cursor every other 500 ms with a class
+(`ui/src/terminal/cursor-blink.ts`), only while the terminal has the focus and the page is visible; a key
+or a cursor move shows it again and starts the period over. The pace and the hidden phase are xterm's.
+**Reason:** Chromium runs an infinite CSS animation every frame, so a blinking cursor at an idle prompt
+cost about 3% of one core in the renderer and the GPU process, against 0.5% with no blink; with the timer
+it is 0.6 to 0.7% (Xvfb and native Wayland, 2026-11-17, numbers in `plans/terminal-rendering.md`). The
+other cheap candidates of that plan were measured and left out: xterm already stops blinking without the
+focus, a hidden window already draws no frame on X11 and on native Wayland, and an opaque window at opacity
+1 cost more under a compositing manager, not less.
+**How to revert:** drop `attachCursorBlink` from `terminal-session.ts` and the cursor rules from
+`terminal.css`; xterm then blinks by itself again.
 
 ## D59. Codex marks its tab through the terminal's program status report, with nothing installed
 

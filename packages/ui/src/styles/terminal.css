@@ -79,6 +79,25 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   scrollbar-gutter: stable both-edges;
 }
 
+/* The cursor blinks by the session's `cursor-off` class (terminal/cursor-blink.ts): xterm's own blink is an
+   infinite animation that Chromium runs every frame. The hidden phase is xterm's own, a plain cell */
+.xterm .xterm-rows .xterm-cursor.xterm-cursor-blink {
+  animation: none !important;
+}
+
+.session.cursor-off .xterm .xterm-rows .xterm-cursor.xterm-cursor-blink.xterm-cursor-block {
+  background-color: inherit !important;
+  color: var(--fg) !important;
+}
+
+.session.cursor-off .xterm .xterm-rows .xterm-cursor.xterm-cursor-blink.xterm-cursor-bar {
+  box-shadow: none !important;
+}
+
+.session.cursor-off .xterm .xterm-rows .xterm-cursor.xterm-cursor-blink.xterm-cursor-underline {
+  border-bottom-style: hidden !important;
+}
+
 /* xterm scrollbar: no arrows, thin track and only the thumb, which disappears without scrolling */
 .xterm .xterm-scrollable-element > .scrollbar.vertical {
   width: var(--size-scrollbar) !important;
