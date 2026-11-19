@@ -19,8 +19,9 @@ export const cockpitTheme = EditorView.theme({
   '.cm-content': { caretColor: 'var(--fg)', padding: '8px 0' },
   '.cm-cursor, .cm-dropCursor': { borderLeft: '2px solid var(--fg)' },
   '&.cm-cursor-off .cm-cursorLayer': { visibility: 'hidden' },
+  // Solid: the gutter stays put while a long line scrolls sideways, and the text passes under it
   '.cm-gutters': {
-    backgroundColor: 'transparent',
+    backgroundColor: 'var(--bg)',
     color: 'var(--muted)',
     border: 'none',
   },
