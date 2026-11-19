@@ -4,8 +4,9 @@ import { cpSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { build } from 'esbuild'
 import { shipsNodePtyFile } from './node-pty-files.mjs'
+
+export { buildCli } from './cli-bundle.mjs'
 
 export const NAME = 'dev-cockpit'
 export const PRODUCT = 'Dev Cockpit'
@@ -51,33 +52,4 @@ export function stageApp(target) {
     main: 'main.cjs',
   }
   writeFileSync(join(target, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`)
-}
-
-// The CLI runs inside the packaged Electron itself, without the user's Node
-export function buildCli(outfile) {
-  return build({
-    entryPoints: [join(repository, 'packages', 'cli', 'src', 'main.ts')],
-    outfile,
-    bundle: true,
-    platform: 'node',
-    format: 'esm',
-    logLevel: 'warning',
-    // Its UMD build loads its parts with a require the bundler cannot follow; the ESM build bundles whole
-    alias: {
-      'jsonc-parser': join(
-        repository,
-        'packages',
-        'adapters',
-        'jsonc',
-        'node_modules',
-        'jsonc-parser',
-        'lib',
-        'esm',
-        'main.js',
-      ),
-    },
-    banner: {
-      js: "import { createRequire as __dckRequire } from 'node:module'; const require = __dckRequire(import.meta.url);",
-    },
-  })
 }

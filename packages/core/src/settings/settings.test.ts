@@ -41,6 +41,7 @@ describe('parseSettings', () => {
       connections: {},
       system: { notifyAfterSeconds: 30, agentConnectHint: true, updates: 'off' },
       review: { layout: 'auto', sideRatio: 0.5, stackedRatio: 0.5, bases: {} },
+      files: { autoSave: true, autoMerge: true },
       extensions: { disabled: [] },
     })
   })
@@ -118,6 +119,16 @@ describe('parseSettings', () => {
       false,
     )
     expect(parseSettings({ system: { agentConnectHint: 'no' } }).system.agentConnectHint).toBe(true)
+  })
+
+  it('should keep saving and merging files on unless a boolean turned them off when reading', () => {
+    // Act
+    const off = parseSettings({ files: { autoSave: false, autoMerge: false } }).files
+    const invalid = parseSettings({ files: { autoSave: 'no', autoMerge: 0 } }).files
+
+    // Assert
+    expect(off).toEqual({ autoSave: false, autoMerge: false })
+    expect(invalid).toEqual({ autoSave: true, autoMerge: true })
   })
 
   it('should keep updates off unless a known mode was chosen when reading', () => {
