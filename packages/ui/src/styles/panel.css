@@ -37,7 +37,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  border-left: 1px solid var(--line);
+  border-left: var(--size-hairline) solid var(--line);
 }
 
 #rail-top {
@@ -173,7 +173,7 @@
 }
 
 .psec {
-  border-top: 1px solid var(--line);
+  border-top: var(--size-hairline) solid var(--line);
 }
 
 .shead {

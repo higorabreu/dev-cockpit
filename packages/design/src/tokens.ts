@@ -99,6 +99,8 @@ export interface Tokens {
     readonly terminal: number
     readonly scrollbar: number
     readonly scrollbarThumb: number
+    // Every divider and card edge: drawn as a border, which Chromium snaps to whole device pixels
+    readonly hairline: number
   }
   readonly radius: { readonly small: string; readonly medium: string; readonly large: string }
   readonly motion: { readonly fast: string; readonly normal: string; readonly easing: string }

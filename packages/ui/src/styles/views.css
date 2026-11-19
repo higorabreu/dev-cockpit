@@ -32,7 +32,7 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-large);
 }
 
@@ -42,7 +42,7 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--size-hairline) solid var(--line);
 }
 
 .vtabs {
@@ -97,7 +97,7 @@
 .vtab + .vgroup {
   margin-left: 6px;
   padding-left: 16px;
-  border-left: 1px solid var(--line);
+  border-left: var(--size-hairline) solid var(--line);
 }
 
 /* Too narrow for the service names: only the line between the groups stays, and each tab's tooltip names
@@ -169,7 +169,7 @@
   align-items: center;
   gap: 6px;
   padding: 4px 8px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-medium);
   background: none;
   color: var(--fg);
@@ -216,14 +216,14 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--size-hairline) solid var(--line);
 }
 
 .vinput {
   flex: 1;
   min-width: 0;
   padding: 6px 8px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-medium);
   background: var(--bg);
   color: var(--fg);
@@ -347,7 +347,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 0 12px;
-  border-bottom: 1px solid transparent;
+  border-bottom: var(--size-hairline) solid transparent;
   border-radius: var(--radius-medium);
   background-clip: padding-box;
   cursor: pointer;
@@ -415,7 +415,7 @@
   gap: 4px;
   height: 20px;
   padding: 0 7px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-small);
   font-size: 11px;
   line-height: 1;

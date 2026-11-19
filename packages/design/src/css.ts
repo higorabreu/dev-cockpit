@@ -32,6 +32,7 @@ function sharedDeclarations(tokens: Tokens): string[] {
     `--font-size-terminal: ${tokens.size.terminal}px;`,
     `--size-scrollbar: ${tokens.size.scrollbar}px;`,
     `--size-scrollbar-thumb: ${tokens.size.scrollbarThumb}px;`,
+    `--size-hairline: ${tokens.size.hairline}px;`,
     ...entries('radius', tokens.radius),
     ...entries('motion', tokens.motion),
   ]

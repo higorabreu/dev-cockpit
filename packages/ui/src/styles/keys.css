@@ -24,7 +24,7 @@
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-small);
   background: var(--hover);
   box-shadow: inset 0 -1px 0 var(--line);

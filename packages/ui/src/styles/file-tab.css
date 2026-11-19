@@ -10,7 +10,7 @@
   max-width: none;
   gap: 1px;
   padding: 1px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
 }
 
 .tab-part {
@@ -59,9 +59,9 @@
 
 .tab-divider {
   flex: none;
-  width: 1px;
+  width: 0;
   height: 14px;
-  background: var(--line);
+  border-left: var(--size-hairline) solid var(--line);
 }
 
 .tab-appendix:has(.tab-part[aria-selected="true"]) .tab-divider {

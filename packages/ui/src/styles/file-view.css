@@ -26,7 +26,7 @@
   min-width: 0;
   height: 30px;
   padding: 0 8px 0 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--size-hairline) solid var(--line);
   color: var(--muted);
   font-size: 12px;
   white-space: nowrap;
@@ -60,7 +60,7 @@
 .fv-link {
   flex: none;
   padding: 3px 8px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-medium);
   background: none;
   color: var(--fg);
@@ -111,7 +111,7 @@
   gap: 8px;
   min-width: 0;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--size-hairline) solid var(--line);
   font-size: 12px;
 }
 
@@ -151,7 +151,7 @@
 .fv-action {
   flex: none;
   padding: 3px 8px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-medium);
   background: none;
   color: var(--fg);
@@ -231,13 +231,13 @@
 }
 
 .fv-compare-side + .fv-compare-side {
-  border-left: 1px solid var(--line);
+  border-left: var(--size-hairline) solid var(--line);
 }
 
 .fv-compare-label {
   flex: none;
   padding: 4px 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--size-hairline) solid var(--line);
   color: var(--muted);
   font-size: 12px;
 }

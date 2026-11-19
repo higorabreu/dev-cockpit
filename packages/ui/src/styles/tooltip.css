@@ -3,7 +3,7 @@
   z-index: 70;
   max-width: 320px;
   padding: 5px 8px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-medium);
   background: var(--surface);
   color: var(--fg);
