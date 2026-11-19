@@ -52,6 +52,16 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     // The needs you mark sits on the tab bar and on the active tab or the selected row of the tab list
     ['warning mark on the window', rgb(color.warning), rgb(color.bg), GRAPHIC],
     ['warning mark on the active tab', rgb(color.warning), rgb(color.tabActive), GRAPHIC],
+    // The current search match is told by its warning underline as well as its tint, and the matches out of
+    // view by their marks beside the scrollbar
+    ['current search match underline', rgb(color.warning), rgb(color.bg), GRAPHIC],
+    [
+      'current search match underline on its tint',
+      rgb(color.warning),
+      rgb(color.searchCurrent),
+      GRAPHIC,
+    ],
+    ['search match mark in the scrollbar', rgb(color.warning), rgb(color.bg), GRAPHIC],
     ['critical on the surface', rgb(color.critical), surface, TEXT],
     // A diff's code stays primary text on every tint; numbers and signs take the line's own ink
     ['code on an added line', fg, rgb(color.diffAdd), TEXT],

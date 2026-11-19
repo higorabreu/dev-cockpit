@@ -40,9 +40,29 @@ export const cockpitTheme = EditorView.theme({
     backgroundColor: 'var(--diff-remove)',
     outline: 'none',
   },
-  // Solid tints, a quiet one under every match and a stronger one under the current match
+  // Solid tints, a quiet one under every match and a stronger one under the current match, which a 2px
+  // underline in the warning color also tells by shape
   '.cm-searchMatch': { backgroundColor: 'var(--search-match)' },
-  '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'var(--search-current)' },
+  '.cm-searchMatch.cm-searchMatch-selected': {
+    backgroundColor: 'var(--search-current)',
+    boxShadow: 'inset 0 -2px 0 var(--warning)',
+  },
+  // The lines with matches, beside the scrollbar (editor-search.ts); the current one in the foreground
+  '.cm-search-marks': {
+    position: 'absolute',
+    right: '0',
+    width: 'var(--size-scrollbar)',
+    pointerEvents: 'none',
+    zIndex: '2',
+  },
+  '.cm-search-mark': {
+    position: 'absolute',
+    left: '1px',
+    right: '1px',
+    height: '2px',
+    backgroundColor: 'var(--warning)',
+  },
+  '.cm-search-mark.current': { height: '3px', backgroundColor: 'var(--fg)' },
   '.cm-from-disk': { backgroundColor: 'var(--diff-add)' },
   '.cm-compare-added': { backgroundColor: 'var(--diff-add)' },
   '.cm-compare-removed': { backgroundColor: 'var(--diff-remove)' },

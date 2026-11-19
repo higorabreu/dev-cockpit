@@ -53,20 +53,49 @@ export interface MatchCount {
   readonly current: number
   readonly total: number
   readonly more: boolean
+  // The lines that hold a match, from 1, once each, for the marks beside the scrollbar
+  readonly lines: readonly number[]
+  readonly currentLine: number | undefined
 }
 
-// How many matches the query has and which one the selection holds
+// How many matches the query has, which one the selection holds and on which lines they are
 export function countMatches(state: EditorState, query: SearchQuery): MatchCount {
   const { from, to } = state.selection.main
   const cursor = query.getCursor(state)
+  const lines: number[] = []
   let total = 0
   let current = 0
+  let currentLine: number | undefined
   for (let next = cursor.next(); !next.done; next = cursor.next()) {
     total++
-    if (next.value.from === from && next.value.to === to) current = total
-    if (total >= MAX_COUNTED) return { current, total, more: !cursor.next().done }
+    const line = state.doc.lineAt(next.value.from).number
+    if (lines.at(-1) !== line) lines.push(line)
+    if (next.value.from === from && next.value.to === to) {
+      current = total
+      currentLine = line
+    }
+    if (total >= MAX_COUNTED)
+      return { current, total, more: !cursor.next().done, lines, currentLine }
   }
-  return { current, total, more: false }
+  return { current, total, more: false, lines, currentLine }
+}
+
+// One mark per line with a match, placed along the scroller's height as the scrollbar maps the file; a
+// redraw replaces them all, after the same pause as the count
+function drawMarks(view: EditorView, marks: HTMLElement, found: MatchCount | undefined) {
+  const scroller = view.scrollDOM
+  marks.style.top = `${scroller.offsetTop}px`
+  marks.style.height = `${scroller.clientHeight}px`
+  const total = view.state.doc.lines
+  const height = scroller.clientHeight
+  marks.replaceChildren(
+    ...(found?.lines ?? []).map((line) =>
+      h('div', {
+        class: line === found?.currentLine ? 'cm-search-mark current' : 'cm-search-mark',
+        style: `top: ${Math.round(((line - 1) / Math.max(1, total)) * (height - 3))}px`,
+      }),
+    ),
+  )
 }
 
 const ICONS = {
@@ -132,6 +161,8 @@ function createSearchPanel(view: EditorView, texts: () => SearchTexts): Panel {
   const replaceOne = h('button', { type: 'button', class: 'fv-search-text' }, t.replaceOne)
   const replaceEvery = h('button', { type: 'button', class: 'fv-search-text' }, t.replaceAll)
   const replaceRow = h('div', { class: 'fv-search-row' }, replace, replaceOne, replaceEvery)
+  const marks = h('div', { class: 'cm-search-marks', 'aria-hidden': 'true' })
+  let found: MatchCount | undefined
   replaceRow.hidden = true
   const dom = h(
     'div',
@@ -159,17 +190,21 @@ function createSearchPanel(view: EditorView, texts: () => SearchTexts): Panel {
   let recount: ReturnType<typeof setTimeout> | undefined
   function showCount() {
     clearTimeout(recount)
+    found = undefined
     if (!query.search) {
       count.textContent = ''
       delete count.dataset.empty
+      drawMarks(view, marks, found)
       return
     }
     if (!query.valid) {
       count.textContent = texts().invalid
       count.dataset.empty = 'true'
+      drawMarks(view, marks, found)
       return
     }
-    const found = countMatches(view.state, query)
+    found = countMatches(view.state, query)
+    drawMarks(view, marks, found)
     count.textContent =
       found.total === 0 ? texts().none : texts().count(found.current, found.total, found.more)
     count.toggleAttribute('data-empty', found.total === 0)
@@ -232,6 +267,7 @@ function createSearchPanel(view: EditorView, texts: () => SearchTexts): Panel {
     dom,
     top: true,
     mount() {
+      view.dom.append(marks)
       panels.set(view, { showReplace })
       find.select()
       showCount()
@@ -254,13 +290,16 @@ function createSearchPanel(view: EditorView, texts: () => SearchTexts): Panel {
           transaction.effects.some((effect) => effect.is(setSearchQuery)),
       )
       if (asked) showCount()
-      else if (update.docChanged || update.selectionSet) {
+      else if (update.geometryChanged) drawMarks(view, marks, found)
+      if (asked) return
+      if (update.docChanged || update.selectionSet) {
         clearTimeout(recount)
         recount = setTimeout(showCount, RECOUNT_MS)
       }
     },
     destroy() {
       clearTimeout(recount)
+      marks.remove()
       panels.delete(view)
     },
   }

@@ -155,6 +155,17 @@ describe('contrastChecks', () => {
     }
   })
 
+  it('should check the current search match underline as a graphic when checking each theme', () => {
+    for (const theme of themeNames) {
+      const checks = contrastChecks(tokens, theme).filter((check) =>
+        check.name.startsWith('current search match underline'),
+      )
+
+      expect(checks).toHaveLength(2)
+      expect(checks.every((check) => check.minimum === 3 && check.passes)).toBe(true)
+    }
+  })
+
   it('should report the current search match when its tint is too strong for the comments', () => {
     const light = tokens.themes.light
     const strong = {
