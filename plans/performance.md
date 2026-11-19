@@ -1,0 +1,200 @@
+# Performance baseline
+
+Measured on 2026-11-19 so the next features (an in-app editor first) can be weighed against numbers. The
+script is `scripts/perf/measure.cjs` ([README](../scripts/perf/README.md)); rerun it on any build to compare.
+
+## How
+
+- **Builds**, each from source in its own `git worktree` with `pnpm install --frozen-lockfile` and
+  `pnpm build`: v0.2.0 (the oldest tag), v0.6.0, v0.9.0, `main` (= v0.11.0, `75e6232`) and `next`, the
+  local branch `perf/cursor-blink` (`1c3fadf`: main plus the timer cursor blink, D58). Every tag asks for
+  Electron `^45.3.0` and all ran on the same 45.3.0 binary: no version mismatch. All five built.
+  `origin/main` moved to v0.12.0 (`f6aeca8`) during the run; it ships the timer blink as #107, so `next`
+  stands for 0.12.0 here, without its full height drag (#108) and lint cleanup (#106).
+- **Machine**: a Linux container, 4 cores, 16 GB, no GPU, shared with other agent sessions. Xvfb
+  1400x760x24, no window manager or compositor, so a frame ends when Chromium commits it, not when a
+  screen shows it. Load average 0.1 to 0.4 during the run; the other processes on the machine used 1 to 3
+  points of a core during each CPU sample, and CPU differences under about 0.5 point are noise. These
+  numbers rank the builds; the maintainer should rerun the script on their Ubuntu (GNOME Wayland, real
+  display) for absolute ones, and add up to a refresh interval to each latency there.
+- **Isolation**: each launch has a fresh home (`PS1='dck-perf$ '`), config, state and socket, no D-Bus
+  session and no tray icon.
+- **No DevTools**: latencies come from a main process hook loaded through `NODE_OPTIONS` and a preload
+  added to the page's session (`inject.cjs`, `probe.cjs`). Playwright stays out, since its DevTools
+  session keeps `document.visibilityState` at `visible` after `hide()`. CPU and memory launches load no
+  probe at all.
+- **Repeats**: 3 launches per build and phase, the builds taken in turn. Latencies pool every sample
+  (median, p95: 180 keys and 24 warm shows per build and path); cold start, memory and CPU are the median of
+  the 3 runs. CPU follows `plans/terminal-rendering.md` on `perf/cursor-blink`: `utime+stime` per process
+  and thread over 10 s, as a share of one core, the window hidden with `window.toggle` and 3 s to settle.
+- **Time**: one full run (5 builds, 3 runs, every phase) took 43 minutes; one build takes about 9.
+
+## Results
+
+Budgets from AGENTS.md. **Bold** marks a broken budget.
+
+### Key to echo (ms)
+
+From the `keydown` time stamp to the end of the frame that draws the letter, at an idle bash prompt, keys
+90 to 150 ms apart.
+
+| | v0.2.0 | v0.6.0 | v0.9.0 | main | next | Budget |
+| --- | --- | --- | --- | --- | --- | --- |
+| median | 14.5 | 13.5 | 13.9 | 13.7 | 4.3 | 16 |
+| p95 | **22.2** | **23.1** | **23.1** | **23.2** | 14.0 | 16 |
+| median to the DOM change | 11.7 | 10.8 | 11.3 | 10.4 | 3.2 | |
+
+### Hotkey to visible window (ms)
+
+From the toggle request to the end of the first frame after the page turns visible. `socket` sends
+`window.toggle` to the daemon (the IPC part of every toggle; in dev mode and outside GNOME the key goes to
+Electron's `globalShortcut`, which skips even that). `CLI` runs the `dck` bundle with Electron as Node,
+as the packaged app's GNOME shortcut does (D30). Warm: hidden for about 1 s; cold-ish: hidden for 15 s.
+
+| | v0.2.0 | v0.6.0 | v0.9.0 | main | next | Budget |
+| --- | --- | --- | --- | --- | --- | --- |
+| socket, warm, median | 10.9 | 11.5 | 11.6 | 11.4 | 10.1 | 100 |
+| socket, warm, p95 | 14.4 | 14.0 | 13.0 | 13.3 | 13.4 | 100 |
+| socket, cold-ish, median | 11.8 | 10.6 | 12.7 | 11.5 | 8.9 | 100 |
+| CLI, warm, median | 89.9 | 95.6 | **104.1** | **105.5** | **103.3** | 100 |
+| CLI, warm, p95 | **132.0** | **118.6** | **134.3** | **129.4** | **130.9** | 100 |
+| CLI, cold-ish, median | 91.4 | 95.6 | **105.8** | **104.2** | 94.6 | 100 |
+
+Where the CLI path goes (median of 15 launches of `dck --help`, which loads the whole bundle and exits):
+Electron as Node with an empty script takes 49 ms; loading the bundle adds 42 ms in v0.2.0 (826 KB) and
+51 ms in main (952 KB). The socket, `show()` and the first frame add the 11 ms above.
+
+### Cold start (ms)
+
+From spawning Electron to the end of the frame that first draws the prompt.
+
+| | v0.2.0 | v0.6.0 | v0.9.0 | main | next | Budget |
+| --- | --- | --- | --- | --- | --- | --- |
+| first prompt drawn | 345 | 329 | 405 | 430 | 410 | 2000 |
+| runs (fastest to slowest) | 309 to 373 | 327 to 336 | 398 to 416 | 349 to 435 | 406 to 422 | |
+| app ready | 170 | 150 | 174 | 176 | 183 | |
+| page loaded | 277 | 262 | 304 | 329 | 308 | |
+
+### Idle memory (MB)
+
+PSS from `smaps_rollup` of the main process, every Chromium child and the daemon; the shells in the tabs
+are left out. RSS adds shared pages once per process and overstates the total.
+
+| | v0.2.0 | v0.6.0 | v0.9.0 | main | next | Budget |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 tab, shown | **313** | 262 | 263 | 264 | 263 | 300 |
+| 1 tab, hidden | **306** | 250 | 250 | 252 | 252 | 300 |
+| 5 tabs, shown | **319** | 264 | 263 | 264 | 263 | 300 |
+| 5 tabs, hidden | **317** | 262 | 263 | 264 | 263 | 300 |
+| RSS sum, 1 tab shown | 691 | 610 | 609 | 610 | 609 | |
+| main / GPU / renderer / daemon, 1 tab | 83 / 74 / 62 / 41 | 85 / 20 / 64 / 42 | 85 / 19 / 66 / 42 | 85 / 19 / 66 / 43 | 86 / 19 / 65 / 43 | |
+
+The two zygotes (27) and the network service (24 to 26) make up the rest.
+
+### Idle CPU (% of one core)
+
+Renderer is the process total (its main thread / `Compositor`), GPU the process total
+(`VizCompositorThread`). The TUI redraws a four line block 10 times a second with the cursor hidden, as
+Claude Code's Ink does. No budget; for the trend.
+
+| Workload | Window | | v0.2.0 | v0.6.0 | v0.9.0 | main | next |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| idle prompt | shown | renderer (main / Compositor) | 2.7 (1.6 / 1.0) | 2.6 (1.5 / 1.0) | 2.7 (1.5 / 1.0) | 2.8 (1.6 / 1.2) | 0.6 (0.3 / 0.2) |
+| | | GPU (Viz) | 1.2 (0.9) | 1.2 (0.9) | 1.1 (0.8) | 1.3 (0.9) | 0.3 (0.1) |
+| | | main / daemon | 0.2 / 0.0 | 0.1 / 0.0 | 0.2 / 0.0 | 0.1 / 0.0 | 0.1 / 0.0 |
+| | | total | 4.1 | 3.9 | 4.0 | 4.2 | 1.0 |
+| idle prompt | hidden | renderer / main / daemon | 0.3 / 0.6 / 0.4 | 0.3 / 0.7 / 0.4 | 0.4 / 0.7 / 0.3 | 0.4 / 0.8 / 0.4 | 0.3 / 0.6 / 0.4 |
+| | | total | 1.3 | 1.4 | 1.4 | 1.5 | 1.2 |
+| TUI | shown | renderer (main / Compositor) | 2.9 (1.4 / 1.0) | 3.1 (1.5 / 1.0) | 3.1 (1.6 / 1.0) | 3.3 (1.6 / 1.0) | 3.5 (1.9 / 1.1) |
+| | | GPU (Viz) | 1.1 (0.9) | 1.2 (0.9) | 1.1 (0.8) | 1.1 (0.9) | 1.2 (1.0) |
+| | | main / daemon | 0.6 / 0.0 | 0.7 / 0.0 | 0.6 / 0.0 | 0.6 / 0.0 | 0.6 / 0.0 |
+| | | total | 4.6 | 5.0 | 4.8 | 5.0 | 5.4 |
+| TUI | hidden | renderer / main / daemon | 0.7 / 1.1 / 0.3 | 0.8 / 1.2 / 0.3 | 0.7 / 1.1 / 0.3 | 0.8 / 1.1 / 0.4 | 0.8 / 1.2 / 0.4 |
+| | | total | 2.1 | 2.3 | 2.1 | 2.2 | 2.3 |
+
+### A 1000 item list at 60 fps
+
+The virtualized list here is the review's file index (and its diff, one scroll for every file). A tab
+whose folder has 1000 changed files opens its review (Ctrl+Shift+D) and the wheel turns 50 notches a
+second for 2 s over each; a `requestAnimationFrame` loop stamps the page's frames meanwhile. v0.2.0 has no
+review.
+
+| | v0.2.0 | v0.6.0 | v0.9.0 | main | next | Budget |
+| --- | --- | --- | --- | --- | --- | --- |
+| file list: frames per second | | 60.0 | 60.0 | 60.0 | 60.0 | 60 |
+| file list: p95 frame interval (ms) | | 16.7 | 16.7 | 16.7 | 16.7 | |
+| file list: rows in the DOM, of 1000 | | 16 | 16 | 16 | 16 | |
+| diff: frames per second | | 60.0 | 60.0 | 60.0 | 60.0 | 60 |
+| frames over 20 ms, both | | 0 | 0 | 0 | 0 | |
+
+Both scrolled the full 12000 px asked, with no frame over 20 ms in any run.
+
+### Size (KB)
+
+| | v0.2.0 | v0.6.0 | v0.9.0 | main | next |
+| --- | --- | --- | --- | --- | --- |
+| `main.cjs` | 849 | 947 | 1056 | 1109 | 1109 |
+| `daemon.cjs` | 784 | 834 | 864 | 877 | 877 |
+| UI JavaScript | 502 | 597 | 652 | 691 | 692 |
+| UI CSS | 32 | 45 | 62 | 68 | 69 |
+| UI fonts | 0 | 0 | 296 | 296 | 296 |
+| `dck.mjs` (CLI) | 826 | 876 | 958 | 952 | 972 |
+| `packages/shell/dist` without maps | 65785 | 66042 | 66550 | 66662 | 66664 |
+
+`dist` is 64 MB of node-pty's build tree, which packaging prunes. The main `.deb` (`pnpm package`, built
+once here) is 88 MB and installs 271 MB: the Electron runtime is 265 MB of that, the app 3.8 MB and the CLI
+0.96 MB.
+
+## What changed and why
+
+- **Memory, v0.2.0 to v0.6.0: 313 to 262 MB, back under budget.** The GPU process went from 74 to 20 MB
+  when the window stopped using the GPU on Linux (D50, `c1774b1`, #50). Nothing since has moved the total:
+  the renderer grew from 62 to 66 MB between v0.2.0 and main as the review, the GitHub views and the
+  settings arrived, and the daemon by 2 MB.
+- **Cold start, v0.6.0 to main: 329 to 430 ms.** Almost all of it is before the page finishes loading
+  (262 to 329 ms): the UI's JavaScript grew from 597 to 691 KB and its CSS from 45 to 68 KB, the fonts
+  became bundled files (296 KB, `e7f9a44`, #80), and `main.cjs` grew from 947 to 1109 KB (the GitHub client #69, the
+  settings file #80, the updates #88). Still a fifth of the budget.
+- **CLI toggle, v0.2.0 to main: 90 to 105 ms, now over budget on the path the packaged GNOME shortcut
+  takes.** Half of it is Electron starting as Node and does not change. The other half is evaluating the
+  bundle, which grew from 826 to 952 KB because `packages/cli/src/main.ts` imports the daemon, the
+  connector views, the secret store, the extension files and the JSONC settings statically, so `toggle`
+  loads all of them (extension commands #10 and #11, the macOS keychain #36, the settings file #80). D30
+  measured 60 to 70 ms for `dck toggle` on the maintainer's machine; that was at v0.2.0, before this growth.
+- **Idle CPU at a prompt and key echo did not move from v0.2.0 to main, then `next` cuts both.** The
+  blinking cursor was an infinite CSS animation that Chromium runs every frame: 4.2 points of a core at a
+  shown idle prompt in main, 1.0 with the timer blink (`f98fed7`, D58). The same change takes key to echo
+  from 13.7 to 4.3 ms (p95 23.2 to 14.0), most of it before the DOM change (10.4 to 3.2 ms): with frames
+  running for the animation, xterm's render waits for a frame slot; with the page idle, the echo gets a
+  frame at once. This was not visible in the cursor-blink results, which measured CPU only.
+- **TUI and hidden CPU are flat across releases** (about 5 points shown, 2 hidden). `next` reads 0.4 higher
+  on the TUI, within the noise: the TUI hides its cursor, so the blink change does not apply. Hidden, the
+  compositor and the GPU process stay at zero; what remains is xterm parsing the output, the main process carrying it, and the
+  daemon.
+- **The review's lists** hold 60 fps on 1000 files since they arrived in v0.6.0 (#42, #44), with 16 rows in
+  the DOM at a time.
+
+## Watch next
+
+- **Broken now:** key to echo p95 in main (23 ms against 16; `next` brings it to 14), and the CLI toggle
+  (105 ms median, 130 ms p95, against 100). For the CLI, loading only what `toggle` needs (a dynamic
+  `import()` for the daemon, `ext` and settings commands) should save most of the 51 ms of bundle
+  evaluation; a V8 compile cache is the other lever. Recheck on the maintainer's machine, where D30 found
+  60 to 70 ms.
+- **Least headroom: memory**, 264 MB of 300 (36 MB, 12%). The renderer is 66 MB of it and grows with every
+  panel. An editor is the first feature that can eat the rest: CodeMirror 6 is small, while Monaco costs
+  tens of MB (roadmap). Load the editor with a dynamic `import()` on first use, so it costs nothing until a
+  file is opened, and run the idle phase with a file open before choosing.
+- **Key echo in an editor** does not cross the PTY, but it shares the renderer's frames. Any per-frame
+  animation brings back the frame slot wait measured here: CodeMirror 6 blinks its cursor with a CSS
+  animation (`drawSelection`'s `cursorBlinkRate`), the same shape D58 removed from the terminal, so blink
+  it with a timer or turn the blink off.
+- **Cold start**, 430 of 2000 ms, has room, but it grew by a third in five releases, mostly through
+  `main.cjs` and the UI bundle. An editor bundled into the boot path would add its parse time to every
+  start; loading it on first use avoids that.
+- **Large files**: the review already keeps 60 fps with 16 DOM rows for 1000 files. An editor has to keep
+  rendering only the viewport the same way (CodeMirror 6 does) and keep long lines and syntax work off
+  the frame.
+- **TUI rendering**, about 5 points of a core per busy tab shown, is untouched by the cursor change; the
+  WebGL candidate in `plans/terminal-rendering.md` is the open lever, and the script's `tui` phase is its
+  test.
