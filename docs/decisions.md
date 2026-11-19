@@ -701,6 +701,21 @@ over 5 s for 300 files on a Mac, so the adapter builds the addition from the fil
 `diff --no-index`: a diff driver, a clean filter, `ident`, a working tree encoding, or a carriage return
 when `text`, `eol`, `crlf` or `core.autocrlf` may convert line ends. A test compares both readers on every
 kind of file. To revert, send every file to `diffUntracked`.
+**Update: the review slides in and out (2026-11-19).** Opening the review (its key, the tab's menu, the hold
+menu, the panel's review button) grows its pane from nothing to its share while the terminal gives way,
+beside or below as the tab lays them out, and closing it does the reverse, with the side panel's motion
+(`--motion-normal`, `--motion-easing`, a `flex-basis` transition under `data-moving` in `styles/panes.css`,
+`slide` in `panes/tab-view.ts`); in a narrow tab, where the review takes the whole tab, it slides over the
+terminal the same way. The terminal keeps its grid meanwhile (`isMoving` holds its fit as D67's drag does)
+and fits once when the motion ends; the divider sits between the panes all along, and the focus, the pane's
+removal on close and the final layout come after the motion; a layout asked meanwhile (a focus change in a
+narrow tab, a resize) waits for its end. A second open or close finishes the one under way at once, and a
+transition that never reports its end is ended 200 ms after its length. With
+`prefers-reduced-motion: reduce` nothing moves. Measured under Xvfb with a review of 1000 changed files
+(the index and the diff virtualized), side by side and narrow, both themes, three opens and three closes
+each: 43 or 44 frames in 700 ms, no long task, and one frame over 20 ms (33 ms, a first open) in 24
+motions. To revert, drop `slide`, `isMoving` and the `animate` and `onMoved` options, and
+the `data-moving` rules.
 
 ## D48. The review fits the tab's shape, reads as one scroll and compares with where the branch started
 

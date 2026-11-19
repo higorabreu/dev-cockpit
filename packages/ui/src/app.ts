@@ -834,6 +834,8 @@ export async function startApp(
       onRatio: (orientation, ratio) => split.saveRatio(orientation, ratio),
       onArrange: (orientation, narrow) => reviews.arranged(id, orientation, narrow),
       onShownChange: () => renderTabs(),
+      animate: () => !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      onMoved: () => sessions.get(id)?.fit(),
     })
     tabViews.set(id, view)
     const session = await createTerminalSession({
@@ -841,7 +843,8 @@ export async function startApp(
       api,
       theme,
       fontSize: settings.current().fontSize,
-      holdFit: () => heldFit,
+      // The edge being dragged or a pane sliding: the grid waits and fits once at the end
+      holdFit: () => heldFit || view.isMoving(),
       ...terminalLook(settings.current(), systemFonts),
       macOptionAsMeta: settings.current().terminal.macOptionAsMeta,
       ...(options.cwd ? { cwd: options.cwd } : {}),
