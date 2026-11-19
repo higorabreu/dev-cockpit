@@ -60,10 +60,6 @@ export interface Platform {
 export const processAdapters = (platform: NodeJS.Platform) =>
   platform === 'darwin' ? macosProc : linuxProc
 
-// The UI is text on the DOM, which Chromium composites in software on Linux; the GPU process cost
-// about 25 MB idle (D50). The Mac keeps it until it is measured there
-export const usesGpu = (platform: NodeJS.Platform) => platform !== 'linux'
-
 // Electron runs as a Wayland client in a Wayland session unless told to use XWayland
 export const nativeWayland = (
   platform: NodeJS.Platform,

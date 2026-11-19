@@ -13,7 +13,6 @@ import {
   type PlatformContext,
   processAdapters,
   selectPlatform,
-  usesGpu,
 } from './select-platform.ts'
 
 let directory = ''
@@ -179,17 +178,6 @@ describe('selectPlatform', () => {
       expect(native).toBe(expected)
     },
   )
-
-  it.each([
-    { platform: 'linux' as const, expected: false },
-    { platform: 'darwin' as const, expected: true },
-  ])('should use the GPU $expected when the platform is $platform', ({ platform, expected }) => {
-    // Act
-    const gpu = usesGpu(platform)
-
-    // Assert
-    expect(gpu).toBe(expected)
-  })
 
   it.each([
     { name: 'macos-proc', platform: 'darwin' as const, expected: macosProc },
