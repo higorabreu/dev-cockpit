@@ -1,6 +1,13 @@
 import { closeSearchPanel } from '@codemirror/search'
 import { EditorSelection, type Extension, Facet, StateEffect, StateField } from '@codemirror/state'
-import { type Command, EditorView, keymap, type Panel, showPanel } from '@codemirror/view'
+import {
+  type Command,
+  EditorView,
+  keymap,
+  type Panel,
+  runScopeHandlers,
+  showPanel,
+} from '@codemirror/view'
 import { keys } from '../kit/keys.ts'
 import { h, icon } from '../panel/dom.ts'
 import { fieldBox, focusField, slideOut } from './find-field.ts'
@@ -130,6 +137,9 @@ function createGoToPanel(view: EditorView): Panel {
     } else if (event.key === 'Escape') {
       event.preventDefault()
       closeGoToLine(view)
+    } else if (runScopeHandlers(view, event, 'search-panel')) {
+      // Ctrl+F, Ctrl+H and Ctrl+G from this field, as from the find widget's
+      event.preventDefault()
     }
   })
   close.addEventListener('click', () => closeGoToLine(view))
@@ -184,7 +194,8 @@ export const goToLineBar = (texts: () => GoToTexts): Extension => [
   goToTexts.of(texts),
   goToOpen,
   keymap.of([
-    { key: 'Ctrl-g', run: openGoToLine, preventDefault: true },
+    // From the find widget's fields too, so the key swaps one drawer for the other as in VS Code
+    { key: 'Ctrl-g', run: openGoToLine, scope: 'editor search-panel', preventDefault: true },
     { key: 'Escape', run: closeGoToLine },
   ]),
 ]

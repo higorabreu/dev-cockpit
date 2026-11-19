@@ -277,7 +277,7 @@ function createSearchPanel(view: EditorView, mac: boolean, texts: () => SearchTe
         focusFind: () => focusField(find),
         showReplace,
       })
-      find.select()
+      focusField(find)
       showCount()
     },
     update(update: ViewUpdate) {
