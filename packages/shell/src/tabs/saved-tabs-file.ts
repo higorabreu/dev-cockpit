@@ -1,6 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import { type Logger, MAX_TAB_NAME, type SavedTabs } from '@dck/core'
+import { type Logger, MAX_RECENT_FILES, MAX_TAB_NAME, type SavedTabs } from '@dck/core'
 import { z } from 'zod'
 
 // A path or a name the window could send, bounded: the file is read back on every start
@@ -15,6 +15,7 @@ export const savedTabsSchema = z.object({
         project: text(4096).optional(),
         name: text(MAX_TAB_NAME).optional(),
         file: text(4096).optional(),
+        recent: z.array(text(4096)).max(MAX_RECENT_FILES).optional(),
       }),
     )
     .max(200),

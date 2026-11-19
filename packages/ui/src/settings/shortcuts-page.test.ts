@@ -105,7 +105,7 @@ describe('shortcuts page, recording an action key', () => {
     const buttons = [...body.querySelectorAll<HTMLElement>('button.skey')]
 
     // Assert
-    expect(buttons).toHaveLength(21)
+    expect(buttons).toHaveLength(22)
     expect(buttons[0]?.textContent).toBe('Ctrl+Shift+T')
     expect(buttons[0]?.getAttribute('aria-labelledby')).toBe(
       'set-label-shortcuts-keys-newTab set-key-newTab',

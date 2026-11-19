@@ -25,7 +25,6 @@ import {
   type ProgramStatus,
   type Project,
   relativePath,
-  rememberFile,
   renameTab,
   reorderTabs,
   reviewBaseFor,
@@ -44,6 +43,8 @@ import {
 import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
 import { createFileRanker, startRankWorker } from './file-search/file-ranker.ts'
 import { createFileSearch } from './file-search/file-search.ts'
+import { createFileTabs, type LeaveAnswer } from './files/file-tabs.ts'
+import { recentLabel } from './files/path-parts.ts'
 import { createHoldMenuController } from './hold-menu/hold-menu-controller.ts'
 import { setFullHeight } from './kit/layout-mode.ts'
 import { showRailDot } from './kit/rail-dot.ts'
@@ -221,16 +222,10 @@ export async function startApp(
       favorite: project.favorite === true,
     }))
 
-  // The files each tab opened from the search, newest first, paths only and only in memory
-  const recentFiles = new Map<string, readonly string[]>()
-
-  // Until the file view exists (F4, which replaces this function), a picked file opens as a Ctrl+click
-  // on a path does: in the system's app (D40)
+  // A picked file opens over the active tab, which keeps it in its recent list
   function openPickedFile(root: string, path: string) {
-    const file = absolutePath(root, path)
     const id = state.activeId
-    if (id !== undefined) recentFiles.set(id, rememberFile(recentFiles.get(id) ?? [], file))
-    api.paths.openFile(file)
+    if (id !== undefined) void fileTabs.openFile(id, absolutePath(root, path))
   }
 
   const fileSearch = createFileSearch(
@@ -265,7 +260,7 @@ export async function startApp(
   function searchFiles() {
     if (fileSearch.isOpen()) return fileSearch.toggleWiden()
     if (search.isOpen()) search.close()
-    const recent = state.activeId === undefined ? [] : (recentFiles.get(state.activeId) ?? [])
+    const recent = state.activeId === undefined ? [] : fileTabs.recent(state.activeId)
     void fileSearch.open(tabFolder(), (root) =>
       recent.flatMap((file) => relativePath(root, file) ?? []),
     )
@@ -320,9 +315,124 @@ export async function startApp(
   }
 
   const activeSession = () => (state.activeId ? sessions.get(state.activeId) : undefined)
-  // The pane of the active tab that last had the keys: its terminal or its review
-  const focusActive = () =>
-    state.activeId ? tabViews.get(state.activeId)?.focusCurrent() : undefined
+  // The file over the active tab when it shows, else the pane that last had the keys: its terminal or
+  // its review
+  const focusActive = () => {
+    const id = state.activeId
+    if (id !== undefined && !fileTabs.focus(id)) tabViews.get(id)?.focusCurrent()
+  }
+
+  // With auto save off, a file with edits about to close or be replaced asks, from its tab, as a menu with
+  // a caption; Esc or a click elsewhere cancels
+  function askLeave(tabId: string, name: string): Promise<LeaveAnswer> {
+    return new Promise((resolve) => {
+      let answer: LeaveAnswer = 'cancel'
+      const tab = [...elements.tabs.querySelectorAll<HTMLElement>('.tab')].find(
+        (element) => element.dataset.id === tabId,
+      )
+      const box = (tab ?? bar).getBoundingClientRect()
+      const above = !document.body.classList.contains('full')
+      const choose = (value: LeaveAnswer) => () => {
+        answer = value
+      }
+      menu.open(
+        [
+          { label: i18n.t('files.save'), enabled: true, run: choose('save') },
+          { label: i18n.t('files.discard'), enabled: true, run: choose('discard') },
+          { label: i18n.t('files.cancel'), enabled: true, run: choose('cancel') },
+        ],
+        box.left,
+        above ? box.top : box.bottom,
+        above,
+        // The menu closes before the chosen item runs, so the answer is read a moment later
+        () => setTimeout(() => resolve(answer)),
+        { caption: i18n.t('files.ask', { name }) },
+      )
+    })
+  }
+
+  const fileTabs = createFileTabs({
+    api,
+    i18n,
+    mac: keymap.keyboard === 'mac',
+    editorKeys: {
+      find: keymap.commandLabel('f'),
+      goToLine: keymap.chordLabel({ ctrl: true, key: 'g' }),
+    },
+    host: (tabId) => tabViews.get(tabId)?.element,
+    cwd: (tabId) => watcher.get(tabId)?.cwd,
+    autoSave: () => settings.current().files.autoSave,
+    autoMerge: () => settings.current().files.autoMerge,
+    ask: askLeave,
+    onChange() {
+      renderTabs()
+      saveTabsSoon()
+    },
+    focusTerminal: (tabId) => tabViews.get(tabId)?.focusCurrent(),
+    loadEditor: () => import('./editor/code-editor.ts'),
+    after(milliseconds, task) {
+      const timer = setTimeout(task, milliseconds)
+      return () => clearTimeout(timer)
+    },
+  })
+
+  // The file segment's right click: the tab's recent files to switch to, and Close file
+  function openFileMenu(tabId: string, x: number, y: number) {
+    const current = fileTabs.appendix(tabId)?.path
+    const recent = fileTabs.recent(tabId).filter((path) => path !== current)
+    const files =
+      recent.length === 0
+        ? [{ label: i18n.t('files.noRecent'), enabled: false, run: () => undefined }]
+        : recent.map((path) => ({
+            label: recentLabel(path, recent),
+            enabled: true,
+            run: () => void fileTabs.openFile(tabId, path),
+          }))
+    const save = {
+      label: i18n.t('files.save'),
+      enabled: fileTabs.appendix(tabId)?.mark === 'unsaved',
+      key: keymap.commandLabel('s'),
+      run: () => fileTabs.save(tabId),
+    }
+    const close = {
+      label: i18n.t('files.close'),
+      enabled: true,
+      run: () => void fileTabs.closeFile(tabId),
+    }
+    menu.open(
+      [...files, save, close],
+      x,
+      y,
+      !document.body.classList.contains('full'),
+      () => focusActive(),
+      { caption: i18n.t('files.recent') },
+    )
+  }
+
+  // The toggle key, the hold menu and the tab's menu: between the terminal (with its review) and the file
+  function toggleFile(tabId: string) {
+    update(activateTab(state, tabId))
+    fileTabs.toggle(tabId)
+  }
+
+  // The review opens under a file that shows: the file steps aside, so the keys reach what is on screen
+  function showPanes(tabId: string): string {
+    if (fileTabs.isShown(tabId)) fileTabs.show(tabId, false)
+    return tabId
+  }
+
+  const fileLabel = (tabId: string) =>
+    i18n.t(fileTabs.isShown(tabId) ? 'files.showTerminal' : 'files.show')
+
+  // The editor writes in the terminal's font family and size
+  function applyEditorFont() {
+    const root = document.documentElement.style
+    root.setProperty(
+      '--editor-font-family',
+      terminalLook(settings.current(), systemFonts).fontFamily,
+    )
+    root.setProperty('--editor-font-size', `${settings.current().fontSize}px`)
+  }
 
   const reviews = createReviewTabs({
     api,
@@ -402,7 +512,13 @@ export async function startApp(
   }
 
   function renderTabs() {
-    tabBar.render(state, attention.marks(), hiddenReviews())
+    const files = new Map(
+      state.tabs.flatMap((tab) => {
+        const appendix = fileTabs.appendix(tab.id)
+        return appendix ? [[tab.id, appendix] as const] : []
+      }),
+    )
+    tabBar.render(state, attention.marks(), hiddenReviews(), files)
   }
 
   function showAttention() {
@@ -511,13 +627,13 @@ export async function startApp(
             ),
           openTicket: (url) => api.external.open(url),
           openModule(path) {
-            if (state.activeId) reviews.showModule(state.activeId, path)
+            if (state.activeId) reviews.showModule(showPanes(state.activeId), path)
           },
           openFile(path) {
-            if (state.activeId) reviews.showFile(state.activeId, path)
+            if (state.activeId) reviews.showFile(showPanes(state.activeId), path)
           },
           openReview() {
-            if (state.activeId) reviews.show(state.activeId)
+            if (state.activeId) reviews.show(showPanes(state.activeId))
           },
         },
         i18n,
@@ -570,6 +686,7 @@ export async function startApp(
       session.setCursor(look.cursorStyle, look.cursorBlink)
     }
     for (const view of tabViews.values()) view.relayout()
+    applyEditorFont()
   }
 
   // Tabs that opened with a name of their own (a project's), which the next start gives them again
@@ -592,9 +709,12 @@ export async function startApp(
     const next = tabsToSave(state, (id) => {
       const cwd = watcher.get(id)?.cwd
       const project = projectOf(id)
+      const { file, recent } = fileTabs.saved(id)
       return {
         ...(cwd ? { cwd } : {}),
         ...(project ? { project } : {}),
+        ...(file ? { file } : {}),
+        recent,
         named: namedTabs.has(id),
       }
     })
@@ -625,6 +745,7 @@ export async function startApp(
         ...(tab.project ? { project: tab.project } : {}),
       })
       if (tab.name) state = renameTab(state, id, tab.name)
+      void fileTabs.restore(id, tab.file, tab.recent ?? [])
     }
     restoring = false
     lastSaved = saved
@@ -633,6 +754,9 @@ export async function startApp(
 
   function update(next: TabsState) {
     if (next === state) return
+    // Leaving a tab leaves its file: auto save writes it
+    if (state.activeId !== undefined && state.activeId !== next.activeId)
+      fileTabs.flush(state.activeId)
     state = next
     render()
   }
@@ -647,17 +771,21 @@ export async function startApp(
     connectHint.forget(id)
     for (const [path, tabId] of projectTabs) if (tabId === id) projectTabs.delete(path)
     namedTabs.delete(id)
-    recentFiles.delete(id)
+    fileTabs.forget(id)
   }
 
-  function close(id: string) {
+  // A file with edits is saved first, or the user is asked; a cancel keeps the tab
+  async function close(id: string) {
+    if (closeTab(state, id) === state || !(await fileTabs.confirmClose(id))) return
     const next = closeTab(state, id)
     if (next === state) return
     discard(id)
     update(next)
   }
 
-  function closeOthers(id: string) {
+  async function closeOthers(id: string) {
+    for (const tab of state.tabs)
+      if (tab.id !== id && !(await fileTabs.confirmClose(tab.id))) return
     for (const tab of state.tabs) if (tab.id !== id) discard(tab.id)
     update(closeOtherTabs(state, id))
   }
@@ -706,7 +834,7 @@ export async function startApp(
       },
       openMenu: (x, y) => openTerminalMenu(id, x, y),
       onCopied: (text) => notice.copied(text),
-      onExit: () => close(id),
+      onExit: () => void close(id),
       onInput() {
         // Only the key that answers a waiting agent redraws: the rest echo with no extra work
         if (attention.input(id)) showAttention()
@@ -838,6 +966,7 @@ export async function startApp(
       viewsView.retranslate()
       reviews.retranslate()
       for (const view of tabViews.values()) view.retranslate()
+      fileTabs.retranslate()
       showWorkWaiting(workWaiting)
       updateNotice.retranslate()
       quitCard.retranslate()
@@ -853,6 +982,7 @@ export async function startApp(
     // A connector was enabled or disabled: its tabs and the Work dot follow
     if (changed.includes('extensions.disabled')) void viewsView.warm()
     if (changed.includes('fontSize')) {
+      applyEditorFont()
       for (const session of sessions.values()) session.setFontSize(next.fontSize)
     }
     if (changed.some((key) => key.startsWith('appearance.')))
@@ -887,6 +1017,11 @@ export async function startApp(
         if (name !== undefined) state = renameTab(state, id, name)
         render()
       },
+      showFile(id, shown) {
+        update(activateTab(state, id))
+        fileTabs.show(id, shown)
+      },
+      fileMenu: openFileMenu,
       contextMenu(id, x, y) {
         const several = state.tabs.length > 1
         menu.open(
@@ -900,6 +1035,16 @@ export async function startApp(
               enabled: true,
               run: () => (reviews.isOpen(id) ? reviews.close(id) : toggleReview(id)),
             },
+            ...(fileTabs.has(id)
+              ? [
+                  {
+                    label: fileLabel(id),
+                    enabled: true,
+                    key: keymap.label('toggleFile'),
+                    run: () => toggleFile(id),
+                  },
+                ]
+              : []),
           ],
           x,
           y,
@@ -931,6 +1076,7 @@ export async function startApp(
   // The review belongs to a tab: it opens on that tab, which comes to the front
   function toggleReview(id: string) {
     update(activateTab(state, id))
+    showPanes(id)
     reviews.toggle(id)
   }
 
@@ -953,6 +1099,7 @@ export async function startApp(
     togglePanel,
     toggleFullHeight: () => api.window.toggleFullHeight(),
     clearTerminal: () => activeSession()?.clear(),
+    toggleFile: () => state.activeId && toggleFile(state.activeId),
     nextFinished() {
       const id = attention.nextUnseen(state.activeId)
       if (id) update(activateTab(state, id))
@@ -980,6 +1127,7 @@ export async function startApp(
     'tab:review': actions.toggleReview,
     'tab:review-layout': actions.toggleReviewLayout,
     'tab:clear': actions.clearTerminal,
+    'tab:file': actions.toggleFile,
     'agent:claude': () => activeSession()?.write('claude\r'),
     'agent:resume': () => activeSession()?.write('claude --resume\r'),
     [CONNECT_ITEM]: () => state.activeId && connectTab(state.activeId),
@@ -1032,6 +1180,15 @@ export async function startApp(
             label: i18n.t('terminal.clear'),
             shortcut: keymap.label('clearTerminal'),
           },
+          ...(state.activeId !== undefined && fileTabs.has(state.activeId)
+            ? [
+                {
+                  id: 'tab:file',
+                  label: fileLabel(state.activeId),
+                  shortcut: keymap.label('toggleFile'),
+                },
+              ]
+            : []),
         ],
       },
       {
@@ -1159,6 +1316,10 @@ export async function startApp(
     }
   })
   window.addEventListener('focus', markActiveSeen)
+  // Hiding the window leaves the files: auto save writes them
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) fileTabs.flushAll()
+  })
   api.notifications.onClick((tabId) => {
     if (state.tabs.some((tab) => tab.id === tabId)) update(activateTab(state, tabId))
   })
@@ -1184,6 +1345,7 @@ export async function startApp(
   const [, readFonts] = await Promise.all([refreshProjects(), api.fonts.system()])
   systemFonts = readFonts
   applyAppearance(document.documentElement, settings.current().appearance)
+  applyEditorFont()
   await loadFont(
     settings.current().fontSize,
     terminalLook(settings.current(), systemFonts).fontFamily,

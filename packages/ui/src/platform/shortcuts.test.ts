@@ -33,6 +33,7 @@ function bind(keyboard: Keyboard, custom: CustomKeys = {}) {
     changeOpacity: record('changeOpacity'),
     changeFontSize: record('changeFontSize'),
     clearTerminal: record('clearTerminal'),
+    toggleFile: record('toggleFile'),
   }
   unbind = bindShortcuts(
     actions,
@@ -175,6 +176,28 @@ describe('bindShortcuts', () => {
     // Assert
     expect(ran).toEqual(['clearTerminal'])
     expect(plain.defaultPrevented).toBe(false)
+  })
+
+  it('should switch between the file and the terminal with Ctrl+Shift+Space and keep the key from the editor', () => {
+    // Arrange
+    const ran = bind('pc')
+
+    // Act
+    const event = press({ key: ' ', code: 'Space', ctrlKey: true, shiftKey: true })
+    const plain = press({ key: ' ', code: 'Space', ctrlKey: true })
+
+    // Assert
+    expect(ran).toEqual(['toggleFile'])
+    expect(event.defaultPrevented).toBe(true)
+    expect(plain.defaultPrevented).toBe(false)
+  })
+
+  it('should switch between the file and the terminal with Shift+Cmd+Space when the keyboard is a Mac one', () => {
+    const ran = bind('mac')
+
+    press({ key: ' ', code: 'Space', metaKey: true, shiftKey: true })
+
+    expect(ran).toEqual(['toggleFile'])
   })
 
   it('should open a tab with Ctrl+Shift+T when the keyboard is a PC one', () => {

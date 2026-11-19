@@ -93,8 +93,9 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     )
 
   // The editor draws code on the window, under a selection or a search match (the selected line's tint) and
-  // on the lines a merge took from the disk (the added line's tint). The indent guides are decorative, and
-  // the comments, as the maintainer chose them, reach 4.5:1 on the window only
+  // on the lines a merge took from the disk and the sides of Compare (the added and removed lines' tints).
+  // The indent guides are decorative; the comments, as the maintainer chose them, reach 4.5:1 on the
+  // window only
   const { indentGuide: _decorative, ...roles } = syntax
   const code = Object.entries(roles).flatMap(([name, hex]) => [
     [`syntax ${name} on the editor`, rgb(hex), rgb(color.bg), TEXT] as const,
@@ -103,6 +104,7 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
       : ([
           [`syntax ${name} on a selection`, rgb(hex), selectedLine(color.bg), TEXT],
           [`syntax ${name} on a line from the disk`, rgb(hex), rgb(color.diffAdd), TEXT],
+          [`syntax ${name} on a removed line`, rgb(hex), rgb(color.diffRemove), TEXT],
         ] as const)),
   ])
 

@@ -11,6 +11,7 @@ export const SHORTCUT_IDS = [
   'nextTab',
   'previousTab',
   'clearTerminal',
+  'toggleFile',
   'review',
   'reviewLayout',
   'reviewSend',
