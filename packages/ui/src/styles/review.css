@@ -23,14 +23,17 @@
   z-index: 3;
 }
 
+/* The panel's header beside it has the same height, divider included, so their lines meet in one */
 .rv-head {
   flex: none;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 12px;
   min-width: 0;
-  padding: 6px 8px 6px 12px;
-  border-bottom: 1px solid var(--line);
+  height: var(--size-header);
+  padding: 0 8px 0 12px;
+  border-bottom: var(--size-hairline) solid var(--line);
 }
 
 /* With little room the scope gives way first, down to its current label: it is as wide as its longest
@@ -169,7 +172,7 @@
   max-height: min(34%, 232px);
   padding-block: 4px;
   overflow-y: auto;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--size-hairline) solid var(--line);
   outline: none;
 }
 
@@ -189,7 +192,7 @@
   .rv-files {
     width: clamp(208px, 24%, 272px);
     max-height: none;
-    border-right: 1px solid var(--line);
+    border-right: var(--size-hairline) solid var(--line);
     border-bottom: 0;
   }
 }
@@ -204,7 +207,7 @@
   align-items: center;
   gap: 8px;
   padding: 0 8px;
-  border-bottom: 1px solid transparent;
+  border-bottom: var(--size-hairline) solid transparent;
   border-radius: var(--radius-medium);
   background-clip: padding-box;
   font-size: 12.5px;
@@ -357,7 +360,7 @@
 .rv-modpart {
   flex: none;
   padding: 0 5px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-small);
   color: var(--muted);
   font-size: 11px;
@@ -594,7 +597,7 @@
   gap: 8px;
   height: 32px;
   padding: 0 8px;
-  border-block: 1px solid var(--line);
+  border-block: var(--size-hairline) solid var(--line);
   background: var(--surface);
   color: var(--fg);
   font: 12.5px var(--font-sans);
@@ -637,7 +640,7 @@
   max-width: 40%;
   overflow: hidden;
   padding: 1px 6px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-small);
   color: var(--muted);
   font-size: 11px;
@@ -664,6 +667,12 @@
   flex: 1 0 0;
 }
 
+/* Open file: an icon of the band's own height, beside Viewed */
+.rv-fhead .rv-icon {
+  width: 22px;
+  height: 22px;
+}
+
 .vbtn.rv-show {
   flex: none;
   padding: 1px 8px;
@@ -677,7 +686,7 @@
   align-items: center;
   gap: 5px;
   padding: 1px 6px 1px 4px;
-  border: 1px solid transparent;
+  border: var(--size-hairline) solid transparent;
   border-radius: var(--radius-small);
   background: none;
   color: var(--muted);
@@ -766,7 +775,7 @@
 .rv-editor {
   box-sizing: border-box;
   max-width: 760px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-medium);
   background: var(--surface);
   color: var(--fg);

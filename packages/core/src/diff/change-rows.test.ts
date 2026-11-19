@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { changeRows, type FileOpening, fileNotice, isCollapsed } from './change-rows.ts'
+import { changeRows, type FileOpening, fileNotice, isCollapsed, lineToOpen } from './change-rows.ts'
 import { hunkLines, type ReviewComment } from './comments.ts'
 import type { DiffFile } from './diff.ts'
 import { parseUnifiedDiff } from './parse.ts'
@@ -171,5 +171,81 @@ describe('changeRows', () => {
       'gone:3',
       'comment:3',
     ])
+  })
+})
+
+describe('lineToOpen', () => {
+  const twoHunks = [
+    'diff --git a/src/b.ts b/src/b.ts',
+    '--- a/src/b.ts',
+    '+++ b/src/b.ts',
+    '@@ -10,3 +10,2 @@',
+    ' l10',
+    '-l11',
+    ' l12',
+    '@@ -40,2 +39,3 @@',
+    ' l40',
+    '+n40',
+    ' l41',
+    '',
+  ].join('\n')
+  const setup = () => {
+    const [file] = parseUnifiedDiff(twoHunks)
+    if (!file) throw new Error('invariant: a file')
+    const rows = changeRows([file], () => closed)
+    const at = (kind: string, line?: number) =>
+      rows.findIndex(
+        (row) =>
+          row.kind === kind && (line === undefined || (row.kind === 'line' && row.line === line)),
+      )
+    return { file, rows, at }
+  }
+
+  it('should open at the line under the cursor when the cursor is on the file', () => {
+    // Arrange
+    const { file, rows } = setup()
+    const added = rows.findIndex((row) => row.kind === 'line' && row.hunk === 1 && row.line === 1)
+
+    // Act
+    const line = lineToOpen(file, 0, rows, { cursor: added, first: 0, last: rows.length - 1 })
+
+    // Assert
+    expect(line).toBe(40)
+  })
+
+  it('should open where a removed line was when the cursor is on it', () => {
+    const { file, rows, at } = setup()
+
+    const line = lineToOpen(file, 0, rows, { cursor: at('line', 1), first: 0, last: 0 })
+
+    expect(line).toBe(11)
+  })
+
+  it('should open at the first changed line on screen when the cursor is on another file', () => {
+    // Arrange
+    const { file, rows } = setup()
+    const secondHunk = rows.findIndex((row) => row.kind === 'hunk' && row.hunk === 1)
+
+    // Act
+    const line = lineToOpen(file, 0, rows, {
+      cursor: 0,
+      first: secondHunk,
+      last: rows.length - 1,
+    })
+
+    // Assert
+    expect(line).toBe(40)
+  })
+
+  it("should open at the file's first change when none of its lines is on screen", () => {
+    const { file, rows } = setup()
+
+    expect(lineToOpen(file, 0, rows, { cursor: -1, first: 0, last: -1 })).toBe(11)
+  })
+
+  it('should give no line when the file has no hunks', () => {
+    const [, , logo] = files()
+
+    expect(logo && lineToOpen(logo, 2, [], { cursor: 0, first: 0, last: 0 })).toBeUndefined()
   })
 })

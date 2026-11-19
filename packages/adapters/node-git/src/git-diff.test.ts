@@ -664,6 +664,32 @@ describe('statusPaths', () => {
   })
 })
 
+describe('root', () => {
+  it('should answer the outermost repository when the folder is inside a nested submodule', async () => {
+    // Arrange
+    const acme = await nested()
+    const source = createGitDiffSource()
+
+    // Act
+    const roots = await Promise.all([
+      source.root(join(acme, 'libs/lib/vendor/deep/src')),
+      source.root(join(acme, 'libs/lib')),
+      source.root(acme),
+    ])
+
+    // Assert
+    const top = await realpath(acme)
+    expect(roots).toEqual([top, top, top])
+  })
+
+  it('should answer nothing when the folder is not in a repository', async () => {
+    const outside = join(directory, 'loose')
+    await mkdir(outside)
+
+    expect(await createGitDiffSource().root(outside)).toBeUndefined()
+  })
+})
+
 describe('fingerprint', () => {
   it('should stay the same when nothing changed and change when a changed file is written again', async () => {
     // Arrange

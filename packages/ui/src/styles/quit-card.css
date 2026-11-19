@@ -23,7 +23,7 @@
   flex-direction: column;
   gap: 8px;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-large);
 }
 

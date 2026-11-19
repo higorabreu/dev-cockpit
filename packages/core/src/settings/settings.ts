@@ -184,6 +184,8 @@ export const settingsSchema = z.preprocess(
       autoSave: z.boolean().catch(true),
       // A change on disk away from the user's edited lines joins them instead of asking (D81)
       autoMerge: z.boolean().catch(true),
+      // A file path Ctrl+clicked in a terminal opens over its tab; off, in the system's app as before (D84)
+      openPathsInCockpit: z.boolean().catch(true),
     }),
     extensions: section({
       // Managed by `dck ext enable` and `dck ext disable`, not by the settings screen

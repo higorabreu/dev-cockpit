@@ -149,4 +149,48 @@ window.addEventListener(
   { capture: true, passive: true },
 )
 
+// The file view (viewers.cjs): when what a file shows is on screen, from the last key pressed. An image
+// and an SVG show once their bitmap is drawn, the preview once it holds the rendered text, the editor once
+// CodeMirror is in place; a PDF once its frame has loaded the viewer
+let lastKey = 0
+window.addEventListener(
+  'keydown',
+  (event) => {
+    lastKey = performance.timeOrigin + event.timeStamp
+  },
+  true,
+)
+
+function watchViewers() {
+  const seen = new WeakSet()
+  const report = (viewer, element) => {
+    if (seen.has(element)) return
+    seen.add(element)
+    const key = lastKey
+    const dom = now()
+    afterFrame((frame) => send('viewer', { viewer, key, dom, frame }))
+  }
+  new MutationObserver(() => {
+    const view = document.querySelector('.file-view:not([hidden])')
+    if (!view) return
+    const image = view.querySelector('.image-view')
+    if (image) report('image', image)
+    const preview = view.querySelector('.md-preview')
+    if (preview && preview.childElementCount > 0) report('preview', preview)
+    const editor = view.querySelector('.cm-editor')
+    if (editor) report('editor', editor)
+    const pdf = view.querySelector('iframe.pdf-view')
+    if (pdf && !seen.has(pdf)) {
+      seen.add(pdf)
+      const key = lastKey
+      pdf.addEventListener(
+        'load',
+        () => afterFrame((frame) => send('viewer', { viewer: 'pdf', key, frame })),
+        { once: true },
+      )
+    }
+  }).observe(document, { childList: true, subtree: true })
+}
+
 watchPrompt()
+watchViewers()

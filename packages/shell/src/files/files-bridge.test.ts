@@ -7,7 +7,8 @@ import { registerFilesBridge } from './files-bridge.ts'
 
 const ID = '0a1b2c3d-0000-4000-8000-000000000001'
 
-function setup() {
+function setup(links: Readonly<Record<string, string>> = {}) {
+  let ids = 0
   const handlers = new Map<string, (...args: unknown[]) => unknown>()
   const ipcMain: IpcMainApi = {
     handle: (channel, listener) =>
@@ -20,9 +21,11 @@ function setup() {
   const files = registerFilesBridge({
     ipcMain,
     store,
+    ignore: { isIgnored: async (path: string) => path.endsWith('.env') },
     logger: silentLogger,
     send: (...args) => void sent.push(args),
-    newId: () => ID,
+    newId: () => (ids++ === 0 ? ID : `0a1b2c3d-0000-4000-8000-${String(ids).padStart(12, '0')}`),
+    realPath: async (path) => links[path] ?? path,
   })
   const call = (channel: string, ...args: unknown[]) => handlers.get(channel)?.({}, ...args)
   const protocol = createFileProtocol({ pathOf: files.mediaPath, store, logger: silentLogger })
@@ -224,5 +227,168 @@ describe('file protocol', () => {
     // Assert
     expect(posted.status).toBe(404)
     expect(store.calls.filter((call) => call.startsWith('read'))).toEqual([])
+  })
+})
+
+describe('registerFilesBridge editorconfig and ignored', () => {
+  it('should list the editorconfig files above an opened file up to the one marked root', async () => {
+    // Arrange
+    const { call, store } = setup()
+    store.put('/home/ana/acme/src/login.ts', 'x\n')
+    store.put('/home/ana/acme/src/.editorconfig', '[*.ts]\nindent_size = 4\n')
+    store.put('/home/ana/acme/.editorconfig', 'root = true\n[*]\nindent_size = 2\n')
+    store.put('/home/ana/.editorconfig', '[*]\nindent_style = tab\n')
+    await call(hostChannels.filesOpen, '/home/ana/acme/src/login.ts')
+
+    // Act
+    const files = await call(hostChannels.filesEditorConfig, '/home/ana/acme/src/login.ts')
+
+    // Assert
+    expect(files).toEqual([
+      { dir: '/home/ana/acme/src', text: '[*.ts]\nindent_size = 4\n' },
+      { dir: '/home/ana/acme', text: 'root = true\n[*]\nindent_size = 2\n' },
+    ])
+  })
+
+  it('should answer nothing for a file that was not opened when asked for its settings', async () => {
+    const { call, store } = setup()
+    store.put('/home/ana/.editorconfig', '[*]\nindent_style = tab\n')
+
+    expect(await call(hostChannels.filesEditorConfig, '/home/ana/notes.txt')).toEqual([])
+    expect(await call(hostChannels.filesIgnored, '/home/ana/.env')).toBe(false)
+  })
+
+  it('should ask git whether an opened file is ignored when the window asks', async () => {
+    // Arrange
+    const { call, store } = setup()
+    store.put('/home/ana/acme/.env', 'TOKEN=x\n')
+    store.put('/home/ana/acme/app.ts', 'x\n')
+    await call(hostChannels.filesOpen, '/home/ana/acme/.env')
+    await call(hostChannels.filesOpen, '/home/ana/acme/app.ts')
+
+    // Act
+    const env = await call(hostChannels.filesIgnored, '/home/ana/acme/.env')
+    const app = await call(hostChannels.filesIgnored, '/home/ana/acme/app.ts')
+
+    // Assert
+    expect([env, app]).toEqual([true, false])
+  })
+})
+
+describe('registerFilesBridge Markdown images', () => {
+  const README = '/home/ana/acme/docs/README.md'
+
+  async function openReadme(links: Readonly<Record<string, string>> = {}) {
+    const bench = setup(links)
+    bench.store.put(README, '# Acme\n')
+    bench.store.put('/home/ana/acme/docs/img/shot.png', Uint8Array.of(0x89, 0x50))
+    bench.store.put('/home/ana/acme/docs/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>')
+    bench.store.put('/home/ana/acme/docs/notes.txt', 'secret\n')
+    bench.store.put('/home/ana/acme/logo.png', Uint8Array.of(0x89))
+    await bench.call(hostChannels.filesOpen, README)
+    return bench
+  }
+
+  it('should give an address to an image under the Markdown file folder and serve it', async () => {
+    // Arrange
+    const { call, protocol } = await openReadme()
+
+    // Act
+    const urls = (await call(hostChannels.filesAssets, {
+      document: README,
+      paths: ['/home/ana/acme/docs/img/shot.png', '/home/ana/acme/docs/logo.svg'],
+    })) as string[]
+    const png = await protocol(new Request(urls[0] ?? ''))
+    const svg = await protocol(new Request(urls[1] ?? ''))
+
+    // Assert
+    expect(urls.every((url) => url.startsWith('dck-file://open/'))).toBe(true)
+    expect(png.status).toBe(200)
+    expect(svg.headers.get('content-type')).toBe('image/svg+xml')
+    expect(svg.headers.get('content-security-policy')).toContain('sandbox')
+  })
+
+  it.each([
+    ['a file outside the folder', '/home/ana/acme/logo.png'],
+    ['a path that climbs out', '/home/ana/acme/docs/../logo.png'],
+    ['a file that is not an image', '/home/ana/acme/docs/notes.txt'],
+    ['a missing image', '/home/ana/acme/docs/gone.png'],
+    ['the folder itself', '/home/ana/acme/docs'],
+  ])('should refuse %s', async (_name, path) => {
+    const { call } = await openReadme()
+
+    const urls = await call(hostChannels.filesAssets, { document: README, paths: [path] })
+
+    expect(urls).toEqual([null])
+  })
+
+  it('should refuse an image whose link leads out of the folder', async () => {
+    const { call } = await openReadme({ '/home/ana/acme/docs/img/shot.png': '/etc/shot.png' })
+
+    const urls = await call(hostChannels.filesAssets, {
+      document: README,
+      paths: ['/home/ana/acme/docs/img/shot.png'],
+    })
+
+    expect(urls).toEqual([null])
+  })
+
+  it('should refuse images for a file that is not an open Markdown file', async () => {
+    // Arrange
+    const { call, store } = await openReadme()
+    store.put('/home/ana/acme/docs/index.ts', 'x\n')
+    await call(hostChannels.filesOpen, '/home/ana/acme/docs/index.ts')
+
+    // Act
+    const text = await call(hostChannels.filesAssets, {
+      document: '/home/ana/acme/docs/index.ts',
+      paths: ['/home/ana/acme/docs/img/shot.png'],
+    })
+    const never = await call(hostChannels.filesAssets, {
+      document: '/home/ana/other/README.md',
+      paths: ['/home/ana/other/a.png'],
+    })
+    const malformed = await call(hostChannels.filesAssets, { document: README, paths: 'a.png' })
+
+    // Assert
+    expect([text, never, malformed]).toEqual([[], [], []])
+  })
+
+  it('should stop serving the images when the Markdown file is released', async () => {
+    // Arrange
+    const { call, protocol } = await openReadme()
+    const [url] = (await call(hostChannels.filesAssets, {
+      document: README,
+      paths: ['/home/ana/acme/docs/img/shot.png'],
+    })) as string[]
+
+    // Act
+    call(hostChannels.filesRelease, README)
+    const response = await protocol(new Request(url ?? ''))
+
+    // Assert
+    expect(response.status).toBe(404)
+  })
+})
+
+describe('registerFilesBridge image bytes', () => {
+  it('should give the bytes of an opened image and nothing for a text or a file never opened', async () => {
+    // Arrange
+    const { call, store } = setup()
+    store.put('/home/ana/acme/logo.png', Uint8Array.of(0x89, 0x50, 0x4e, 0x47))
+    store.put('/home/ana/acme/index.ts', 'one\n')
+    store.put('/home/ana/acme/other.png', Uint8Array.of(0x89))
+    await call(hostChannels.filesOpen, '/home/ana/acme/logo.png')
+    await call(hostChannels.filesOpen, '/home/ana/acme/index.ts')
+
+    // Act
+    const image = await call(hostChannels.filesBytes, '/home/ana/acme/logo.png')
+    const text = await call(hostChannels.filesBytes, '/home/ana/acme/index.ts')
+    const never = await call(hostChannels.filesBytes, '/home/ana/acme/other.png')
+    const relative = await call(hostChannels.filesBytes, 'logo.png')
+
+    // Assert
+    expect([...((image as Uint8Array | undefined) ?? [])]).toEqual([0x89, 0x50, 0x4e, 0x47])
+    expect([text, never, relative]).toEqual([undefined, undefined, undefined])
   })
 })

@@ -19,18 +19,23 @@ export interface TipBox {
 interface TipHint {
   readonly key?: string
   readonly gesture?: Gesture
+  // A second held click on its own line, such as Ctrl+Shift+click opening a path the other way
+  readonly alternate?: { readonly key: string; readonly gesture: Gesture }
 }
 
 // A part of an element that has no node of its own, like a link drawn in the terminal
 export interface TipRegion extends TipHint {
   readonly text: string
   readonly box: TipBox
+  // A file path, which wraps only after a separator
+  readonly path?: boolean
 }
 
 interface Candidate extends TipHint {
   readonly anchor: HTMLElement
   readonly text: string
   readonly box?: TipBox
+  readonly path?: boolean
 }
 
 const regions = new WeakMap<HTMLElement, TipRegion>()
@@ -53,19 +58,60 @@ function isTruncated(element: HTMLElement): boolean {
 let shortcutLabel: (id: string) => string | undefined = () => undefined
 
 const tipOf = (anchor: HTMLElement, text: string): Candidate => {
+  // `data-tip-path`: the text is a file path, which wraps only after a separator
+  const tip = anchor.hasAttribute('data-tip-path') ? { anchor, text, path: true } : { anchor, text }
   const shortcut = anchor.getAttribute('data-tip-shortcut')
   const key =
     anchor.getAttribute('data-tip-key') ?? (shortcut ? shortcutLabel(shortcut) : undefined)
-  if (!key) return { anchor, text }
-  // A left click with the key held: `data-tip-gesture` is what it does, `data-tip-click` its spoken name
+  if (!key) return tip
+  // A left click with the key held: `data-tip-gesture` is what it does, `data-tip-click` its spoken name;
+  // `data-tip-alt-key` and `data-tip-alt-gesture` a second one with other keys, as Ctrl+Shift+click
   const action = anchor.getAttribute('data-tip-gesture')
   const click = anchor.getAttribute('data-tip-click')
-  return action && click ? { anchor, text, key, gesture: { click, action } } : { anchor, text, key }
+  if (!action || !click) return { ...tip, key }
+  const held = { ...tip, key, gesture: { click, action } }
+  const otherKey = anchor.getAttribute('data-tip-alt-key')
+  const other = anchor.getAttribute('data-tip-alt-gesture')
+  return otherKey && other
+    ? { ...held, alternate: { key: otherKey, gesture: { click, action: other } } }
+    : held
 }
 
-function hintOf({ key, gesture: held }: TipHint): HTMLElement[] {
+// A space before the keys keeps them apart from the text, and collapses when they wrap to a line of
+// their own, so they line up with the text's left edge instead of sitting indented
+function gap(): HTMLElement {
+  const space = document.createElement('span')
+  space.className = 'tip-gap'
+  space.textContent = ' '
+  return space
+}
+
+function hintOf({ key, gesture: held, alternate }: TipHint): HTMLElement[] {
   if (!key) return []
-  return [held ? gesture(key, held) : keys(key, 'compact')]
+  if (!held) return [gap(), keys(key, 'compact')]
+  return [gesture(key, held), ...(alternate ? [gesture(alternate.key, alternate.gesture)] : [])]
+}
+
+// About what fits on a line of the tooltip's width: a longer name is cut where the line ends rather than
+// overflow it
+const MAX_KEPT_NAME = 48
+
+function namePiece(part: string): Node {
+  if (part.length > MAX_KEPT_NAME) return document.createTextNode(part)
+  const name = document.createElement('span')
+  name.className = 'tip-name'
+  name.textContent = part
+  return name
+}
+
+// A break is allowed after each separator and nowhere else, not even after a hyphen inside a name, so a
+// long path never wraps inside a name; only a name too long for a line is cut
+export function pathText(path: string): Node[] {
+  return path
+    .split(/(?<=[\\/])/)
+    .flatMap((part, index) =>
+      index === 0 ? [namePiece(part)] : [document.createElement('wbr'), namePiece(part)],
+    )
 }
 
 // `data-tip` always shows the given text; text cut by an ellipsis shows its full content
@@ -132,7 +178,8 @@ export function installTooltips(options: TooltipOptions = {}) {
     if (!anchor.isConnected) return
     // A text of several lines, such as a list of commits, keeps each one on its own line, cut by the width
     const lines = text.split('\n')
-    const body = lines.length > 1 ? lines.map((line) => tipLine(line)) : [text]
+    const single = candidate.path ? pathText(text) : [text]
+    const body = lines.length > 1 ? lines.map((line) => tipLine(line)) : single
     tip.toggleAttribute('data-lines', lines.length > 1)
     tip.replaceChildren(...body, ...hintOf(candidate))
     // A stale position squeezes the tooltip against the edge and wraps the text, and the measurement comes out wrong

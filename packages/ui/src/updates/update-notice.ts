@@ -11,6 +11,8 @@ export interface UpdateNoticeDeps {
   agentTabs(): number
   // Writes the tabs at once, so the restarted cockpit opens them again
   saveTabs(): void
+  // Saves the open files first, or asks the user about them; false when the restart must wait
+  beforeRestart(): Promise<boolean>
   // Gives the keys back to the terminal after a click
   done(): void
   // The compact notice's actions, in the tab bar's small menu beside its icon, under a caption when given
@@ -85,8 +87,15 @@ export function createUpdateNotice(deps: UpdateNoticeDeps) {
       return
     }
     confirming = 0
-    deps.saveTabs()
-    updates.restart()
+    // A file that needs the user keeps the cockpit as it is, the update still ready
+    void deps.beforeRestart().then((allowed) => {
+      if (!allowed) {
+        render()
+        return
+      }
+      deps.saveTabs()
+      updates.restart()
+    })
   }
 
   function cancel() {

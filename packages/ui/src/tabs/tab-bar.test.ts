@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { createTranslator, emptyTabs, openTab } from '@dck/core'
 import { afterEach, describe, expect, it } from 'vitest'
+import type { FileAppendix } from '../files/file-tabs.ts'
 import { createTabBar } from './tab-bar.ts'
 
 function setup(language: 'en' | 'pt-BR' = 'en', middleClickCloses = true) {
@@ -8,6 +9,8 @@ function setup(language: 'en' | 'pt-BR' = 'en', middleClickCloses = true) {
   document.body.append(container)
   const renames: [string, string | undefined][] = []
   const closed: string[] = []
+  const shown: [string, boolean][] = []
+  const fileMenus: string[] = []
   const bar = createTabBar(
     container,
     {
@@ -17,6 +20,8 @@ function setup(language: 'en' | 'pt-BR' = 'en', middleClickCloses = true) {
       middleClickCloses: () => middleClickCloses,
       reorder: () => undefined,
       rename: (id, name) => void renames.push([id, name]),
+      showFile: (id, file) => void shown.push([id, file]),
+      fileMenu: (id) => void fileMenus.push(id),
     },
     createTranslator(language).t,
   )
@@ -24,7 +29,7 @@ function setup(language: 'en' | 'pt-BR' = 'en', middleClickCloses = true) {
     id: 'tab-2',
     label: 'shell 2',
   })
-  return { container, bar, state, renames, closed }
+  return { container, bar, state, renames, closed, shown, fileMenus }
 }
 
 afterEach(() => {
@@ -252,5 +257,110 @@ describe('createTabBar middle click', () => {
     // Assert
     expect(closed).toEqual([])
     expect(down.defaultPrevented).toBe(false)
+  })
+})
+
+const appendix = (overrides: Partial<FileAppendix> = {}): FileAppendix => ({
+  name: 'login.ts',
+  path: '/home/ana/acme/src/login.ts',
+  shown: true,
+  mark: undefined,
+  ...overrides,
+})
+
+describe('createTabBar file appendix', () => {
+  it('should draw the active tab as two segments in one outline when it has a file', () => {
+    // Arrange
+    const { container, bar, state } = setup()
+
+    // Act
+    bar.render(state, new Map(), new Set(), new Map([['tab-2', appendix()]]))
+
+    // Assert
+    const tab = container.querySelector<HTMLElement>('[data-id="tab-2"]')
+    expect(tab?.classList.contains('tab-appendix')).toBe(true)
+    expect(tab?.dataset.active).toBe('true')
+    const [terminal, file] = [...(tab?.querySelectorAll('.tab-part') ?? [])]
+    expect(terminal?.textContent).toBe('shell 2')
+    expect(terminal?.getAttribute('aria-selected')).toBe('false')
+    expect(file?.getAttribute('aria-selected')).toBe('true')
+    expect(file?.querySelector('.tab-file-name')?.textContent).toBe('login.ts')
+    expect(file?.getAttribute('data-tip')).toBe('/home/ana/acme/src/login.ts')
+    expect(file?.getAttribute('data-tip-shortcut')).toBe('toggleFile')
+    expect(file?.querySelector('.tab-file-name')?.getAttribute('data-tip')).toBe(
+      '/home/ana/acme/src/login.ts',
+    )
+    expect(tab?.querySelector('.tab-divider')).not.toBeNull()
+  })
+
+  it('should select the terminal segment when the file is hidden behind it', () => {
+    const { container, bar, state } = setup()
+
+    bar.render(state, new Map(), new Set(), new Map([['tab-2', appendix({ shown: false })]]))
+
+    const [terminal, file] = [...container.querySelectorAll('[data-id="tab-2"] .tab-part')]
+    expect(terminal?.getAttribute('aria-selected')).toBe('true')
+    expect(file?.getAttribute('aria-selected')).toBe('false')
+  })
+
+  it('should show only the glyph beside the name when an inactive tab has a file', () => {
+    const { container, bar, state } = setup()
+
+    bar.render(state, new Map(), new Set(), new Map([['tab-1', appendix({ mark: 'unsaved' })]]))
+
+    const tab = container.querySelector('[data-id="tab-1"]')
+    expect(tab?.classList.contains('tab-appendix')).toBe(false)
+    expect(tab?.querySelector('.tab-file-glyph svg')).not.toBeNull()
+    expect(tab?.querySelector('.tab-file-glyph .file-mark.unsaved')).not.toBeNull()
+  })
+
+  it('should name the unsaved ring and the conflict dot when the file has them', () => {
+    // Arrange
+    const { container, bar, state } = setup()
+
+    // Act
+    bar.render(state, new Map(), new Set(), new Map([['tab-2', appendix({ mark: 'unsaved' })]]))
+    const ring = container.querySelector('.tab-file .file-mark')
+    const ringLabel = [
+      ring?.className,
+      ring?.getAttribute('aria-label'),
+      ring?.getAttribute('data-tip'),
+    ]
+    bar.render(state, new Map(), new Set(), new Map([['tab-2', appendix({ mark: 'conflict' })]]))
+    const dot = container.querySelector('.tab-file .file-mark')
+
+    // Assert
+    expect(ringLabel).toEqual(['file-mark unsaved', 'Unsaved changes', 'Unsaved changes'])
+    expect(dot?.className).toBe('file-mark conflict')
+    expect(dot?.getAttribute('aria-label')).toBe('Changed on disk')
+  })
+
+  it('should name a file deleted on disk with the conflict dot when it is gone', () => {
+    const { container, bar, state } = setup()
+
+    bar.render(state, new Map(), new Set(), new Map([['tab-2', appendix({ mark: 'deleted' })]]))
+
+    const dot = container.querySelector('.tab-file .file-mark')
+    expect(dot?.className).toBe('file-mark conflict')
+    expect(dot?.getAttribute('data-tip')).toBe('Deleted on disk')
+  })
+
+  it('should switch between the segments and open the file menu when they are clicked', () => {
+    // Arrange
+    const { container, bar, state, shown, fileMenus } = setup()
+    bar.render(state, new Map(), new Set(), new Map([['tab-2', appendix()]]))
+    const parts = () => [...container.querySelectorAll<HTMLElement>('[data-id="tab-2"] .tab-part')]
+
+    // Act
+    parts()[0]?.click()
+    parts()[1]?.click()
+    parts()[1]?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }))
+
+    // Assert
+    expect(shown).toEqual([
+      ['tab-2', false],
+      ['tab-2', true],
+    ])
+    expect(fileMenus).toEqual(['tab-2'])
   })
 })

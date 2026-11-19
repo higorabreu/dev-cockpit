@@ -1,0 +1,115 @@
+/* A tab with a file over it (plans/files.md, "Where"). The active one grows a second segment inside one
+   1px outline, `api │ login.ts`, at the same height as any tab: 1px of outline, 1px of inset and 3px of
+   padding stand for the plain tab's 5px. A 1px divider sits between the segments, hidden beside the
+   active one, which takes the selected tab's style */
+#bar {
+  container: bar / inline-size;
+}
+
+.tab.tab-appendix {
+  max-width: none;
+  gap: 1px;
+  padding: 1px;
+  border: var(--size-hairline) solid var(--line);
+}
+
+.tab-part {
+  flex: none;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 0;
+  border-radius: calc(var(--radius-medium) - 2px);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tab-part.tab-terminal {
+  max-width: 160px;
+}
+
+.tab-part.tab-file {
+  flex: 0 1 auto;
+  padding-left: 8px;
+}
+
+.tab-part:hover {
+  color: var(--fg);
+}
+
+.tab-part[aria-selected="true"] {
+  background: var(--tab-active);
+  color: var(--fg);
+}
+
+.tab-part:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: -2px;
+}
+
+.tab-part svg {
+  flex: none;
+  display: block;
+}
+
+.tab-divider {
+  flex: none;
+  width: 0;
+  height: 14px;
+  border-left: var(--size-hairline) solid var(--line);
+}
+
+.tab-appendix:has(.tab-part[aria-selected="true"]) .tab-divider {
+  visibility: hidden;
+}
+
+.tab-file-name {
+  min-width: 0;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A narrow window shrinks the file's name, then leaves only its glyph */
+@container bar (max-width: 900px) {
+  .tab-file-name {
+    max-width: 64px;
+  }
+}
+
+@container bar (max-width: 600px) {
+  .tab-file-name {
+    display: none;
+  }
+}
+
+/* An inactive tab with a file: the glyph beside the name, in the muted color, with the file's mark */
+.tab-file-glyph {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+}
+
+/* Ring: edits not saved yet. Filled dot in the warning color: a conflict with the disk */
+.file-mark {
+  flex: none;
+  box-sizing: border-box;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.file-mark.unsaved {
+  border: 1.5px solid currentColor;
+}
+
+.file-mark.conflict {
+  background: var(--warning);
+}

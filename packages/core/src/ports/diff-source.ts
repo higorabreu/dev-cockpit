@@ -34,4 +34,7 @@ export interface DiffSource {
   // (HEAD, the status, the size or time of a changed file), far cheaper than the diff; undefined when it
   // cannot be read, so the caller keeps what it has
   fingerprint(cwd: string): Promise<string | undefined>
+  // The top folder of the outermost repository holding a folder: a submodule's answers its superproject's,
+  // so a file's path is written from the project the user opened; undefined outside a repository
+  root(cwd: string): Promise<string | undefined>
 }

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { createTabMenu } from './tab-menu.ts'
+import { createTabMenu, placeMenu } from './tab-menu.ts'
 
 function setup() {
   document.body.replaceChildren()
@@ -223,5 +223,113 @@ describe('createTabMenu options', () => {
     // Assert
     expect(afterOld).toBe(false)
     expect(element.hidden).toBe(true)
+  })
+})
+
+describe('placeMenu', () => {
+  const view = { width: 800, height: 300 }
+
+  it('should open on the side asked when the menu fits there', () => {
+    const place = placeMenu({ x: 100, y: 250, width: 180, height: 120, above: true }, view)
+
+    expect(place).toEqual({ left: 100, top: 124 })
+  })
+
+  it('should open on the other side when only that side has room', () => {
+    const place = placeMenu({ x: 100, y: 40, width: 180, height: 120, above: true }, view)
+
+    expect(place).toEqual({ left: 100, top: 46 })
+  })
+
+  it('should take the window height with a 4 px margin when it fits on neither side', () => {
+    const place = placeMenu({ x: 100, y: 150, width: 180, height: 400, above: false }, view)
+
+    expect(place).toEqual({ left: 100, top: 4, maxHeight: 292 })
+  })
+
+  it('should keep 4 px from the right edge when the menu is wider than the room left', () => {
+    const place = placeMenu({ x: 700, y: 20, width: 180, height: 40, above: false }, view)
+
+    expect(place.left).toBe(616)
+  })
+})
+
+describe('createTabMenu in a short window', () => {
+  const actions = (count: number) =>
+    Array.from({ length: count }, (_, index) => ({
+      label: `file-${index}.ts`,
+      enabled: true,
+      run: () => undefined,
+    }))
+
+  it('should cap its height and keep the footer apart from the list when the window is too short', () => {
+    // Arrange
+    const { menu, element } = setup()
+    element.getBoundingClientRect = () => new DOMRect(0, 0, 180, 900)
+    const close = { label: 'Close file', enabled: true, run: () => undefined }
+
+    // Act
+    menu.open(actions(30), 100, 300, true, undefined, { caption: 'Recent', footer: [close] })
+
+    // Assert
+    expect(element.style.maxHeight).toBe(`${window.innerHeight - 8}px`)
+    expect(element.style.top).toBe('4px')
+    const list = element.querySelector('.menu-list.scroll')
+    expect(list?.querySelectorAll('button')).toHaveLength(30)
+    expect(element.querySelector('.menu-divider')?.getAttribute('role')).toBe('separator')
+    expect(element.querySelector('.menu-footer')?.textContent).toBe('Close file')
+  })
+
+  it('should reach the footer and scroll each item into view when the arrows walk the list', () => {
+    // Arrange
+    const { menu, focused, press } = setup()
+    const scrolled: string[] = []
+    const scrollIntoView = HTMLElement.prototype.scrollIntoView
+    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
+      scrolled.push(this.textContent ?? '')
+    }
+    const close = { label: 'Close file', enabled: true, run: () => undefined }
+    menu.open(actions(3), 100, 100, false, undefined, { footer: [close] })
+
+    // Act
+    press('End')
+    const last = focused()
+    press('ArrowDown')
+    HTMLElement.prototype.scrollIntoView = scrollIntoView
+
+    // Assert
+    expect(last).toBe('Close file')
+    expect(focused()).toBe('file-0.ts')
+    expect(scrolled).toEqual(['Close file', 'file-0.ts'])
+  })
+
+  it('should drop the cap of a short window when it opens again with room', () => {
+    // Arrange
+    const { menu, element } = setup()
+    element.getBoundingClientRect = () => new DOMRect(0, 0, 180, 5000)
+    menu.open(actions(3), 100, 100, false)
+    element.getBoundingClientRect = () => new DOMRect(0, 0, 180, 60)
+
+    // Act
+    menu.open(actions(3), 100, 100, false)
+
+    // Assert
+    expect(element.style.maxHeight).toBe('')
+    expect(element.style.top).toBe('106px')
+  })
+
+  it('should show the detail beside the label in its own span when an item has one', () => {
+    const { menu, element } = setup()
+
+    menu.open(
+      [{ label: 'settings.json', detail: 'acme/api', enabled: true, run: () => undefined }],
+      100,
+      100,
+      false,
+    )
+
+    const item = element.querySelector('button')
+    expect(item?.querySelector('span')?.textContent).toBe('settings.json')
+    expect(item?.querySelector('.menu-detail')?.textContent).toBe('acme/api')
   })
 })

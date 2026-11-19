@@ -344,6 +344,12 @@ export function registerHostBridge(options: BridgeOptions) {
     if (!parsed.success || !(await isFolder(parsed.data))) return undefined
     return options.review.fingerprint(parsed.data)
   })
+  // Asked when a tab's folder changes, to write its files' paths from the project; nothing else is read
+  ipcMain.handle(hostChannels.reviewRoot, async (_event, cwd: unknown) => {
+    const parsed = absolutePathSchema.safeParse(cwd)
+    if (!parsed.success || !(await isFolder(parsed.data))) return undefined
+    return options.review.root(parsed.data)
+  })
   ipcMain.handle(hostChannels.autostartGet, () => options.autostart.isEnabled())
   ipcMain.handle(hostChannels.autostartSet, async (_event, enabled: unknown) => {
     await options.autostart.setEnabled(enabled === true)

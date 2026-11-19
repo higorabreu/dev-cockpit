@@ -255,6 +255,25 @@ describe('createNodeFileStore watch', () => {
     stop()
   })
 
+  it('should report a deletion made while the folder watch starts when no event comes for it', async () => {
+    // Arrange: a folder watch that never reports, as macOS's events can be for a change right at its start
+    const path = join(folder, 'index.ts')
+    await writeFile(path, 'one\n')
+    const { changes, listener } = collect()
+    const silent = createNodeFileStore({
+      settleMs: 20,
+      watchFolder: () => ({ close: () => undefined }),
+    })
+    const stop = value(silent.watch(path, await stampOf(path), listener))
+
+    // Act
+    await unlink(path)
+
+    // Assert
+    await vi.waitFor(() => expect(changes).toEqual([{ kind: 'deleted' }]))
+    stop()
+  })
+
   it('should report only the end of a write that empties the file first and fills it later', async () => {
     // Arrange
     const path = join(folder, 'index.ts')

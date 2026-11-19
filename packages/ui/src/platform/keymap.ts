@@ -46,6 +46,8 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     reviewSend: [{ ...CS, key: 'Enter' }],
     theme: [{ ...CS, key: 'l' }],
     projects: [{ ...CS, key: 'p' }],
+    // Ctrl+P stays with the shell (D13); the Shortcuts page offers it in one click
+    fileSearch: [{ ...CS, key: 'o' }],
     views: [{ ...CS, key: 'm' }],
     panel: [{ ...CS, key: 'b' }],
     fullHeight: [{ key: 'F11' }],
@@ -59,6 +61,10 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     fontSmaller: [{ ...C, key: '-' }],
     fontReset: [{ ...C, key: '0' }],
     clearTerminal: [{ ...CS, key: 'k' }],
+    // Esc stays with the editor and Ctrl+` is a dead key on ABNT2 (plans/files.md)
+    toggleFile: [{ ...CS, key: ' ' }],
+    // Ctrl+Shift+V, VS Code's, pastes in the terminal
+    filePreview: [{ ...CS, key: 'j' }],
   },
   // Cmd where Terminal.app and VS Code use it, so Ctrl stays with the shell
   mac: {
@@ -82,6 +88,8 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     reviewSend: [{ ...MS, key: 'Enter' }],
     theme: [{ ...MS, key: 'l' }],
     projects: [{ ...MS, key: 'p' }],
+    // Quick open as in VS Code; Cmd leaves Ctrl+P to the shell
+    fileSearch: [{ ...M, key: 'p' }],
     views: [{ ...MS, key: 'm' }],
     panel: [{ ...MS, key: 'b' }],
     // F11 shows the desktop on a Mac; Ctrl+Cmd+F is its full screen key
@@ -97,6 +105,9 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     fontReset: [{ ...M, key: '0' }],
     // Terminal.app, iTerm2 and VS Code clear with Cmd+K
     clearTerminal: [{ ...M, key: 'k' }],
+    // ⌘Space and ⌥⌘Space are Spotlight's, ⌃Space and ⌃⌥Space the input sources', ⌃⌘Space the emoji viewer
+    toggleFile: [{ ...MS, key: ' ' }],
+    filePreview: [{ ...MS, key: 'j' }],
   },
 }
 
@@ -197,6 +208,8 @@ export interface Keymap {
   readonly click: {
     readonly modifier: 'meta' | 'ctrl'
     readonly label: string
+    // The same click with Shift too, which opens a path the other way (Ctrl+Shift, ⇧⌘)
+    readonly alternateLabel: string
     isHeld(event: Pick<MouseEvent, 'ctrlKey' | 'metaKey'>): boolean
   }
   matches(event: KeyInput, id: ShortcutId): boolean
@@ -246,6 +259,7 @@ export function createKeymap(keyboard: Keyboard, custom: () => CustomKeys = () =
     click: {
       modifier: primary.meta ? 'meta' : 'ctrl',
       label: modifiersLabel(primary, keyboard),
+      alternateLabel: modifiersLabel({ ...primary, shift: true }, keyboard),
       isHeld: (event) => (primary.meta ? event.metaKey : event.ctrlKey),
     },
     matches,

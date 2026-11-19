@@ -542,6 +542,9 @@ is logged by kind, never by path.
 **Reason:** a request from the maintainer on 2026-11-13; terminal output is not trusted, and the default
 app of a launcher or a script runs it.
 **How to revert:** drop `attachPaths` from the terminal session and the `paths` channels from the bridge.
+**Amended by D84** (2026-11-19): a file Ctrl+clicked opens in the cockpit over its tab, at the line and
+column the output names; Ctrl+Shift+click, or `files.openPathsInCockpit` off, opens it in the default app as
+above, through the same checks. A folder and an address are unchanged.
 
 ## D41. GitLab becomes a built-in connector, and the product speaks of connectors by id
 
@@ -698,6 +701,21 @@ over 5 s for 300 files on a Mac, so the adapter builds the addition from the fil
 `diff --no-index`: a diff driver, a clean filter, `ident`, a working tree encoding, or a carriage return
 when `text`, `eol`, `crlf` or `core.autocrlf` may convert line ends. A test compares both readers on every
 kind of file. To revert, send every file to `diffUntracked`.
+**Update: the review slides in and out (2026-11-19).** Opening the review (its key, the tab's menu, the hold
+menu, the panel's review button) grows its pane from nothing to its share while the terminal gives way,
+beside or below as the tab lays them out, and closing it does the reverse, with the side panel's motion
+(`--motion-normal`, `--motion-easing`, a `flex-basis` transition under `data-moving` in `styles/panes.css`,
+`slide` in `panes/tab-view.ts`); in a narrow tab, where the review takes the whole tab, it slides over the
+terminal the same way. The terminal keeps its grid meanwhile (`isMoving` holds its fit as D67's drag does)
+and fits once when the motion ends; the divider sits between the panes all along, and the focus, the pane's
+removal on close and the final layout come after the motion; a layout asked meanwhile (a focus change in a
+narrow tab, a resize) waits for its end. A second open or close finishes the one under way at once, and a
+transition that never reports its end is ended 200 ms after its length. With
+`prefers-reduced-motion: reduce` nothing moves. Measured under Xvfb with a review of 1000 changed files
+(the index and the diff virtualized), side by side and narrow, both themes, three opens and three closes
+each: 43 or 44 frames in 700 ms, no long task, and one frame over 20 ms (33 ms, a first open) in 24
+motions. To revert, drop `slide`, `isMoving` and the `animate` and `onMoved` options, and
+the `data-moving` rules.
 
 ## D48. The review fits the tab's shape, reads as one scroll and compares with where the branch started
 
@@ -1589,3 +1607,382 @@ editors; the watcher then shows that write as a change.
 **How to revert:** drop `core/src/files`, the `FileStore` port, `packages/adapters/node-fs`,
 `shell/src/files`, the `files` channels in `host-api.ts` and `preload.ts`, the protocol in `main.ts`, the
 `files` settings with their rows and catalog entries, and the `DCK-FIL-*` codes.
+
+
+## D82. A file search on Ctrl+Shift+O lists the project's files and keeps the ignored ones apart
+
+**Decision:** F3 of [plans/files.md](../plans/files.md). `Ctrl+Shift+O` (`⌘P` on a Mac) opens a file search
+over the tab's folder, the project search's overlay, list and keys in a wider box; the action is
+`fileSearch` in `SHORTCUT_IDS`, in the Window group of the Shortcuts page and in the hold menu's Projects
+category. Ctrl+P stays with the shell (D13); on a PC the Shortcuts page offers it under the row in one click
+("Use Ctrl+P, as in VS Code"), saved like a recorded key, and D69's note then says the terminal no longer
+gets it. Inside a repository `git ls-files --cached --recurse-submodules` names the tracked files first (git
+takes `--recurse-submodules` only with `--cached` alone, so it is its own call); `--others
+--exclude-standard` (the untracked files) and `--others --ignored --exclude-standard --directory
+--no-empty-directory` (ignored files one by one, wholly ignored folders closed, `node_modules/` once) follow
+in a second request, and the list grows when they arrive. Names stream with a cap (200 000 files, 20 000
+ignored) and a time limit (5 s, 3 s). Outside a repository a walk (`@dck/adapter-node-walk`) reads the
+first 20 000 entries within 2 s, breadth first, 16 folders at a time, skipping `node_modules`, `.git`,
+`dist`, `build`, `target`, `.venv` and `__pycache__` and never entering a link to a folder. Enter on a
+closed folder, or typing a path into it, steps in: two levels, 2000 entries, 300 ms, deeper folders closed
+again. The ranking is in `core/src/file-search`: project files match fuzzily (letters in order; points
+for word starts, camelCase, runs, the file's name, a name that starts with the query and an exact name;
+smart case; the shorter path breaks a tie); an ignored file shows only when the query, three characters or
+more, a leading dot dropped, appears whole in its name, in a group headed "Ignored by git" after the
+project's rows, five rows at most and "N more", which widens. The search key again widens to every listed
+ignored file with the fuzzy rule and says so in the header; a query the project does not match does it
+by itself. An empty query lists the files the tab picked before, then the project. Each ignored row has an
+eye struck through (with its tooltip), a closed folder a chevron. The channels `file-search:list`,
+`file-search:others` and `file-search:expand` validate with zod; `others` answers only for a root a listing
+named and `expand` only a folder a listing closed, relative and never climbing out. Names only cross the
+bridge, never content. Until the file view (F4) exists, a picked file opens in the system's app as a
+Ctrl+click on a path does (D40), in one function of `app.ts`.
+**Reason:** the plan agreed with the maintainer on 2026-11-19. Measured on Linux under Xvfb: this
+repository (761 files) lists in 9 to 15 ms and its untracked and ignored files in 9 to 11 ms; a synthetic
+repository of 100 000 tracked files with a 150 000 file ignored `node_modules` lists its tracked files in 82
+to 111 ms through the bridge and the rest in 670 to 810 ms, the same as `rg --files` (750 ms) since both walk
+the tree, hence the two steps. Ranking 100 000 paths took 5 to 35 ms per key on one thread, over the
+8 ms a frame allows, so it runs in a module worker (4 KB) started when the search opens and ended when it
+closes, each key ranking only what the previous one matched; the window's thread is busy 0.1 to 0.5 ms per
+key and the list redraws 7 to 50 ms after the key on 100 000 files, 1 to 9 ms on this repository. Open, the
+search adds about 28 MB to the renderer's working set on 100 000 files and 24 MB on this repository,
+most of it the worker itself; closed, the window's heap is back where it was and the worker is gone,
+though the process returns the pages to the system only later. The bounded walk reads 20 000 entries in about 320 ms; a step into
+`node_modules` 16 to 34 ms.
+**How to revert:** drop `core/src/file-search`, `ports/project-files.ts`, `git-files.ts` in node-git,
+`packages/adapters/node-walk`, `shell/src/file-search`, the `fileSearch` channels in `host-api.ts` and
+`preload.ts`, `ui/src/file-search` and `styles/file-search.css`, the `#files` overlay in `index.html`, the
+`fileSearch` action with its keys, Shortcuts row, offer and hold menu item, and the `fileSearch.*`
+catalog entries.
+
+## D83. A file opens over its tab as an appendix, in CodeMirror with Lezer's colors, saved by itself
+
+**Decision:** F4a of [plans/files.md](../plans/files.md), the file view's first part.
+- **Where:** one file at a time over each tab (`ui/src/files/file-tabs.ts`), above its terminal and review,
+  which stay alive and fitted underneath and paint nothing while the file shows (`data-file-shown` hides
+  them, so a transparent window never shows the terminal through the text). `openFile(tabId, path, line?)`
+  is the only way in: the file search's pick (D82) opens there, and the Ctrl+click on a path and the
+  review's button (F5) will. The active tab with a file grows a second segment in one 1px `--line` outline,
+  `api │ login.ts`, at the plain tab's height; a 1px divider sits between the segments, hidden beside the
+  active one, which takes the selected tab's style; the file segment has a file glyph and the whole path in
+  its tooltip. An inactive tab with a file shows the glyph beside its name. In the file's segment a hollow
+  ring marks edits not saved yet (from the first key, even while auto save waits) and a filled dot in the
+  warning color a conflict with the disk or a deletion, each named by its tooltip ("Changed on disk",
+  "Deleted on disk"); a container query on the bar shrinks the name to 120 px, then 64 px below 900 px, then
+  hides it below 600 px. A click on a segment switches; the file segment's right click lists the tab's
+  recent files and Close file, and Save while it has edits; the tab's right click and the hold menu's Tabs
+  list carry Show file or Show terminal. The view's header writes the path from the tab's folder (folders
+  muted, the name in the foreground), "Ignored by git" when `git check-ignore` says so (a `GitIgnoreCheck`
+  port, node-git, channel `files:ignored`), the note of a read only or colorless file, Find and Go to line
+  buttons for the mouse (their keys in the tooltips), and a terminal button with the toggle key in its
+  tooltip. The strip under it takes the settings file's strip (D65): its height, its text and its bordered
+  buttons.
+- **Toggle key:** `toggleFile`, `Ctrl+Shift+Space` on a PC and `⇧⌘Space` on a Mac (⌘Space and ⌥⌘Space are
+  Spotlight's, ⌃Space and ⌃⌥Space the input sources', ⌃⌘Space the character viewer; ⇧⌘Space is free in
+  macOS's own shortcuts), in the keymap, the Shortcuts page's Files group and every tooltip through
+  `data-tip-shortcut`. It does nothing on a tab without a file. Going to the terminal saves first with auto
+  save on; a review opened while the file shows sends it behind.
+- **Editor:** CodeMirror 6 (`state` 6.7.6, `view` 6.43.15, `commands` 6.11.1, `search` 6.7.2, `language`
+  6.13.1, `language-data` 6.5.2, `@lezer/highlight` 1.2.5, `@lezer/common` 1.5.5, pinned), in
+  `ui/src/editor`, loaded with a dynamic import on the first text opened: nothing of it is in the page at
+  start (a 77 KB chunk and CodeMirror's own, about 290 KB, come with the first file). Text and Markdown
+  source open in it; any other kind shows a card with its kind, its size and "Open in the system's app"
+  until F4b. Syntax colors come from Lezer's grammars through `@codemirror/language-data`, each language
+  loaded on first use, for files up to 2 MB (`FILE_LIMITS.colorBytes`); from 2 to 5 MB the file is editable
+  without colors and the header says so; past 5 MB, or not UTF-8, it opens read only with the reason and
+  "Open in the system's app". The colors are the palette the maintainer chose, "dck vivo, suave": roles in
+  `tokens.json` (`syntax.*`, both themes) mapped to Lezer's tags in `editor-syntax.ts`, brackets colored by
+  depth and a doc comment's `@tags`, both from the parse tree of the visible lines, indent guides as 1px
+  lines per level for the visible lines, the terminal's font family and size with ligatures on. The
+  maintainer took the comments a step lighter in dark (#969696) and darker in light (#5c5c5c) than the mock,
+  so every role and the plain text, comments included, reach 4.5:1 on all six grounds of the editor: its
+  background, a selection (focused or not, one tint, which a matching bracket shares), a search match, the
+  current match, a line from the disk and a removed line (tested in `packages/design`). The editor has no
+  active line tint; the active line shows in the gutter. The chrome (gutter, line numbers, cursor,
+  selection, matching brackets, search matches, panels) is a CodeMirror theme over the cockpit's tokens:
+  matching brackets take the selection's solid tint and search matches two of their own (`searchMatch` under
+  every match, the stronger `searchCurrent` under the current one; their hues and the current match's
+  outline are D87's), and the line numbers
+  keep room for three digits, so the text never moves at line 10 or 100. `.editorconfig` files from the
+  file's folder up to one marked `root` (channel `files:editorconfig`, a parser in `core/src/files`) give
+  the indentation and the final newline; without one the indentation is guessed from the file. The line
+  break is the file's: CRLF stays CRLF, a file that mixes them keeps its carriage returns as characters. The
+  cursor blinks with the terminal's timer (D58), never with CodeMirror's animation.
+- **Search inside the file:** `@codemirror/search` with a find widget of the cockpit's own controls, a
+  drawer that hangs from the header's bottom border at the top right of the editor, left of the scrollbar
+  and its match marks (the maintainer's choice on 2026-11-19, over a full-width bar and a floating card):
+  no top border, the other sides a 1px `--line` border with bottom radii, the header's border running on
+  above it, over the code without pushing it down. CodeMirror reads its height as a scroll margin, so a
+  match it steps to never lands under it. Its first row: a chevron for the replace row, the query (24px,
+  JetBrains Mono) with the match case, whole word and regular expression toggles inside its right end
+  (pressed with an outline too), "3 of 12" counted up to 2000 matches and again 150 ms after typing stops,
+  previous, next and close; the second: the replace field under the query, Replace and Replace all as icons.
+  A query with no match turns the field's edge to `--critical` and the count says "No results". About
+  420px wide, the fields shrink in a narrow editor. Go to line (`Ctrl+G`, `⌃G` on a Mac, where `⌘G` finds
+  the next) is the same drawer, shorter, in the same corner (one at a time): a field with "of 245" inside,
+  an Enter cap and close; it takes `12`, `12:4`, `12,4` and `:12`, clamps a line past the end to the last,
+  and an entry that is not a line turns the edge critical and says "Not a line" inside the field. CodeMirror's
+  own go to line dialog is gone. Keys, as VS Code: `Ctrl+F` (`⌘F`), `Enter`/`Shift+Enter` and
+  `F3`/`Shift+F3`, `Ctrl+H` (`⌥⌘F`) with the replace row, `Ctrl+Alt+Enter` (`⌥⌘Enter`) replaces all from
+  the replace field; a key with its widget open focuses the field and selects its text, and from the text a
+  selection on one line becomes the query first; never a toggle: `Esc` closes either and the focus goes back
+  to the text. The header's Find and Go to line buttons do what their keys do. Motion (the maintainer's rule,
+  2026-11-19): the drawer slides down from under the header's edge over `--motion-fast` with
+  `--motion-easing`, transform and opacity only, and a copy of it slides back up when it closes (CodeMirror
+  takes the panel out at once); the replace row opens and closes with its height; a key that only refocuses
+  an open drawer moves nothing, nothing moves per key typed, the field has the focus from the first frame,
+  and with reduced motion it all appears at once. Their words come from the
+  catalogs; the editor uses no other CodeMirror surface (no tooltips, completion, lint, fold gutter or
+  selection match highlight).
+- **Saving and the disk:** `ui/src/files/file-session.ts` keeps the base and runs saves and the disk's
+  changes one after the other, so a change that arrives during a save is checked once the save resolves.
+  With `files.autoSave` on, a pause of 1 s, going to the terminal, leaving the tab, hiding the window and
+  closing the tab save, and `Ctrl+S` saves at any time; off, closing the tab or replacing the file with
+  edits asks Save, Don't save or Cancel in a menu with a caption from the tab. A change on disk follows
+  D81's rules: no edits, the text reloads in place (only the lines that differ, so the cursor and the scroll
+  stay); with edits and `files.autoMerge`, the merge's edits apply by lines outside the undo history and a
+  quiet strip says "Merged with a change on disk" with Show (the lines from the disk tinted for 4 s) and
+  Undo merge (the user's text back and the conflict strip); otherwise the strip "This file changed on disk",
+  with the reason, offers Reload (undoable), Keep mine and Compare, and auto save waits. Compare shows the
+  disk's version and the user's side by side, read only, the differing lines tinted; picking hunks from
+  three versions is left for F4b. A file deleted on disk gets Save again and Close file; a failed save says
+  why with Try again. Every quit from the menus, the tray or the quit card (D75), closing the last window
+  (`close-guard.ts`) and the restart after an update (D71; a cancel keeps the update ready) ask the window
+  last (`shell/src/quit/quit-files.ts`, channels `quit:settle-files` and `quit:files-settled`): it writes
+  the pending saves through the same check within 2 s and lets the app quit; a file left in conflict,
+  deleted or not saved shows its strip and keeps the app open until the user decides; with auto save off
+  each file with edits asks Save, Don't save or Cancel. While the user is asked the host shows the window
+  and waits; a window that does not answer within 2.5 s does not keep the app from quitting. A logout or a
+  shutdown quits as before.
+- **Recent files:** each tab keeps its last 5 files, the open one included (10 at first; D84), (paths only), offered by the segment's menu and by the
+  file search's empty query. With `window.restoreTabs` a saved tab keeps its open file and its recent list;
+  on start the file comes back over its tab, hidden, if it still opens, and is read again only when it
+  shows.
+**Reason:** the plan agreed with the maintainer on 2026-11-19, the measurements of F0
+(`plans/files-measurements.md`) and the palette the maintainer picked on 2026-11-19. Measured on Linux under
+Xvfb (`scripts/perf/`, 3 runs, `main` against this branch): idle memory 266 MB shown and 255 MB hidden
+against 267 and 255, a first prompt 414 ms after spawn against 394 (fastest runs 372 and 392), the terminal
+echoing a key at 4.9 ms median and 11.1 ms p95 against 4.5 and 11.7, all within the machine's noise. In the
+editor: a 1 MB TypeScript file shows, colored, 80 ms after Enter in the file search on the first open (the
+editor's code and the grammar loaded on the way) and 22 ms on the next, a key echoes at 9.1 ms median and
+13.3 ms p95 in its middle (120 keys typed through X), and the first open adds 28 MB of PSS. Lezer's coloring
+matches the maintainer's mock on its snippet but for three tokens: a name used as a value (`Warning` in
+`Warning.SenderUnavailable`) is a variable and its member a property, where the mock shows a type;
+`undefined` is a variable, not a constant; a type annotation's colon is punctuation, not an operator.
+JavaScript's grammar tags a method's name where it is declared as a property, so `editor-syntax.ts` retags
+it as a function, as the mock and a call show it.
+**How to revert:** drop `ui/src/files`, `ui/src/editor`, `tabs/file-segment.ts` and the appendix in
+`tab-bar.ts`, `styles/file-tab.css`, `file-view.css` and `editor.css`, the `toggleFile` action with its keys
+and Shortcuts row, the file view's wiring in `app.ts` (the pick of the file search goes back to the system's
+app), the `syntax` tokens with their checks, `editorconfig.ts` and `line-edits.ts` in the core, the
+`files:editorconfig` and `files:ignored` channels with the `GitIgnoreCheck` port and `git-ignore.ts`, the
+`file` and `recent` fields of a saved tab, `shell/src/quit/quit-files.ts` with the `quit:settle-files` and
+`quit:files-settled` channels, the `files.*` catalog entries and the CodeMirror packages, and give the last
+window's close and the update's restart their direct quit again.
+
+## D84. A file path opens in the cockpit at its line, from the terminal and from the review
+
+**Decision:** F5 of [plans/files.md](../plans/files.md), the ways into the file view (D83), and the
+maintainer's changes to F4a asked on the way.
+- **Ctrl+click on a path (amends D40):** a file path Ctrl+clicked (`⌘` on a Mac) in a terminal opens through
+  `openFile(tabId, path, line, column)` over the tab where the click happened, the cursor at the place the
+  line names and scrolled to the middle; a file the view cannot show (binary, too large) opens its card, which
+  offers the system's app. The places read (`ui/src/terminal/path-candidates.ts`): `a.ts:12` and
+  `a.ts:12:5` (gcc, clang, go, rustc, tsc `--pretty`, vitest, jest, pytest, a stack trace), `a.ts(12,5)` and
+  `a.ts(12)` (tsc, MSBuild), Python's `File "a.py", line 12` and ESLint's compact `a.ts: line 12, col 5`; a
+  line or column of 0 is ignored. A drive letter starts a path (`C:\src\a.ts:3`, `D:/x/a.ts`), only at the start
+  of a word, so `PATH=/a:/b` still splits; a folder written whole in parentheses or brackets
+  (`app/(auth)/[id]/page.tsx`) stays in the path, any other bracket ends it, so `Update(src/x.ts)` still finds
+  `src/x.ts`; a quoted text with a space in it is one candidate (`"/home/ana/my project/a.py"`), and an
+  apostrophe that opens nothing path-like is passed over. Relative paths resolve against the tab's folder
+  and a path that does not exist is no link, as in D40. A folder keeps its menu and an address its browser.
+- **Ctrl+Shift+click** opens a file the other way: in the system's app while files open in the cockpit, in
+  the cockpit while the setting below sends them to the app. Cheap (xterm hands the click's Shift over) and
+  the old behavior stays one key away. The tooltip draws both held clicks, each on its own line ("Open",
+  then "Open in the system's app" or "Open in the cockpit"), through a second gesture in the design system's
+  tooltip (`data-tip-alt-key` and `data-tip-alt-gesture` on an element, `alternate` on a region), and names
+  the path from the project with its place, `acme-api/src/app.ts:12:5`. A folder shows one click.
+- **Setting:** `files.openPathsInCockpit`, on by default, with its row in the Files group: off, the plain
+  click goes to the system's app as before and Ctrl+Shift+click to the cockpit. Kept because it is one
+  boolean and one branch (`pathRoute`), and someone who edits in another editor keeps D40's habit.
+- **From the review:** each file's header has an Open file button (the file glyph, `Open file` and `o` in
+  its tooltip) between the counts and Viewed, and `o` does the same for the file under the cursor in the
+  diff or the one picked in the index; the review's key hints list it. It opens the whole file over the
+  review's tab, switching the tab to the file, at the line under the diff's cursor when the cursor is on that
+  file (a removed line opens where it was), else at its first changed line on screen below the pinned
+  header, else at its first change (`lineToOpen` in `core/src/diff/change-rows.ts`). `o` was free (the review
+  has `n p [ ] v c`, Enter, `Ctrl+R`, `Ctrl+Shift+Enter`) and reads as open; `e` would have suggested
+  editing in place. A deleted file and a submodule's pointer get no button and `o` does nothing on them; a
+  file inside a submodule opens by its real path, the review's root and its path from the top. Ctrl+click on
+  a header's path now opens as a path in the terminal does, with the same two clicks in its tooltip.
+- **A file's path from its project:** the file segment's tooltip, the file view's header, the terminal's
+  path tooltip and the recent list write a path from the outermost repository of the tab's folder, its
+  name first (`notifica-compose/.claude/commands/notifica-docs.md`), so a file in a submodule keeps the
+  submodule's folder; under the home it starts with `~`, anywhere else it is whole (`shortPath` in
+  `core/src/files/short-path.ts`, Windows separators kept and case ignored). The host answers the
+  repository through `review:root` (`DiffSource.root`), which follows `--show-superproject-working-tree` up;
+  the window asks once per folder and draws the tabs again when it answers.
+- **Tooltips:** a path tooltip (`data-tip-path`) breaks only after a separator (a `<wbr>` after each, each
+  name kept whole, a hyphen in it too), within the design system's maximum width; only a name longer than
+  a line (48 characters) is cut where the line ends. The keys beside any tooltip's text follow a space
+  that collapses when they wrap, instead of an 8px left margin, so a keys row of its own starts at the
+  text's left edge; this was the shared tooltip's (`kit/tooltip.ts`), fixed there for every tooltip.
+- **Tab menus in a short window:** the shared menu (`tabs/tab-menu.ts`: the tab's right click, the file
+  segment's, the folder's, the update notice's) opens on the side asked, else on the other, and when it fits
+  neither it takes the window's height with a 4px margin and its list scrolls with the design system's
+  scrollbar, the arrows scrolling each item into view; the caption and a footer of actions stay in view.
+  The all-tabs list is its own component and already scrolled.
+- **Recent files:** 5 per tab counting the open one, so the segment's menu lists up to 4 others (a saved
+  list of 10 keeps its newest 5); Save and Close file sit under a divider as the menu's footer; two files of
+  one name show, muted beside the name, the fewest folders of their short path that tell them apart
+  (`api` and `web`, `.vscode` and `User`), as the file search writes a row's folder.
+**Reason:** F5 as agreed with the maintainer on 2026-11-19, and the maintainer's requests of the same day on
+the menu clipped in a 600px window, the recent list, the long absolute path in the segment's tooltip and its
+indented keys.
+**How to revert:** give `PathLinkOptions.openFile` back to `api.paths.openFile` in the terminal session and
+drop `path-open.ts`, the places in `path-candidates.ts`, `files.openPathsInCockpit` with its row and texts,
+the column of `openFile` and `goToLine`, `alternateLabel` in the keymap and the tooltip's second gesture;
+drop the review's Open file button, `o`, `openingLine` and `lineToOpen`; write the segment's tooltip and
+the header from the absolute path and the tab's folder again and drop `shortPath`, `recentEntries` and the
+`review:root` channel; set `MAX_RECENT_FILES` back to 10 and put the menu's footer back in its list.
+
+## D85. A file shows as what it is: an image, an SVG, a Markdown preview or a PDF, and Compare picks per conflict
+
+**Decision:** F4b of [plans/files.md](../plans/files.md), the file view's second part, as the maintainer
+decided from F0 on 2026-11-19. `load` in `ui/src/files/file-tabs.ts` gives each kind its view; the views live
+in `ui/src/viewers`, the Markdown and SVG modes in `ui/src/files/file-modes.ts`.
+- **Images** (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO): the header reads the size from an `<img>` that is never
+  drawn; past 50 megapixels (`FILE_LIMITS.imagePixels`) the card shows with the size. Otherwise the bytes
+  come over `files:bytes` (only an image opened in this session, zod at the bridge) and WebCodecs'
+  `ImageDecoder` decodes the first frame at most 2048 px on the long side (`FILE_LIMITS.imageSide`, a smaller
+  scale for a JPEG, which then never decodes whole), into an `ImageBitmap` drawn on a canvas the size of the
+  view; a Blob decode is the fallback for a type WebCodecs does not take. Neither an `<img>` decode nor its
+  pixels stay: the bitmap is closed and `webFrame.clearCache()` runs when the file closes. Fit is the default
+  (a small image stays at 100%); the font keys zoom while an image shows (`Ctrl` + `=` `-` `0`, `⌘` on a
+  Mac, with their tooltips from the keymap), and the image itself takes `+` `-` `0` `1` (actual size) and the
+  arrows; Ctrl and the wheel zoom at the pointer, a drag or the wheel pans an image larger than the view. The
+  header shows −, the percentage, +, Fit and Actual size (pressed with a ring), the pixel size and the file
+  size. Transparency sits on a checkerboard of `--surface` and `--line`. An animated GIF, APNG, WebP or AVIF
+  (`core/src/files/image-head.ts` reads the first 8000 bytes) shows its first frame; the header says so and
+  offers "Open in the system's app" to see it play. Pixel art zoomed in keeps square pixels.
+- **SVG:** opens as its image, drawn from its `<img>` (never inline in the page, so its scripts never run) at
+  2048 px on the long side; `dck-file:` serves an image with `content-security-policy: default-src 'none';
+  style-src 'unsafe-inline'; sandbox`, so an SVG framed by mistake runs nothing either. The header's Code
+  button and `Ctrl+Shift+J` (`⇧⌘J`, the new action `filePreview`, in the Shortcuts page's Files group) switch
+  to the source in the editor and back; the image is drawn again after each save or reload.
+- **Markdown:** opens in the editor, whose fenced code blocks now take their language's colors (Markdown
+  loaded with `codeLanguages`). Edit, Preview and Side by side in the header (side by side only when the
+  window is wider than 900 px; narrower, the editor stays alone); `Ctrl+Shift+J` switches between Edit and
+  Preview, keeping the nearest top level heading in view both ways (`core/src/files/markdown-headings.ts`).
+  `marked` 18.2.1 (GFM) and `dompurify` 3.4.18, pinned, load with the first preview. DOMPurify keeps the
+  html profile without styles, forms, frames, plugins, media, SVG or MathML; an image's address waits in a
+  data attribute until checked. Links (`core/src/files/markdown-links.ts`): http and https open in the
+  system's browser through `external.openLink` (D40), a relative or absolute path opens that file in the
+  cockpit (GitHub's `#L12` at its line), `#anchor` scrolls to the heading with GitHub's slug, anything else
+  does nothing. Images: under the Markdown file's folder they come through `dck-file:` (channel
+  `files:assets`: only for a Markdown file opened in this session, only image kinds, only paths inside its
+  folder after links are followed, ids revoked by `files:release` when the file closes); `data:` images
+  show; https images wait behind a placeholder with their address and "Load remote images", which loads
+  them for that file while it stays open; http and other schemes show nothing. Past 200 KB
+  (`FILE_LIMITS.previewBytes`) the header says "Preview up to 200 KB" and the editor stays alone. The
+  preview uses Inter, the editor's font for code and the editor's Lezer colors for code blocks, on
+  `--surface` (contrast checked for every syntax role there); each top level block has
+  `content-visibility: auto`.
+- **PDF:** Chromium's viewer (`plugins: true`, the only plugin Electron 45 has) in an `iframe` from
+  `dck-file:`. A link in the PDF asks the browser side to take the whole window: `will-frame-navigate`
+  (`shell/src/files/frame-guard.ts`) refuses it and opens an http or https address in the system's browser
+  when a PDF shows; a frame may only hold an opened PDF, the viewer's extension or `about:blank`, and never
+  goes elsewhere. The viewer's download saves only a `dck-file:` address, through the system's dialog with
+  the file's name (`will-download`); its print button opens the system's print dialog.
+- **Compare** on a conflict is a three-way picker (`viewers/merge-picker.ts`) over `mergeRegions` in
+  `core/src/files/merge.ts` (git's grouping, as the merge by itself, with no cap on how much the disk
+  changed; past 20 000 changed lines the file is one conflict): merged stretches are in place, folded to 3
+  lines around a conflict; each conflict shows the user's lines (`--diff-add`) and the disk's
+  (`--diff-remove`) with Use mine, Use disk and Use both (the user's first, as git's union); the choice shows
+  as a pressed button, its words and a bar at the kept side. Keys: `n` and `p` (or `F7`, `Shift+F7`) step
+  between conflicts, `m`, `d` and `b` choose and move on, `Ctrl+Enter` (`⌘Enter`) is Done, `Esc` Cancel, all
+  in the tooltips. Done puts the text in the editor as one step Ctrl+Z takes back and settles the conflict
+  (the base becomes the disk's, auto save writes it); Cancel goes back to the strip. The two read only
+  columns of D83 are gone.
+- **The rest** (binary, past 50 MB) keeps the card.
+- **Page policy** (`packages/ui/index.html`): `img-src 'self' data: dck-file: https:`, `frame-src
+  dck-file:`, `object-src 'none'`; `default-src 'self'` covers the rest, so scripts and fetches stay as
+  they were. `https:` in `img-src` is for the remote images the user asks for in a preview.
+**Reason:** the plan and the maintainer's choices of 2026-11-19, and F0's measurements
+([files-measurements.md](../plans/files-measurements.md) on the spike branch). Measured on Linux under Xvfb
+with `scripts/perf/viewers.cjs` (each viewer in a launch of its own, median of 3 runs, PSS of every process
+against the moment before the file opened):
+
+| Viewer | first paint (ms) | PSS shown (MB) | peak (MB) | after it closed (MB), of it the renderer | F0's row |
+| --- | --- | --- | --- | --- | --- |
+| PNG 4000x3000, 21 MB | 500 | 156 | 205 | 101, renderer 17 | bitmap 2048: 345 ms, 51, 103, 25 |
+| JPEG 3600x2400, 2.4 MB | 195 | 34 | 37 | 12, renderer -2 | 6000x4000 bitmap: 302 ms, 57, 154, 33 |
+| SVG, 480x320 | 93 | 21 | 21 | 3, renderer -2 | |
+| README 100 KB, preview | 133 | 31 | 33 | 17, renderer 9 | marked: 105 ms, 15 shown |
+| PDF 50 pages, 3 MB | 97 (frame loaded) | 93 | 93 | 21, renderer -5 | dck-file frame: 122 ms, 97, 27 |
+
+What stays in the renderer after an image closes is 17 MB for the PNG and nothing for the JPEG and the SVG;
+the rest of the "after" column is the main process, which read the file to send it and frees the buffers at
+its next collection (24 MB after the PNG in one run, 84 in two). The first version, an `<img>` decode, kept
+89 MB in the renderer after the PNG closed, and a Blob decode copied the file into the browser process
+first. A JPEG decodes at a smaller scale, so its peak stays near what shows; a PNG has no scaled decode, so
+its peak is F0's (about 1.6 times the full image), and the PNG shows at 500 ms against F0's 345 because
+its 21 MB cross from the main process first. The PDF viewer's
+three processes start with the frame and end with it. With no file open nothing measurable changed
+(`scripts/perf/measure.cjs`, probe and idle, 3 runs, `main` against this branch): idle memory 266 MB shown
+and 253 MB hidden against 265 and 253, the renderer 67 MB against 66, a first prompt 445 ms after spawn
+against 432 (main's runs 384 to 436, this branch's 445 to 446, the main process reaching the cockpit's code
+19 ms later before any of it runs), a key echoed at 4.9 ms median and 9.9 ms p95 against 4.6 and 10.0. The
+page's first bundle grows by 25 KB (the viewers and Compare); marked and DOMPurify load with the first
+preview. `plugins: true` adds nothing while no PDF shows (F0, and the idle rows above); it lets any frame of the
+page show a PDF from a source the policy allows, so `frame-src` names `dck-file:` only, `object-src` is
+`'none'` and the guard above keeps the viewer from navigating; PDFium runs in sandboxed renderers of its own.
+The protocol's new rule serves a Markdown file's images only while it is open and only from its folder,
+links resolved, as the plan asked.
+**How to revert:** drop `ui/src/viewers`, `ui/src/files/file-modes.ts`, `editor/code-highlight.ts`,
+`styles/viewers.css` and `markdown.css`, `image-head.ts`, `markdown-links.ts` and `markdown-headings.ts` and
+`mergeRegions` in the core, `frame-guard.ts` with its handlers and `plugins: true` in `main.ts`, the
+`files:assets`, `files:release` and `files:bytes` channels, the SVG address and the image policy in the
+protocol, the `filePreview` action, the `files.image.*`, `files.markdown.*`, `files.svg.*`,
+`files.pdf.*` and `files.merge.*` entries, `marked`, `dompurify` and `@codemirror/lang-markdown`, the page
+policy's new sources, and give `load` its card for every kind but text again.
+
+## D86. Hairlines are borders of one token, and the bars and the side by side headers sit on whole device pixels
+
+**Decision:** every 1px line in the line color is a border of `--size-hairline` (1px), never a filled box,
+a box shadow or a box moved by a half translate: Chromium snaps a border to whole device pixels (one at
+125% and 150%, two at 200%) wherever it lands, while a 1px box took two pixels at 150% (the pane divider)
+and a translate of -50% spread the hold menu hint's side lines over two. The tab bar is `--size-bar` (44px)
+and the headers that sit side by side, the panel's path, the file view's and the review's, are
+`--size-header` (36px), each with its divider inside (`box-sizing: border-box`); both are steps of 4, whole
+device pixels at 100%, 125%, 150%, 175% and 200%, so the lines below the bar land on a pixel at full
+height and the three header lines meet in one. The panel header draws its own divider and the first
+section drops its line. The panel's mono path and the file view's Inter path keep their fonts; both are
+trimmed to their x-height (`text-box: trim-both ex alphabetic`) and centered, which puts their baselines
+within half a device pixel at every scale (their x-heights are 6.5px and 6.6px). The dock controller
+takes, for an anchored or dragged height, the nearest height in DIPs that is a whole number of device
+pixels at the display's scale (`deviceHeight`, within 4 DIPs, never past the work area; the whole work
+area is kept as it is): at 125% a window of 557 DIPs is 696.25 pixels, and a compositor that fits the
+window's 697 rows into that box spreads the lines near the bottom over two rows. `styles/hairlines.test.ts`
+keeps the rules.
+**Reason:** reported by the maintainer on 2026-11-19 on Ubuntu at a fractional scale: the lines were not
+the same thickness and changed with the window's height, and the panel's header and the file view's did
+not meet. Measured in the real app at scales 1, 1.25, 1.5 and 2 and six heights (`plans/hairlines.md`).
+**How to revert:** drop `deviceHeight` and the `scaleFactor` of `Display` from the dock controller and the
+screen port, the `hairline`, `bar` and `header` size tokens and their uses in `ui/src/styles`, the panel
+header's divider and `text-box` trims, and `styles/hairlines.test.ts`.
+
+## D87. Search matches take VS Code's hues, and the current one an outline
+
+**Decision:** in the file view, every match of the find widget sits on an orange tint (`searchMatch`) and the
+current one on a gold tint (`searchCurrent`) with a 1px inset outline in `--warning`, no underline: VS Code's
+hues (Dark Modern's `#9E6A03` for the current match, `#EA5C0055` for the others) taken toward the editor's
+background until every syntax role, comments included, keeps 4.5:1 on them. Dark: `#4c240a` and
+`#3e2c0a`. Light: `#f5d7c4` and `#e6dcc7`. VS Code's own colors leave a comment at 1.6:1 on the current
+match, and at the contrast limit the current tint cannot be brighter than the others, so the outline tells
+it apart by shape.
+**Reason:** the maintainer found the two dim yellow tints and the underline ugly on 2026-11-19 and asked
+for something closer to VS Code; of three variants in the real app (VS Code's exact colors, gold with an
+outline, VS Code's older blue gray with an outline) they chose the gold with an outline.
+**How to revert:** put back `searchMatch` and `searchCurrent` (dark `#2e2a12` and `#382e0c`, light `#f5e8bf`
+and `#f1dc9a`) and the 2px warning underline in `editor-theme.ts`, with its contrast check.

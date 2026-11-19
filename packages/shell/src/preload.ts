@@ -8,7 +8,7 @@ import type {
   ViewSnapshot,
 } from '@dck/core'
 import { type HostApi, hostChannels } from '@dck/core/host-api'
-import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import { contextBridge, ipcRenderer, webFrame, webUtils } from 'electron'
 
 function subscribe<Args extends unknown[]>(channel: string, listener: (...args: Args) => void) {
   const handler = (_event: unknown, ...args: Args) => listener(...args)
@@ -55,6 +55,12 @@ const api: HostApi = {
     watch: (path, since) => ipcRenderer.invoke(hostChannels.filesWatch, { path, since }),
     unwatch: (path) => ipcRenderer.send(hostChannels.filesUnwatch, path),
     onChange: (listener) => subscribe<[string, FileChange]>(hostChannels.filesChanged, listener),
+    editorConfig: (path) => ipcRenderer.invoke(hostChannels.filesEditorConfig, path),
+    ignored: (path) => ipcRenderer.invoke(hostChannels.filesIgnored, path),
+    assets: (document, paths) => ipcRenderer.invoke(hostChannels.filesAssets, { document, paths }),
+    release: (document) => ipcRenderer.send(hostChannels.filesRelease, document),
+    bytes: (path) => ipcRenderer.invoke(hostChannels.filesBytes, path),
+    clearImageCache: () => webFrame.clearCache(),
   },
   notifications: {
     show: (notification) => ipcRenderer.send(hostChannels.notificationsShow, notification),
@@ -99,6 +105,7 @@ const api: HostApi = {
       ipcRenderer.invoke(hostChannels.reviewUntracked, { root, path, ignoreWhitespace }),
     fileLines: (root, path) => ipcRenderer.invoke(hostChannels.reviewFile, { root, path }),
     fingerprint: (cwd) => ipcRenderer.invoke(hostChannels.reviewFingerprint, cwd),
+    root: (cwd) => ipcRenderer.invoke(hostChannels.reviewRoot, cwd),
     saveNotes: (root, markdown) => ipcRenderer.invoke(hostChannels.reviewNotes, { root, markdown }),
   },
   autostart: {
@@ -112,6 +119,11 @@ const api: HostApi = {
   agent: {
     onSignal: (listener) => subscribe<[AgentSignal]>(hostChannels.agentSignal, listener),
     profiles: () => ipcRenderer.invoke(hostChannels.agentProfiles),
+  },
+  fileSearch: {
+    list: (cwd) => ipcRenderer.invoke(hostChannels.fileSearchList, cwd),
+    others: (root) => ipcRenderer.invoke(hostChannels.fileSearchOthers, root),
+    expand: (root, folder) => ipcRenderer.invoke(hostChannels.fileSearchExpand, { root, folder }),
   },
   projects: {
     list: () => ipcRenderer.invoke(hostChannels.projectsList),
@@ -142,6 +154,8 @@ const api: HostApi = {
   quit: {
     onAsk: (listener) => subscribe<[number]>(hostChannels.quitAsk, listener),
     answer: (quit) => ipcRenderer.send(hostChannels.quitAnswer, quit),
+    onSettleFiles: (listener) => subscribe<[]>(hostChannels.quitSettleFiles, listener),
+    filesSettled: (answer) => ipcRenderer.send(hostChannels.quitFilesSettled, answer),
   },
   window: {
     toggleFullHeight: () => ipcRenderer.send(hostChannels.windowToggleFullHeight),

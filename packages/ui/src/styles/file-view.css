@@ -1,0 +1,225 @@
+/* A file over the whole tab: its panes stay alive and fitted underneath, painted nothing while it shows,
+   so a transparent window never shows the terminal through the text */
+.file-view {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  outline: none;
+}
+
+.file-view[hidden] {
+  display: none;
+}
+
+.tabview[data-file-shown] > :not(.file-view) {
+  visibility: hidden;
+}
+
+/* The panel's header beside it has the same height, divider included, so their lines meet in one */
+.fv-head {
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  height: var(--size-header);
+  padding: 0 8px 0 12px;
+  border-bottom: var(--size-hairline) solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Trimmed to its x-height and centered by the row, as the panel's path beside it, so the two share a
+   baseline; the padding, given back by the margin, keeps ascenders and descenders inside the clip */
+.fv-path {
+  min-width: 0;
+  margin-block: -1ex;
+  padding-block: 1ex;
+  overflow: hidden;
+  text-box: trim-both ex alphabetic;
+  text-overflow: ellipsis;
+}
+
+.fv-name {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+/* Ignored by git: a word in a quiet outline, so it reads as a fact about the file, not a warning */
+.fv-flag {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-small);
+  line-height: 18px;
+}
+
+.fv-note {
+  flex: none;
+}
+
+/* The settings file strip's button (D65), as the strip's actions below */
+.fv-link {
+  flex: none;
+  padding: 3px 8px;
+  border: var(--size-hairline) solid var(--line);
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  line-height: 16px;
+}
+
+.fv-link:hover {
+  background: var(--hover);
+}
+
+.fv-link:focus-visible,
+.fv-action:focus-visible,
+.fv-strip-close:focus-visible,
+.fv-icon:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
+.fv-spacer {
+  flex: 1;
+}
+
+.fv-icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--muted);
+}
+
+.fv-icon:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+/* What happened with the disk: a filled dot for a conflict (as on the tab), a ring for a merge. The
+   settings file's strip (D65) is the pattern: its height, its text and its buttons, at the left edge the
+   header keeps */
+.fv-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 12px;
+  border-bottom: var(--size-hairline) solid var(--line);
+  font-size: 12px;
+}
+
+.fv-strip-mark {
+  flex: none;
+  box-sizing: border-box;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.fv-strip-mark.conflict {
+  background: var(--warning);
+}
+
+.fv-strip-mark.merged {
+  border: 1.5px solid var(--muted);
+}
+
+.fv-strip-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fv-strip-detail {
+  margin-left: 6px;
+  color: var(--muted);
+}
+
+.fv-strip-detail::before {
+  content: "· ";
+}
+
+.fv-action {
+  flex: none;
+  padding: 3px 8px;
+  border: var(--size-hairline) solid var(--line);
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+}
+
+.fv-action:hover {
+  background: var(--hover);
+}
+
+.fv-strip-close {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: none;
+  color: var(--muted);
+}
+
+.fv-strip-close:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.fv-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.fv-editor {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.fv-editor[hidden] {
+  display: none;
+}
+
+.fv-editor .cm-editor {
+  flex: 1;
+  min-width: 0;
+}
+
+/* A kind the editor does not take: what it is, its size and the way to the system's app */
+.fv-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.fv-card-name {
+  color: var(--fg);
+  font-weight: 500;
+}

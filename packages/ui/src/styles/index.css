@@ -12,6 +12,7 @@
 @import "./tooltip.css";
 @import "./environment-section.css";
 @import "./project-search-results.css";
+@import "./file-search.css";
 @import "./select.css";
 @import "./settings.css";
 @import "./views.css";
@@ -20,3 +21,8 @@
 @import "./tab-list.css";
 @import "./review.css";
 @import "./quit-card.css";
+@import "./file-tab.css";
+@import "./file-view.css";
+@import "./editor.css";
+@import "./viewers.css";
+@import "./markdown.css";

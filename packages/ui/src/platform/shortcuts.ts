@@ -15,11 +15,15 @@ export interface ShortcutActions {
   openSettings(): void
   openViews(): void
   searchProjects(): void
+  searchFiles(): void
   togglePanel(): void
   toggleFullHeight(): void
   changeOpacity(direction: 1 | -1): void
   changeFontSize(delta: number | 'reset'): void
   clearTerminal(): void
+  toggleFile(): void
+  // A Markdown file between its text and its preview, an SVG between its image and its code
+  togglePreview(): void
 }
 
 // Listened for in the capture phase: the app's keys never reach the shell
@@ -36,6 +40,7 @@ export function bindShortcuts(actions: ShortcutActions, keymap: Keymap): () => v
     reviewSend: actions.sendReview,
     theme: actions.toggleTheme,
     projects: actions.searchProjects,
+    fileSearch: actions.searchFiles,
     views: actions.openViews,
     panel: actions.togglePanel,
     fullHeight: actions.toggleFullHeight,
@@ -45,6 +50,8 @@ export function bindShortcuts(actions: ShortcutActions, keymap: Keymap): () => v
     fontSmaller: () => actions.changeFontSize(-1),
     fontReset: () => actions.changeFontSize('reset'),
     clearTerminal: actions.clearTerminal,
+    toggleFile: actions.toggleFile,
+    filePreview: actions.togglePreview,
   }
   const handle = (event: KeyboardEvent) => {
     if (inputGate.blocked) return

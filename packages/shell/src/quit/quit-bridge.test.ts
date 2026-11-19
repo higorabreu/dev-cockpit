@@ -12,9 +12,15 @@ function setup() {
       void handlers.set(channel, listener as (...args: unknown[]) => unknown),
   }
   const answers: boolean[] = []
-  registerQuitBridge({ ipcMain, guard: { answer: (quit) => void answers.push(quit) } })
+  const files: string[] = []
+  registerQuitBridge({
+    ipcMain,
+    guard: { answer: (quit) => void answers.push(quit) },
+    files: { answer: (answer) => void files.push(answer) },
+  })
   const send = (...args: unknown[]) => handlers.get(hostChannels.quitAnswer)?.({}, ...args)
-  return { send, answers }
+  const settled = (...args: unknown[]) => handlers.get(hostChannels.quitFilesSettled)?.({}, ...args)
+  return { send, settled, answers, files }
 }
 
 describe('registerQuitBridge', () => {
@@ -34,5 +40,16 @@ describe('registerQuitBridge', () => {
     send(1)
 
     expect(answers).toEqual([false, false])
+  })
+
+  it('should pass the window answer about its files and stay open when it is not one of the three', () => {
+    const { settled, files } = setup()
+
+    settled('quit')
+    settled('asking')
+    settled('stay')
+    settled('maybe')
+
+    expect(files).toEqual(['quit', 'asking', 'stay', 'stay'])
   })
 })

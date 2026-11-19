@@ -2,6 +2,7 @@ import type { AboutLink } from '../about/about.ts'
 import type { AgentSignal } from '../attention/agent-signal.ts'
 import type { Connector } from '../connectors/connector.ts'
 import type { DiffFile } from '../diff/diff.ts'
+import type { EditorConfigFile } from '../files/editorconfig.ts'
 import type { OpenedFile } from '../files/file-opener.ts'
 import type { SystemFontsInfo } from '../fonts/fonts.ts'
 import type { ErrorBody } from '../ipc/protocol.ts'
@@ -16,6 +17,7 @@ import type { DiffOutcome, DiffRequest } from './diff-source.ts'
 import type { ComposeStatus } from './environment.ts'
 import type { FileChange, FileStamp, FileWrite } from './file-store.ts'
 import type { TabNotification } from './notifier.ts'
+import type { FileListing, GitOthers, WalkResult } from './project-files.ts'
 import type { Project } from './projects.ts'
 import type { PtyExit, Unsubscribe } from './pty.ts'
 import type { SessionActivityInfo, SessionSnapshot } from './session.ts'
@@ -68,6 +70,19 @@ export interface HostApi {
     watch(path: string, since: FileStamp | undefined): Promise<Result<null, ErrorBody>>
     unwatch(path: string): void
     onChange(listener: (path: string, change: FileChange) => void): Unsubscribe
+    // The `.editorconfig` files above a file opened before, the nearest first, up to one marked root
+    editorConfig(path: string): Promise<readonly EditorConfigFile[]>
+    // Whether git leaves a file opened before out; false outside a repository
+    ignored(path: string): Promise<boolean>
+    // For a Markdown file opened before: an address for each image path under its folder, in order, null
+    // for a path refused (outside the folder, not an image, missing); valid until `release`
+    assets(document: string, paths: readonly string[]): Promise<readonly (string | null)[]>
+    // The Markdown file closed: its images' addresses stop answering
+    release(document: string): void
+    // The bytes of an image opened before, to decode it at the size it shows; undefined for any other
+    bytes(path: string): Promise<Uint8Array<ArrayBuffer> | undefined>
+    // Frees the decoded images Chromium keeps once a viewer is gone
+    clearImageCache(): void
   }
   readonly notifications: {
     show(notification: TabNotification): void
@@ -129,6 +144,8 @@ export interface HostApi {
     fileLines(root: string, path: string): Promise<Result<readonly string[], ErrorBody>>
     // Changes when the diff of the folder's repository may have changed; undefined when unknown
     fingerprint(cwd: string): Promise<string | undefined>
+    // The outermost repository's top folder for a folder, to write a file's path from the project
+    root(cwd: string): Promise<string | undefined>
     // Writes the pending comments for the agent, only for a root a diff answered with; the file's path
     saveNotes(root: string, markdown: string): Promise<Result<string, ErrorBody>>
   }
@@ -146,6 +163,15 @@ export interface HostApi {
     onSignal(listener: (signal: AgentSignal) => void): Unsubscribe
     // The agents the cockpit recognizes, with how to connect each one
     profiles(): Promise<readonly AgentProfile[]>
+  }
+  // The files of a tab's folder for the file search, names only, never content
+  readonly fileSearch: {
+    // Git's view of the folder's repository (its tracked files first), or a bounded walk outside one
+    list(cwd: string): Promise<FileListing>
+    // The untracked and ignored files of a root a partial listing named; empty for any other folder
+    others(root: string): Promise<GitOthers>
+    // A closed ignored folder a listing named, two levels at a time; empty for any other folder
+    expand(root: string, folder: string): Promise<WalkResult>
   }
   readonly projects: {
     list(): Promise<readonly Project[]>
@@ -186,6 +212,10 @@ export interface HostApi {
     onAsk(listener: (running: number) => void): Unsubscribe
     // True quits; false keeps the cockpit open
     answer(quit: boolean): void
+    // Before any quit: write the pending saves and answer whether the app may quit ('asking' while the
+    // user decides about a file)
+    onSettleFiles(listener: () => void): Unsubscribe
+    filesSettled(answer: 'quit' | 'stay' | 'asking'): void
   }
   readonly window: {
     toggleFullHeight(): void
@@ -215,6 +245,11 @@ export const hostChannels = {
   filesWatch: 'files:watch',
   filesUnwatch: 'files:unwatch',
   filesChanged: 'files:changed',
+  filesEditorConfig: 'files:editorconfig',
+  filesIgnored: 'files:ignored',
+  filesAssets: 'files:assets',
+  filesRelease: 'files:release',
+  filesBytes: 'files:bytes',
   notificationsShow: 'notifications:show',
   notificationsClick: 'notifications:click',
   environmentInspect: 'environment:inspect',
@@ -240,6 +275,7 @@ export const hostChannels = {
   reviewFile: 'review:file',
   reviewUntracked: 'review:untracked',
   reviewFingerprint: 'review:fingerprint',
+  reviewRoot: 'review:root',
   reviewNotes: 'review:notes',
   autostartGet: 'autostart:get',
   autostartSet: 'autostart:set',
@@ -247,6 +283,9 @@ export const hostChannels = {
   sessionInspect: 'session:inspect',
   agentSignal: 'agent:signal',
   agentProfiles: 'agent:profiles',
+  fileSearchList: 'file-search:list',
+  fileSearchOthers: 'file-search:others',
+  fileSearchExpand: 'file-search:expand',
   projectsList: 'projects:list',
   projectsTouch: 'projects:touch',
   projectsToggleFavorite: 'projects:toggle-favorite',
@@ -265,6 +304,8 @@ export const hostChannels = {
   updatesChanged: 'updates:changed',
   quitAsk: 'quit:ask',
   quitAnswer: 'quit:answer',
+  quitSettleFiles: 'quit:settle-files',
+  quitFilesSettled: 'quit:files-settled',
   windowToggleFullHeight: 'window:toggle-full-height',
   windowResize: 'window:resize',
   windowResizeEnd: 'window:resize-end',

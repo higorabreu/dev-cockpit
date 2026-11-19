@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, openSync, readFileSync, watch, writeFileSync } from 'node:fs'
 import { realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
 import { createGitHubReleaseSource } from '@dck/adapter-github'
 import { createJsoncSettingsText } from '@dck/adapter-jsonc'
@@ -10,17 +10,21 @@ import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import { createNodeFileStore } from '@dck/adapter-node-fs'
 import {
   createGitDiffSource,
+  createGitFiles,
+  createGitIgnoreCheck,
   createGitInspector,
   createGitReviewNotes,
 } from '@dck/adapter-node-git'
 import { connectTo, defaultConfigDir, defaultEndpoint, defaultLogDir } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
+import { createFolderWalk } from '@dck/adapter-node-walk'
 import {
   type ConnectionFields,
   checkProfile,
   connectorCatalog,
   createConnections,
   createDockController,
+  createFileFinder,
   createJsonLogger,
   createTranslator,
   createUpdater,
@@ -64,8 +68,10 @@ import { createElectronStatusIcon } from './electron/status-icon.ts'
 import { createToggleKeyBinder } from './electron/toggle-key-binder.ts'
 import { buildTrayMenu } from './electron/tray-menu.ts'
 import { createWindowSender } from './electron/window-sender.ts'
+import { registerFileSearchBridge } from './file-search/file-search-bridge.ts'
 import { createFileProtocol } from './files/file-protocol.ts'
 import { registerFilesBridge } from './files/files-bridge.ts'
+import { downloadAllowed, frameNavigation, isPdfViewer } from './files/frame-guard.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
@@ -82,7 +88,9 @@ import { createWindowRequests } from './platform/window-requests.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
+import { createCloseGuard } from './quit/close-guard.ts'
 import { registerQuitBridge } from './quit/quit-bridge.ts'
+import { createQuitFiles } from './quit/quit-files.ts'
 import { createQuitGuard } from './quit/quit-guard.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
 import { watchSettingsFile } from './settings/settings-watch.ts'
@@ -214,12 +222,29 @@ app.whenReady().then(async () => {
       preload: join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
+      // Chromium's PDF viewer, the only plugin Electron still has; a PDF the user opened shows in a frame
+      // from `dck-file:` (the page's policy lets no other source frame or embed one)
+      plugins: true,
     },
   })
   platform.window.place(window)
   // Page content never opens an Electron window nor leaves the app; links go to the browser through the host
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
+  // A PDF's frame keeps to the PDF: a web link in it goes to the browser, anything else stays put
+  window.webContents.on('will-frame-navigate', (event) => {
+    const pdfShown = window.webContents.mainFrame.framesInSubtree.some((frame) =>
+      isPdfViewer(frame.url),
+    )
+    const verdict = frameNavigation(event.url, event.isMainFrame, {
+      initiator: event.initiator?.url,
+      pdfShown,
+    })
+    if (verdict === 'allow') return
+    event.preventDefault()
+    logger.info('frame navigation refused', { external: verdict === 'external' })
+    if (verdict === 'external') void electronShell.openExternal(event.url)
+  })
   const send = createWindowSender(window)
 
   const systemScreen = createElectronScreen(
@@ -431,11 +456,30 @@ app.whenReady().then(async () => {
   })
 
   const fileStore = createNodeFileStore({ logger })
-  const files = registerFilesBridge({ ipcMain: ipc, store: fileStore, logger, send })
+  const files = registerFilesBridge({
+    ipcMain: ipc,
+    store: fileStore,
+    ignore: createGitIgnoreCheck(),
+    logger,
+    send,
+    realPath: (path) => realpath(path).catch(() => undefined),
+  })
   protocol.handle(
     FILE_SCHEME,
     createFileProtocol({ pathOf: files.mediaPath, store: fileStore, logger }),
   )
+  // The PDF viewer's download button saves the file it shows through the system's dialog, under its name;
+  // nothing else downloads
+  window.webContents.session.on('will-download', (event, item) => {
+    const id = URL.parse(item.getURL())?.pathname.slice(1)
+    const path = id === undefined ? undefined : files.mediaPath(id)
+    if (!downloadAllowed(item.getURL()) || path === undefined) {
+      event.preventDefault()
+      logger.info('download refused')
+      return
+    }
+    item.setSaveDialogOptions({ defaultPath: basename(path) })
+  })
 
   // A development run may read a local test feed; the packaged app always reads GitHub (D71)
   const updateFeed = app.isPackaged ? undefined : process.env.DCK_UPDATE_FEED
@@ -460,6 +504,16 @@ app.whenReady().then(async () => {
     logger,
     onChange: (state) => send(hostChannels.updatesChanged, state),
   })
+  registerFileSearchBridge({
+    ipcMain: ipc,
+    finder: createFileFinder({ git: createGitFiles(), walk: createFolderWalk() }),
+    isFolder: (path) =>
+      stat(path).then(
+        (stats) => stats.isDirectory(),
+        () => false,
+      ),
+    logger,
+  })
   registerAboutBridge({
     ipcMain: ipc,
     repository: RELEASES_REPOSITORY,
@@ -479,16 +533,29 @@ app.whenReady().then(async () => {
     logger,
   })
 
+  // Last before any quit from the menus or the quit card: the open files are saved, or the user decides
+  const quitFiles = createQuitFiles({
+    settle: () => send(hostChannels.quitSettleFiles),
+    present: windowRequests.reopen,
+    quit: () => app.quit(),
+    after(milliseconds, task) {
+      const timer = setTimeout(task, milliseconds)
+      return () => clearTimeout(timer)
+    },
+  })
   const quitGuard = createQuitGuard({
     pids: () => bridge.pids(),
     activity: (pid) => sessionInspector.activity(pid),
     // The question is a card in the window, so the window shows first, even from the menu bar icon
     ask: windowRequests.askQuit,
-    quit: () => app.quit(),
+    quit: () => quitFiles.request(),
   })
-  registerQuitBridge({ ipcMain: ipc, guard: quitGuard })
+  registerQuitBridge({ ipcMain: ipc, guard: quitGuard, files: quitFiles })
+  const closeGuard = createCloseGuard(() => quitFiles.request())
+  window.on('close', (event) => closeGuard.close(event))
+  app.on('before-quit', () => closeGuard.quitting())
   // The app menu's Quit (⌘Q) and the menu bar icon's; a logout or shutdown quits without asking
-  const quit = platform.asksBeforeQuit ? () => void quitGuard.request() : () => app.quit()
+  const quit = platform.asksBeforeQuit ? () => void quitGuard.request() : () => quitFiles.request()
 
   activeKey = loaded.settings.shortcuts.toggleWindow
   void toggleKey.bind(activeKey).then((bound) => {

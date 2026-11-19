@@ -47,4 +47,23 @@ describe('buildCss', () => {
     expect(css).toContain('--size-scrollbar: 8px;')
     expect(css).toContain('--size-scrollbar-thumb: 4px;')
   })
+
+  it('should expose the hairline, the tab bar and the header sizes when building the css', () => {
+    expect(css).toContain('--size-hairline: 1px;')
+    expect(css).toContain('--size-bar: 44px;')
+    expect(css).toContain('--size-header: 36px;')
+  })
+
+  it('should keep the bar and the header on whole device pixels at the usual scales when reading the tokens', () => {
+    const scales = [1, 1.25, 1.5, 1.75, 2]
+    const whole = (size: number) => scales.every((scale) => Number.isInteger(size * scale))
+
+    expect([tokens.size.bar, tokens.size.header].filter((size) => !whole(size))).toEqual([])
+  })
+
+  it('should define each syntax role for both themes when building the css', () => {
+    expect(css).toContain('--syntax-storage: #79a6cf;')
+    expect(css).toContain('--syntax-storage: #2b5f8f;')
+    expect(css).toContain('--syntax-indent-guide: #232323;')
+  })
 })

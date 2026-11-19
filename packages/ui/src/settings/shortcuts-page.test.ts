@@ -105,7 +105,7 @@ describe('shortcuts page, recording an action key', () => {
     const buttons = [...body.querySelectorAll<HTMLElement>('button.skey')]
 
     // Assert
-    expect(buttons).toHaveLength(20)
+    expect(buttons).toHaveLength(23)
     expect(buttons[0]?.textContent).toBe('Ctrl+Shift+T')
     expect(buttons[0]?.getAttribute('aria-labelledby')).toBe(
       'set-label-shortcuts-keys-newTab set-key-newTab',
@@ -445,5 +445,45 @@ describe('shortcuts page, the hold menu trigger', () => {
     // Assert
     expect(note).toBe('Already assigned to Full height')
     expect(current().shortcuts).toMatchObject({ holdTrigger: 'F11', keys: { fullHeight: 'F13' } })
+  })
+})
+
+describe('shortcuts page, Ctrl+P for the file search', () => {
+  const offer = (row: HTMLElement) =>
+    row.querySelector<HTMLButtonElement>('[data-focus="set-key-ctrl-p"]')
+
+  it('should save Ctrl+P and say the terminal loses it when the offer is clicked', async () => {
+    // Arrange
+    const { row, patches, keyButton } = openShortcuts()
+
+    // Act
+    offer(row('fileSearch'))?.click()
+    await settle()
+
+    // Assert
+    expect(patches).toEqual([{ shortcuts: { keys: { fileSearch: 'Ctrl+P' } } }])
+    expect(keyButton('fileSearch').textContent).toBe('Ctrl+P')
+    expect(row('fileSearch').querySelector('.snote')?.textContent).toBe(
+      'The terminal no longer receives Ctrl+P.',
+    )
+    expect(offer(row('fileSearch'))).toBeNull()
+  })
+
+  it('should offer Ctrl+P under the file search when its key is the default one', () => {
+    // Arrange
+    const { row, keyButton } = openShortcuts()
+
+    // Assert
+    expect(keyButton('fileSearch').textContent).toBe('Ctrl+Shift+O')
+    expect(offer(row('fileSearch'))?.textContent).toBe('Use Ctrl+P, as in VS Code')
+  })
+
+  it('should not offer Ctrl+P when the keyboard is a Mac one', () => {
+    // Arrange
+    const { row, keyButton } = openShortcuts(defaultSettings, 'mac')
+
+    // Assert
+    expect(keyButton('fileSearch').textContent).toBe('⌘P')
+    expect(offer(row('fileSearch'))).toBeNull()
   })
 })

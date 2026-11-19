@@ -33,3 +33,22 @@ describe('index.html texts', () => {
     for (const action of actions) expect(isShortcutId(action), action).toBe(true)
   })
 })
+
+describe('index.html policy', () => {
+  const policy = /Content-Security-Policy"\s+content="([^"]+)"/.exec(html)?.[1] ?? ''
+  const directive = (name: string) =>
+    policy
+      .split(';')
+      .map((part) => part.trim().split(/\s+/))
+      .find(([first]) => first === name)
+      ?.slice(1)
+
+  // An opened image or PDF comes from the cockpit's own protocol; https images only once the user asks
+  it('should let images and frames come only from the file protocol when the page is built', () => {
+    expect(directive('img-src')).toEqual(["'self'", 'data:', 'dck-file:', 'https:'])
+    expect(directive('frame-src')).toEqual(['dck-file:'])
+    expect(directive('object-src')).toEqual(["'none'"])
+    expect(directive('script-src')).toBeUndefined()
+    expect(directive('default-src')).toEqual(["'self'"])
+  })
+})

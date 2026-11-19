@@ -29,6 +29,8 @@ describe('createKeymap labels', () => {
     ['fullHeight', 'F11', '⌃⌘F'],
     ['opacityUp', 'Ctrl+Shift+↑', '⇧⌘↑'],
     ['clearTerminal', 'Ctrl+Shift+K', '⌘K'],
+    ['toggleFile', 'Ctrl+Shift+Space', '⇧⌘Space'],
+    ['filePreview', 'Ctrl+Shift+J', '⇧⌘J'],
   ] as const)('should label %s as %s on a PC and %s on a Mac', (id, onPc, onMac) => {
     expect(pc.label(id)).toBe(onPc)
     expect(mac.label(id)).toBe(onMac)
@@ -196,6 +198,7 @@ describe('createKeymap per keyboard', () => {
       'MetaRight',
     ])
     expect(mac.click.isHeld({ ctrlKey: true, metaKey: false })).toBe(false)
+    expect(mac.click.alternateLabel).toBe('⇧⌘')
   })
 
   it('should open links with Ctrl and hold the right Ctrl when the keyboard is a PC one', () => {
@@ -209,6 +212,7 @@ describe('createKeymap per keyboard', () => {
       'ControlRight',
     ])
     expect(pc.click.isHeld({ ctrlKey: true, metaKey: false })).toBe(true)
+    expect(pc.click.alternateLabel).toBe('Ctrl+Shift')
   })
 
   it('should copy and paste with Ctrl+Shift+C and V on a PC and leave them to the shell on a Mac', () => {

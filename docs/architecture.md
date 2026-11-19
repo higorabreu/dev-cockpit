@@ -79,6 +79,7 @@ Source folders in `ui` and `shell` are grouped by feature or area, with tests be
 ```
 ui/src/        main.ts, app.ts, then terminal/ tabs/ panes/ review/ hold-menu/ panel/ projects/
                views/ agents/ settings/ updates/ quit/ window/ kit/ platform/ styles/ types/
+               files/ (a file over its tab) editor/ (CodeMirror, loaded on the first file)
 shell/src/     main.ts, preload.ts, then electron/ daemon/ tabs/ projects/ settings/ inspectors/
                connections/ updates/ quit/ platform/linux/ platform/darwin/
 ```

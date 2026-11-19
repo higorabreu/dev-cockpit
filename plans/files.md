@@ -1,6 +1,7 @@
 # Open and edit files in the cockpit
 
-**Status:** Agreed with the maintainer on 2026-11-19, except the syntax colors, decided by F0. Nothing implemented.
+**Status:** Agreed with the maintainer on 2026-11-19; the syntax colors decided by F0. F0 to F4 done (F4a:
+the file over the tab and the editor, D83; F4b: the viewers and Compare, D85; F5: the entries, D84); F6 left.
 
 Asked by the maintainer on 2026-11-17 (roadmap backlog, "Editing files") and refined on 2026-11-19: find a
 file of the tab's project and open it in the cockpit, text and code to edit, and the common non-text files
@@ -115,18 +116,48 @@ before it is kept.
 
 ## Open questions
 
-- Syntax colors: decided by the measurement of F0, with screenshots beside VS Code's.
+- None left from F0: the syntax colors are Lezer's, in the palette the maintainer chose (D83).
 
 ## Tasks
 
-- [ ] F0. Spike: measure each kind of the table with the perf script; decide which kinds stay.
-- [ ] F1. Core: file opening model (kinds, limits, recent list per tab), the conflict rule, tests.
-- [ ] F2. Adapter and bridge: read, watch, atomic save with the change check, the protocol for non-text.
-- [ ] F3. File search: the project's files (`git ls-files`, else a bounded walk), fuzzy match, the ignored
+- [x] F0. Spike: measure each kind of the table with the perf script; decide which kinds stay. Decided on
+  2026-11-19 from [files-measurements.md](files-measurements.md): CodeMirror 6 loaded on the first open,
+  its cursor blinking with the terminal's timer; syntax colors with Lezer's grammars through
+  `@codemirror/language-data`, each language on first use, up to 2 MB, editable without colors from 2 to 5
+  MB, read only to 50 MB and the card above; images, Markdown (marked and DOMPurify) and PDF (Chromium's
+  viewer) kept for F4b.
+- [x] F1. Core: file opening model (kinds, limits, recent list per tab), the conflict rule, tests (D81).
+- [x] F2. Adapter and bridge: read, watch, atomic save with the change check, the protocol for non-text
+  (D81).
+- [x] F3. File search: the project's files (`git ls-files`, else a bounded walk), fuzzy match, the ignored
   group and the step into an ignored folder, key.
-- [ ] F4. File view over the tab: editor, image, Markdown, PDF, card; switch key; recent list.
-- [ ] F5. Entries: Ctrl+click on a path (amends D40), the review's button.
+- [x] F4. File view over the tab: editor, image, Markdown, PDF, card; switch key; recent list.
+  - [x] F4a (D83). The appendix in the tab bar with its marks and menus, `Ctrl+Shift+Space` (`⇧⌘Space`),
+    the editor (CodeMirror, Lezer colors, the palette in `tokens.json`, `.editorconfig`, line endings kept,
+    timer blink), the search inside the file, auto save, the strips for a merge, a conflict (Compare as two
+    read only columns) and a deletion, the recent list kept with the tab, the card for every other kind,
+    the file search's pick opening here, and the open files saved before the app quits.
+  - [x] F4b (D85). Images drawn from a bitmap of at most 2048 px with fit, zoom (the font keys, `1`, the
+    header's buttons, Ctrl and the wheel) and pan, a checkerboard under transparency, the card past 50
+    megapixels and the first frame of an animation; SVG as an image with Code (`Ctrl+Shift+J`); Markdown
+    with Edit, Preview and Side by side (marked and DOMPurify loaded on first use, up to 200 KB, code
+    blocks in the editor's colors, links to the browser, to a file or to a heading, images of the file's
+    folder through the protocol and remote ones on request); PDF in Chromium's viewer with its web links
+    sent to the browser and its download through the system's dialog; Compare as a three-way picker with
+    Use mine, Use disk and Use both per conflict; the card for the rest. The editor's search and Go to
+    line became a drawer under the header (D83).
+- [x] F5. Entries: Ctrl+click on a path at its line (amends D40), Ctrl+Shift+click and
+  `files.openPathsInCockpit` for the system's app, the review's Open file button and `o` (D84).
 - [ ] F6. Decision (and D13's text, which still names Ctrl+Shift+O for projects), README, perf report updated, checks in the real app with screenshots, both themes.
+
+## Later
+
+- **Raise the size limits toward VS Code's, after measuring** (the maintainer, 2026-11-19; nothing changes
+  now). Today: colors to 2 MB, editing to 5 MB, read only to 50 MB, the card above. VS Code: colors to 20 MB
+  or 300 000 lines, editing to about 1 GB with a confirmation, extensions to 50 MB (`textModel.ts` in
+  `src/vs/editor/common/model/` and `files.ts` in `src/vs/platform/files/common/`). To measure: editing
+  without colors up to 50 MB; colors up to about 10 MB with the parse kept to the visible range; "Open
+  anyway" above 50 MB.
 
 ## Why a toggle key and not Esc
 
