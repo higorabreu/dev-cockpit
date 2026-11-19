@@ -610,7 +610,6 @@ export const ptBR = {
   'files.showTerminal': 'Mostrar terminal',
   'files.close': 'Fechar arquivo',
   'files.recent': 'Arquivos recentes',
-  'files.noRecent': 'Nenhum outro arquivo recente',
   'files.unsaved': 'Alterações não salvas',
   'files.conflict': 'Alterado no disco',
   'files.deletedMark': 'Apagado no disco',
