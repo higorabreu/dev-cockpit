@@ -639,6 +639,9 @@ export const ptBR = {
   'error.DCK-INS-005': 'Download corrompido; nada foi instalado',
   'error.DCK-INS-006': 'A instalação falhou',
   'error.DCK-FIL-001': 'O arquivo não existe',
+  'error.DCK-FIL-002': 'Não foi possível ler o arquivo',
+  'error.DCK-FIL-003': 'Não foi possível salvar o arquivo',
+  'error.DCK-FIL-004': 'Não é possível acompanhar as mudanças do arquivo no disco',
 } as const
 
 export type MessageKey = keyof typeof ptBR
