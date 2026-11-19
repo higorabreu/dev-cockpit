@@ -602,8 +602,7 @@ export const en: Record<MessageKey, string> = {
   'settings.autoMerge': 'Merge changes made on disk',
   'settings.autoMerge.hint': 'Lines another program changed away from yours join your edits.',
   'settings.openPathsInCockpit': 'Open terminal paths in the cockpit',
-  'settings.openPathsInCockpit.hint':
-    "Off, a file path clicked in a terminal opens in the system's app; {key}+click opens it the other way.",
+  'settings.openPathsInCockpit.hint': "Off, they open in the system's app. {key}+click swaps it.",
 
   'files.toggle': 'Show file or terminal',
   'files.show': 'Show file',
