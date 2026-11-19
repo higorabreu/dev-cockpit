@@ -83,7 +83,7 @@ import {
   waylandSocket,
 } from './platform/linux/wayland-bounds.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
-import { nativeWayland, selectPlatform, usesGpu } from './platform/select-platform.ts'
+import { nativeWayland, selectPlatform } from './platform/select-platform.ts'
 import { createWindowRequests } from './platform/window-requests.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
@@ -120,9 +120,6 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason) => {
   logger.error('unhandled rejection in main', { error: String(reason) })
 })
-
-// Before the app is ready, or Chromium has already started the GPU process
-if (!usesGpu(process.platform)) app.disableHardwareAcceleration()
 
 if (!app.requestSingleInstanceLock()) app.quit()
 
