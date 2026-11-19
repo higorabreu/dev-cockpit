@@ -27,9 +27,10 @@ changed, and your pull requests, merge requests and tasks. The clips show exampl
 ## What it does
 
 - **Drop-down window.** `F12` shows or hides it on the monitor where the mouse is; `F11` switches between
-  anchored and full height, and dragging its bottom edge sets the anchored height (a double click on the
-  edge switches to full height). Tabs, opacity and font size are a key away; a tab can be renamed in place,
-  a middle click closes it, and the tabs open again in their folders on the next start.
+  anchored and full height, and dragging its bottom edge sets the anchored height (dragged to the bottom
+  of the screen it goes full height; a double click on the edge switches it). Tabs, opacity and font size
+  are a key away; a tab can be renamed in place, a middle click closes it, and the tabs open again in
+  their folders on the next start.
 - **Action wheel.** Hold the right `Ctrl` (configurable, a mouse button too) and the hold menu puts every
   action in one wheel: tabs, projects, the agent and the system. Choose with the arrows or the mouse and
   release to run it. It was inspired by the weapon wheel in Rockstar's games.

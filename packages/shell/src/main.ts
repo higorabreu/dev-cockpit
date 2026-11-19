@@ -398,7 +398,13 @@ app.whenReady().then(async () => {
     home: homedir(),
     logger,
     send,
-    toggleFullHeight: () => void dockActions.toggleFullHeight().then(syncLayout),
+    toggleFullHeight: () =>
+      void dockActions.toggleFullHeight().then((ratio) => {
+        // DCK_HEIGHT pins the saved height: the window still leaves full height, the file keeps its value
+        if (ratio === undefined || settingsStore.get().locked.includes('window.heightRatio'))
+          syncLayout()
+        else void settingsStore.update({ window: { heightRatio: ratio } }).then(syncLayout)
+      }),
     // DCK_HEIGHT pins the height, so the edge moves nothing
     resizeWindow(height) {
       if (settingsStore.get().locked.includes('window.heightRatio')) return undefined

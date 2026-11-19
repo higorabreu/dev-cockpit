@@ -1,6 +1,6 @@
 # Full height by dragging the edge to 100%
 
-**Status:** Planned, after the maintenance of 0.11.1.
+**Status:** Done (D80).
 
 Today a drag of the bottom edge to 100% saves `window.heightRatio = 1` (D67). F11 then switches to full
 height, which at 100% looks the same, so nothing happens, and there is no height left to go back to. Reported
@@ -18,8 +18,9 @@ Decided with the maintainer:
 
 ## Tasks
 
-- [ ] F1. Core: `endResize` reports a release at 100% as full height (no ratio to save), the controller turns
+- [x] F1. Core: `endResize` reports a release at 100% as full height (no ratio to save), the controller turns
   full height on, and leaving full height with an anchored height of 100% falls back to 50%. Tests.
-- [ ] F2. Shell: on a release at full height, skip the save and tell the window it is at full height.
-- [ ] F3. Decision (amends D67), README if it mentions the drag, a check in the real app with screenshots:
+- [x] F2. Shell: save the height F11 returns (not while `DCK_HEIGHT` pins it); a release at 100% saves
+  nothing and the layout follows full height.
+- [x] F3. Decision (amends D67), README if it mentions the drag, a check in the real app with screenshots:
   drag to 100%, F11, drag up from full height, double click, both themes.

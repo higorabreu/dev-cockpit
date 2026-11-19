@@ -43,9 +43,9 @@ describe('createDockActions', () => {
     const { window, dock, actions } = setup([compositorArea])
     dock.show()
 
-    const fullHeight = await actions.toggleFullHeight()
+    await actions.toggleFullHeight()
 
-    expect(fullHeight).toBe(true)
+    expect(dock.isFullHeight()).toBe(true)
     expect(window.bounds().height).toBe(868)
   })
 
@@ -97,9 +97,9 @@ describe('createDockActions', () => {
     const actions = createDockActions(dock)
 
     await actions.show()
-    const fullHeight = await actions.toggleFullHeight()
+    await actions.toggleFullHeight()
 
-    expect(fullHeight).toBe(true)
+    expect(dock.isFullHeight()).toBe(true)
     expect(window.bounds().height).toBe(900)
   })
 })
