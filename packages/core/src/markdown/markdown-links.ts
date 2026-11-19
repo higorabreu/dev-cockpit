@@ -1,4 +1,4 @@
-import { imageTypeOf } from './file-kind.ts'
+import { imageTypeOf } from '../files/file-kind.ts'
 
 // Where a link of a Markdown preview leads: the system's browser, a heading of the same file, another
 // file in the cockpit (at a line for GitHub's `#L12`), or nowhere (`javascript:`, `mailto:`, `data:`...)
