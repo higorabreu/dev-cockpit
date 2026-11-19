@@ -101,6 +101,10 @@ export interface Tokens {
     readonly scrollbarThumb: number
     // Every divider and card edge: drawn as a border, which Chromium snaps to whole device pixels
     readonly hairline: number
+    // The tab bar and the headers that sit side by side (panel, file view, review), divider included. Steps
+    // of 4 are whole device pixels at 1, 1.25, 1.5, 1.75 and 2, so the lines under them land on a pixel
+    readonly bar: number
+    readonly header: number
   }
   readonly radius: { readonly small: string; readonly medium: string; readonly large: string }
   readonly motion: { readonly fast: string; readonly normal: string; readonly easing: string }

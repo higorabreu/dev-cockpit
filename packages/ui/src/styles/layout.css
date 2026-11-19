@@ -23,12 +23,17 @@ body {
   flex-direction: column;
 }
 
+/* A fixed height, divider included, in whole device pixels: the tabs' own height (the font's line, a file
+   tab's snapped outline) never moves the line or anything under it */
 #bar {
   order: 2;
+  flex: none;
+  box-sizing: border-box;
+  height: var(--size-bar);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 0 8px;
   border-top: var(--size-hairline) solid var(--line);
   overflow: hidden;
 }

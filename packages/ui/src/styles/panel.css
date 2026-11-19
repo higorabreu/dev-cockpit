@@ -154,14 +154,27 @@
   flex-direction: column;
 }
 
+/* As tall as the file view's and the review's headers beside it, divider included, so the three lines meet
+   in one. The line is trimmed to its x-height and centered, as the file view's path is: the mono path and
+   the Inter one then share the baseline and the middle of their x-height (a flex row would drop the
+   ellipsis, hence the padding) */
 .phead {
   flex: none;
-  padding: 10px 16px 8px;
+  box-sizing: border-box;
+  height: var(--size-header);
+  padding: calc((var(--size-header) - var(--size-hairline) - 1ex) / 2) 16px 0;
   overflow: hidden;
+  border-bottom: var(--size-hairline) solid var(--line);
   color: var(--muted);
   font: 11.5px var(--font-mono);
+  text-box: trim-both ex alphabetic;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The header's divider stands for the first section's: two lines would meet there */
+.pscroll > :first-child > .psec:first-child {
+  border-top: 0;
 }
 
 .stack {

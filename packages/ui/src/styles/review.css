@@ -23,13 +23,16 @@
   z-index: 3;
 }
 
+/* The panel's header beside it has the same height, divider included, so their lines meet in one */
 .rv-head {
   flex: none;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 12px;
   min-width: 0;
-  padding: 6px 8px 6px 12px;
+  height: var(--size-header);
+  padding: 0 8px 0 12px;
   border-bottom: var(--size-hairline) solid var(--line);
 }
 
