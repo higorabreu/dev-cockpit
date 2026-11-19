@@ -1,5 +1,6 @@
 import { connectTo, defaultConfigDir, defaultEndpoint } from '@dck/adapter-node-net'
 import { silentLogger } from '@dck/core'
+import { signalAgent } from './agent-signal.ts'
 import { isDaemonCommand, runDaemonCommand } from './daemon-command.ts'
 
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
@@ -13,13 +14,16 @@ const io = {
   err: (text: string) => process.stderr.write(text),
 }
 
-// The window's global key runs `dck toggle` on every press (D30), so only the socket and the protocol load
-// up front: the settings, the catalogs, the daemon and the extensions come in by import() when needed
+// The window's global key runs `dck toggle` on every press (D30) and coding agents' hooks run
+// `dck agent signal` on every event, so only the socket and the protocol load up front: the settings, the
+// catalogs, the daemon and the extensions come in by import() when needed
 if (isDaemonCommand(command)) {
   process.exitCode = await runDaemonCommand(command, {
     ...io,
     translate: async () => (await import('./full-cli.ts')).translatorForUser(configDir),
   })
+} else if (command === 'agent' && args[1] === 'signal') {
+  await signalAgent(args.slice(2), { ...io, env: process.env })
 } else if (command === 'daemon') {
   await (await import('./daemon-process.ts')).runDaemonProcess(endpoint)
 } else {

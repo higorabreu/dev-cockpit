@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { agentSignalSchema } from '../attention/agent-signal.ts'
 import { DckError } from '../errors.ts'
 import type { Logger } from '../ports/logger.ts'
 import { connectLoopback } from '../testing/loopback.ts'
@@ -61,6 +62,20 @@ describe('hub requests', () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.data?.code).toBe('DCK-IPC-003')
+  })
+
+  it('should answer invalid params without logging when a zod/mini schema rejects them', async () => {
+    // Arrange
+    const { client, errors } = setup({
+      'agent.signal': (params) => agentSignalSchema.parse(params),
+    })
+
+    // Act
+    const result = await client.request('agent.signal', { ptyId: -1, state: 'done' })
+
+    // Assert
+    expect(!result.ok && result.error.data?.code).toBe('DCK-IPC-003')
+    expect(errors).toEqual([])
   })
 
   it('should hide the internal details when a handler throws an unexpected error', async () => {

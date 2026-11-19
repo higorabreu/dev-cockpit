@@ -76,6 +76,16 @@ describe('dck entry point', () => {
     expect(run.stderr).toContain('Inicie o daemon com: dck daemon')
   })
 
+  it('should exit successfully in silence when an agent signals with no daemon running', () => {
+    const run = dck(['agent', 'signal', 'working'], '', { DCK_PTY_ID: '3' })
+
+    expect({ status: run.status, stdout: run.stdout, stderr: run.stderr }).toEqual({
+      status: 0,
+      stdout: '',
+      stderr: '',
+    })
+  })
+
   it('should answer in english when the terminal speaks a language with no catalog', () => {
     const run = dck(['--help'], '', { LANG: 'de_DE.UTF-8' })
 
