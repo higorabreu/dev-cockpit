@@ -131,6 +131,7 @@ export const en: Record<MessageKey, string> = {
   'terminal.leftClick': 'left click',
   'terminal.openLink': 'Open',
   'terminal.openPath': 'Open',
+  'terminal.openInCockpit': 'Open in the cockpit',
   'terminal.openInNewTab': 'Open in a new tab',
   'terminal.openInFileManager': 'Open in the file manager',
   'terminal.clear': 'Clear terminal',
@@ -487,6 +488,8 @@ export const en: Record<MessageKey, string> = {
   'review.viewedFiles.short': '{viewed} / {count}',
   'review.changedSinceViewed': 'Changed since last viewed',
   'review.hint.viewed': 'viewed',
+  'review.hint.open': 'open file',
+  'review.openFile': 'Open file',
   'review.a11y.viewed': '{file}, viewed',
   'review.renamedFrom': 'Renamed from {path}',
   'review.copiedFrom': 'Copied from {path}',
@@ -598,6 +601,9 @@ export const en: Record<MessageKey, string> = {
   'settings.autoSave.hint': 'After a pause in typing, and when you leave the file.',
   'settings.autoMerge': 'Merge changes made on disk',
   'settings.autoMerge.hint': 'Lines another program changed away from yours join your edits.',
+  'settings.openPathsInCockpit': 'Open terminal paths in the cockpit',
+  'settings.openPathsInCockpit.hint':
+    "Off, a file path clicked in a terminal opens in the system's app; {key}+click opens it the other way.",
 
   'files.toggle': 'Show file or terminal',
   'files.show': 'Show file',

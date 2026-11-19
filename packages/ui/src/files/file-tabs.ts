@@ -237,7 +237,13 @@ export function createFileTabs(deps: FileTabsDeps) {
     if (entry.watching) api.files.unwatch(entry.path)
   }
 
-  async function mountEditor(tabId: string, entry: Entry, file: OpenedFile, line?: number) {
+  async function mountEditor(
+    tabId: string,
+    entry: Entry,
+    file: OpenedFile,
+    line?: number,
+    column?: number,
+  ) {
     if (!('base' in file) || !entry.view) return
     const [module, configs] = await Promise.all([
       deps.loadEditor(),
@@ -292,7 +298,7 @@ export function createFileTabs(deps: FileTabsDeps) {
     mountModes(tabId, entry, file, module)
     const watched = await api.files.watch(file.path, file.base.stamp)
     entry.watching = watched.ok
-    if (line !== undefined) editor.goToLine(line)
+    if (line !== undefined) editor.goToLine(line, column)
     if (entry.shown) focusEntry(entry)
   }
 
@@ -368,7 +374,7 @@ export function createFileTabs(deps: FileTabsDeps) {
   }
 
   // Reads the file and shows it over the tab, in place of the one there
-  async function load(tabId: string, path: string, line?: number) {
+  async function load(tabId: string, path: string, line?: number, column?: number) {
     const host = deps.host(tabId)
     if (!host) return
     const opened = await api.files.open(path)
@@ -407,7 +413,7 @@ export function createFileTabs(deps: FileTabsDeps) {
     entry.opened = opened.value
     const file = opened.value
     if (file.kind === 'text' || file.kind === 'markdown')
-      await mountEditor(tabId, entry, file, line)
+      await mountEditor(tabId, entry, file, line, column)
     else if (file.kind === 'image') await mountImage(entry, file)
     else if (file.kind === 'pdf') {
       view.setInfo(sizeText(i18n, file.size))
@@ -456,15 +462,16 @@ export function createFileTabs(deps: FileTabsDeps) {
     else if (!entry.modes?.focus()) entry.editor?.focus()
   }
 
-  async function openFile(tabId: string, path: string, line?: number) {
+  // A line and a column from 1, as a compiler or the review names them
+  async function openFile(tabId: string, path: string, line?: number, column?: number) {
     const entry = entries.get(tabId)
     if (entry?.path === path && !entry.pending) {
       show(tabId, true)
-      if (line !== undefined) entry.editor?.goToLine(line)
+      if (line !== undefined) entry.editor?.goToLine(line, column)
       return
     }
     if (entry && !(await leave(tabId, entry))) return
-    await load(tabId, path, line)
+    await load(tabId, path, line, column)
   }
 
   async function closeFile(tabId: string): Promise<boolean> {

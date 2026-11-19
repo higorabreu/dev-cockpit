@@ -23,8 +23,11 @@ const settled = () => new Promise((resolve) => setTimeout(resolve, 0))
 // CodeMirror as plain text: what the controller hands it and what the user types into it
 function fakeEditors() {
   const made: { options: CodeEditorOptions; editor: CodeEditor; type(text: string): void }[] = []
+  // Where each go to line put the cursor: the line and the column
+  const places: (readonly [number, number | undefined])[] = []
   return {
     made,
+    places,
     module: {
       createCodeEditor(options: CodeEditorOptions): CodeEditor {
         let text = options.text
@@ -37,7 +40,7 @@ function fakeEditors() {
           },
           applyLineEdits: () => undefined,
           markLines: () => undefined,
-          goToLine: () => undefined,
+          goToLine: (line, column) => void places.push([line, column]),
           topLine: () => 1,
           scrollToLine: () => undefined,
           ensureFinalNewline: () => false,
@@ -167,6 +170,21 @@ describe('file tabs', () => {
     expect(host.querySelector('.fv-name')?.textContent).toBe('login.ts')
     expect(editors.made[0]?.options.config).toEqual({ indentSize: 4, tabWidth: 4 })
     expect(editors.made[0]?.options.colors).toBe(true)
+  })
+
+  it('should put the cursor on the line and column when a path names them', async () => {
+    // Arrange
+    const { tabs, editors } = setup()
+
+    // Act
+    await tabs.openFile('tab-1', LOGIN, 12, 5)
+    await tabs.openFile('tab-1', LOGIN, 3)
+
+    // Assert
+    expect(editors.places).toEqual([
+      [12, 5],
+      [3, undefined],
+    ])
   })
 
   it('should save first and give the keys to the terminal when the user switches to it', async () => {

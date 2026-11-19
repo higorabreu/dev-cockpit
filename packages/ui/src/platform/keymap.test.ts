@@ -198,6 +198,7 @@ describe('createKeymap per keyboard', () => {
       'MetaRight',
     ])
     expect(mac.click.isHeld({ ctrlKey: true, metaKey: false })).toBe(false)
+    expect(mac.click.alternateLabel).toBe('⇧⌘')
   })
 
   it('should open links with Ctrl and hold the right Ctrl when the keyboard is a PC one', () => {
@@ -211,6 +212,7 @@ describe('createKeymap per keyboard', () => {
       'ControlRight',
     ])
     expect(pc.click.isHeld({ ctrlKey: true, metaKey: false })).toBe(true)
+    expect(pc.click.alternateLabel).toBe('Ctrl+Shift')
   })
 
   it('should copy and paste with Ctrl+Shift+C and V on a PC and leave them to the shell on a Mac', () => {

@@ -1,5 +1,7 @@
 import { type DiffFile, type FileNotice, isCollapsed, type Translator } from '@dck/core'
 import { h, icon } from '../panel/dom.ts'
+import { FILE_GLYPH } from '../tabs/file-segment.ts'
+import type { LinkHint } from '../terminal/terminal-links.ts'
 import { counts, fileLetter, filePathLabel, statusKey } from './file-list.ts'
 
 export function sizeText(i18n: Translator, bytes: number): string {
@@ -11,10 +13,14 @@ export function sizeText(i18n: Translator, bytes: number): string {
 
 export interface FileHeadDeps {
   readonly i18n: Translator
-  // The modifier's name and whether it was held, for Ctrl+click on the path (Cmd on macOS)
-  readonly modifier: string
+  // The held clicks on the path for its tooltip (Ctrl+click, and Ctrl+Shift+click the other way, D84),
+  // and whether the modifier was held (Cmd on macOS)
+  pathHint(): LinkHint
   isModified(event: MouseEvent): boolean
-  open(path: string): void
+  // Ctrl+click on the path, routed as a path in the terminal; `alternate` with Shift
+  open(file: DiffFile, alternate: boolean): void
+  // The header's Open file button (`o` from the keys): the whole file over the tab, at the line in view
+  openFile(file: DiffFile): void
   showAnyway(file: DiffFile): void
   // Reads the content of a file listed without it
   load(file: DiffFile): void
@@ -114,9 +120,57 @@ function viewedBox(file: DiffFile, deps: FileHeadDeps): HTMLElement {
   return box
 }
 
+// A file on disk the cockpit can open: not a deletion, not a submodule's pointer (a folder)
+export const opensFile = (file: DiffFile) => file.status !== 'deleted' && !file.submodule
+
+// The path, Ctrl+clicked to open it; a file gone or a submodule's pointer only names itself
+function pathLabel(file: DiffFile, deps: FileHeadDeps): HTMLElement {
+  const path = filePathLabel(file)
+  path.dataset.tip = file.path
+  path.dataset.tipPath = ''
+  if (!opensFile(file)) return path
+  const hint = deps.pathHint()
+  path.classList.add('rv-open')
+  path.dataset.tipKey = hint.key
+  path.dataset.tipClick = hint.gesture.click
+  path.dataset.tipGesture = hint.gesture.action
+  if (hint.alternate) {
+    path.dataset.tipAltKey = hint.alternate.key
+    path.dataset.tipAltGesture = hint.alternate.gesture.action
+  }
+  path.addEventListener('click', (event) => {
+    if (deps.isModified(event)) deps.open(file, event.shiftKey)
+  })
+  return path
+}
+
+// "Open file": the whole file over the tab at the line in view; none for a file that is not on disk
+function openButton(file: DiffFile, deps: FileHeadDeps): HTMLElement | undefined {
+  if (!opensFile(file)) return undefined
+  const label = deps.i18n.t('review.openFile')
+  const button = h(
+    'button',
+    {
+      type: 'button',
+      class: 'rv-icon rv-openfile',
+      tabindex: '-1',
+      'aria-label': label,
+      'data-tip': label,
+      'data-tip-key': 'o',
+    },
+    icon(FILE_GLYPH, 14),
+  )
+  button.addEventListener('mousedown', (event) => event.preventDefault())
+  button.addEventListener('click', (event) => {
+    event.stopPropagation()
+    deps.openFile(file)
+  })
+  return button
+}
+
 // A file's header in the diff: state glyph, path (Ctrl+click opens it), labels, why it shows no lines,
-// "Load diff" for a collapsed one or one whose content waits, "Viewed" and the counts. Its buttons never take the focus from the
-// diff
+// "Load diff" for a collapsed one or one whose content waits, the counts, Open file and "Viewed". Its
+// buttons never take the focus from the diff
 export function fileHead(
   file: DiffFile,
   notice: FileNotice | undefined,
@@ -124,15 +178,7 @@ export function fileHead(
 ): HTMLElement {
   const { i18n } = deps
   const letter = fileLetter(file, i18n)
-  const path = filePathLabel(file)
-  path.classList.add('rv-open')
-  path.dataset.tip = file.path
-  path.dataset.tipKey = deps.modifier
-  path.dataset.tipClick = i18n.t('terminal.leftClick')
-  path.dataset.tipGesture = i18n.t('terminal.openPath')
-  path.addEventListener('click', (event) => {
-    if (deps.isModified(event)) deps.open(file.path)
-  })
+  const path = pathLabel(file, deps)
   let action: HTMLElement | undefined
   if (isCollapsed(notice) || notice === 'unloaded') {
     action = h(
@@ -164,6 +210,7 @@ export function fileHead(
     h('span', { class: 'rv-spacer' }),
     action,
     file.hunks.length === 0 ? undefined : counts(file.additions, file.deletions),
+    openButton(file, deps),
     viewedBox(file, deps),
   )
 }

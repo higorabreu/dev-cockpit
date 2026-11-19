@@ -93,6 +93,8 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
   let closes = 0
   let layouts = 0
   const sent: string[] = []
+  const opened: { path: string; line: number | undefined }[] = []
+  const clicked: { path: string; line: number | undefined; alternate: boolean }[] = []
   const memory = { indexHidden: false }
   const bases = new Map<string, string>()
   const api = {
@@ -151,10 +153,22 @@ function setup(answer: Answer | (() => Answer), cwd: string | undefined = '/home
       return true
     },
     activity: async () => undefined,
+    openFile: (path, line) => void opened.push({ path, line }),
+    openPath: (path, line, alternate) => void clicked.push({ path, line, alternate }),
+    pathHint: () => ({
+      key: 'Ctrl',
+      gesture: { click: 'left click', action: 'Open' },
+      alternate: {
+        key: 'Ctrl+Shift',
+        gesture: { click: 'left click', action: "Open in the system's app" },
+      },
+    }),
   })
   document.body.append(pane.element)
   return {
     pane,
+    opened,
+    clicked,
     requests,
     reads,
     escapes: () => escapes,
@@ -586,7 +600,9 @@ describe('createReviewPane', () => {
     const inside = text('.phint')
     outside.focus()
 
-    expect(inside).toBe('↑↓ navigate[ ] filen p hunkc commentv viewedEsc terminalCtrl+R Refresh')
+    expect(inside).toBe(
+      '↑↓ navigate[ ] filen p hunkc commentv viewedo open fileEsc terminalCtrl+R Refresh',
+    )
     expect(text('.phint')).toBe('Ctrl+Shift+D review')
   })
 
@@ -1069,5 +1085,130 @@ describe('createReviewPane', () => {
     expect((pane.element.querySelector('.rv-inner') as HTMLElement).style.height).toBe(
       `${40 + 26 + 10_000 * 20}px`,
     )
+  })
+})
+
+describe('createReviewPane opening a file', () => {
+  const invoicePath = '/home/ana/acme/src/billing/invoice.ts'
+
+  it('should open the whole file at the first changed line in view when its header button is clicked', async () => {
+    // Arrange
+    const { pane, opened } = setup(repository())
+    pane.open()
+    await flush()
+    const button = pane.element.querySelector<HTMLElement>(
+      '.rv-filerow[data-file="1"] .rv-openfile',
+    )
+
+    // Act
+    button?.click()
+
+    // Assert
+    expect(button?.dataset.tip).toBe('Open file')
+    expect(button?.dataset.tipKey).toBe('o')
+    expect(opened).toEqual([{ path: invoicePath, line: 11 }])
+  })
+
+  it('should open the file at the line under the cursor when o is pressed in the diff', async () => {
+    // Arrange
+    const { pane, key, opened } = setup(repository())
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+
+    // Act
+    key(lines, 'n')
+    key(lines, 'ArrowDown')
+    key(lines, 'o')
+
+    // Assert
+    expect(opened).toEqual([{ path: invoicePath, line: 10 }])
+  })
+
+  it('should open the file picked in the index when o is pressed there', async () => {
+    // Arrange
+    const { pane, key, opened } = setup(repository())
+    pane.open()
+    await flush()
+    const index = pane.element.querySelector('.rv-files') as HTMLElement
+    index.focus()
+
+    // Act
+    key(index, 'ArrowDown')
+    key(index, 'o')
+
+    // Assert
+    expect(opened).toEqual([{ path: invoicePath, line: 11 }])
+  })
+
+  it('should route a Ctrl+click on the path and offer the other way with Shift in its tooltip', async () => {
+    // Arrange
+    const { pane, clicked } = setup(repository())
+    pane.open()
+    await flush()
+    const path = pane.element.querySelector<HTMLElement>('.rv-filerow[data-file="1"] .rv-path')
+
+    // Act
+    path?.dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true }))
+    path?.dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true, shiftKey: true }))
+
+    // Assert
+    expect(path?.dataset.tipGesture).toBe('Open')
+    expect(path?.dataset.tipAltKey).toBe('Ctrl+Shift')
+    expect(path?.dataset.tipAltGesture).toBe("Open in the system's app")
+    expect(clicked).toEqual([
+      { path: invoicePath, line: 11, alternate: false },
+      { path: invoicePath, line: 11, alternate: true },
+    ])
+  })
+
+  it('should offer no button and open nothing when the file was deleted', async () => {
+    // Arrange
+    const [invoice] = parseUnifiedDiff(diffText(3000, 5000))
+    if (!invoice) throw new Error('invariant: a file')
+    const gone = { ...invoice, status: 'deleted' as const }
+    const answer = ok({
+      kind: 'ok' as const,
+      diff: reviewDiff('/home/ana/acme', 'uncommitted', feature, [gone], []),
+    })
+    const { pane, key, opened } = setup(answer)
+    pane.open()
+    await flush()
+    const lines = pane.element.querySelector('.rv-lines') as HTMLElement
+    lines.focus()
+
+    // Act
+    key(lines, 'o')
+
+    // Assert
+    expect(pane.element.querySelector('.rv-openfile')).toBeNull()
+    expect(opened).toEqual([])
+  })
+
+  it('should open a file inside a submodule by its real path when its button is clicked', async () => {
+    // Arrange
+    const [invoice] = parseUnifiedDiff(diffText(3000, 5000))
+    if (!invoice) throw new Error('invariant: a file')
+    const inside = {
+      ...invoice,
+      path: 'libs/billing/src/billing/invoice.ts',
+      module: 'libs/billing',
+    }
+    const answer = ok({
+      kind: 'ok' as const,
+      diff: reviewDiff('/home/ana/acme', 'uncommitted', feature, [inside], []),
+    })
+    const { pane, opened } = setup(answer)
+    pane.open()
+    await flush()
+
+    // Act
+    pane.element.querySelector<HTMLElement>('.rv-filerow .rv-openfile')?.click()
+
+    // Assert
+    expect(opened).toEqual([
+      { path: '/home/ana/acme/libs/billing/src/billing/invoice.ts', line: 11 },
+    ])
   })
 })

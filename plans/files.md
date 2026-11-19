@@ -1,7 +1,7 @@
 # Open and edit files in the cockpit
 
 **Status:** Agreed with the maintainer on 2026-11-19; the syntax colors decided by F0. F0 to F4 done (F4a:
-the file over the tab and the editor, D83; F4b: the viewers and Compare, D84); F5 and F6 left.
+the file over the tab and the editor, D83; F4b: the viewers and Compare, D85; F5: the entries, D84); F6 left.
 
 Asked by the maintainer on 2026-11-17 (roadmap backlog, "Editing files") and refined on 2026-11-19: find a
 file of the tab's project and open it in the cockpit, text and code to edit, and the common non-text files
@@ -137,7 +137,7 @@ before it is kept.
     timer blink), the search inside the file, auto save, the strips for a merge, a conflict (Compare as two
     read only columns) and a deletion, the recent list kept with the tab, the card for every other kind,
     the file search's pick opening here, and the open files saved before the app quits.
-  - [x] F4b (D84). Images drawn from a bitmap of at most 2048 px with fit, zoom (the font keys, `1`, the
+  - [x] F4b (D85). Images drawn from a bitmap of at most 2048 px with fit, zoom (the font keys, `1`, the
     header's buttons, Ctrl and the wheel) and pan, a checkerboard under transparency, the card past 50
     megapixels and the first frame of an animation; SVG as an image with Code (`Ctrl+Shift+J`); Markdown
     with Edit, Preview and Side by side (marked and DOMPurify loaded on first use, up to 200 KB, code
@@ -146,7 +146,8 @@ before it is kept.
     sent to the browser and its download through the system's dialog; Compare as a three-way picker with
     Use mine, Use disk and Use both per conflict; the card for the rest. The editor's search and Go to
     line became a drawer under the header (D83).
-- [ ] F5. Entries: Ctrl+click on a path (amends D40), the review's button.
+- [x] F5. Entries: Ctrl+click on a path at its line (amends D40), Ctrl+Shift+click and
+  `files.openPathsInCockpit` for the system's app, the review's Open file button and `o` (D84).
 - [ ] F6. Decision (and D13's text, which still names Ctrl+Shift+O for projects), README, perf report updated, checks in the real app with screenshots, both themes.
 
 ## Later

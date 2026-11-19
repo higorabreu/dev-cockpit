@@ -43,6 +43,10 @@ export interface TabViewDeps {
   onArrange?(orientation: Orientation | undefined, narrow: boolean): void
   // Which panes are on screen changed (a pane opened or closed, or a narrow tab switched panes)
   onShownChange?(): void
+  // Whether a pane opening or closing slides, as the side panel does; false with reduced motion
+  animate?(): boolean
+  // A slide ended: the terminal fits once, having kept its grid while the panes moved (as D67's drag)
+  onMoved?(): void
 }
 
 // The divider is 1px of line between the panes; its grip is wider than what it draws
@@ -53,6 +57,18 @@ const KEY_STEP = 16
 const USUAL_GRIDS: Readonly<Record<PaneKind, PaneGrid>> = {
   terminal: { cellWidth: 9.6, cellHeight: 19, frameWidth: 24, frameHeight: 16 },
   review: { cellWidth: 7.2, cellHeight: 20, frameWidth: 122, frameHeight: 72 },
+}
+
+// The motion's length when the style does not give one, and the margin before a slide is ended by hand
+const MOTION_MS = 170
+const MOTION_SLACK_MS = 200
+
+// The token is written in milliseconds, but a computed style may give it back in seconds (0.17s)
+export function motionMs(element: HTMLElement): number {
+  const text = getComputedStyle(element).getPropertyValue('--motion-normal').trim()
+  const value = Number.parseFloat(text)
+  if (!Number.isFinite(value)) return MOTION_MS
+  return text.endsWith('ms') ? value : value * 1000
 }
 
 const KEYS: Readonly<Record<Orientation, { readonly back: string; readonly forward: string }>> = {
@@ -80,6 +96,8 @@ export function createTabView(host: HTMLElement, deps: TabViewDeps) {
   let frame = 0
   let shownIds = ''
   let dragging = false
+  // The end of the slide under way: the next open or close runs it first, so a slide is never left half done
+  let moving: (() => void) | undefined
 
   function shape(): TabShape {
     for (const view of views.values()) {
@@ -108,8 +126,9 @@ export function createTabView(host: HTMLElement, deps: TabViewDeps) {
     divider.setAttribute('aria-valuemax', String(share(PANE_RATIO.min)))
   }
 
+  // During a slide the panes keep the motion's sizes; its end lays them out
   function arrange() {
-    if (!layout) return
+    if (!layout || moving) return
     const tab = shape()
     const before = arranged
     arranged = arrangePanes(layout, tab, deps.preferences().preference)
@@ -157,6 +176,62 @@ export function createTabView(host: HTMLElement, deps: TabViewDeps) {
     if (!layout || dragging) return
     const { ratios } = deps.preferences()
     layout = setPaneRatio(setPaneRatio(layout, 'side', ratios.side), 'stacked', ratios.stacked)
+  }
+
+  function settle() {
+    const end = moving
+    moving = undefined
+    end?.()
+  }
+
+  // A pane slides between no room and its share while the other takes the rest: open grows `id` from
+  // nothing, close shrinks it away. A narrow tab, which shows one pane, slides it over the whole tab. The
+  // panes keep their grids meanwhile (`isMoving`); `finish` lays them out for good, then focus follows
+  function slide(id: string, opening: boolean, finish: () => void) {
+    const pane = views.get(id)
+    const first = layout?.panes[0]
+    const terminal = first && first.id !== id ? views.get(first.id) : undefined
+    if (!pane || !terminal || pane.element.hidden || deps.animate?.() !== true) {
+      finish()
+      return
+    }
+    const stacked = arranged.orientation === 'stacked'
+    const total = Math.max(0, (stacked ? element.clientHeight : element.clientWidth) - DIVIDER)
+    // Shared, each pane has its share as laid out; alone in a narrow tab, the shown one has it all
+    const shared = arranged.orientation !== undefined
+    const paneShare = shared ? pane.element.style.flex : `0 1 ${total}px`
+    const terminalShare = shared ? terminal.element.style.flex : '0 1 0px'
+    const [paneFrom, paneTo] = opening ? ['0 1 0px', paneShare] : [paneShare, '0 1 0px']
+    const [terminalFrom, terminalTo] = opening
+      ? [`0 1 ${total}px`, terminalShare]
+      : [terminalShare, `0 1 ${total}px`]
+    pane.element.hidden = false
+    terminal.element.hidden = false
+    pane.element.style.flex = paneFrom
+    terminal.element.style.flex = terminalFrom
+    // The start is laid out before the transition is turned on, so it animates from there
+    void element.offsetWidth
+    element.dataset.moving = ''
+    pane.element.style.flex = paneTo
+    terminal.element.style.flex = terminalTo
+    const done = () => {
+      if (moving !== end) return
+      moving = undefined
+      end()
+    }
+    const end = () => {
+      clearTimeout(timer)
+      pane.element.removeEventListener('transitionend', onEnd)
+      delete element.dataset.moving
+      finish()
+      deps.onMoved?.()
+    }
+    const onEnd = (event: TransitionEvent) => {
+      if (event.target === pane.element && event.propertyName === 'flex-basis') done()
+    }
+    pane.element.addEventListener('transitionend', onEnd)
+    const timer = setTimeout(done, motionMs(element) + MOTION_SLACK_MS)
+    moving = end
   }
 
   const observer = new ResizeObserver(() => {
@@ -222,6 +297,8 @@ export function createTabView(host: HTMLElement, deps: TabViewDeps) {
     },
     open(view: PaneView) {
       if (!layout) return
+      settle()
+      const opened = paneOfKind(layout, view.kind) !== undefined
       if (!views.has(view.id)) {
         views.set(view.id, view)
         element.append(divider, view.element)
@@ -229,18 +306,30 @@ export function createTabView(host: HTMLElement, deps: TabViewDeps) {
       adopt()
       layout = addPane(layout, view)
       arrange()
-      view.focus()
+      const finish = () => {
+        arrange()
+        view.focus()
+      }
+      if (opened) finish()
+      else slide(view.id, true, finish)
     },
     close(id: string) {
+      settle()
       const view = views.get(id)
       if (!layout || !view || layout.panes[0]?.id === id) return
-      layout = removePane(layout, id)
-      views.delete(id)
-      view.element.remove()
-      divider.remove()
-      arrange()
-      this.focusCurrent()
+      const focusCurrent = () => this.focusCurrent()
+      slide(id, false, () => {
+        if (!layout || views.get(id) !== view) return
+        layout = removePane(layout, id)
+        views.delete(id)
+        view.element.remove()
+        divider.remove()
+        arrange()
+        focusCurrent()
+      })
     },
+    // True while a pane slides: the terminal keeps its grid until it ends
+    isMoving: () => moving !== undefined,
     focus(id: string) {
       if (!layout) return
       layout = focusPane(layout, id)
@@ -268,6 +357,7 @@ export function createTabView(host: HTMLElement, deps: TabViewDeps) {
       if (layout && arranged.orientation) describeDivider(layout, arranged.orientation, shape())
     },
     dispose() {
+      settle()
       observer.disconnect()
       cancelAnimationFrame(frame)
       element.remove()

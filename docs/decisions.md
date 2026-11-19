@@ -542,6 +542,9 @@ is logged by kind, never by path.
 **Reason:** a request from the maintainer on 2026-11-13; terminal output is not trusted, and the default
 app of a launcher or a script runs it.
 **How to revert:** drop `attachPaths` from the terminal session and the `paths` channels from the bridge.
+**Amended by D84** (2026-11-19): a file Ctrl+clicked opens in the cockpit over its tab, at the line and
+column the output names; Ctrl+Shift+click, or `files.openPathsInCockpit` off, opens it in the default app as
+above, through the same checks. A folder and an address are unchanged.
 
 ## D41. GitLab becomes a built-in connector, and the product speaks of connectors by id
 
@@ -698,6 +701,21 @@ over 5 s for 300 files on a Mac, so the adapter builds the addition from the fil
 `diff --no-index`: a diff driver, a clean filter, `ident`, a working tree encoding, or a carriage return
 when `text`, `eol`, `crlf` or `core.autocrlf` may convert line ends. A test compares both readers on every
 kind of file. To revert, send every file to `diffUntracked`.
+**Update: the review slides in and out (2026-11-19).** Opening the review (its key, the tab's menu, the hold
+menu, the panel's review button) grows its pane from nothing to its share while the terminal gives way,
+beside or below as the tab lays them out, and closing it does the reverse, with the side panel's motion
+(`--motion-normal`, `--motion-easing`, a `flex-basis` transition under `data-moving` in `styles/panes.css`,
+`slide` in `panes/tab-view.ts`); in a narrow tab, where the review takes the whole tab, it slides over the
+terminal the same way. The terminal keeps its grid meanwhile (`isMoving` holds its fit as D67's drag does)
+and fits once when the motion ends; the divider sits between the panes all along, and the focus, the pane's
+removal on close and the final layout come after the motion; a layout asked meanwhile (a focus change in a
+narrow tab, a resize) waits for its end. A second open or close finishes the one under way at once, and a
+transition that never reports its end is ended 200 ms after its length. With
+`prefers-reduced-motion: reduce` nothing moves. Measured under Xvfb with a review of 1000 changed files
+(the index and the diff virtualized), side by side and narrow, both themes, three opens and three closes
+each: 43 or 44 frames in 700 ms, no long task, and one frame over 20 ms (33 ms, a first open) in 24
+motions. To revert, drop `slide`, `isMoving` and the `animate` and `onMoved` options, and
+the `data-moving` rules.
 
 ## D48. The review fits the tab's shape, reads as one scroll and compares with where the branch started
 
@@ -1735,7 +1753,7 @@ catalog entries.
   each file with edits asks Save, Don't save or Cancel. While the user is asked the host shows the window
   and waits; a window that does not answer within 2.5 s does not keep the app from quitting. A logout or a
   shutdown quits as before.
-- **Recent files:** each tab keeps its last 10 files (paths only), offered by the segment's menu and by the
+- **Recent files:** each tab keeps its last 5 files, the open one included (10 at first; D84), (paths only), offered by the segment's menu and by the
   file search's empty query. With `window.restoreTabs` a saved tab keeps its open file and its recent list;
   on start the file comes back over its tab, hidden, if it still opens, and is read again only when it
   shows.
@@ -1761,7 +1779,73 @@ app), the `syntax` tokens with their checks, `editorconfig.ts` and `line-edits.t
 `quit:files-settled` channels, the `files.*` catalog entries and the CodeMirror packages, and give the last
 window's close and the update's restart their direct quit again.
 
-## D84. A file shows as what it is: an image, an SVG, a Markdown preview or a PDF, and Compare picks per conflict
+## D84. A file path opens in the cockpit at its line, from the terminal and from the review
+
+**Decision:** F5 of [plans/files.md](../plans/files.md), the ways into the file view (D83), and the
+maintainer's changes to F4a asked on the way.
+- **Ctrl+click on a path (amends D40):** a file path Ctrl+clicked (`⌘` on a Mac) in a terminal opens through
+  `openFile(tabId, path, line, column)` over the tab where the click happened, the cursor at the place the
+  line names and scrolled to the middle; a file the view cannot show (binary, too large) opens its card, which
+  offers the system's app. The places read (`ui/src/terminal/path-candidates.ts`): `a.ts:12` and
+  `a.ts:12:5` (gcc, clang, go, rustc, tsc `--pretty`, vitest, jest, pytest, a stack trace), `a.ts(12,5)` and
+  `a.ts(12)` (tsc, MSBuild), Python's `File "a.py", line 12` and ESLint's compact `a.ts: line 12, col 5`; a
+  line or column of 0 is ignored. A drive letter starts a path (`C:\src\a.ts:3`, `D:/x/a.ts`), only at the start
+  of a word, so `PATH=/a:/b` still splits; a folder written whole in parentheses or brackets
+  (`app/(auth)/[id]/page.tsx`) stays in the path, any other bracket ends it, so `Update(src/x.ts)` still finds
+  `src/x.ts`; a quoted text with a space in it is one candidate (`"/home/ana/my project/a.py"`), and an
+  apostrophe that opens nothing path-like is passed over. Relative paths resolve against the tab's folder
+  and a path that does not exist is no link, as in D40. A folder keeps its menu and an address its browser.
+- **Ctrl+Shift+click** opens a file the other way: in the system's app while files open in the cockpit, in
+  the cockpit while the setting below sends them to the app. Cheap (xterm hands the click's Shift over) and
+  the old behavior stays one key away. The tooltip draws both held clicks, each on its own line ("Open",
+  then "Open in the system's app" or "Open in the cockpit"), through a second gesture in the design system's
+  tooltip (`data-tip-alt-key` and `data-tip-alt-gesture` on an element, `alternate` on a region), and names
+  the path from the project with its place, `acme-api/src/app.ts:12:5`. A folder shows one click.
+- **Setting:** `files.openPathsInCockpit`, on by default, with its row in the Files group: off, the plain
+  click goes to the system's app as before and Ctrl+Shift+click to the cockpit. Kept because it is one
+  boolean and one branch (`pathRoute`), and someone who edits in another editor keeps D40's habit.
+- **From the review:** each file's header has an Open file button (the file glyph, `Open file` and `o` in
+  its tooltip) between the counts and Viewed, and `o` does the same for the file under the cursor in the
+  diff or the one picked in the index; the review's key hints list it. It opens the whole file over the
+  review's tab, switching the tab to the file, at the line under the diff's cursor when the cursor is on that
+  file (a removed line opens where it was), else at its first changed line on screen below the pinned
+  header, else at its first change (`lineToOpen` in `core/src/diff/change-rows.ts`). `o` was free (the review
+  has `n p [ ] v c`, Enter, `Ctrl+R`, `Ctrl+Shift+Enter`) and reads as open; `e` would have suggested
+  editing in place. A deleted file and a submodule's pointer get no button and `o` does nothing on them; a
+  file inside a submodule opens by its real path, the review's root and its path from the top. Ctrl+click on
+  a header's path now opens as a path in the terminal does, with the same two clicks in its tooltip.
+- **A file's path from its project:** the file segment's tooltip, the file view's header, the terminal's
+  path tooltip and the recent list write a path from the outermost repository of the tab's folder, its
+  name first (`notifica-compose/.claude/commands/notifica-docs.md`), so a file in a submodule keeps the
+  submodule's folder; under the home it starts with `~`, anywhere else it is whole (`shortPath` in
+  `core/src/files/short-path.ts`, Windows separators kept and case ignored). The host answers the
+  repository through `review:root` (`DiffSource.root`), which follows `--show-superproject-working-tree` up;
+  the window asks once per folder and draws the tabs again when it answers.
+- **Tooltips:** a path tooltip (`data-tip-path`) breaks only after a separator (a `<wbr>` after each, each
+  name kept whole, a hyphen in it too), within the design system's maximum width; only a name longer than
+  a line (48 characters) is cut where the line ends. The keys beside any tooltip's text follow a space
+  that collapses when they wrap, instead of an 8px left margin, so a keys row of its own starts at the
+  text's left edge; this was the shared tooltip's (`kit/tooltip.ts`), fixed there for every tooltip.
+- **Tab menus in a short window:** the shared menu (`tabs/tab-menu.ts`: the tab's right click, the file
+  segment's, the folder's, the update notice's) opens on the side asked, else on the other, and when it fits
+  neither it takes the window's height with a 4px margin and its list scrolls with the design system's
+  scrollbar, the arrows scrolling each item into view; the caption and a footer of actions stay in view.
+  The all-tabs list is its own component and already scrolled.
+- **Recent files:** 5 per tab counting the open one, so the segment's menu lists up to 4 others (a saved
+  list of 10 keeps its newest 5); Save and Close file sit under a divider as the menu's footer; two files of
+  one name show, muted beside the name, the fewest folders of their short path that tell them apart
+  (`api` and `web`, `.vscode` and `User`), as the file search writes a row's folder.
+**Reason:** F5 as agreed with the maintainer on 2026-11-19, and the maintainer's requests of the same day on
+the menu clipped in a 600px window, the recent list, the long absolute path in the segment's tooltip and its
+indented keys.
+**How to revert:** give `PathLinkOptions.openFile` back to `api.paths.openFile` in the terminal session and
+drop `path-open.ts`, the places in `path-candidates.ts`, `files.openPathsInCockpit` with its row and texts,
+the column of `openFile` and `goToLine`, `alternateLabel` in the keymap and the tooltip's second gesture;
+drop the review's Open file button, `o`, `openingLine` and `lineToOpen`; write the segment's tooltip and
+the header from the absolute path and the tab's folder again and drop `shortPath`, `recentEntries` and the
+`review:root` channel; set `MAX_RECENT_FILES` back to 10 and put the menu's footer back in its list.
+
+## D85. A file shows as what it is: an image, an SVG, a Markdown preview or a PDF, and Compare picks per conflict
 
 **Decision:** F4b of [plans/files.md](../plans/files.md), the file view's second part, as the maintainer
 decided from F0 on 2026-11-19. `load` in `ui/src/files/file-tabs.ts` gives each kind its view; the views live
