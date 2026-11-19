@@ -73,12 +73,12 @@ export function createFileSearch(elements: FileSearchElements, deps: FileSearchD
   function drawHint() {
     const offered = stage.kind === 'ready' && stage.listing.kind === 'git'
     wide.hidden = !widened
-    wide.textContent = t('files.widened')
+    wide.textContent = t('fileSearch.widened')
     hint.hidden = !offered
     if (!offered) return hint.replaceChildren()
     const action = actionHint(
       keymap.label('fileSearch'),
-      t(widened ? 'files.narrow' : 'files.widen'),
+      t(widened ? 'fileSearch.narrow' : 'fileSearch.widen'),
     )
     action.addEventListener('click', () => {
       toggleWiden()
@@ -103,19 +103,19 @@ export function createFileSearch(elements: FileSearchElements, deps: FileSearchD
         listing?.truncated === true && folder === undefined ? listing.files.length : undefined,
       widenKey: 'fileSearch',
     })
-    if (choices.length === 0) message(t('files.none'))
+    if (choices.length === 0) message(t('fileSearch.none'))
     selected = Math.min(selected, Math.max(0, choices.length - 1))
   }
 
   function stepInto(folder: string, root: string, query: string) {
     const found = steps.get(folder)
-    if (found === 'listing') return message(t('files.listingFolder', { folder }))
+    if (found === 'listing') return message(t('fileSearch.listingFolder', { folder }))
     if (found) {
       const rows = stepRows(folder, found.entries, query)
       return show({ project: [], ignored: rows, more: 0, loose: true }, folder)
     }
     steps.set(folder, 'listing')
-    message(t('files.listingFolder', { folder }))
+    message(t('fileSearch.listingFolder', { folder }))
     void deps.expand(root, folder).then((result) => {
       steps.set(folder, result)
       closed = [...closed, ...result.entries.filter(isClosedFolder)]
@@ -214,13 +214,13 @@ export function createFileSearch(elements: FileSearchElements, deps: FileSearchD
       input.focus()
       stage = { kind: 'listing' }
       drawHint()
-      message(t('files.listing'))
+      message(t('fileSearch.listing'))
       const cwd = await folder
       if (ticket !== opened || !isOpen()) return
       if (cwd === undefined) {
         stage = { kind: 'no-folder' }
         drawHint()
-        return message(t('files.noFolder'))
+        return message(t('fileSearch.noFolder'))
       }
       const listing = await deps.list(cwd)
       if (ticket !== opened || !isOpen()) return

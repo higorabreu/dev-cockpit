@@ -62,7 +62,7 @@ const ACTION_LABELS: Readonly<Record<ShortcutId, MessageKey>> = {
   reviewLayout: 'review.layout.toggle',
   reviewSend: 'review.send',
   projects: 'projects.search',
-  fileSearch: 'files.search',
+  fileSearch: 'fileSearch.search',
   views: 'views.open',
   panel: 'menu.system.panel',
   settings: 'settings.ref.settings',

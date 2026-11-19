@@ -37,7 +37,7 @@ const escapeHtml = (text: string) => text.replace(/[&<>"]/g, (char) => ENTITIES[
 
 function option(row: FileRow, index: number, options: RowsOptions): string {
   const on = index === options.selected
-  const ignored = escapeHtml(options.t('files.ignored'))
+  const ignored = escapeHtml(options.t('fileSearch.ignored'))
   // Inside a folder stepped into, the heading already says it is ignored and names the folder
   const inside = options.folder
   const folder = folderOf(row.path)
@@ -47,7 +47,7 @@ function option(row: FileRow, index: number, options: RowsOptions): string {
     `<span class="l">${escapeHtml(nameOf(row.path))}</span>`,
     `<span class="p">${escapeHtml(shown)}</span>`,
     row.folder
-      ? `<span class="fmark" data-tip="${escapeHtml(options.t('files.stepInto'))}" data-tip-key="Enter">${STEP}</span>`
+      ? `<span class="fmark" data-tip="${escapeHtml(options.t('fileSearch.stepInto'))}" data-tip-key="Enter">${STEP}</span>`
       : '',
     // Last, so the marks of every row line up at the right edge
     row.ignored && !inside ? `<span class="fmark" data-tip="${ignored}">${IGNORED}</span>` : '',
@@ -71,8 +71,8 @@ export function drawGroups(
   }
   if (groups.ignored.length > 0 || groups.more > 0) {
     const title = options.folder
-      ? `${escapeHtml(options.folder)} · ${escapeHtml(t('files.ignored'))}`
-      : escapeHtml(t('files.ignored'))
+      ? `${escapeHtml(options.folder)} · ${escapeHtml(t('fileSearch.ignored'))}`
+      : escapeHtml(t('fileSearch.ignored'))
     html.push(`<div class="fgroup" role="presentation">${title}</div>`)
   }
   for (const row of groups.ignored) {
@@ -83,13 +83,13 @@ export function drawGroups(
     const index = choices.length
     const on = index === options.selected
     html.push(
-      `<button type="button" class="it fmore${on ? ' on' : ''}" role="option" aria-selected="${on}" data-index="${index}" data-tip="${escapeHtml(t('files.widen'))}" data-tip-shortcut="${options.widenKey}">${escapeHtml(options.plural('files.more', groups.more, { count: groups.more }))}</button>`,
+      `<button type="button" class="it fmore${on ? ' on' : ''}" role="option" aria-selected="${on}" data-index="${index}" data-tip="${escapeHtml(t('fileSearch.widen'))}" data-tip-shortcut="${options.widenKey}">${escapeHtml(options.plural('fileSearch.more', groups.more, { count: groups.more }))}</button>`,
     )
     choices.push({ kind: 'more' })
   }
   if (options.truncated !== undefined)
     html.push(
-      `<div class="fnote">${escapeHtml(t('files.truncated', { count: options.truncated }))}</div>`,
+      `<div class="fnote">${escapeHtml(t('fileSearch.truncated', { count: options.truncated }))}</div>`,
     )
   // Redrawing resets the scroll; the selected row is brought back into view below
   results.innerHTML = html.join('')

@@ -1046,7 +1046,7 @@ export async function startApp(
           },
           {
             id: 'file:search',
-            label: `${i18n.t('files.search')}…`,
+            label: `${i18n.t('fileSearch.search')}…`,
             shortcut: keymap.label('fileSearch'),
           },
           { id: 'views:open', label: i18n.t('views.open'), shortcut: keymap.label('views') },
