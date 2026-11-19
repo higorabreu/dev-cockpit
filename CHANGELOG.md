@@ -3,6 +3,18 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.12.0](https://github.com/higorabreu/dev-cockpit/compare/v0.11.0...v0.12.0) (2026-11-19)
+
+
+### Features
+
+* go full height when the edge is dragged to 100% ([#108](https://github.com/higorabreu/dev-cockpit/issues/108)) ([39d3daf](https://github.com/higorabreu/dev-cockpit/commit/39d3daf6bd430ceb46dab335e4d20eeb16725c88))
+
+
+### Bug Fixes
+
+* blink the terminal cursor with a timer instead of a per-frame animation ([#107](https://github.com/higorabreu/dev-cockpit/issues/107)) ([1bbea09](https://github.com/higorabreu/dev-cockpit/commit/1bbea09b2bb640e5e3a14624f4015bdc6914edd5))
+
 ## [0.11.0](https://github.com/higorabreu/dev-cockpit/compare/v0.10.0...v0.11.0) (2026-11-18)
 
 
