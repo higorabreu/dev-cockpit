@@ -60,6 +60,10 @@ changed, and your pull requests, merge requests and tasks. The clips show exampl
   opens a menu with Copy, Paste and Select all, and `⌘Q` asks first while a tab runs a program.
 
 <p align="center">
+  <img src="docs/media/editor.gif" alt="Files in the cockpit, at full height: Ctrl+Shift+O finds src/orders.ts in the acme-api project and opens it over the tab in syntax colors, a number is changed and the hollow ring of unsaved on the tab goes away when it saves by itself, Ctrl+F highlights the matches of a search, the project's README.md opens and Ctrl+Shift+J shows its preview, Ctrl+Shift+Space goes back to the terminal, and a Ctrl+click on src/orders.ts:42:5 in the output of tsc opens the file at that line" width="960">
+</p>
+
+<p align="center">
   <img src="docs/media/dropdown.gif" alt="The cockpit over a desktop, its bottom edge dragged down for more room and then to the bottom of the screen, where the tab bar moves to the top, dragged back, hidden with F12 and shown again" width="960">
 </p>
 
