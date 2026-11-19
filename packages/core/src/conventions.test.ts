@@ -57,6 +57,13 @@ describe('project conventions', () => {
     expect(found).toEqual([])
   })
 
+  // `@dck/core` declares `sideEffects: false`, so a bundler drops a module imported only for what it runs
+  it('should import no core module only for its side effects when listing the core sources', () => {
+    const found = offenders(sources, /^import\s+['"]/m, (path) => !path.startsWith('core/src/'))
+
+    expect(found).toEqual([])
+  })
+
   it('should keep adapters independent from each other when listing their sources', () => {
     const found = offenders(
       sources,

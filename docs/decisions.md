@@ -370,6 +370,25 @@ which solved the same problem for Guake.
 budget tightens. The shortcut stays in the system even with the app closed (in that case the toggle says
 there is no window). A conflict with a native GNOME key (not a custom one) is not detected.
 **How to revert:** delete the adapter and go back to only `createElectronShortcuts`.
+**Update: `dck toggle` loads only the socket code (2026-11-19).** The toggle had grown to about 100 ms
+on the CLI alone, half of it Electron starting as Node and half reading one 990 kB `dck.mjs` that held the
+daemon, the extensions, jsonc, the settings schema, both catalogs and all of zod, and read `settings.json`
+before any command. Now `main.ts` runs `toggle` and `ping` with only the socket, the IPC protocol and the
+English error catalog, and loads the rest by `import()`: the settings and the user's translator only to
+report a failure, `daemon-process.ts` for `dck daemon` and `full-cli.ts` for every other command. The
+protocol validates with `zod/mini` (the classic zod build alone costs about 25 ms to load there) and
+`@dck/core` declares `"sideEffects": false`, so the bundler leaves out the modules of the barrel the
+toggle does not use. `buildCli` makes two builds: `resources/dck.mjs` (87 kB) and, from what it imports
+lazily, `resources/cli/` (`full-cli.mjs`, `daemon-process.mjs` and a shared 856 kB chunk); a single split
+build would put zod's shared modules, its classic API included, in a chunk the toggle also loads. With
+Electron as Node at 48 ms on an empty module, the CLI alone went from 101 to 58 ms median (118 to 71 ms
+p95) and `ping` from 100 to 56 ms, over 40 runs; through the window (`scripts/perf`, request to the first
+frame drawn visible, 32 runs) from 127 to 60 ms median and 164 to 74 ms p95, in a container without a GPU.
+`dck agent signal`, which coding agents' hooks run on every event, now loads the same way, with its schema
+also in `zod/mini` (the hub answers `DCK-IPC-003` when either zod build rejects the params): from 110 to
+63 ms median (149 to 85 ms p95) against a daemon over 40 runs, and from 106 to 57 ms outside a cockpit
+terminal.
+The other commands take as long as before. To revert, go back to one `build` of `main.ts` with `outfile`.
 
 ## D31. A single pattern for the floating tabs
 

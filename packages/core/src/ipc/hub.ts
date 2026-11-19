@@ -51,7 +51,8 @@ export function createHub(handlers: Readonly<Record<string, Handler>>, logger: L
     try {
       peer.send({ jsonrpc, id: request.id, result: (await handler(request.params, peer)) ?? null })
     } catch (error) {
-      if (error instanceof z.ZodError) {
+      // The base class of both zod builds: a zod/mini schema such as agentSignalSchema throws no ZodError
+      if (error instanceof z.core.$ZodError) {
         peer.send({ jsonrpc, id: request.id, error: errorBody('DCK-IPC-003') })
       } else if (error instanceof DckError) {
         peer.send({ jsonrpc, id: request.id, error: errorBody(error.code, error.detail) })

@@ -1,34 +1,36 @@
-import { z } from 'zod'
+// zod/mini: the window's global key loads this protocol through `dck toggle` on every press (D30), and
+// the classic zod build alone takes about 25 ms to load there
+import * as z from 'zod/mini'
 import { type ErrorCode, errorInfo } from '../errors.ts'
 import { fail, ok, type Result } from '../result.ts'
 
 // JSON-RPC 2.0: https://www.jsonrpc.org/specification
 const version = z.literal('2.0')
-const id = z.number().int()
+const id = z.int()
 
 const requestSchema = z.object({
   jsonrpc: version,
   id,
-  method: z.string().min(1),
-  params: z.unknown().optional(),
+  method: z.string().check(z.minLength(1)),
+  params: z.optional(z.unknown()),
 })
 
 const notificationSchema = z.object({
   jsonrpc: version,
-  method: z.string().min(1),
-  params: z.unknown().optional(),
+  method: z.string().check(z.minLength(1)),
+  params: z.optional(z.unknown()),
 })
 
 const errorBodySchema = z.object({
-  code: z.number().int(),
+  code: z.int(),
   message: z.string(),
-  data: z
-    .object({
+  data: z.optional(
+    z.object({
       code: z.string(),
-      category: z.string().optional(),
-      retryable: z.boolean().optional(),
-    })
-    .optional(),
+      category: z.optional(z.string()),
+      retryable: z.optional(z.boolean()),
+    }),
+  ),
 })
 
 const responseSchema = z.union([
