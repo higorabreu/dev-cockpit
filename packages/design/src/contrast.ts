@@ -52,11 +52,11 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     // The needs you mark sits on the tab bar and on the active tab or the selected row of the tab list
     ['warning mark on the window', rgb(color.warning), rgb(color.bg), GRAPHIC],
     ['warning mark on the active tab', rgb(color.warning), rgb(color.tabActive), GRAPHIC],
-    // The current search match is told by its warning underline as well as its tint, and the matches out of
+    // The current search match is told by its warning outline as well as its tint, and the matches out of
     // view by their marks beside the scrollbar
-    ['current search match underline', rgb(color.warning), rgb(color.bg), GRAPHIC],
+    ['current search match outline', rgb(color.warning), rgb(color.bg), GRAPHIC],
     [
-      'current search match underline on its tint',
+      'current search match outline on its tint',
       rgb(color.warning),
       rgb(color.searchCurrent),
       GRAPHIC,

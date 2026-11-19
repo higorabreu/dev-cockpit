@@ -1701,7 +1701,8 @@ catalog entries.
   active line tint; the active line shows in the gutter. The chrome (gutter, line numbers, cursor,
   selection, matching brackets, search matches, panels) is a CodeMirror theme over the cockpit's tokens:
   matching brackets take the selection's solid tint and search matches two of their own (`searchMatch` under
-  every match, the stronger `searchCurrent` under the current one), never an outline, and the line numbers
+  every match, the stronger `searchCurrent` under the current one; their hues and the current match's
+  outline are D87's), and the line numbers
   keep room for three digits, so the text never moves at line 10 or 100. `.editorconfig` files from the
   file's folder up to one marked `root` (channel `files:editorconfig`, a parser in `core/src/files`) give
   the indentation and the final newline; without one the indentation is guessed from the file. The line
@@ -1970,3 +1971,18 @@ not meet. Measured in the real app at scales 1, 1.25, 1.5 and 2 and six heights 
 **How to revert:** drop `deviceHeight` and the `scaleFactor` of `Display` from the dock controller and the
 screen port, the `hairline`, `bar` and `header` size tokens and their uses in `ui/src/styles`, the panel
 header's divider and `text-box` trims, and `styles/hairlines.test.ts`.
+
+## D87. Search matches take VS Code's hues, and the current one an outline
+
+**Decision:** in the file view, every match of the find widget sits on an orange tint (`searchMatch`) and the
+current one on a gold tint (`searchCurrent`) with a 1px inset outline in `--warning`, no underline: VS Code's
+hues (Dark Modern's `#9E6A03` for the current match, `#EA5C0055` for the others) taken toward the editor's
+background until every syntax role, comments included, keeps 4.5:1 on them. Dark: `#4c240a` and
+`#3e2c0a`. Light: `#f5d7c4` and `#e6dcc7`. VS Code's own colors leave a comment at 1.6:1 on the current
+match, and at the contrast limit the current tint cannot be brighter than the others, so the outline tells
+it apart by shape.
+**Reason:** the maintainer found the two dim yellow tints and the underline ugly on 2026-11-19 and asked
+for something closer to VS Code; of three variants in the real app (VS Code's exact colors, gold with an
+outline, VS Code's older blue gray with an outline) they chose the gold with an outline.
+**How to revert:** put back `searchMatch` and `searchCurrent` (dark `#2e2a12` and `#382e0c`, light `#f5e8bf`
+and `#f1dc9a`) and the 2px warning underline in `editor-theme.ts`, with its contrast check.
