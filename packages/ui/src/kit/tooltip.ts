@@ -19,6 +19,8 @@ export interface TipBox {
 interface TipHint {
   readonly key?: string
   readonly gesture?: Gesture
+  // A second held click on its own line, such as Ctrl+Shift+click opening a path the other way
+  readonly alternate?: { readonly key: string; readonly gesture: Gesture }
 }
 
 // A part of an element that has no node of its own, like a link drawn in the terminal
@@ -62,10 +64,17 @@ const tipOf = (anchor: HTMLElement, text: string): Candidate => {
   const key =
     anchor.getAttribute('data-tip-key') ?? (shortcut ? shortcutLabel(shortcut) : undefined)
   if (!key) return tip
-  // A left click with the key held: `data-tip-gesture` is what it does, `data-tip-click` its spoken name
+  // A left click with the key held: `data-tip-gesture` is what it does, `data-tip-click` its spoken name;
+  // `data-tip-alt-key` and `data-tip-alt-gesture` a second one with other keys, as Ctrl+Shift+click
   const action = anchor.getAttribute('data-tip-gesture')
   const click = anchor.getAttribute('data-tip-click')
-  return action && click ? { ...tip, key, gesture: { click, action } } : { ...tip, key }
+  if (!action || !click) return { ...tip, key }
+  const held = { ...tip, key, gesture: { click, action } }
+  const otherKey = anchor.getAttribute('data-tip-alt-key')
+  const other = anchor.getAttribute('data-tip-alt-gesture')
+  return otherKey && other
+    ? { ...held, alternate: { key: otherKey, gesture: { click, action: other } } }
+    : held
 }
 
 // A space before the keys keeps them apart from the text, and collapses when they wrap to a line of
@@ -77,9 +86,10 @@ function gap(): HTMLElement {
   return space
 }
 
-function hintOf({ key, gesture: held }: TipHint): HTMLElement[] {
+function hintOf({ key, gesture: held, alternate }: TipHint): HTMLElement[] {
   if (!key) return []
-  return held ? [gesture(key, held)] : [gap(), keys(key, 'compact')]
+  if (!held) return [gap(), keys(key, 'compact')]
+  return [gesture(key, held), ...(alternate ? [gesture(alternate.key, alternate.gesture)] : [])]
 }
 
 // A break is allowed after each separator, so a long path never wraps inside a name

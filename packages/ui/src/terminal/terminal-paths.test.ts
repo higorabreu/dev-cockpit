@@ -1,12 +1,14 @@
 import type { ResolvedPath } from '@dck/core'
 import type { IBufferCell, IBufferLine, ILink, ILinkProvider, Terminal } from '@xterm/xterm'
 import { describe, expect, it } from 'vitest'
+import type { FilePlace } from './path-open.ts'
 import {
   attachPaths,
   candidateRange,
   createResolveCache,
   type PathLinkOptions,
   readLogicalLine,
+  tipText,
 } from './terminal-paths.ts'
 
 // One row of the screen; a `wide` character takes its cell and an empty one after it
@@ -109,10 +111,15 @@ function setup(text: string, disk: Record<string, ResolvedPath['kind']>) {
   } as unknown as Terminal
   const asked: { base: string | undefined; paths: readonly string[] }[] = []
   const files: string[] = []
+  const opened: { path: string; place: FilePlace; alternate: boolean }[] = []
   const folders: { path: string; x: number; y: number }[] = []
   const options: PathLinkOptions = {
     modifier: 'ctrl',
-    hint: () => ({ key: 'Ctrl', gesture: { click: 'left click', action: 'Open' } }),
+    hint: (kind) => ({
+      key: 'Ctrl',
+      gesture: { click: 'left click', action: kind === 'dir' ? 'Open folder' : 'Open' },
+    }),
+    shown: (path) => path.replace('/srv/acme', 'acme'),
     cwd: () => '/srv/acme',
     resolve: async (base, paths) => {
       asked.push({ base, paths })
@@ -121,18 +128,28 @@ function setup(text: string, disk: Record<string, ResolvedPath['kind']>) {
         return { path: absolute, kind: disk[absolute] ?? 'missing' }
       })
     },
-    openFile: (path) => void files.push(path),
+    openFile(path, place, alternate) {
+      files.push(path)
+      opened.push({ path, place, alternate })
+    },
     openFolder: (path, x, y) => void folders.push({ path, x, y }),
     tip: () => undefined,
   }
   attachPaths(terminal, options)
   const links = () =>
     new Promise<ILink[]>((done) => provider?.provideLinks(1, (found) => done(found ?? [])))
-  return { links, asked, files, folders }
+  return { links, asked, files, folders, opened }
 }
 
 const click = (init: MouseEventInit = {}) =>
-  ({ ctrlKey: false, metaKey: false, clientX: 40, clientY: 60, ...init }) as MouseEvent
+  ({
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+    clientX: 40,
+    clientY: 60,
+    ...init,
+  }) as MouseEvent
 
 describe('attachPaths', () => {
   it('should link only the paths that exist when the line is hovered', async () => {
@@ -182,5 +199,49 @@ describe('attachPaths', () => {
 
     expect(await links()).toEqual([])
     expect(asked).toEqual([])
+  })
+
+  it('should open the file at the line and column the line names when it is clicked', async () => {
+    // Arrange
+    const { links, opened } = setup('src/app.ts(12,5): error TS2322', {
+      '/srv/acme/src/app.ts': 'file',
+    })
+    const [link] = await links()
+
+    // Act
+    link?.activate(click({ ctrlKey: true }), link.text)
+
+    // Assert
+    expect(link?.text).toBe('src/app.ts(12,5)')
+    expect(opened).toEqual([
+      { path: '/srv/acme/src/app.ts', place: { line: 12, column: 5 }, alternate: false },
+    ])
+  })
+
+  it('should ask for the other way when Shift is held with the modifier', async () => {
+    const { links, opened } = setup('src/app.ts:3', { '/srv/acme/src/app.ts': 'file' })
+    const [link] = await links()
+
+    link?.activate(click({ ctrlKey: true, shiftKey: true }), link.text)
+
+    expect(opened).toEqual([{ path: '/srv/acme/src/app.ts', place: { line: 3 }, alternate: true }])
+  })
+
+  it('should offer the folder menu and no file when a folder is clicked with Shift too', async () => {
+    const { links, folders, opened } = setup('see /srv/acme/web', { '/srv/acme/web': 'dir' })
+    const [link] = await links()
+
+    link?.activate(click({ ctrlKey: true, shiftKey: true }), link.text)
+
+    expect(folders).toHaveLength(1)
+    expect(opened).toEqual([])
+  })
+})
+
+describe('tipText', () => {
+  it('should name the place the click goes to when the line gives one', () => {
+    expect(tipText('acme/src/app.ts', { line: 12, column: 5 })).toBe('acme/src/app.ts:12:5')
+    expect(tipText('acme/src/app.ts', { line: 12 })).toBe('acme/src/app.ts:12')
+    expect(tipText('acme/src', {})).toBe('acme/src')
   })
 })

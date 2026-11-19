@@ -74,6 +74,7 @@ import { createSessionWatcher } from './tabs/sessions-watcher.ts'
 import { createTabBar } from './tabs/tab-bar.ts'
 import { createTabList } from './tabs/tab-list.ts'
 import { createTabMenu } from './tabs/tab-menu.ts'
+import { type FilePlace, filePathHint, folderPathHint, pathRoute } from './terminal/path-open.ts'
 import { createTerminalSession, type TerminalSession } from './terminal/terminal-session.ts'
 import { createUpdateNotice } from './updates/update-notice.ts'
 import { createSeenMarks } from './views/seen-marks.ts'
@@ -848,11 +849,13 @@ export async function startApp(
       },
       paths: {
         modifier: keymap.click.modifier,
-        hint: () => ({
-          key: keymap.click.label,
-          gesture: { click: i18n.t('terminal.leftClick'), action: i18n.t('terminal.openPath') },
-        }),
+        hint: (kind) =>
+          kind === 'dir'
+            ? folderPathHint(keymap.click, i18n.t)
+            : filePathHint(keymap.click, i18n.t, settings.current().files.openPathsInCockpit),
+        shown: (path) => shortPath(path, rootOf(id)),
         cwd: () => watcher.get(id)?.cwd,
+        openFile: (path, place, alternate) => openPath(id, path, place, alternate),
         openFolder: (path, x, y) => openFolderMenu(id, path, x, y),
         tip: setTipRegion,
       },
@@ -877,6 +880,17 @@ export async function startApp(
     if (options.project) projectTabs.set(options.project, id)
     update(openTab(state, { id, label: options.label ?? i18n.t('tabs.default', { n: counter }) }))
     return id
+  }
+
+  // A file Ctrl+clicked in a terminal or on the review's path: over its tab at the place the line named,
+  // or in the system's app, as the setting and Shift say (D84)
+  function openPath(tabId: string, path: string, place: FilePlace, alternate: boolean) {
+    if (pathRoute(settings.current().files.openPathsInCockpit, alternate) === 'system') {
+      api.paths.openFile(path)
+      return
+    }
+    update(activateTab(state, tabId))
+    void fileTabs.openFile(tabId, path, place.line, place.column)
   }
 
   // A folder Ctrl+clicked in a terminal: a tab there or the file manager; the focus returns to that terminal

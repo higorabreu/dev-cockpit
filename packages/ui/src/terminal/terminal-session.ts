@@ -57,7 +57,7 @@ export interface SessionOptions {
   readonly cwd?: string
   readonly exitedText: string
   // How a file or folder path printed in the terminal opens; the host checks it on disk
-  readonly paths: Omit<PathLinkOptions, 'resolve' | 'openFile'>
+  readonly paths: Omit<PathLinkOptions, 'resolve'>
   // How a link printed in the terminal opens and shows its tooltip
   readonly links: Omit<LinkOptions, 'open'>
   readonly nativeMiddlePaste: boolean
@@ -114,7 +114,6 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
   attachPaths(terminal, {
     ...options.paths,
     resolve: (base, paths) => api.paths.resolve(base, paths),
-    openFile: (path) => api.paths.openFile(path),
   })
 
   attachLinks(terminal, { ...options.links, open: (url) => api.external.openLink(url) })

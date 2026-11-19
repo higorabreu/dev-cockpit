@@ -159,4 +159,30 @@ describe('installTooltips', () => {
     expect(keys?.previousElementSibling?.className).toBe('tip-gap')
     expect(keys?.previousElementSibling?.textContent).toBe(' ')
   })
+
+  it('should draw a second gesture on its own line when the element names one', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const path = document.createElement('span')
+    path.dataset.tip = 'acme/src/app.ts'
+    path.dataset.tipKey = 'Ctrl'
+    path.dataset.tipGesture = 'Open'
+    path.dataset.tipClick = 'left click'
+    path.dataset.tipAltKey = 'Ctrl+Shift'
+    path.dataset.tipAltGesture = "Open in the system's app"
+    document.body.append(path)
+
+    // Act
+    path.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    vi.advanceTimersByTime(500)
+
+    // Assert
+    const gestures = [...document.querySelectorAll('#tooltip > .gesture')].map(
+      (line) => line.textContent,
+    )
+    expect(gestures).toEqual([
+      'Ctrl+left click, Open',
+      "Ctrl+Shift+left click, Open in the system's app",
+    ])
+  })
 })

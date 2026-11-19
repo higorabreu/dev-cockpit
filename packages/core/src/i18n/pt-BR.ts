@@ -130,6 +130,7 @@ export const ptBR = {
   'terminal.leftClick': 'clique',
   'terminal.openLink': 'Abrir',
   'terminal.openPath': 'Abrir',
+  'terminal.openInCockpit': 'Abrir no cockpit',
   'terminal.openInNewTab': 'Abrir em uma nova aba',
   'terminal.openInFileManager': 'Abrir no gerenciador de arquivos',
   'terminal.clear': 'Limpar terminal',
@@ -487,6 +488,8 @@ export const ptBR = {
   'review.viewedFiles.short': '{viewed} / {count}',
   'review.changedSinceViewed': 'Alterado desde a última visualização',
   'review.hint.viewed': 'visualizado',
+  'review.hint.open': 'abrir arquivo',
+  'review.openFile': 'Abrir arquivo',
   'review.a11y.viewed': '{file}, visualizado',
   'review.renamedFrom': 'Renomeado de {path}',
   'review.copiedFrom': 'Copiado de {path}',
@@ -598,6 +601,9 @@ export const ptBR = {
   'settings.autoMerge': 'Mesclar mudanças feitas no disco',
   'settings.autoMerge.hint':
     'Linhas que outro programa mudou longe das suas se juntam às suas edições.',
+  'settings.openPathsInCockpit': 'Abrir no cockpit os caminhos do terminal',
+  'settings.openPathsInCockpit.hint':
+    'Desligado, um caminho de arquivo clicado no terminal abre no app do sistema; {key}+clique abre do outro jeito.',
 
   'files.toggle': 'Alternar arquivo e terminal',
   'files.show': 'Mostrar arquivo',

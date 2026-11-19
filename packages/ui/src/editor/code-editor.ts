@@ -64,7 +64,8 @@ export interface CodeEditor {
   // Lines of the current text, from 0, tinted for a while (the lines a merge took from the disk)
   markLines(ranges: readonly LineRange[], milliseconds: number): void
   // From 1; the cursor goes to the line's start, in the middle of the view
-  goToLine(line: number): void
+  // The column too when a compiler named one, both from 1, scrolled to the middle
+  goToLine(line: number, column?: number): void
   // `.editorconfig`'s insert_final_newline: true when a line break was added
   ensureFinalNewline(): boolean
   setReadOnly(readOnly: boolean): void
@@ -228,12 +229,13 @@ export function createCodeEditor(options: CodeEditorOptions): CodeEditor {
         view.dispatch({ effects: EditorView.scrollIntoView(doc.line(first).from, { y: 'center' }) })
       setTimeout(() => view.dispatch({ effects: setMarks.of(Decoration.none) }), milliseconds)
     },
-    goToLine(line) {
+    goToLine(line, column = 1) {
       const { doc } = view.state
       const target = doc.line(Math.max(1, Math.min(line, doc.lines)))
+      const at = target.from + Math.max(0, Math.min(column - 1, target.length))
       view.dispatch({
-        selection: EditorSelection.cursor(target.from),
-        effects: EditorView.scrollIntoView(target.from, { y: 'center' }),
+        selection: EditorSelection.cursor(at),
+        effects: EditorView.scrollIntoView(at, { y: 'center' }),
       })
     },
     ensureFinalNewline() {
