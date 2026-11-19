@@ -1,5 +1,6 @@
 import {
   type AgentState,
+  absolutePath,
   type BranchInfo,
   branchName,
   carryGaps,
@@ -27,7 +28,9 @@ import { createSelect, type SelectOption } from '../kit/select.ts'
 import { h, icon } from '../panel/dom.ts'
 import { displayPath } from '../panel/format.ts'
 import type { Keymap } from '../platform/keymap.ts'
+import type { LinkHint } from '../terminal/terminal-links.ts'
 import { createDiffView, LINE_HEIGHT } from './diff-view.ts'
+import { opensFile } from './file-head.ts'
 import { counts, createFileList } from './file-list.ts'
 import { watchHead } from './head-fit.ts'
 import { createReviewComments } from './review-comments.ts'
@@ -92,6 +95,12 @@ export interface ReviewPaneDeps {
   send(text: string): boolean
   // What runs in the tab's terminal, read fresh at sending
   activity(): Promise<SessionActivityInfo | undefined>
+  // The whole file over the review's tab, at a line from 1 (the Open file button and `o`)
+  openFile(path: string, line: number | undefined): void
+  // A path Ctrl+clicked in a file's header, routed as one in the terminal (D84)
+  openPath(path: string, line: number | undefined, alternate: boolean): void
+  // The held clicks on a file's path, for its tooltip
+  pathHint(): LinkHint
 }
 
 let measured: number | undefined
@@ -242,9 +251,13 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   const diff = createDiffView({
     id: deps.id,
     i18n,
-    modifier: deps.keymap.click.label,
+    pathHint: deps.pathHint,
     isModified: deps.keymap.click.isHeld,
-    open: (path) => state.kind === 'ok' && api.paths.openFile(`${state.diff.root}/${path}`),
+    open(file, line, alternate) {
+      const path = onDisk(file)
+      if (path !== undefined) deps.openPath(path, line, alternate)
+    },
+    openFile: (file, line) => openWhole(file, line),
     expand: (file, gap) => void expand(file, gap),
     showAnyway(file) {
       shownAnyway.add(file.path)
@@ -274,6 +287,13 @@ export function createReviewPane(deps: ReviewPaneDeps) {
   )
 
   const files = (): readonly DiffFile[] => (state.kind === 'ok' ? state.diff.files : [])
+  // Where a file of the change is on disk; a submodule's file by its real path, its folder in it
+  const onDisk = (file: DiffFile) =>
+    state.kind === 'ok' && opensFile(file) ? absolutePath(state.diff.root, file.path) : undefined
+  function openWhole(file: DiffFile, line: number | undefined) {
+    const path = onDisk(file)
+    if (path !== undefined) deps.openFile(path, line)
+  }
   // Something for the index: a file, or a submodule whose pointer moved with no file of its own
   const listed = () =>
     state.kind === 'ok' && (state.diff.files.length > 0 || state.diff.modules.length > 0)
@@ -624,6 +644,7 @@ export function createReviewPane(deps: ReviewPaneDeps) {
             droppable(keyHint('n p', t('review.hint.hunk')), 2),
             droppable(keyHint('c', t('review.hint.comment')), 4),
             droppable(keyHint('v', t('review.hint.viewed')), 1),
+            droppable(keyHint('o', t('review.hint.open')), 1),
           ]
         : []),
       keyHint('Esc', t('review.hint.terminal')),
@@ -842,6 +863,10 @@ export function createReviewPane(deps: ReviewPaneDeps) {
       const index = where === 'index' ? list.selectedFile() : diff.currentFile()
       const file = index === undefined ? undefined : files()[index]
       if (file) toggleViewed(file)
+    } else if (key === 'o') {
+      const index = where === 'index' ? list.selectedFile() : diff.currentFile()
+      const file = index === undefined ? undefined : files()[index]
+      if (file) openWhole(file, diff.openingLine(file))
     } else if (key === 'c' && where === 'diff') {
       const target = diff.commentTarget()
       if (target) startComment(target)

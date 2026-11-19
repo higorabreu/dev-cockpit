@@ -83,6 +83,9 @@ function setup(options: Options = {}) {
       return true
     },
     activity: async () => running,
+    openFile: () => undefined,
+    openPath: () => undefined,
+    pathHint: () => ({ key: 'Ctrl', gesture: { click: 'left click', action: 'Open' } }),
   })
   document.body.append(pane.element)
   const button = () => pane.element.querySelector('.rv-send') as HTMLButtonElement

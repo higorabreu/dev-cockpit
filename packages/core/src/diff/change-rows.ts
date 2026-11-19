@@ -1,5 +1,5 @@
 import { lastLine, type ReviewComment } from './comments.ts'
-import { collapseReason, type DiffFile } from './diff.ts'
+import { collapseReason, type DiffFile, type DiffHunk } from './diff.ts'
 import { type DiffGap, diffRows } from './rows.ts'
 
 // Why a file shows no lines: it cannot be read here, its content waits to be asked for, or it starts
@@ -108,4 +108,65 @@ export function changeRows(
   rows.push({ kind: 'gone', file: files.length })
   for (const comment of gone) rows.push({ kind: 'comment', file: files.length, id: comment.id })
   return rows
+}
+
+// The working tree's line a changed line stands for: an added line its own; a removed one the line now
+// where it was taken from, the next line kept or added, else the one after the last before it
+function newLineOf(hunk: DiffHunk, index: number): number {
+  const own = hunk.lines[index]?.new
+  if (own !== undefined) return own
+  const next = hunk.lines.slice(index + 1).find((line) => line.new !== undefined)?.new
+  if (next !== undefined) return next
+  const before = hunk.lines
+    .slice(0, index)
+    .reverse()
+    .find((line) => line.new !== undefined)?.new
+  return before === undefined ? Math.max(1, hunk.newStart) : before + 1
+}
+
+const firstChange = (hunk: DiffHunk) => {
+  const index = hunk.lines.findIndex((line) => line.kind !== 'context')
+  return newLineOf(hunk, Math.max(0, index))
+}
+
+// The working tree's line a row of a file stands for: a line its own, a hunk header its first change;
+// undefined for a header, a gap or a comment
+export function rowLine(file: DiffFile, row: ChangeRow): number | undefined {
+  if (row.kind === 'context') return row.new
+  if (row.kind === 'line') {
+    const hunk = file.hunks[row.hunk]
+    return hunk && newLineOf(hunk, row.line)
+  }
+  if (row.kind === 'hunk') {
+    const hunk = file.hunks[row.hunk]
+    return hunk && firstChange(hunk)
+  }
+  return undefined
+}
+
+export interface ReadingPlace {
+  // The cursor's row, and the first and last rows on screen (last included)
+  readonly cursor: number
+  readonly first: number
+  readonly last: number
+}
+
+// Where the whole file opens from the review: the cursor's line when the cursor is on this file, else
+// its first changed line on screen, else its first change; undefined for a file with no lines
+export function lineToOpen(
+  file: DiffFile,
+  fileIndex: number,
+  rows: readonly ChangeRow[],
+  place: ReadingPlace,
+): number | undefined {
+  const cursor = rows[place.cursor]
+  const atCursor = cursor?.file === fileIndex ? rowLine(file, cursor) : undefined
+  if (atCursor !== undefined) return atCursor
+  for (let index = Math.max(0, place.first); index <= place.last; index++) {
+    const row = rows[index]
+    if (row?.kind !== 'line' || row.file !== fileIndex) continue
+    if (file.hunks[row.hunk]?.lines[row.line]?.kind !== 'context') return rowLine(file, row)
+  }
+  const hunk = file.hunks[0]
+  return hunk && firstChange(hunk)
 }

@@ -10,6 +10,7 @@ import {
   isCollapsed,
   isSelected,
   type LineSelection,
+  lineToOpen,
   selectionTarget,
   selectLine,
   visibleRange,
@@ -45,7 +46,8 @@ export interface DiffComments {
   remove(id: string): void
 }
 
-export interface DiffViewDeps extends Omit<FileHeadDeps, 'showAnyway' | 'load'> {
+export interface DiffViewDeps
+  extends Omit<FileHeadDeps, 'showAnyway' | 'load' | 'open' | 'openFile'> {
   readonly id: string
   readonly comments: DiffComments
   // The gutter's "+": the comment field for these lines
@@ -53,6 +55,9 @@ export interface DiffViewDeps extends Omit<FileHeadDeps, 'showAnyway' | 'load'> 
   expand(file: DiffFile, gap: DiffGap): void
   showAnyway(file: DiffFile): void
   load(file: DiffFile): void
+  // The path Ctrl+clicked in a header, and the header's Open file, each at the line in view
+  open(file: DiffFile, line: number | undefined, alternate: boolean): void
+  openFile(file: DiffFile, line: number | undefined): void
   // The file the diff is on changed: the one at its top, or the one the keys went to
   onCurrentFile(index: number): void
 }
@@ -206,11 +211,31 @@ export function createDiffView(deps: DiffViewDeps) {
     return t('review.a11y.context', { line: line.new ?? 0, text })
   }
 
+  // The line a file opens at: the cursor's when it is on the file, else its first change on screen,
+  // below the pinned header
+  function openingLine(file: DiffFile): number | undefined {
+    const index = files.indexOf(file)
+    if (index < 0) return undefined
+    anchorCursor()
+    const top = element.scrollTop + FILE_BAND
+    const bottom = element.scrollTop + viewHeight()
+    let first = rows.length
+    let last = -1
+    for (let row = 0; row < rows.length; row++) {
+      const at = tops[row] ?? 0
+      if (at >= top && first === rows.length) first = row
+      if (at < bottom) last = row
+      else break
+    }
+    return lineToOpen(file, index, rows, { cursor, first, last })
+  }
+
   const headDeps = (): FileHeadDeps => ({
     i18n,
-    modifier: deps.modifier,
+    pathHint: deps.pathHint,
     isModified: deps.isModified,
-    open: deps.open,
+    open: (file, alternate) => deps.open(file, openingLine(file), alternate),
+    openFile: (file) => deps.openFile(file, openingLine(file)),
     showAnyway: deps.showAnyway,
     load: deps.load,
     viewed: deps.viewed,
@@ -811,6 +836,7 @@ export function createDiffView(deps: DiffViewDeps) {
     nextHunk: (step: 1 | -1) => stepHunk(step),
     nextFile: (step: 1 | -1) => stepFile(step),
     revealFile,
+    openingLine,
     // The file being read: the one the keys went to, else the one at the cursor
     currentFile() {
       anchorCursor()

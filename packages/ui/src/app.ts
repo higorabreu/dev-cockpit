@@ -479,6 +479,13 @@ export async function startApp(
       const ptyId = sessions.get(tabId)?.ptyId
       return ptyId === undefined ? undefined : api.session.activity(ptyId)
     },
+    openFile(tabId, path, line) {
+      update(activateTab(state, tabId))
+      void fileTabs.openFile(tabId, path, line)
+    },
+    openPath: (tabId, path, line, alternate) =>
+      openPath(tabId, path, line === undefined ? {} : { line }, alternate),
+    pathHint: () => filePathHint(keymap.click, i18n.t, settings.current().files.openPathsInCockpit),
   })
 
   let activeSnapshot: SessionSnapshot | undefined
