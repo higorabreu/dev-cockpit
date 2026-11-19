@@ -46,6 +46,10 @@
   min-width: 96px;
 }
 
+.rv-tally-short {
+  display: none;
+}
+
 .rv-head[data-short-tally] .rv-tally:has(+ .rv-tally-short) {
   display: none;
 }
@@ -56,10 +60,6 @@
 
 .rv-head[data-short-send] .rv-send-text {
   display: none;
-}
-
-.rv-head[data-short-send] .vbtn.rv-send {
-  padding-left: 4px;
 }
 
 .rv-head .select {
@@ -83,10 +83,6 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.rv-tally-short {
-  display: none;
 }
 
 .rv-status {
@@ -913,6 +909,10 @@
   flex: none;
   padding: 2px 4px 2px 10px;
   white-space: nowrap;
+}
+
+.rv-head[data-short-send] .vbtn.rv-send {
+  padding-left: 4px;
 }
 
 .rv-send-count {

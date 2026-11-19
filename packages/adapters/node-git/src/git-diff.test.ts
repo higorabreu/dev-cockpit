@@ -1,9 +1,21 @@
 import { execFileSync } from 'node:child_process'
-import { chmod, mkdir, mkdtemp, realpath, rm, symlink, unlink, writeFile } from 'node:fs/promises'
+import {
+  chmod,
+  cp,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  unlink,
+  writeFile,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { DiffOutcome, DiffRequest, ErrorBody, Result } from '@dck/core'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { createGitDiffSource, statusModules, statusPaths, untrackedModules } from './git-diff.ts'
 import type { GitAnswer } from './git-run.ts'
 
@@ -16,8 +28,8 @@ const run = (cwd: string, ...args: string[]) =>
     { cwd, stdio: 'ignore' },
   )
 
-async function repo(name: string, files: Record<string, string | Buffer>) {
-  const path = join(directory, name)
+async function repo(name: string, files: Record<string, string | Buffer>, base = directory) {
+  const path = join(base, name)
   await mkdir(path, { recursive: true })
   run(path, 'init', '-b', 'main')
   for (const [file, content] of Object.entries(files)) {
@@ -294,13 +306,13 @@ const addModule = (cwd: string, source: string, path: string) =>
   run(cwd, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', source, path)
 
 // acme holds libs/lib, which holds vendor/deep, and libs/other
-async function nested() {
-  const deep = await repo('deep', { 'src/deep.txt': numbered(3) })
-  const lib = await repo('lib', { 'x.txt': numbered(3), 'src/util.ts': numbered(3) })
+async function buildNested(base: string) {
+  const deep = await repo('deep', { 'src/deep.txt': numbered(3) }, base)
+  const lib = await repo('lib', { 'x.txt': numbered(3), 'src/util.ts': numbered(3) }, base)
   addModule(lib, deep, 'vendor/deep')
   run(lib, 'commit', '-q', '-m', 'Add the deep module')
-  const other = await repo('other', { 'docs/guide.md': numbered(3) })
-  const acme = await repo('acme', { 'app.ts': numbered(3) })
+  const other = await repo('other', { 'docs/guide.md': numbered(3) }, base)
+  const acme = await repo('acme', { 'app.ts': numbered(3) }, base)
   addModule(acme, lib, 'libs/lib')
   addModule(acme, other, 'libs/other')
   run(acme, 'commit', '-q', '-m', 'Add libs')
@@ -314,7 +326,34 @@ async function nested() {
     '--recursive',
     '-q',
   )
-  return acme
+}
+
+// Built once and copied for each test: its twenty git commands were most of each test's time, which on a
+// slow runner came close to the timeout
+let template = ''
+
+beforeAll(async () => {
+  template = await realpath(await mkdtemp(join(tmpdir(), 'dck-nested-')))
+  await buildNested(template)
+})
+
+afterAll(() => rm(template, { recursive: true, force: true }))
+
+// The copy's remotes and submodule URLs still name the template's folders: point them to the copy's own
+async function retarget(folder: string) {
+  const entries = await readdir(folder, { recursive: true, withFileTypes: true })
+  for (const entry of entries) {
+    if (!entry.isFile() || entry.name !== 'config') continue
+    const path = join(entry.parentPath, entry.name)
+    const text = await readFile(path, 'utf8')
+    if (text.includes(template)) await writeFile(path, text.replaceAll(template, folder))
+  }
+}
+
+async function nested() {
+  await cp(template, directory, { recursive: true })
+  await retarget(directory)
+  return join(directory, 'acme')
 }
 
 describe('submodules', () => {
