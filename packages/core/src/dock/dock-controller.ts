@@ -62,16 +62,33 @@ export function dragRatio(workAreaHeight: number, height: number, minRatio: numb
   return snap ?? Math.round((clamped / workAreaHeight) * 1000) / 1000
 }
 
+// Steps tried around a height, nearest first and the shorter one first, until one is whole device pixels
+const DEVICE_STEPS = [0, -1, 1, -2, 2, -3, 3, -4, 4]
+
+// The height nearest `height` that is a whole number of device pixels at `scale`, never past `limit`. At
+// 125% a window of 557 DIPs is 696.25 pixels: the compositor stretches its 697 to fit and every 1px line
+// lands across two pixels, more so toward the bottom. A scale with no such height nearby keeps it
+export function deviceHeight(height: number, scale: number, limit: number): number {
+  const fits = (candidate: number) => {
+    const pixels = candidate * scale
+    return candidate >= 1 && candidate <= limit && Math.abs(pixels - Math.round(pixels)) < 0.001
+  }
+  return DEVICE_STEPS.map((step) => height + step).find(fits) ?? height
+}
+
 export function dockBounds(
   workArea: Rectangle,
   heightRatio: number,
   fullHeight: boolean,
+  scale = 1,
 ): Rectangle {
+  const wanted = Math.round(workArea.height * (fullHeight ? 1 : heightRatio))
   return {
     x: workArea.x,
     y: workArea.y,
     width: workArea.width,
-    height: Math.round(workArea.height * (fullHeight ? 1 : heightRatio)),
+    // The whole work area ends where the system says; only a part of it can move to a whole pixel
+    height: wanted >= workArea.height ? wanted : deviceHeight(wanted, scale, workArea.height),
   }
 }
 
@@ -93,8 +110,10 @@ export function createDockController(options: DockOptions): DockController {
   let anchor: Point | undefined
   let lastToggleAt: number | undefined
 
-  const boundsAt = (point: Point) =>
-    dockBounds(screen.displayNearest(point).workArea, ratio(), fullHeight)
+  const boundsAt = (point: Point) => {
+    const display = screen.displayNearest(point)
+    return dockBounds(display.workArea, ratio(), fullHeight, display.scaleFactor)
+  }
 
   function show(point: Point = screen.cursorPoint()) {
     cancelReapply?.()
@@ -165,11 +184,11 @@ export function createDockController(options: DockOptions): DockController {
     resizeTo(height) {
       // A reapply scheduled by the last show would pull the window back to its old height
       cancelReapply?.()
-      const { workArea } = screen.displayNearest(here())
+      const { workArea, scaleFactor } = screen.displayNearest(here())
       const next = dragRatio(workArea.height, height, options.minRatio ?? 0.3)
       dragged = { ratio: next, wasFullHeight: dragged?.wasFullHeight ?? fullHeight }
       fullHeight = false
-      window.setBounds(dockBounds(workArea, next, false))
+      window.setBounds(dockBounds(workArea, next, false, scaleFactor))
       return next
     },
     endResize(keep) {

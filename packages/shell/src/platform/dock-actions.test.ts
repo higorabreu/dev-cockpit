@@ -39,6 +39,23 @@ describe('createDockActions', () => {
     expect(window.bounds()).toEqual({ x: 0, y: 0, width: 1600, height: 434 })
   })
 
+  it('should keep the monitor scale when the compositor gives the size', async () => {
+    const area = createWaylandArea(async () => compositorArea)
+    const scaled: SystemScreen = {
+      cursorPoint: () => ({ x: 0, y: 0 }),
+      displayNearest: () => ({
+        ...electronScreen.displayNearest({ x: 0, y: 0 }),
+        scaleFactor: 1.25,
+      }),
+    }
+    await area.refresh()
+
+    const display = boundedScreen(scaled, () => area.current()).displayNearest({ x: 0, y: 0 })
+
+    expect(display.workArea).toEqual({ x: 0, y: 0, width: 1600, height: 868 })
+    expect(display.scaleFactor).toBe(1.25)
+  })
+
   it('should ask the compositor before going full height when no size is known yet', async () => {
     const { window, dock, actions } = setup([compositorArea])
     dock.show()

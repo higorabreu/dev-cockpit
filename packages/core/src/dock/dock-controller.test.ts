@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Display } from '../ports/index.ts'
 import { FakeClock, FakeDockWindow, FakeScheduler, FakeScreen } from '../testing/index.ts'
-import { createDockController, dockBounds, dragRatio } from './dock-controller.ts'
+import { createDockController, deviceHeight, dockBounds, dragRatio } from './dock-controller.ts'
 
 const display = (
   id: string,
@@ -63,6 +63,45 @@ describe('dockBounds', () => {
     const result = dockBounds(workArea, 0.5, true)
 
     expect(result.height).toBe(1080)
+  })
+
+  it('should take a height of whole device pixels when the ratio falls between them at 125%', () => {
+    const workArea = { x: 0, y: 32, width: 1536, height: 832 }
+
+    const result = dockBounds(workArea, 0.67, false, 1.25)
+
+    expect(result.height).toBe(556)
+    expect(result.height * 1.25).toBe(695)
+  })
+
+  it('should keep the whole work area when it is not whole device pixels at full height', () => {
+    const workArea = { x: 0, y: 0, width: 1280, height: 721 }
+
+    const result = dockBounds(workArea, 0.5, true, 1.5)
+
+    expect(result.height).toBe(721)
+  })
+})
+
+describe('deviceHeight', () => {
+  it.each([
+    [557, 1, 557],
+    [557, 1.25, 556],
+    [559, 1.25, 560],
+    [558, 1.25, 556],
+    [557, 1.5, 556],
+    [557, 1.75, 556],
+    [557, 2, 557],
+  ])('should take %i DIPs at a scale of %f as %i', (height, scale, expected) => {
+    expect(deviceHeight(height, scale, 2000)).toBe(expected)
+  })
+
+  it('should not go past the limit when the nearest whole height is above it', () => {
+    expect(deviceHeight(831, 1.25, 831)).toBe(828)
+  })
+
+  it('should keep the height when no height nearby is whole device pixels at the scale', () => {
+    expect(deviceHeight(557, 1.0123, 2000)).toBe(557)
   })
 })
 
@@ -387,6 +426,24 @@ describe('resizeTo', () => {
     // Assert
     expect(ratio).toBe(0.6)
     expect(window.bounds()).toEqual({ x: 1920, y: 32, width: 1920, height: 629 })
+  })
+
+  it('should land on whole device pixels of the display when the dragged edge falls between them', () => {
+    // Arrange
+    const window = new FakeDockWindow()
+    const scaled: Display = { ...left, scaleFactor: 1.5 }
+    const dock = createDockController({
+      screen: new FakeScreen([scaled], { x: 300, y: 300 }),
+      window,
+      scheduler: new FakeScheduler(),
+    })
+    dock.show()
+
+    // Act
+    dock.resizeTo(701)
+
+    // Assert
+    expect(window.bounds().height).toBe(700)
   })
 
   it('should not be pulled back to the old height by the reapply of the last show', () => {
