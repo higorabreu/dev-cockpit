@@ -7,8 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./testing": "./src/testing/index.ts",
-    "./host-api": "./src/ports/host-api.ts",
-    "./file-search": "./src/file-search/file-groups.ts"
+    "./host-api": "./src/ports/host-api.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"

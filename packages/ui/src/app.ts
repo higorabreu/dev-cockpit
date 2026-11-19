@@ -24,6 +24,8 @@ import {
   openTab,
   type ProgramStatus,
   type Project,
+  relativePath,
+  rememberFile,
   renameTab,
   reorderTabs,
   reviewBaseFor,
@@ -219,6 +221,18 @@ export async function startApp(
       favorite: project.favorite === true,
     }))
 
+  // The files each tab opened from the search, newest first, paths only and only in memory
+  const recentFiles = new Map<string, readonly string[]>()
+
+  // Until the file view exists (F4, which replaces this function), a picked file opens as a Ctrl+click
+  // on a path does: in the system's app (D40)
+  function openPickedFile(root: string, path: string) {
+    const file = absolutePath(root, path)
+    const id = state.activeId
+    if (id !== undefined) recentFiles.set(id, rememberFile(recentFiles.get(id) ?? [], file))
+    api.paths.openFile(file)
+  }
+
   const fileSearch = createFileSearch(
     {
       overlay: elements.files,
@@ -231,9 +245,7 @@ export async function startApp(
       others: (root) => api.fileSearch.others(root),
       expand: (root, folder) => api.fileSearch.expand(root, folder),
       ranker: createFileRanker(startRankWorker),
-      // Until the file view exists (F4, which replaces this line), a picked file opens as a Ctrl+click on
-      // a path does: in the system's app (D40)
-      onPick: (root, path) => api.paths.openFile(absolutePath(root, path)),
+      onPick: openPickedFile,
       onClose: () => focusActive(),
       i18n,
       keymap,
@@ -253,8 +265,10 @@ export async function startApp(
   function searchFiles() {
     if (fileSearch.isOpen()) return fileSearch.toggleWiden()
     if (search.isOpen()) search.close()
-    // The recent files come with the file view (F1); until then the empty query lists the project
-    void fileSearch.open(tabFolder(), () => [])
+    const recent = state.activeId === undefined ? [] : (recentFiles.get(state.activeId) ?? [])
+    void fileSearch.open(tabFolder(), (root) =>
+      recent.flatMap((file) => relativePath(root, file) ?? []),
+    )
   }
 
   function searchProjects() {
@@ -633,6 +647,7 @@ export async function startApp(
     connectHint.forget(id)
     for (const [path, tabId] of projectTabs) if (tabId === id) projectTabs.delete(path)
     namedTabs.delete(id)
+    recentFiles.delete(id)
   }
 
   function close(id: string) {

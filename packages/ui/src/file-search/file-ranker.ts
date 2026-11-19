@@ -1,10 +1,4 @@
-// The ranking alone, not the whole core: the worker loads it on every search
-import {
-  createFileSearch,
-  type FileGroups,
-  type FileSearch,
-  type FileSearchInput,
-} from '@dck/core/file-search'
+import { createFileSearch, type FileGroups, type FileSearch, type FileSearchInput } from '@dck/core'
 
 // What the window asks the ranking worker, and its answer
 export type RankRequest =
