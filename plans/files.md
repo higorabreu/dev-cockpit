@@ -1,6 +1,7 @@
 # Open and edit files in the cockpit
 
-**Status:** Agreed with the maintainer on 2026-11-19, except the syntax colors, decided by F0. Nothing implemented.
+**Status:** Agreed with the maintainer on 2026-11-19; the syntax colors decided by F0. F0 to F3 done, F4 in
+progress (F4a: the file over the tab and the editor, D83).
 
 Asked by the maintainer on 2026-11-17 (roadmap backlog, "Editing files") and refined on 2026-11-19: find a
 file of the tab's project and open it in the cockpit, text and code to edit, and the common non-text files
@@ -115,16 +116,29 @@ before it is kept.
 
 ## Open questions
 
-- Syntax colors: decided by the measurement of F0, with screenshots beside VS Code's.
+- None left from F0: the syntax colors are Lezer's, in the palette the maintainer chose (D83).
 
 ## Tasks
 
-- [ ] F0. Spike: measure each kind of the table with the perf script; decide which kinds stay.
-- [ ] F1. Core: file opening model (kinds, limits, recent list per tab), the conflict rule, tests.
-- [ ] F2. Adapter and bridge: read, watch, atomic save with the change check, the protocol for non-text.
+- [x] F0. Spike: measure each kind of the table with the perf script; decide which kinds stay. Decided on
+  2026-11-19 from [files-measurements.md](files-measurements.md): CodeMirror 6 loaded on the first open,
+  its cursor blinking with the terminal's timer; syntax colors with Lezer's grammars through
+  `@codemirror/language-data`, each language on first use, up to 2 MB, editable without colors from 2 to 5
+  MB, read only to 50 MB and the card above; images, Markdown (marked and DOMPurify) and PDF (Chromium's
+  viewer) kept for F4b.
+- [x] F1. Core: file opening model (kinds, limits, recent list per tab), the conflict rule, tests (D81).
+- [x] F2. Adapter and bridge: read, watch, atomic save with the change check, the protocol for non-text
+  (D81).
 - [x] F3. File search: the project's files (`git ls-files`, else a bounded walk), fuzzy match, the ignored
   group and the step into an ignored folder, key.
-- [ ] F4. File view over the tab: editor, image, Markdown, PDF, card; switch key; recent list.
+- [ ] F4. File view over the tab: editor, image, Markdown, PDF, card; switch key; recent list. In progress:
+  - [x] F4a (D83). The appendix in the tab bar with its marks and menus, `Ctrl+Shift+Space` (`⇧⌘Space`),
+    the editor (CodeMirror, Lezer colors, the palette in `tokens.json`, `.editorconfig`, line endings kept,
+    timer blink), the search inside the file, auto save, the strips for a merge, a conflict (Compare as two
+    read only columns) and a deletion, the recent list kept with the tab, the card for every other kind,
+    and the file search's pick opening here.
+  - [ ] F4b. Image, Markdown preview and PDF views in place of the card (`load` in
+    `ui/src/files/file-tabs.ts` is the seam); the three-way Compare that picks hunk by hunk.
 - [ ] F5. Entries: Ctrl+click on a path (amends D40), the review's button.
 - [ ] F6. Decision (and D13's text, which still names Ctrl+Shift+O for projects), README, perf report updated, checks in the real app with screenshots, both themes.
 

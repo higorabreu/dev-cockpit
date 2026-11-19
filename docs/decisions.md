@@ -1636,3 +1636,94 @@ though the process returns the pages to the system only later. The bounded walk 
 `preload.ts`, `ui/src/file-search` and `styles/file-search.css`, the `#files` overlay in `index.html`, the
 `fileSearch` action with its keys, Shortcuts row, offer and hold menu item, and the `fileSearch.*`
 catalog entries.
+
+## D83. A file opens over its tab as an appendix, in CodeMirror with Lezer's colors, saved by itself
+
+**Decision:** F4a of [plans/files.md](../plans/files.md), the file view's first part.
+- **Where:** one file at a time over each tab (`ui/src/files/file-tabs.ts`), above its terminal and review,
+  which stay alive and fitted underneath and paint nothing while the file shows (`data-file-shown` hides
+  them, so a transparent window never shows the terminal through the text). `openFile(tabId, path, line?)`
+  is the only way in: the file search's pick (D82) opens there, and the Ctrl+click on a path and the
+  review's button (F5) will. The active tab with a file grows a second segment in one 1px `--line` outline,
+  `api │ login.ts`, at the plain tab's height; a 1px divider sits between the segments, hidden beside the
+  active one, which takes the selected tab's style; the file segment has a file glyph and the whole path in
+  its tooltip. An inactive tab with a file shows the glyph beside its name. In the file's segment a hollow
+  ring marks edits not saved yet (from the first key, even while auto save waits) and a filled dot in the
+  warning color a conflict with the disk or a deletion, each named by its tooltip ("Changed on disk",
+  "Deleted on disk"); a container query on the bar shrinks the name to 120 px, then 64 px below 900 px, then
+  hides it below 600 px. A click on a segment switches; the file segment's right click lists the tab's
+  recent files and Close file, and Save while it has edits; the tab's right click and the hold menu's Tabs
+  list carry Show file or Show terminal. The view's header writes the path from the tab's folder (folders
+  muted, the name in the foreground), "Ignored by git" when `git check-ignore` says so (a `GitIgnoreCheck`
+  port, node-git, channel `files:ignored`), the note of a read only or colorless file, Find and Go to line
+  buttons for the mouse (their keys in the tooltips), and a terminal button with the toggle key in its
+  tooltip. The strip under it takes the settings file's strip (D65): its height, its text and its bordered
+  buttons.
+- **Toggle key:** `toggleFile`, `Ctrl+Shift+Space` on a PC and `⇧⌘Space` on a Mac (⌘Space and ⌥⌘Space are
+  Spotlight's, ⌃Space and ⌃⌥Space the input sources', ⌃⌘Space the character viewer; ⇧⌘Space is free in
+  macOS's own shortcuts), in the keymap, the Shortcuts page's Files group and every tooltip through
+  `data-tip-shortcut`. It does nothing on a tab without a file. Going to the terminal saves first with auto
+  save on; a review opened while the file shows sends it behind.
+- **Editor:** CodeMirror 6 (`state` 6.7.6, `view` 6.43.15, `commands` 6.11.1, `search` 6.7.2, `language`
+  6.13.1, `language-data` 6.5.2, `@lezer/highlight` 1.2.5, `@lezer/common` 1.5.5, pinned), in
+  `ui/src/editor`, loaded with a dynamic import on the first text opened: nothing of it is in the page at
+  start (a 77 KB chunk and CodeMirror's own, about 290 KB, come with the first file). Text and Markdown
+  source open in it; any other kind shows a card with its kind, its size and "Open in the system's app"
+  until F4b. Syntax colors come from Lezer's grammars through `@codemirror/language-data`, each language
+  loaded on first use, for files up to 2 MB (`FILE_LIMITS.colorBytes`); from 2 to 5 MB the file is editable
+  without colors and the header says so; past 5 MB, or not UTF-8, it opens read only with the reason and
+  "Open in the system's app". The colors are the palette the maintainer chose, "dck vivo, suave": roles in
+  `tokens.json` (`syntax.*`, both themes) mapped to Lezer's tags in `editor-syntax.ts`, brackets colored by
+  depth and a doc comment's `@tags`, both from the parse tree of the visible lines, indent guides as 1px
+  lines per level for the visible lines, the terminal's font family and size with ligatures on. Every role
+  reaches 4.5:1 on the editor's background in both themes, and all but the comments also on a selection or
+  search match and on the added and removed tints (tested in `packages/design`). The chrome (gutter, line
+  numbers, cursor, selection, matching brackets, search matches, panels) is a CodeMirror theme over the
+  cockpit's tokens: matching brackets take the selection's solid tint, never an outline, and the line
+  numbers keep room for three digits, so the text never moves at line 10 or 100. `.editorconfig` files from
+  the file's folder up to one marked `root` (channel `files:editorconfig`, a parser in `core/src/files`)
+  give the indentation and the final newline; without one the indentation is guessed from the file. The line
+  break is the file's: CRLF stays CRLF, a file that mixes them keeps its carriage returns as characters. The
+  cursor blinks with the terminal's timer (D58), never with CodeMirror's animation.
+- **Search inside the file:** `@codemirror/search` with a bar of the cockpit's own controls at the top: find
+  and replace fields, match case, whole word and regular expression toggles (pressed with an outline too),
+  "3 of 12" counted up to 2000 matches and again 150 ms after typing stops, previous and next. Keys:
+  `Ctrl+F` (`⌘F`), `Enter`/`Shift+Enter` and `F3`/`Shift+F3`, `Ctrl+H` (`⌥⌘F`) with the replace row,
+  `Ctrl+G` to a line (`⌃G` on a Mac, where `⌘G` finds the next), `Esc` closes the bar and stays in the file;
+  the selection seeds the query. Its words and CodeMirror's phrases come from the catalogs.
+- **Saving and the disk:** `ui/src/files/file-session.ts` keeps the base and runs saves and the disk's
+  changes one after the other, so a change that arrives during a save is checked once the save resolves.
+  With `files.autoSave` on, a pause of 1 s, going to the terminal, leaving the tab, hiding the window and
+  closing the tab save, and `Ctrl+S` saves at any time; off, closing the tab or replacing the file with
+  edits asks Save, Don't save or Cancel in a menu with a caption from the tab. A change on disk follows
+  D81's rules: no edits, the text reloads in place (only the lines that differ, so the cursor and the scroll
+  stay); with edits and `files.autoMerge`, the merge's edits apply by lines outside the undo history and a
+  quiet strip says "Merged with a change on disk" with Show (the lines from the disk tinted for 4 s) and
+  Undo merge (the user's text back and the conflict strip); otherwise the strip "This file changed on disk",
+  with the reason, offers Reload (undoable), Keep mine and Compare, and auto save waits. Compare shows the
+  disk's version and the user's side by side, read only, the differing lines tinted; picking hunks from
+  three versions is left for F4b. A file deleted on disk gets Save again and Close file; a failed save says
+  why with Try again.
+- **Recent files:** each tab keeps its last 10 files (paths only), offered by the segment's menu and by the
+  file search's empty query. With `window.restoreTabs` a saved tab keeps its open file and its recent list;
+  on start the file comes back over its tab, hidden, if it still opens, and is read again only when it
+  shows.
+**Reason:** the plan agreed with the maintainer on 2026-11-19, the measurements of F0
+(`plans/files-measurements.md`) and the palette the maintainer picked on 2026-11-19. Measured on Linux under
+Xvfb (`scripts/perf/`, 3 runs, `main` against this branch): idle memory 266 MB shown and 255 MB hidden
+against 267 and 255, a first prompt 414 ms after spawn against 394 (fastest runs 372 and 392), the terminal
+echoing a key at 4.9 ms median and 11.1 ms p95 against 4.5 and 11.7, all within the machine's noise. In the
+editor: a 1 MB TypeScript file shows, colored, 80 ms after Enter in the file search on the first open (the
+editor's code and the grammar loaded on the way) and 22 ms on the next, a key echoes at 9.1 ms median and
+13.3 ms p95 in its middle (120 keys typed through X), and the first open adds 28 MB of PSS. Lezer's coloring
+matches the maintainer's mock on its snippet but for three tokens: a name used as a value (`Warning` in
+`Warning.SenderUnavailable`) is a variable and its member a property, where the mock shows a type;
+`undefined` is a variable, not a constant; a type annotation's colon is punctuation, not an operator.
+JavaScript's grammar tags a method's name where it is declared as a property, so `editor-syntax.ts` retags
+it as a function, as the mock and a call show it.
+**How to revert:** drop `ui/src/files`, `ui/src/editor`, `tabs/file-segment.ts` and the appendix in
+`tab-bar.ts`, `styles/file-tab.css`, `file-view.css` and `editor.css`, the `toggleFile` action with its keys
+and Shortcuts row, the file view's wiring in `app.ts` (the pick of the file search goes back to the system's
+app), the `syntax` tokens with their checks, `editorconfig.ts` and `line-edits.ts` in the core, the
+`files:editorconfig` and `files:ignored` channels with the `GitIgnoreCheck` port and `git-ignore.ts`, the
+`file` and `recent` fields of a saved tab, the `files.*` catalog entries and the CodeMirror packages.
