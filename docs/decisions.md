@@ -1524,3 +1524,49 @@ back to. The maintainer chose the height from before the drag, and 50% when that
 **How to revert:** in `core/src/dock/dock-controller.ts`, have `endResize` return the ratio when kept
 whatever it is, have `toggleFullHeight` only flip the flag and return nothing, and drop `leftTo` and
 `LEAVE_RATIO`; `main.ts` then saves nothing on F11.
+
+## D81. A file opens through a port that saves only over what was read, and merges a disk change by itself
+
+**Decision:** the model of `plans/files.md` (F1, F2). The core decides a file's kind from what the
+`FileStore` port reports (`core/src/files/file-kind.ts`, `file-opener.ts`): an image or a PDF by its
+extension, read by nothing but the window through the protocol below; over 50 MB only the card, without a
+read; a NUL among the first 8000 bytes (git's probe) a binary, unless a UTF-16 byte order mark starts the
+file; anything else text, or Markdown by its extension, read whole. A text over 5 MB, or one that is not
+UTF-8 and has no mark, opens read only and is never written back; UTF-8 with or without a mark and UTF-16
+with one are written back in the encoding they were read in. The base kept at reading is the text, its
+size, its modification time and its SHA-256. Before a save the adapter (`@dck/adapter-node-fs`) reads the
+disk again and writes only when it holds the base (same size and hash; a time that moved alone is no
+change), else it answers with what the disk holds and the window shows the conflict. The write goes whole
+to a hidden temporary file in the same folder, takes the file's mode, is synced and renamed over it; a
+link is written through to its file, a file with other hard links is written in place, and a file the user
+may not write fails, since a rename only needs the folder's permission. The watcher follows the file's
+folder (a writer that renames a new file over it ends a watch on the file itself), waits for 100 ms of
+quiet, and reports only a change of content, a deletion or a rename away, and the file coming back; a
+truncate then write counts once two reads a pause apart agree. The rules after a change on disk
+(`disk-change.ts`): the base again (the cockpit's own save) is ignored; with no edits of the user, or when
+the user already typed what the disk holds, reload; with edits and `files.autoMerge` on (the default), a
+line based three-way merge in the core (`merge.ts`, a Myers line diff and diff3's grouping) merges when
+the disk's and the user's changes touch neither the same nor adjacent lines (as `git merge-file`, and
+the same change on both sides is taken once), the disk changed at most 30% of the lines (3 at least), each
+side changed at most 2000 inserted plus deleted lines, and the line endings and the encoding stayed; the
+merge answers the text, the disk's changes as edits of the user's text and the lines they fill; anything
+else is a conflict with its reason (`same-lines`, `many-lines`, `merge-off`, `encoding`, `line-endings`,
+`not-text`, `deleted`). `files.autoSave` (on) and `files.autoMerge` (on) are settings in a Files group.
+The host channels (`files:open`, `files:save`, `files:watch`, `files:unwatch`, `files:changed`, in
+`shell/src/files/files-bridge.ts`) validate every request with zod: any absolute path opens; only a text
+opened in this session and not read only saves, and only a file opened in this session is watched. An
+opened image or PDF gets an address `dck-file://open/<id>` with a random id; the `dck-file` protocol serves
+only those, with their media type and `nosniff`, never another path, a folder or a remote address. A `.env`
+opens and saves like any file; no file's content reaches a log, only its path. The recent list per tab keeps
+at most 10 paths.
+**Reason:** the plan agreed with the maintainer on 2026-11-19. The merge runs in the core rather than
+through a library in the window: diff3 over a line diff is about 200 readable lines, the core takes no
+package, and it is tested against `git merge-file` on fixtures and on random edits (it never merges what git
+does not, and what it merges equals git's text). The cap on edits bounds the diff's work, which grows with
+the square of the edits; a few local changes in a 100 000 line file merge in tens of milliseconds, since
+the common start and end of each side never enter the diff. The check before a save leaves a few
+milliseconds between the read and the rename in which another writer can still slip in, as in git and the
+editors; the watcher then shows that write as a change.
+**How to revert:** drop `core/src/files`, the `FileStore` port, `packages/adapters/node-fs`,
+`shell/src/files`, the `files` channels in `host-api.ts` and `preload.ts`, the protocol in `main.ts`, the
+`files` settings with their rows and catalog entries, and the `DCK-FIL-*` codes.
