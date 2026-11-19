@@ -1044,6 +1044,12 @@ export function createSettingsView(
             checkbox('files.autoMerge'),
             t('settings.autoMerge.hint'),
           ),
+          row(
+            'files.openPathsInCockpit',
+            t('settings.openPathsInCockpit'),
+            checkbox('files.openPathsInCockpit'),
+            t('settings.openPathsInCockpit.hint', { key: deps.keymap.click.alternateLabel }),
+          ),
         ),
       ],
       shortcuts: shortcuts.groups(),

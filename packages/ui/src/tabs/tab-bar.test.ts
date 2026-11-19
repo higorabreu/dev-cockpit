@@ -287,6 +287,9 @@ describe('createTabBar file appendix', () => {
     expect(file?.querySelector('.tab-file-name')?.textContent).toBe('login.ts')
     expect(file?.getAttribute('data-tip')).toBe('/home/ana/acme/src/login.ts')
     expect(file?.getAttribute('data-tip-shortcut')).toBe('toggleFile')
+    expect(file?.querySelector('.tab-file-name')?.getAttribute('data-tip')).toBe(
+      '/home/ana/acme/src/login.ts',
+    )
     expect(tab?.querySelector('.tab-divider')).not.toBeNull()
   })
 

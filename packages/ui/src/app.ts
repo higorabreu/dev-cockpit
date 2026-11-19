@@ -24,6 +24,7 @@ import {
   openTab,
   type ProgramStatus,
   type Project,
+  recentEntries,
   relativePath,
   renameTab,
   reorderTabs,
@@ -33,6 +34,7 @@ import {
   type SessionSnapshot,
   type SystemFontsInfo,
   sameSavedTabs,
+  shortPath,
   stepFontSize,
   stepOpacity,
   stepTab,
@@ -44,7 +46,6 @@ import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
 import { createFileRanker, startRankWorker } from './file-search/file-ranker.ts'
 import { createFileSearch } from './file-search/file-search.ts'
 import { createFileTabs, type LeaveAnswer } from './files/file-tabs.ts'
-import { recentLabel } from './files/path-parts.ts'
 import { createHoldMenuController } from './hold-menu/hold-menu-controller.ts'
 import { setFullHeight } from './kit/layout-mode.ts'
 import { showRailDot } from './kit/rail-dot.ts'
@@ -73,6 +74,7 @@ import { createSessionWatcher } from './tabs/sessions-watcher.ts'
 import { createTabBar } from './tabs/tab-bar.ts'
 import { createTabList } from './tabs/tab-list.ts'
 import { createTabMenu } from './tabs/tab-menu.ts'
+import { type FilePlace, filePathHint, folderPathHint, pathRoute } from './terminal/path-open.ts'
 import { createTerminalSession, type TerminalSession } from './terminal/terminal-session.ts'
 import { createUpdateNotice } from './updates/update-notice.ts'
 import { createSeenMarks } from './views/seen-marks.ts'
@@ -366,7 +368,8 @@ export async function startApp(
       goToLine: keymap.chordLabel({ ctrl: true, key: 'g' }),
     },
     host: (tabId) => tabViews.get(tabId)?.element,
-    cwd: (tabId) => watcher.get(tabId)?.cwd,
+    // The header writes the path from the project, as the tab's tooltip and the recent list do
+    cwd: (tabId) => rootOf(tabId) ?? watcher.get(tabId)?.cwd,
     autoSave: () => settings.current().files.autoSave,
     autoMerge: () => settings.current().files.autoMerge,
     ask: askLeave,
@@ -382,17 +385,36 @@ export async function startApp(
     },
   })
 
-  // The file segment's right click: the tab's recent files to switch to, and Close file
+  // The outermost repository of each tab's folder, asked once per folder, so a file's path is written
+  // from the project (`shortPath`); a cd to a new folder asks again and draws the tabs when it answers
+  const roots = new Map<string, string | undefined>()
+  function rootOf(tabId: string): string | undefined {
+    const cwd = watcher.get(tabId)?.cwd
+    if (cwd === undefined) return undefined
+    if (!roots.has(cwd)) {
+      if (roots.size > 64) roots.clear()
+      roots.set(cwd, undefined)
+      void api.review.root(cwd).then((root) => {
+        roots.set(cwd, root)
+        if (root !== undefined) renderTabs()
+      })
+    }
+    return roots.get(cwd)
+  }
+
+  // The file segment's right click: the tab's recent files to switch to, then Save and Close file under a
+  // divider, which stay in view when a short window scrolls the list
   function openFileMenu(tabId: string, x: number, y: number) {
     const current = fileTabs.appendix(tabId)?.path
     const recent = fileTabs.recent(tabId).filter((path) => path !== current)
     const files =
       recent.length === 0
         ? [{ label: i18n.t('files.noRecent'), enabled: false, run: () => undefined }]
-        : recent.map((path) => ({
-            label: recentLabel(path, recent),
+        : recentEntries(recent, rootOf(tabId)).map((entry) => ({
+            label: entry.name,
+            ...(entry.folder === undefined ? {} : { detail: entry.folder }),
             enabled: true,
-            run: () => void fileTabs.openFile(tabId, path),
+            run: () => void fileTabs.openFile(tabId, entry.path),
           }))
     const save = {
       label: i18n.t('files.save'),
@@ -405,14 +427,10 @@ export async function startApp(
       enabled: true,
       run: () => void fileTabs.closeFile(tabId),
     }
-    menu.open(
-      [...files, save, close],
-      x,
-      y,
-      !document.body.classList.contains('full'),
-      () => focusActive(),
-      { caption: i18n.t('files.recent') },
-    )
+    menu.open(files, x, y, !document.body.classList.contains('full'), () => focusActive(), {
+      caption: i18n.t('files.recent'),
+      footer: [save, close],
+    })
   }
 
   // The toggle key, the hold menu and the tab's menu: between the terminal (with its review) and the file
@@ -461,6 +479,13 @@ export async function startApp(
       const ptyId = sessions.get(tabId)?.ptyId
       return ptyId === undefined ? undefined : api.session.activity(ptyId)
     },
+    openFile(tabId, path, line) {
+      update(activateTab(state, tabId))
+      void fileTabs.openFile(tabId, path, line)
+    },
+    openPath: (tabId, path, line, alternate) =>
+      openPath(tabId, path, line === undefined ? {} : { line }, alternate),
+    pathHint: () => filePathHint(keymap.click, i18n.t, settings.current().files.openPathsInCockpit),
   })
 
   let activeSnapshot: SessionSnapshot | undefined
@@ -520,8 +545,11 @@ export async function startApp(
   function renderTabs() {
     const files = new Map(
       state.tabs.flatMap((tab) => {
+        // Asked for every tab, so a path hovered in its terminal is already written from the project
+        const root = rootOf(tab.id)
         const appendix = fileTabs.appendix(tab.id)
-        return appendix ? [[tab.id, appendix] as const] : []
+        if (!appendix) return []
+        return [[tab.id, { ...appendix, path: shortPath(appendix.path, root) }] as const]
       }),
     )
     tabBar.render(state, attention.marks(), hiddenReviews(), files)
@@ -806,6 +834,8 @@ export async function startApp(
       onRatio: (orientation, ratio) => split.saveRatio(orientation, ratio),
       onArrange: (orientation, narrow) => reviews.arranged(id, orientation, narrow),
       onShownChange: () => renderTabs(),
+      animate: () => !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      onMoved: () => sessions.get(id)?.fit(),
     })
     tabViews.set(id, view)
     const session = await createTerminalSession({
@@ -813,7 +843,8 @@ export async function startApp(
       api,
       theme,
       fontSize: settings.current().fontSize,
-      holdFit: () => heldFit,
+      // The edge being dragged or a pane sliding: the grid waits and fits once at the end
+      holdFit: () => heldFit || view.isMoving(),
       ...terminalLook(settings.current(), systemFonts),
       macOptionAsMeta: settings.current().terminal.macOptionAsMeta,
       ...(options.cwd ? { cwd: options.cwd } : {}),
@@ -830,11 +861,13 @@ export async function startApp(
       },
       paths: {
         modifier: keymap.click.modifier,
-        hint: () => ({
-          key: keymap.click.label,
-          gesture: { click: i18n.t('terminal.leftClick'), action: i18n.t('terminal.openPath') },
-        }),
+        hint: (kind) =>
+          kind === 'dir'
+            ? folderPathHint(keymap.click, i18n.t)
+            : filePathHint(keymap.click, i18n.t, settings.current().files.openPathsInCockpit),
+        shown: (path) => shortPath(path, rootOf(id)),
         cwd: () => watcher.get(id)?.cwd,
+        openFile: (path, place, alternate) => openPath(id, path, place, alternate),
         openFolder: (path, x, y) => openFolderMenu(id, path, x, y),
         tip: setTipRegion,
       },
@@ -859,6 +892,17 @@ export async function startApp(
     if (options.project) projectTabs.set(options.project, id)
     update(openTab(state, { id, label: options.label ?? i18n.t('tabs.default', { n: counter }) }))
     return id
+  }
+
+  // A file Ctrl+clicked in a terminal or on the review's path: over its tab at the place the line named,
+  // or in the system's app, as the setting and Shift say (D84)
+  function openPath(tabId: string, path: string, place: FilePlace, alternate: boolean) {
+    if (pathRoute(settings.current().files.openPathsInCockpit, alternate) === 'system') {
+      api.paths.openFile(path)
+      return
+    }
+    update(activateTab(state, tabId))
+    void fileTabs.openFile(tabId, path, place.line, place.column)
   }
 
   // A folder Ctrl+clicked in a terminal: a tab there or the file manager; the focus returns to that terminal

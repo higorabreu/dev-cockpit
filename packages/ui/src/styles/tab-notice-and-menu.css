@@ -152,17 +152,58 @@ button.notice-icon:focus-visible {
   gap: 6px;
 }
 
+/* The list scrolls when the window is too short for the menu (`placeMenu` caps its height); the caption
+   and the footer keep their place. The padding sits inside each part, so the list touches the edges */
 #tab-menu {
   position: fixed;
   z-index: 40;
   min-width: 168px;
-  padding: 4px;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-large);
+}
+
+#tab-menu .menu-list,
+#tab-menu .menu-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px;
+}
+
+#tab-menu .menu-list {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* The scrollbar's strip takes the right padding while the list overflows, and the left one matches it */
+#tab-menu .menu-list[data-overflow] {
+  padding-left: var(--size-scrollbar);
+  padding-right: 0;
+}
+
+#tab-menu .menu-footer {
+  flex: none;
+}
+
+#tab-menu .menu-caption + .menu-list {
+  padding-top: 0;
+}
+
+#tab-menu .menu-divider {
+  flex: none;
+  height: 1px;
+  background: var(--line);
+}
+
+/* The folder that tells two files of one name apart, after the name as the file search writes it */
+#tab-menu .menu-detail {
+  margin-left: 8px;
+  color: var(--muted);
 }
 
 #tab-menu[hidden] {
@@ -171,7 +212,8 @@ button.notice-icon:focus-visible {
 
 /* Why the items are offered: the items' padding, read and never focused */
 #tab-menu .menu-caption {
-  padding: 6px 10px;
+  flex: none;
+  padding: 10px 14px 6px;
   color: var(--muted);
   white-space: nowrap;
 }

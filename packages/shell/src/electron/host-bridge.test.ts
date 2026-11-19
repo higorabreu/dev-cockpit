@@ -125,6 +125,7 @@ function setup(picked: string | undefined = undefined) {
         return ok(['one'])
       },
       fingerprint: async (cwd) => `print of ${cwd}`,
+      root: async (cwd) => `root of ${cwd}`,
     },
     reviewNotes: {
       save: async (root, markdown) => {
@@ -971,6 +972,21 @@ describe('registerHostBridge review', () => {
 
     // Assert
     expect(answers).toEqual(['print of /srv/acme/backend', undefined, undefined])
+  })
+
+  it('should give the repository root of an existing folder and nothing for a path it refuses', async () => {
+    // Arrange
+    const { call } = setup()
+
+    // Act
+    const answers = [
+      await call(hostChannels.reviewRoot, '/srv/acme/backend'),
+      await call(hostChannels.reviewRoot, '/srv/acme/missing'),
+      await call(hostChannels.reviewRoot, 'srv/acme'),
+    ]
+
+    // Assert
+    expect(answers).toEqual(['root of /srv/acme/backend', undefined, undefined])
   })
 })
 
