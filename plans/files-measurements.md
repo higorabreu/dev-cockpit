@@ -241,3 +241,11 @@ The PSS of the 100k list stayed after it was dropped (+56 MB).
 | `dompurify` | 3.4.18 | 30 KB, 12 KB |
 
 Not added: Shiki (`@shikijs/*` 4.6.0), markdown-it 15.0.3, pdfjs-dist 6.5.438.
+
+**Fit with the files core (#113).** `FILE_LIMITS` already holds the read only (5 MB) and card (50 MB)
+limits measured here; F0 adds three, for `core/src/files/file-kind.ts` or the view in F4: syntax colors up
+to 2 MB, the Markdown preview up to 200 KB, and the card for images over 50 megapixels (the header gives
+the size before any decode). The `dck-file:` scheme as registered (`standard`, `secure`, `stream`, no
+`supportFetchAPI`, `no-store`) serves both kinds as measured: images through `<img>` (add `dck-file:` to
+`img-src`) and PDF in a frame with `plugins: true` (add it to `frame-src`, or `object-src` for an
+`embed`). `no-store` does not free an `<img>`'s decoded pixels after it closes; the bitmap does.
