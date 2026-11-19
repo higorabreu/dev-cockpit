@@ -313,6 +313,99 @@ module.exports = {
       await sleep(1200)
     },
   },
+
+  editor: {
+    settings: { window: { heightRatio: 1, restoreTabs: false } },
+    async setup(c) {
+      await tabs(c, ['acme-api'])
+      await c.panel(false)
+      await clearScreen(c)
+      await c.type('ls src\n', 5)
+      await c.sleep(800)
+      await c.shot('setup')
+    },
+    async run(c) {
+      const { page, sleep, mark, shot } = c
+      await sleep(1500)
+      await page.keyboard.press('Control+Shift+O')
+      mark('search')
+      await sleep(900)
+      await c.type('ord', 260)
+      await sleep(1100)
+      await shot('search')
+      await page.keyboard.press('Enter')
+      mark('open')
+      await codeShown(c, 'inStock')
+      mark('shown')
+      await sleep(1900)
+      await shot('open')
+      const number = await textCenter(c, '.cm-line', '5000')
+      if (!number) throw new Error('invariant: the shipping threshold is not on screen')
+      await c.glide(number.x, number.y, 600)
+      await sleep(200)
+      xdotool('click', '--repeat', '2', '--delay', '80', '1')
+      mark('select')
+      await sleep(500)
+      await c.park()
+      await c.type('7500', 200)
+      mark('edited')
+      await shot('edited')
+      await c.waitFor(async () => (await unsavedMarks(c)) === 0, 10000, 'saved')
+      mark('saved')
+      await sleep(1600)
+      await shot('saved')
+      await page.keyboard.press('Control+F')
+      mark('find')
+      await sleep(700)
+      await c.type('total', 220)
+      await sleep(1300)
+      await page.keyboard.press('Enter')
+      mark('first')
+      await sleep(1300)
+      await page.keyboard.press('Enter')
+      mark('found')
+      await sleep(1600)
+      await shot('find')
+      await page.keyboard.press('Escape')
+      mark('find-closed')
+      await sleep(900)
+      await page.keyboard.press('Control+Shift+O')
+      mark('readme-search')
+      await sleep(700)
+      await c.type('readme', 160)
+      await sleep(800)
+      await page.keyboard.press('Enter')
+      mark('readme')
+      await sleep(1800)
+      await shot('readme')
+      await page.keyboard.press('Control+Shift+J')
+      mark('preview')
+      await sleep(2600)
+      await shot('preview')
+      await page.keyboard.press('Control+Shift+Space')
+      mark('terminal')
+      await sleep(1000)
+      await c.type('tsc\n', 160)
+      mark('tsc')
+      await c.waitFor(async () => /Found 1 error/.test(await c.screenText()), 30000, 'tsc')
+      mark('error')
+      await sleep(1400)
+      await shot('error')
+      const place = await terminalCell(c, 'src/orders.ts:42:5', 6)
+      if (!place) throw new Error('invariant: the error line is not on screen')
+      await c.glide(place.x, place.y, 700)
+      mark('hover')
+      await sleep(1500)
+      await shot('hover')
+      xdotool('keydown', 'ctrl', 'click', '1', 'keyup', 'ctrl')
+      mark('jump')
+      await codeShown(c, 'formatCents(orderTotal')
+      mark('line')
+      await c.park()
+      await sleep(2800)
+      await shot('line')
+    },
+  },
 }
 
 // Shift+click with the real pointer, as a reader extends a selection
@@ -329,4 +422,69 @@ function shiftClick(at) {
     'keyup',
     'shift',
   ])
+}
+
+// The middle of some text inside the element that holds it, in window pixels
+function textCenter(c, selector, text) {
+  return c.page.evaluate(
+    ([selector, text]) => {
+      for (const node of document.querySelectorAll(selector)) {
+        const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT)
+        for (let leaf = walker.nextNode(); leaf; leaf = walker.nextNode()) {
+          const at = leaf.textContent.indexOf(text)
+          if (at < 0) continue
+          const range = document.createRange()
+          range.setStart(leaf, at)
+          range.setEnd(leaf, at + text.length)
+          const box = range.getBoundingClientRect()
+          if (box.width === 0) continue
+          return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) }
+        }
+      }
+      return undefined
+    },
+    [selector, text],
+  )
+}
+
+// A terminal row's text is split into spans by color, so the cell is found by its column instead
+function terminalCell(c, text, offset) {
+  return c.page.evaluate(
+    ([text, offset]) => {
+      const rows = document.querySelector('.tabview.active .xterm-rows')
+      const screen = document.querySelector('.tabview.active .xterm-screen')
+      if (!rows || !screen) return undefined
+      const lines = [...rows.children]
+      const index = lines.findIndex((row) => row.textContent.includes(text))
+      if (index < 0) return undefined
+      const box = screen.getBoundingClientRect()
+      const cell = box.height / lines.length
+      const width = lines[index].getBoundingClientRect().width / lines[index].textContent.length
+      const column = lines[index].textContent.indexOf(text) + offset
+      return {
+        x: Math.round(box.x + (column + 0.5) * width),
+        y: Math.round(box.y + (index + 0.5) * cell),
+      }
+    },
+    [text, offset],
+  )
+}
+
+// A file opens on an empty editor for a moment; the clip cuts to it once its text is painted
+async function codeShown(c, text) {
+  await c.waitFor(
+    async () => (await c.page.locator('.cm-line', { hasText: text }).count()) > 0,
+    10000,
+    text,
+  )
+  await c.sleep(120)
+}
+
+function unsavedMarks(c) {
+  return c.page.$$eval('.file-mark.unsaved', (nodes) => nodes.length)
+}
+
+// The real pointer's buttons and keys, as a reader clicks
+function xdotool(...args) {
+  require('node:child_process').execFileSync('xdotool', args)
 }

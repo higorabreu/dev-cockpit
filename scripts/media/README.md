@@ -11,6 +11,7 @@ settings or keyring.
 | `review` | `review.gif`: the review with a submodule, a comment sent to the agent, the file updating | Claude Code |
 | `dropdown` | `dropdown.gif`: the window over the desktop, resized by its edge to full height and back | |
 | `work` | `work.gif`: the Work screen, a filter and a pull request opened in the browser | |
+| `editor` | `editor.gif`: a file found and opened over the tab, edited and saved by itself, a search in it, a Markdown preview and a compiler's path opened at its line | |
 
 ## Requirements
 
@@ -37,7 +38,9 @@ cp ~/.cache/dck-media/out/hero.gif docs/media/
 ```
 
 `run.sh` rebuilds the fixtures every time: the projects `acme-api` (with the `libs/billing` submodule)
-and `acme-web` in the fixture home, a shell prompt, and the Claude Code wrapper. The fixture home is
+and `acme-web` in the fixture home, a shell prompt, and the Claude Code wrapper; a scene that needs more
+runs its own `prep-<scene>.sh` after that (`review` moves the submodule, `editor` adds TypeScript sources
+with a type error, a README and `tsc`). The fixture home is
 `/home/ana` by default, because the cockpit shows paths under `/home/<name>` as `~/...`; create it
 once with `sudo install -d -o "$USER" /home/ana`, or set `MEDIA_HOME` to another empty folder (paths then
 show in full). The script refuses to clear a folder it did not create.

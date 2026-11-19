@@ -117,4 +117,40 @@ def work(e):
     }
 
 
-SCENES = {'hero': hero, 'review': review, 'dropdown': dropdown, 'work': work}
+def editor(e):
+    # The window is full height here, so every zoom stays inside the cockpit
+    palette = (240, 0, 800, 450)
+    edit = (0, 0, 800, 450)
+    terminal = (0, 0, 1068, 601)
+    return {
+        'segments': [
+            # Cut from Enter to the painted file, past the empty editor of the first open
+            (0.3, e['search'], 1.5), (e['search'], e['open'], 1.3), (e['shown'], e['select'] - 0.6, 1.4),
+            (e['select'] - 0.6, e['edited'], 1.2), (e['edited'], e['saved'], 1), (e['saved'], e['find'], 1.4),
+            (e['find'], e['first'], 1.3), (e['first'], e['find-closed'], 1.4),
+            (e['find-closed'], e['readme'], 1.6), (e['readme'], e['preview'], 1.5), (e['preview'], e['terminal'], 1.4),
+            (e['terminal'], e['error'], 1.4), (e['error'], e['hover'], 1.3), (e['hover'], e['jump'], 1.2),
+            (e['line'], e['end'], 1.1),
+        ],
+        'camera': [
+            (0, FULL), (e['search'] - 0.1, FULL), (e['search'] + 0.25, palette), (e['open'] - 0.05, palette),
+            (e['shown'], FULL), (e['select'] - 0.9, FULL), (e['select'] - 0.5, edit), (e['find'] - 0.2, edit),
+            (e['find'] + 0.2, FULL), (e['terminal'] + 0.4, FULL), (e['terminal'] + 0.8, terminal), (e['jump'], terminal),
+            (e['line'], FULL), (e['end'] + 5, FULL),
+        ],
+        'captions': [
+            (0, e['shown'], "Find a file of the tab's project", ['Ctrl', 'Shift', 'O']),
+            (e['shown'], e['select'], 'It opens over the tab, the shell still running', []),
+            (e['select'], e['saved'], 'A ring while an edit is not saved', []),
+            (e['saved'], e['find'], 'Saved by itself after a pause', []),
+            (e['find'], e['first'], 'Find in the file', ['Ctrl', 'F']),
+            (e['first'], e['find-closed'], 'From match to match', ['Enter']),
+            (e['find-closed'], e['preview'], 'Markdown opens the same way', ['Ctrl', 'Shift', 'O']),
+            (e['preview'], e['terminal'], 'And shows its preview', ['Ctrl', 'Shift', 'J']),
+            (e['terminal'], e['hover'], 'Back to the terminal', ['Ctrl', 'Shift', 'Space']),
+            (e['hover'], e['end'] + 1, 'A path in the output opens at its line', ['Ctrl', 'Click']),
+        ],
+    }
+
+
+SCENES = {'hero': hero, 'review': review, 'dropdown': dropdown, 'work': work, 'editor': editor}
