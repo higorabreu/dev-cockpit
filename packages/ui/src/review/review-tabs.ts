@@ -1,6 +1,7 @@
 import type { AgentState, HostApi, Orientation, SessionActivityInfo, Translator } from '@dck/core'
 import type { TabView } from '../panes/tab-view.ts'
 import type { Keymap } from '../platform/keymap.ts'
+import type { LinkHint } from '../terminal/terminal-links.ts'
 import { createReviewPane, type ReviewMemory, type ReviewPane } from './review-pane.ts'
 
 export interface ReviewTabsDeps {
@@ -21,6 +22,11 @@ export interface ReviewTabsDeps {
   // What runs in the tab's terminal: the watcher's last read, and a fresh one for sending
   watched(tabId: string): SessionActivityInfo | undefined
   activity(tabId: string): Promise<SessionActivityInfo | undefined>
+  // A file of the review over its tab, switching the tab to the file; a line from 1
+  openFile(tabId: string, path: string, line: number | undefined): void
+  // A path Ctrl+clicked in a file's header, routed as one in the terminal; Shift held is `alternate`
+  openPath(tabId: string, path: string, line: number | undefined, alternate: boolean): void
+  pathHint(): LinkHint
 }
 
 const paneId = (tabId: string) => `${tabId}:review`
@@ -52,6 +58,9 @@ export function createReviewTabs(deps: ReviewTabsDeps) {
         return true
       },
       activity: () => deps.activity(tabId),
+      openFile: (path, line) => deps.openFile(tabId, path, line),
+      openPath: (path, line, alternate) => deps.openPath(tabId, path, line, alternate),
+      pathHint: deps.pathHint,
     })
   }
 

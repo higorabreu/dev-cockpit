@@ -15,6 +15,21 @@
   visibility: visible;
 }
 
+/* A pane opening or closing slides as the side panel does: the review grows from nothing to its share and
+   the terminal gives way, or the reverse (`slide` in panes/tab-view.ts sets `data-moving` for the motion).
+   The terminal keeps its grid meanwhile and fits once at the end; nothing moves with reduced motion */
+@media (prefers-reduced-motion: no-preference) {
+  .tabview[data-moving] > .session,
+  .tabview[data-moving] > .review {
+    transition: flex-basis var(--motion-normal) var(--motion-easing);
+  }
+}
+
+.tabview[data-moving] > .session,
+.tabview[data-moving] > .review {
+  overflow: hidden;
+}
+
 .session {
   box-sizing: border-box;
   position: relative;

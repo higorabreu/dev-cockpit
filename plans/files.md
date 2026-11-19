@@ -139,7 +139,8 @@ before it is kept.
     the file search's pick opening here, and the open files saved before the app quits.
   - [ ] F4b. Image, Markdown preview and PDF views in place of the card (`load` in
     `ui/src/files/file-tabs.ts` is the seam); the three-way Compare that picks hunk by hunk.
-- [ ] F5. Entries: Ctrl+click on a path (amends D40), the review's button.
+- [x] F5. Entries: Ctrl+click on a path at its line (amends D40), Ctrl+Shift+click and
+  `files.openPathsInCockpit` for the system's app, the review's Open file button and `o` (D84).
 - [ ] F6. Decision (and D13's text, which still names Ctrl+Shift+O for projects), README, perf report updated, checks in the real app with screenshots, both themes.
 
 ## Later

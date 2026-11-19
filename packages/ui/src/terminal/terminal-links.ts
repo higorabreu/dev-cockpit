@@ -20,6 +20,8 @@ export interface ViewportCells {
 export interface LinkHint {
   readonly key: string
   readonly gesture: Gesture
+  // A second held click, on its own line: Ctrl+Shift+click on a file path
+  readonly alternate?: { readonly key: string; readonly gesture: Gesture }
 }
 
 export interface LinkOptions {
@@ -58,6 +60,8 @@ export function showLinkTip(
   range: CellRange,
   text: string,
   hint: LinkHint,
+  // A file path wraps only after a separator
+  path = false,
 ) {
   const owner = terminal.element
   const screen = owner?.querySelector('.xterm-screen')
@@ -67,7 +71,8 @@ export function showLinkTip(
     cols: terminal.cols,
     rows: terminal.rows,
   }
-  tip(owner, { text, ...hint, box: linkBox(range, view, screen.getBoundingClientRect()) })
+  const box = linkBox(range, view, screen.getBoundingClientRect())
+  tip(owner, { text, ...hint, box, ...(path ? { path } : {}) })
 }
 
 export function hideLinkTip(terminal: Terminal, tip: Tip) {

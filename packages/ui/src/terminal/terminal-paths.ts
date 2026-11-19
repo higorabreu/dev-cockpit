@@ -1,9 +1,11 @@
-import type { ResolvedPath } from '@dck/core'
+import type { PathKind, ResolvedPath } from '@dck/core'
 import type { IBuffer, ILink, Terminal } from '@xterm/xterm'
 import { findPathCandidates, type PathCandidate } from './path-candidates.ts'
+import type { FilePlace } from './path-open.ts'
 import {
   type CellRange,
   hideLinkTip,
+  type LinkHint,
   type LinkModifier,
   type LinkOptions,
   opensLink,
@@ -12,11 +14,15 @@ import {
 
 export interface PathLinkOptions {
   readonly modifier: LinkModifier
-  hint: LinkOptions['hint']
+  // The held clicks of a file or a folder, read on every hover: the language or the setting may change
+  hint(kind: Exclude<PathKind, 'missing'>): LinkHint
+  // The path as the tooltip writes it, from the tab's project
+  shown(path: string): string
   // The tab's current directory, for relative paths; unknown right after the tab opens
   cwd(): string | undefined
   resolve(base: string | undefined, paths: readonly string[]): Promise<readonly ResolvedPath[]>
-  openFile(path: string): void
+  // `alternate`: Shift was held too, which opens it the other way (D84)
+  openFile(path: string, place: FilePlace, alternate: boolean): void
   // A folder offers a choice, shown where the click happened
   openFolder(path: string, x: number, y: number): void
   tip: LinkOptions['tip']
@@ -91,22 +97,38 @@ export function createResolveCache(
   }
 }
 
+const placeOf = ({ line, column }: PathCandidate): FilePlace => ({
+  ...(line === undefined ? {} : { line }),
+  ...(column === undefined ? {} : { column }),
+})
+
+// The tooltip names the place the click goes to, as `acme/src/app.ts:12:5`
+export function tipText(path: string, { line, column }: FilePlace): string {
+  if (line === undefined) return path
+  return column === undefined ? `${path}:${line}` : `${path}:${line}:${column}`
+}
+
 // Paths printed in the terminal become links only when they exist; a file opens, a folder offers a menu
 export function attachPaths(terminal: Terminal, options: PathLinkOptions) {
   const resolve = createResolveCache(options.resolve)
 
   const linkFor = (line: LogicalLine, candidate: PathCandidate, target: ResolvedPath) => {
     const range = candidateRange(line, candidate)
-    if (!range || target.kind === 'missing') return []
+    const { kind, path } = target
+    if (!range || kind === 'missing') return []
+    const place = kind === 'file' ? placeOf(candidate) : {}
     const link: ILink = {
       range,
       text: line.text.slice(candidate.start, candidate.end),
       activate(event) {
         if (!opensLink(event, options.modifier)) return
-        if (target.kind === 'dir') options.openFolder(target.path, event.clientX, event.clientY)
-        else options.openFile(target.path)
+        if (kind === 'dir') options.openFolder(path, event.clientX, event.clientY)
+        else options.openFile(path, place, event.shiftKey)
       },
-      hover: () => showLinkTip(terminal, options.tip, range, target.path, options.hint()),
+      hover: () => {
+        const text = tipText(options.shown(path), place)
+        showLinkTip(terminal, options.tip, range, text, options.hint(kind), true)
+      },
       leave: () => hideLinkTip(terminal, options.tip),
     }
     return [link]

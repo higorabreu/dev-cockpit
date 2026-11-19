@@ -175,7 +175,13 @@ export function createFileTabs(deps: FileTabsDeps) {
     if (entry.watching) api.files.unwatch(entry.path)
   }
 
-  async function mountEditor(tabId: string, entry: Entry, file: OpenedFile, line?: number) {
+  async function mountEditor(
+    tabId: string,
+    entry: Entry,
+    file: OpenedFile,
+    line?: number,
+    column?: number,
+  ) {
     if (!('base' in file) || !entry.view) return
     const [module, configs] = await Promise.all([
       deps.loadEditor(),
@@ -220,12 +226,12 @@ export function createFileTabs(deps: FileTabsDeps) {
     Object.assign(entry, { editor, editorHost, session })
     const watched = await api.files.watch(file.path, file.base.stamp)
     entry.watching = watched.ok
-    if (line !== undefined) editor.goToLine(line)
+    if (line !== undefined) editor.goToLine(line, column)
     if (entry.shown) editor.focus()
   }
 
   // Reads the file and shows it over the tab, in place of the one there
-  async function load(tabId: string, path: string, line?: number) {
+  async function load(tabId: string, path: string, line?: number, column?: number) {
     const host = deps.host(tabId)
     if (!host) return
     const opened = await api.files.open(path)
@@ -264,7 +270,7 @@ export function createFileTabs(deps: FileTabsDeps) {
     entry.opened = opened.value
     // F4b gives an image, a PDF and the Markdown preview views of their own here; until then a card
     if (opened.value.kind === 'text' || opened.value.kind === 'markdown')
-      await mountEditor(tabId, entry, opened.value, line)
+      await mountEditor(tabId, entry, opened.value, line, column)
     else view.showCard(opened.value)
   }
 
@@ -359,15 +365,16 @@ export function createFileTabs(deps: FileTabsDeps) {
       }
       return true
     },
-    async openFile(tabId: string, path: string, line?: number) {
+    // A line and a column from 1, as a compiler or the review names them
+    async openFile(tabId: string, path: string, line?: number, column?: number) {
       const entry = entries.get(tabId)
       if (entry?.path === path && !entry.pending) {
         show(tabId, true)
-        if (line !== undefined) entry.editor?.goToLine(line)
+        if (line !== undefined) entry.editor?.goToLine(line, column)
         return
       }
       if (entry && !(await leave(tabId, entry))) return
-      await load(tabId, path, line)
+      await load(tabId, path, line, column)
     },
     show,
     // The toggle key, the header's button, the menus: between the terminal (with its review) and the file

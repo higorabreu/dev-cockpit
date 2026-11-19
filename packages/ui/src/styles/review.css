@@ -667,6 +667,12 @@
   flex: 1 0 0;
 }
 
+/* Open file: an icon of the band's own height, beside Viewed */
+.rv-fhead .rv-icon {
+  width: 22px;
+  height: 22px;
+}
+
 .vbtn.rv-show {
   flex: none;
   padding: 1px 8px;

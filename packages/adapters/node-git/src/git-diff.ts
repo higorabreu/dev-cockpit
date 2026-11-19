@@ -30,6 +30,8 @@ import {
   untrackedPlans,
 } from './untracked-file.ts'
 
+// Submodules inside submodules: past this the folder is taken for the outermost one
+const MAX_ROOT_DEPTH = 8
 const QUICK = { timeoutMs: 5000, maxBytes: 1024 * 1024 }
 // The whole diff of a scope; past this the review says it is too large instead of freezing
 const DIFF = { timeoutMs: 15_000, maxBytes: 32 * 1024 * 1024 }
@@ -605,6 +607,17 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       }
       if (!(await visit(root))) return undefined
       return hashText(parts.join('\0'))
+    },
+
+    // A submodule answers its superproject, nested ones too, up to the repository the user opened
+    async root(cwd) {
+      let top = await topOf(cwd)
+      for (let depth = 0; top !== undefined && depth < MAX_ROOT_DEPTH; depth++) {
+        const outer = await answer(top, ['rev-parse', '--show-superproject-working-tree'])
+        if (!outer) return top
+        top = outer
+      }
+      return top
     },
 
     async untrackedFile(root, path, ignoreWhitespace): Promise<Result<DiffFile, ErrorBody>> {

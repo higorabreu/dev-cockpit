@@ -205,6 +205,8 @@ export interface Keymap {
   readonly click: {
     readonly modifier: 'meta' | 'ctrl'
     readonly label: string
+    // The same click with Shift too, which opens a path the other way (Ctrl+Shift, ⇧⌘)
+    readonly alternateLabel: string
     isHeld(event: Pick<MouseEvent, 'ctrlKey' | 'metaKey'>): boolean
   }
   matches(event: KeyInput, id: ShortcutId): boolean
@@ -254,6 +256,7 @@ export function createKeymap(keyboard: Keyboard, custom: () => CustomKeys = () =
     click: {
       modifier: primary.meta ? 'meta' : 'ctrl',
       label: modifiersLabel(primary, keyboard),
+      alternateLabel: modifiersLabel({ ...primary, shift: true }, keyboard),
       isHeld: (event) => (primary.meta ? event.metaKey : event.ctrlKey),
     },
     matches,

@@ -87,6 +87,9 @@ function setup(first = invoice(), options: Options = {}) {
       return true
     },
     activity: async () => undefined,
+    openFile: () => undefined,
+    openPath: () => undefined,
+    pathHint: () => ({ key: 'Ctrl', gesture: { click: 'left click', action: 'Open' } }),
   })
   document.body.append(pane.element)
   const find = <T extends Element = HTMLElement>(selector: string) =>

@@ -97,6 +97,9 @@ function setup(width = 1201, height = 700, diffText = '', accepts = true) {
     },
     watched: () => running,
     activity: async () => running,
+    openFile: () => undefined,
+    openPath: () => undefined,
+    pathHint: () => ({ key: 'Ctrl', gesture: { click: 'left click', action: 'Open' } }),
   })
   return {
     reviews,

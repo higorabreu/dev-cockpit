@@ -15,10 +15,19 @@
   transition: opacity var(--motion-fast) ease;
 }
 
-/* A long path wraps; the shortcut beside it stays one piece (.keys does not wrap) */
+/* A long path wraps; the shortcut beside it stays one piece (.keys does not wrap). The space before it
+   (`.tip-gap`, widened to about 8px) collapses when the keys wrap, so they start at the text's left edge */
 #tooltip > .keys {
-  margin-left: 8px;
   color: var(--muted);
+}
+
+/* A folder or file name of a path tooltip (`pathText`): it breaks only after its separator */
+#tooltip .tip-name {
+  white-space: nowrap;
+}
+
+#tooltip > .tip-gap {
+  word-spacing: 5px;
 }
 
 /* What a held key does with the mouse reads as a sentence on its own line, below the path or link */

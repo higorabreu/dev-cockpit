@@ -135,6 +135,8 @@ export interface HostApi {
     fileLines(root: string, path: string): Promise<Result<readonly string[], ErrorBody>>
     // Changes when the diff of the folder's repository may have changed; undefined when unknown
     fingerprint(cwd: string): Promise<string | undefined>
+    // The outermost repository's top folder for a folder, to write a file's path from the project
+    root(cwd: string): Promise<string | undefined>
     // Writes the pending comments for the agent, only for a root a diff answered with; the file's path
     saveNotes(root: string, markdown: string): Promise<Result<string, ErrorBody>>
   }
@@ -261,6 +263,7 @@ export const hostChannels = {
   reviewFile: 'review:file',
   reviewUntracked: 'review:untracked',
   reviewFingerprint: 'review:fingerprint',
+  reviewRoot: 'review:root',
   reviewNotes: 'review:notes',
   autostartGet: 'autostart:get',
   autostartSet: 'autostart:set',

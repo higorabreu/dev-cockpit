@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { createTranslator, type Orientation, type SplitPreference } from '@dck/core'
-import { afterEach, describe, expect, it } from 'vitest'
-import { createTabView, type PaneView } from './tab-view.ts'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createTabView, motionMs, type PaneView } from './tab-view.ts'
 
 function pane(id: string, kind: 'terminal' | 'review', focused: string[]): PaneView {
   const element = document.createElement('div')
@@ -17,7 +17,7 @@ function pane(id: string, kind: 'terminal' | 'review', focused: string[]): PaneV
   }
 }
 
-function setup(width: number, height = 700, initial: SplitPreference = 'side') {
+function setup(width: number, height = 700, initial: SplitPreference = 'side', animate = false) {
   const host = document.createElement('div')
   document.body.append(host)
   const focused: string[] = []
@@ -25,6 +25,7 @@ function setup(width: number, height = 700, initial: SplitPreference = 'side') {
   const arrangements: (Orientation | undefined)[] = []
   const saved: [Orientation, number][] = []
   let shownChanges = 0
+  let moved = 0
   const preferences = { preference: initial, ratios: { side: 0.5, stacked: 0.5 } }
   const view = createTabView(host, {
     t: createTranslator('en').t,
@@ -36,6 +37,10 @@ function setup(width: number, height = 700, initial: SplitPreference = 'side') {
     },
     onShownChange: () => {
       shownChanges += 1
+    },
+    animate: () => animate,
+    onMoved: () => {
+      moved += 1
     },
   })
   Object.defineProperty(view.element, 'clientWidth', { value: width, configurable: true })
@@ -58,6 +63,7 @@ function setup(width: number, height = 700, initial: SplitPreference = 'side') {
     saved,
     preferences,
     shownChanges: () => shownChanges,
+    moved: () => moved,
   }
 }
 
@@ -65,6 +71,7 @@ const key = (target: Element, name: string) =>
   target.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }))
 
 afterEach(() => {
+  vi.useRealTimers()
   document.body.replaceChildren()
 })
 
@@ -211,5 +218,139 @@ describe('createTabView', () => {
     view.close('tab-1')
 
     expect(terminal.element.isConnected).toBe(true)
+  })
+})
+
+describe('createTabView sliding', () => {
+  it('should slide the review in from nothing and focus it only when the motion ends', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const { view, review, widths, focused, moved } = setup(1201, 700, 'side', true)
+
+    // Act
+    view.open(review)
+    const during = {
+      moving: view.isMoving(),
+      marked: view.element.hasAttribute('data-moving'),
+      widths: widths(),
+      focused: [...focused],
+    }
+    vi.advanceTimersByTime(400)
+
+    // Assert
+    expect(during).toEqual({
+      moving: true,
+      marked: true,
+      widths: ['0 1 600px', '0 1 600px'],
+      focused: [],
+    })
+    expect(view.isMoving()).toBe(false)
+    expect(view.element.hasAttribute('data-moving')).toBe(false)
+    expect(focused).toEqual(['tab-1:review'])
+    expect(moved()).toBe(1)
+  })
+
+  it('should end the slide when the review pane finishes its transition', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const { view, review, moved } = setup(1201, 700, 'side', true)
+    view.open(review)
+
+    // Act
+    const end = new Event('transitionend') as TransitionEvent
+    Object.defineProperty(end, 'propertyName', { value: 'flex-basis' })
+    review.element.dispatchEvent(end)
+
+    // Assert
+    expect(view.isMoving()).toBe(false)
+    expect(moved()).toBe(1)
+  })
+
+  it('should shrink the review away and remove it only when the motion ends', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const { view, review, widths, focused } = setup(1201, 700, 'side', true)
+    view.open(review)
+    vi.advanceTimersByTime(400)
+
+    // Act
+    view.close('tab-1:review')
+    const during = { connected: review.element.isConnected, widths: widths() }
+    vi.advanceTimersByTime(400)
+
+    // Assert
+    expect(during).toEqual({ connected: true, widths: ['0 1 1200px', '0 1 0px'] })
+    expect(review.element.isConnected).toBe(false)
+    expect(focused.at(-1)).toBe('tab-1')
+  })
+
+  it('should slide the review over the whole tab and then hide the terminal when the tab is narrow', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const { view, terminal, review, widths } = setup(700, 700, 'side', true)
+
+    // Act
+    view.open(review)
+    const during = { widths: widths(), terminalHidden: terminal.element.hidden }
+    vi.advanceTimersByTime(400)
+
+    // Assert
+    expect(during).toEqual({ widths: ['0 1 0px', '0 1 699px'], terminalHidden: false })
+    expect(terminal.element.hidden).toBe(true)
+    expect(review.element.hidden).toBe(false)
+  })
+
+  it('should finish a slide at once when the review is closed while it opens', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const { view, review, focused } = setup(1201, 700, 'side', true)
+    view.open(review)
+
+    // Act
+    view.close('tab-1:review')
+    const focusedOnOpen = [...focused]
+    vi.advanceTimersByTime(400)
+
+    // Assert
+    expect(focusedOnOpen).toEqual(['tab-1:review'])
+    expect(review.element.isConnected).toBe(false)
+  })
+
+  it('should not slide when motion is reduced', () => {
+    const { view, review, focused } = setup(1201)
+
+    view.open(review)
+
+    expect(view.isMoving()).toBe(false)
+    expect(view.element.hasAttribute('data-moving')).toBe(false)
+    expect(focused).toEqual(['tab-1:review'])
+  })
+
+  it('should keep sliding when the focus moves in a narrow tab while the review slides in', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const { view, terminal, review, widths } = setup(700, 700, 'side', true)
+    view.open(review)
+
+    // Act
+    terminal.element.focus()
+    const during = { widths: widths(), terminalHidden: terminal.element.hidden }
+    vi.advanceTimersByTime(400)
+
+    // Assert
+    expect(during).toEqual({ widths: ['0 1 0px', '0 1 699px'], terminalHidden: false })
+    expect(terminal.element.hidden).toBe(true)
+  })
+
+  it.each([
+    ['170ms', 170],
+    ['0.17s', 170],
+    ['', 170],
+  ])('should read the motion as %j in milliseconds when the style gives it so', (value, ms) => {
+    const element = document.createElement('div')
+    element.style.setProperty('--motion-normal', value)
+    document.body.append(element)
+
+    expect(motionMs(element)).toBe(ms)
   })
 })

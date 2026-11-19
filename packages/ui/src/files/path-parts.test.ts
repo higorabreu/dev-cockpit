@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fileName, pathParts, recentLabel } from './path-parts.ts'
+import { fileName, pathParts } from './path-parts.ts'
 
 describe('pathParts', () => {
   it('should start from the tab folder name when the file is inside it', () => {
@@ -21,14 +21,7 @@ describe('pathParts', () => {
   })
 })
 
-describe('recentLabel', () => {
-  it('should add the parent folder when another recent file has the same name', () => {
-    const recent = ['/home/ana/acme/api/index.ts', '/home/ana/acme/web/index.ts', '/home/ana/a.ts']
-
-    expect(recentLabel(recent[0] ?? '', recent)).toBe('api/index.ts')
-    expect(recentLabel(recent[2] ?? '', recent)).toBe('a.ts')
-  })
-
+describe('fileName', () => {
   it('should give the last part of a path as its name', () => {
     expect(fileName('C:\\work\\acme\\login.ts')).toBe('login.ts')
   })

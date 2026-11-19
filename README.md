@@ -48,8 +48,10 @@ changed, and your pull requests, merge requests and tasks. The clips show exampl
 - **Review.** What changed in the tab's repository, beside or below its terminal, with comments that go
   back to the agent (below).
 - **Connectors.** Your GitHub pull requests, GitLab merge requests and Jira tasks in one screen (below).
-- **Terminal.** `Ctrl+click` (`⌘`+click on a Mac) opens links in the browser and file or folder paths in
-  their default app; files dropped on it or pasted into it are typed as paths. Selecting copies, and the
+- **Terminal.** `Ctrl+click` (`⌘`+click on a Mac) opens links in the browser, a file path over the tab at
+  the line a compiler or a test runner printed (`src/app.ts:12:5`, `src/app.ts(12,5)`), with
+  `Ctrl+Shift+click` in its default app instead, and a folder in a new tab or the file manager; files
+  dropped on it or pasted into it are typed as paths. Selecting copies, and the
   right or middle button pastes (`Ctrl+Shift+C` and `Ctrl+Shift+V` also work). On a Mac the right click
   opens a menu with Copy, Paste and Select all, and `⌘Q` asks first while a tab runs a program.
 
@@ -177,7 +179,7 @@ Mac, `pnpm package:mac` builds the `.app` and the `.dmg` in `release/`.
 | `Ctrl+Shift+O` | File search in the tab's project, `⌘P` on a Mac; the files git ignores show when what you type finds them, and the same key again includes them all. Settings, Shortcuts offers `Ctrl+P` in one click |
 | `Ctrl+Shift+M` | Work screen: pull requests, merge requests and tasks |
 | `Ctrl+Shift+B` | Side panel |
-| `Ctrl+Shift+D` | Review what changed in the tab's repository beside or below its terminal; from the terminal it goes back to an open review, from the review it closes it (`Esc` back to the terminal; inside it `↑↓`, `Enter`, `←` `→` fold a submodule in the file list, `[` `]` file, `n` `p` hunk, `v` viewed, `Shift+↑↓` or `Shift`+click select lines, `c` comment, `Ctrl+Enter` save it, `Ctrl+R` refresh) |
+| `Ctrl+Shift+D` | Review what changed in the tab's repository beside or below its terminal; from the terminal it goes back to an open review, from the review it closes it (`Esc` back to the terminal; inside it `↑↓`, `Enter`, `←` `→` fold a submodule in the file list, `[` `]` file, `n` `p` hunk, `v` viewed, `o` open the file at the line in view, `Shift+↑↓` or `Shift`+click select lines, `c` comment, `Ctrl+Enter` save it, `Ctrl+R` refresh) |
 | `Ctrl+Shift+E` | Switch the review between side by side and stacked (Settings brings back Automatic) |
 | `Ctrl+Shift+Enter` | Write the review's pending comments to a file and type a line naming it at the tab's prompt, without Enter ("Send to agent" in the review header); only while an agent runs in the tab |
 | `Ctrl+Shift+Up` / `Down` | Opacity |
@@ -263,7 +265,8 @@ this README are recorded from the built app by [scripts/media](scripts/media/REA
   instead (D37).
 - Connectors are built in (GitHub, GitLab and Jira Cloud); third-party connectors are not done. The keys
   inside a panel (the review's single keys, the arrows of a list) cannot be changed.
-- No file editor: the review reads and comments, and files are edited in the terminal or your editor.
+- The file view is a light editor (CodeMirror): no language servers, completion or multi-file tabs;
+  images, Markdown previews and PDFs arrive with its next part.
 - The GNOME tray icon opens the menu and does not toggle the window directly.
 
 ## License
