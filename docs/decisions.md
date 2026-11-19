@@ -788,6 +788,7 @@ and the toggle key behaved the same. The interface is text on the DOM, the termi
 renderer, D14), with little to gain from the GPU. `--in-process-gpu` was measured too and saved
 nothing: the main process grew by what the GPU process lost.
 **How to revert:** make `usesGpu` return true for Linux.
+**Reverted by D89** (2026-11-19): software output cost the editor a frame per key on a 4K screen.
 
 ## D51. On the Mac the cockpit's keys use Cmd where the Mac does, and Ctrl stays with the shell
 
@@ -2000,4 +2001,19 @@ sits near 300 MB and with a 5 MB file past it. The maintainer accepted it as the
 on 2026-11-19.
 **How to revert:** hold the budget with files open too, by lowering `FILE_LIMITS` (`core/src/files`) or
 freeing the editor's code and the file's buffers once the last file closes, and say so in AGENTS.md.
+
+## D89. The Linux window renders with the GPU again (reverts D50)
+
+**Decision:** the shell no longer calls `app.disableHardwareAcceleration()` on Linux; every platform renders
+with the GPU, as the Mac always did. `usesGpu` is gone.
+**Reason:** measured on the maintainer's Ubuntu (X11, a 3840x2160 screen at scale 2) on 2026-11-19: without
+the GPU, Chromium hands every frame to the X server as an image, and key to echo in the file editor took
+25.3 ms median and 44.9 p95 (the terminal 6.8 and 8.7, since a row of text is a small image); with the GPU,
+12.5 and 19.3. The maintainer chose the GPU on every Linux screen over turning it on for dense screens only.
+The cost is memory: D50 measured 276 to 293 MB idle with the GPU on that machine, against 263 without; in the
+perf container, which has no GPU and runs Chromium's software GL instead, the idle cockpit read 324 MB against
+264, so the 300 MB budget is to be checked again on real hardware (`plans/performance.md`). Echo, CPU and cold
+start did not get worse in the container.
+**How to revert:** call `app.disableHardwareAcceleration()` before the app is ready in `shell/src/main.ts`,
+for Linux only, as D50 did.
 
