@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { MemoryFileStore } from '../testing/fakes.ts'
-import { extensionOf, FILE_LIMITS, kindFromHead, kindFromName, mediaTypeOf } from './file-kind.ts'
+import {
+  extensionOf,
+  FILE_LIMITS,
+  imageTypeOf,
+  kindFromHead,
+  kindFromName,
+  mediaTypeOf,
+  servedTypeOf,
+} from './file-kind.ts'
 import { createFileOpener } from './file-opener.ts'
 
 const MB = 1024 * 1024
@@ -41,6 +49,15 @@ describe('file kinds', () => {
     expect(mediaTypeOf('/a/b.webp')).toBe('image/webp')
     expect(mediaTypeOf('/a/b.pdf')).toBe('application/pdf')
     expect(mediaTypeOf('/a/b.svg')).toBeUndefined()
+  })
+
+  it('should serve an SVG as an image and keep a PDF out of the images when asked for a type', () => {
+    expect(servedTypeOf('/a/logo.SVG')).toBe('image/svg+xml')
+    expect(servedTypeOf('/a/manual.pdf')).toBe('application/pdf')
+    expect(servedTypeOf('/a/notes.md')).toBeUndefined()
+    expect(imageTypeOf('/a/logo.svg')).toBe('image/svg+xml')
+    expect(imageTypeOf('/a/shot.png')).toBe('image/png')
+    expect(imageTypeOf('/a/manual.pdf')).toBeUndefined()
   })
 })
 
@@ -113,7 +130,7 @@ describe('createFileOpener', () => {
     })
   })
 
-  it('should give an image its address without reading it', async () => {
+  it('should give an image its address reading only its first bytes', async () => {
     // Arrange
     const { store, opener } = setup()
     store.put('/home/ana/acme/logo.png', Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0))
@@ -124,9 +141,49 @@ describe('createFileOpener', () => {
     // Assert
     expect(opened).toEqual({
       ok: true,
-      value: { kind: 'image', path: '/home/ana/acme/logo.png', size: 5, url: 'dck-file://open/23' },
+      value: {
+        kind: 'image',
+        path: '/home/ana/acme/logo.png',
+        size: 5,
+        url: 'dck-file://open/23',
+        animated: false,
+      },
     })
-    expect(store.calls).toEqual(['stat /home/ana/acme/logo.png'])
+    expect(store.calls).toEqual(['stat /home/ana/acme/logo.png', 'head /home/ana/acme/logo.png'])
+  })
+
+  it('should say an image moves when its first bytes name more than one frame', async () => {
+    const { store, opener } = setup()
+    store.put('/a/spin.webp', new TextEncoder().encode('RIFF\0\0\0\0WEBPVP8X\n\0\0\0\x02\0\0\0'))
+
+    const opened = await opener.open('/a/spin.webp')
+
+    expect(opened).toMatchObject({ ok: true, value: { kind: 'image', animated: true } })
+  })
+
+  it('should give a PDF its address without reading it', async () => {
+    const { store, opener } = setup()
+    store.put('/a/manual.pdf', '%PDF-1.7')
+
+    const opened = await opener.open('/a/manual.pdf')
+
+    expect(opened).toEqual({
+      ok: true,
+      value: { kind: 'pdf', path: '/a/manual.pdf', size: 8, url: 'dck-file://open/13' },
+    })
+    expect(store.calls).toEqual(['stat /a/manual.pdf'])
+  })
+
+  it('should open an SVG as a text with an address to draw it from', async () => {
+    const { store, opener } = setup()
+    store.put('/a/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>')
+
+    const opened = await opener.open('/a/logo.svg')
+
+    expect(opened).toMatchObject({
+      ok: true,
+      value: { kind: 'text', url: 'dck-file://open/11', readOnly: undefined },
+    })
   })
 
   it('should read only the first bytes of a binary and nothing of a file past the limit', async () => {

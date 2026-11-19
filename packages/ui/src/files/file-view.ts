@@ -49,6 +49,10 @@ export function createFileView(host: HTMLElement, deps: FileViewDeps) {
   const head = h('div', { class: 'fv-head' })
   const strip = h('div', { class: 'fv-strip-slot' })
   const body = h('div', { class: 'fv-body' })
+  // What a viewer puts in the header: its controls (zoom, Edit and Preview) and a word on the file (its
+  // pixel size); kept across the header's redraws
+  const tools = h('span', { class: 'fv-tools-slot' })
+  const infoSlot = h('span', { class: 'fv-info' })
   const element = h(
     'section',
     { class: 'file-view', tabindex: '-1', hidden: true },
@@ -112,7 +116,9 @@ export function createFileView(host: HTMLElement, deps: FileViewDeps) {
       info.ignored && h('span', { class: 'fv-flag' }, t('files.ignored')),
       info.note && h('span', { class: 'fv-note' }, noteText(info.note, limit)),
       info.note?.kind === 'read-only' && external(info.path),
+      infoSlot,
       h('span', { class: 'fv-spacer' }),
+      tools,
       info.editing && tool(FIND, t('files.search.find'), deps.keys.find, deps.find),
       info.editing && tool(LINE, t('files.phrase.goToLine'), deps.keys.goToLine, deps.goToLine),
       terminal,
@@ -125,14 +131,18 @@ export function createFileView(host: HTMLElement, deps: FileViewDeps) {
   return {
     element,
     body,
+    tools,
     renderHead,
+    setInfo(text: string) {
+      infoSlot.textContent = text
+    },
     current: () => current,
     setStrip(content: HTMLElement | undefined) {
       strip.replaceChildren(...(content ? [content] : []))
     },
     // A kind the editor does not take, or a file past the limit: what it is, its size, and the way out
-    showCard(file: OpenedFile) {
-      const kind = t(CARD_KINDS[file.kind] ?? 'files.card.binary')
+    showCard(file: OpenedFile, detail?: string) {
+      const kind = detail ?? t(CARD_KINDS[file.kind] ?? 'files.card.binary')
       body.replaceChildren(
         h(
           'div',

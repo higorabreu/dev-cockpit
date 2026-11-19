@@ -1,7 +1,8 @@
 import type { ErrorBody } from '../ipc/protocol.ts'
 import type { FileStamp, FileStore } from '../ports/file-store.ts'
 import { ok, type Result } from '../result.ts'
-import { FILE_LIMITS, kindFromHead, kindFromName } from './file-kind.ts'
+import { FILE_LIMITS, isSvg, kindFromHead, kindFromName } from './file-kind.ts'
+import { isAnimatedImage } from './image-head.ts'
 import { decodeText, type LineEnding, lineEndingOf, type TextEncoding } from './text-codec.ts'
 
 // What the editor's text is compared with: on a save (the stamp) and on a change on disk (the text)
@@ -22,14 +23,19 @@ export type OpenedFile =
       readonly size: number
       readonly base: TextBase
       readonly readOnly: ReadOnlyReason | undefined
+      // An SVG's address, to show it as an image beside its text
+      readonly url?: string
     }
   // Drawn by the window from `url`, the cockpit's own protocol, never from the path
   | {
-      readonly kind: 'image' | 'pdf'
+      readonly kind: 'image'
       readonly path: string
       readonly size: number
       readonly url: string
+      // More than one frame: the window shows the first
+      readonly animated: boolean
     }
+  | { readonly kind: 'pdf'; readonly path: string; readonly size: number; readonly url: string }
   | { readonly kind: 'binary' | 'too-large'; readonly path: string; readonly size: number }
 
 export interface FileOpenerDeps {
@@ -43,8 +49,8 @@ function readOnlyReason(encoding: TextEncoding, size: number): ReadOnlyReason | 
   return size > FILE_LIMITS.editableBytes ? 'large' : undefined
 }
 
-// Reads only what the kind needs: nothing for an image, a PDF or a file past the limit, the first bytes for
-// a binary, the whole file for a text
+// Reads only what the kind needs: nothing for a PDF or a file past the limit, the first bytes for an image
+// or a binary, the whole file for a text
 export function createFileOpener(deps: FileOpenerDeps) {
   const { store } = deps
   return {
@@ -53,8 +59,12 @@ export function createFileOpener(deps: FileOpenerDeps) {
       if (!info.ok) return info
       const { size } = info.value
       const named = kindFromName(path, size)
-      if (named === 'image' || named === 'pdf')
-        return ok({ kind: named, path, size, url: deps.urlOf(path) })
+      if (named === 'pdf') return ok({ kind: named, path, size, url: deps.urlOf(path) })
+      if (named === 'image') {
+        const head = await store.head(path, FILE_LIMITS.probeBytes)
+        const animated = head.ok && isAnimatedImage(head.value)
+        return ok({ kind: named, path, size, url: deps.urlOf(path), animated })
+      }
       if (named !== undefined) return ok({ kind: 'too-large', path, size })
       const head = await store.head(path, FILE_LIMITS.probeBytes)
       if (!head.ok) return head
@@ -66,7 +76,8 @@ export function createFileOpener(deps: FileOpenerDeps) {
       const { text, encoding } = decodeText(read.value.bytes)
       const readOnly = readOnlyReason(encoding, stamp.size)
       const base = { text, stamp, encoding, lineEnding: lineEndingOf(text) }
-      return ok({ kind, path, size: stamp.size, base, readOnly })
+      const url = isSvg(path) ? { url: deps.urlOf(path) } : {}
+      return ok({ kind, path, size: stamp.size, base, readOnly, ...url })
     },
   }
 }

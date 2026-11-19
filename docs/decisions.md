@@ -1707,12 +1707,32 @@ catalog entries.
   the indentation and the final newline; without one the indentation is guessed from the file. The line
   break is the file's: CRLF stays CRLF, a file that mixes them keeps its carriage returns as characters. The
   cursor blinks with the terminal's timer (D58), never with CodeMirror's animation.
-- **Search inside the file:** `@codemirror/search` with a bar of the cockpit's own controls at the top: find
-  and replace fields, match case, whole word and regular expression toggles (pressed with an outline too),
-  "3 of 12" counted up to 2000 matches and again 150 ms after typing stops, previous and next. Keys:
-  `Ctrl+F` (`⌘F`), `Enter`/`Shift+Enter` and `F3`/`Shift+F3`, `Ctrl+H` (`⌥⌘F`) with the replace row,
-  `Ctrl+G` to a line (`⌃G` on a Mac, where `⌘G` finds the next), `Esc` closes the bar and stays in the file;
-  the selection seeds the query. Its words and CodeMirror's phrases come from the catalogs.
+- **Search inside the file:** `@codemirror/search` with a find widget of the cockpit's own controls, a
+  drawer that hangs from the header's bottom border at the top right of the editor, left of the scrollbar
+  and its match marks (the maintainer's choice on 2026-11-19, over a full-width bar and a floating card):
+  no top border, the other sides a 1px `--line` border with bottom radii, the header's border running on
+  above it, over the code without pushing it down. CodeMirror reads its height as a scroll margin, so a
+  match it steps to never lands under it. Its first row: a chevron for the replace row, the query (24px,
+  JetBrains Mono) with the match case, whole word and regular expression toggles inside its right end
+  (pressed with an outline too), "3 of 12" counted up to 2000 matches and again 150 ms after typing stops,
+  previous, next and close; the second: the replace field under the query, Replace and Replace all as icons.
+  A query with no match turns the field's edge to `--critical` and the count says "No results". About
+  420px wide, the fields shrink in a narrow editor. Go to line (`Ctrl+G`, `⌃G` on a Mac, where `⌘G` finds
+  the next) is the same drawer, shorter, in the same corner (one at a time): a field with "of 245" inside,
+  an Enter cap and close; it takes `12`, `12:4`, `12,4` and `:12`, clamps a line past the end to the last,
+  and an entry that is not a line turns the edge critical and says "Not a line" inside the field. CodeMirror's
+  own go to line dialog is gone. Keys, as VS Code: `Ctrl+F` (`⌘F`), `Enter`/`Shift+Enter` and
+  `F3`/`Shift+F3`, `Ctrl+H` (`⌥⌘F`) with the replace row, `Ctrl+Alt+Enter` (`⌥⌘Enter`) replaces all from
+  the replace field; a key with its widget open focuses the field and selects its text, and from the text a
+  selection on one line becomes the query first; never a toggle: `Esc` closes either and the focus goes back
+  to the text. The header's Find and Go to line buttons do what their keys do. Motion (the maintainer's rule,
+  2026-11-19): the drawer slides down from under the header's edge over `--motion-fast` with
+  `--motion-easing`, transform and opacity only, and a copy of it slides back up when it closes (CodeMirror
+  takes the panel out at once); the replace row opens and closes with its height; a key that only refocuses
+  an open drawer moves nothing, nothing moves per key typed, the field has the focus from the first frame,
+  and with reduced motion it all appears at once. Their words come from the
+  catalogs; the editor uses no other CodeMirror surface (no tooltips, completion, lint, fold gutter or
+  selection match highlight).
 - **Saving and the disk:** `ui/src/files/file-session.ts` keeps the base and runs saves and the disk's
   changes one after the other, so a change that arrives during a save is checked once the save resolves.
   With `files.autoSave` on, a pause of 1 s, going to the terminal, leaving the tab, hiding the window and
@@ -1824,3 +1844,104 @@ the column of `openFile` and `goToLine`, `alternateLabel` in the keymap and the 
 drop the review's Open file button, `o`, `openingLine` and `lineToOpen`; write the segment's tooltip and
 the header from the absolute path and the tab's folder again and drop `shortPath`, `recentEntries` and the
 `review:root` channel; set `MAX_RECENT_FILES` back to 10 and put the menu's footer back in its list.
+
+## D85. A file shows as what it is: an image, an SVG, a Markdown preview or a PDF, and Compare picks per conflict
+
+**Decision:** F4b of [plans/files.md](../plans/files.md), the file view's second part, as the maintainer
+decided from F0 on 2026-11-19. `load` in `ui/src/files/file-tabs.ts` gives each kind its view; the views live
+in `ui/src/viewers`, the Markdown and SVG modes in `ui/src/files/file-modes.ts`.
+- **Images** (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO): the header reads the size from an `<img>` that is never
+  drawn; past 50 megapixels (`FILE_LIMITS.imagePixels`) the card shows with the size. Otherwise the bytes
+  come over `files:bytes` (only an image opened in this session, zod at the bridge) and WebCodecs'
+  `ImageDecoder` decodes the first frame at most 2048 px on the long side (`FILE_LIMITS.imageSide`, a smaller
+  scale for a JPEG, which then never decodes whole), into an `ImageBitmap` drawn on a canvas the size of the
+  view; a Blob decode is the fallback for a type WebCodecs does not take. Neither an `<img>` decode nor its
+  pixels stay: the bitmap is closed and `webFrame.clearCache()` runs when the file closes. Fit is the default
+  (a small image stays at 100%); the font keys zoom while an image shows (`Ctrl` + `=` `-` `0`, `⌘` on a
+  Mac, with their tooltips from the keymap), and the image itself takes `+` `-` `0` `1` (actual size) and the
+  arrows; Ctrl and the wheel zoom at the pointer, a drag or the wheel pans an image larger than the view. The
+  header shows −, the percentage, +, Fit and Actual size (pressed with a ring), the pixel size and the file
+  size. Transparency sits on a checkerboard of `--surface` and `--line`. An animated GIF, APNG, WebP or AVIF
+  (`core/src/files/image-head.ts` reads the first 8000 bytes) shows its first frame; the header says so and
+  offers "Open in the system's app" to see it play. Pixel art zoomed in keeps square pixels.
+- **SVG:** opens as its image, drawn from its `<img>` (never inline in the page, so its scripts never run) at
+  2048 px on the long side; `dck-file:` serves an image with `content-security-policy: default-src 'none';
+  style-src 'unsafe-inline'; sandbox`, so an SVG framed by mistake runs nothing either. The header's Code
+  button and `Ctrl+Shift+J` (`⇧⌘J`, the new action `filePreview`, in the Shortcuts page's Files group) switch
+  to the source in the editor and back; the image is drawn again after each save or reload.
+- **Markdown:** opens in the editor, whose fenced code blocks now take their language's colors (Markdown
+  loaded with `codeLanguages`). Edit, Preview and Side by side in the header (side by side only when the
+  window is wider than 900 px; narrower, the editor stays alone); `Ctrl+Shift+J` switches between Edit and
+  Preview, keeping the nearest top level heading in view both ways (`core/src/files/markdown-headings.ts`).
+  `marked` 18.2.1 (GFM) and `dompurify` 3.4.18, pinned, load with the first preview. DOMPurify keeps the
+  html profile without styles, forms, frames, plugins, media, SVG or MathML; an image's address waits in a
+  data attribute until checked. Links (`core/src/files/markdown-links.ts`): http and https open in the
+  system's browser through `external.openLink` (D40), a relative or absolute path opens that file in the
+  cockpit (GitHub's `#L12` at its line), `#anchor` scrolls to the heading with GitHub's slug, anything else
+  does nothing. Images: under the Markdown file's folder they come through `dck-file:` (channel
+  `files:assets`: only for a Markdown file opened in this session, only image kinds, only paths inside its
+  folder after links are followed, ids revoked by `files:release` when the file closes); `data:` images
+  show; https images wait behind a placeholder with their address and "Load remote images", which loads
+  them for that file while it stays open; http and other schemes show nothing. Past 200 KB
+  (`FILE_LIMITS.previewBytes`) the header says "Preview up to 200 KB" and the editor stays alone. The
+  preview uses Inter, the editor's font for code and the editor's Lezer colors for code blocks, on
+  `--surface` (contrast checked for every syntax role there); each top level block has
+  `content-visibility: auto`.
+- **PDF:** Chromium's viewer (`plugins: true`, the only plugin Electron 45 has) in an `iframe` from
+  `dck-file:`. A link in the PDF asks the browser side to take the whole window: `will-frame-navigate`
+  (`shell/src/files/frame-guard.ts`) refuses it and opens an http or https address in the system's browser
+  when a PDF shows; a frame may only hold an opened PDF, the viewer's extension or `about:blank`, and never
+  goes elsewhere. The viewer's download saves only a `dck-file:` address, through the system's dialog with
+  the file's name (`will-download`); its print button opens the system's print dialog.
+- **Compare** on a conflict is a three-way picker (`viewers/merge-picker.ts`) over `mergeRegions` in
+  `core/src/files/merge.ts` (git's grouping, as the merge by itself, with no cap on how much the disk
+  changed; past 20 000 changed lines the file is one conflict): merged stretches are in place, folded to 3
+  lines around a conflict; each conflict shows the user's lines (`--diff-add`) and the disk's
+  (`--diff-remove`) with Use mine, Use disk and Use both (the user's first, as git's union); the choice shows
+  as a pressed button, its words and a bar at the kept side. Keys: `n` and `p` (or `F7`, `Shift+F7`) step
+  between conflicts, `m`, `d` and `b` choose and move on, `Ctrl+Enter` (`⌘Enter`) is Done, `Esc` Cancel, all
+  in the tooltips. Done puts the text in the editor as one step Ctrl+Z takes back and settles the conflict
+  (the base becomes the disk's, auto save writes it); Cancel goes back to the strip. The two read only
+  columns of D83 are gone.
+- **The rest** (binary, past 50 MB) keeps the card.
+- **Page policy** (`packages/ui/index.html`): `img-src 'self' data: dck-file: https:`, `frame-src
+  dck-file:`, `object-src 'none'`; `default-src 'self'` covers the rest, so scripts and fetches stay as
+  they were. `https:` in `img-src` is for the remote images the user asks for in a preview.
+**Reason:** the plan and the maintainer's choices of 2026-11-19, and F0's measurements
+([files-measurements.md](../plans/files-measurements.md) on the spike branch). Measured on Linux under Xvfb
+with `scripts/perf/viewers.cjs` (each viewer in a launch of its own, median of 3 runs, PSS of every process
+against the moment before the file opened):
+
+| Viewer | first paint (ms) | PSS shown (MB) | peak (MB) | after it closed (MB), of it the renderer | F0's row |
+| --- | --- | --- | --- | --- | --- |
+| PNG 4000x3000, 21 MB | 500 | 156 | 205 | 101, renderer 17 | bitmap 2048: 345 ms, 51, 103, 25 |
+| JPEG 3600x2400, 2.4 MB | 195 | 34 | 37 | 12, renderer -2 | 6000x4000 bitmap: 302 ms, 57, 154, 33 |
+| SVG, 480x320 | 93 | 21 | 21 | 3, renderer -2 | |
+| README 100 KB, preview | 133 | 31 | 33 | 17, renderer 9 | marked: 105 ms, 15 shown |
+| PDF 50 pages, 3 MB | 97 (frame loaded) | 93 | 93 | 21, renderer -5 | dck-file frame: 122 ms, 97, 27 |
+
+What stays in the renderer after an image closes is 17 MB for the PNG and nothing for the JPEG and the SVG;
+the rest of the "after" column is the main process, which read the file to send it and frees the buffers at
+its next collection (24 MB after the PNG in one run, 84 in two). The first version, an `<img>` decode, kept
+89 MB in the renderer after the PNG closed, and a Blob decode copied the file into the browser process
+first. A JPEG decodes at a smaller scale, so its peak stays near what shows; a PNG has no scaled decode, so
+its peak is F0's (about 1.6 times the full image), and the PNG shows at 500 ms against F0's 345 because
+its 21 MB cross from the main process first. The PDF viewer's
+three processes start with the frame and end with it. With no file open nothing measurable changed
+(`scripts/perf/measure.cjs`, probe and idle, 3 runs, `main` against this branch): idle memory 266 MB shown
+and 253 MB hidden against 265 and 253, the renderer 67 MB against 66, a first prompt 445 ms after spawn
+against 432 (main's runs 384 to 436, this branch's 445 to 446, the main process reaching the cockpit's code
+19 ms later before any of it runs), a key echoed at 4.9 ms median and 9.9 ms p95 against 4.6 and 10.0. The
+page's first bundle grows by 25 KB (the viewers and Compare); marked and DOMPurify load with the first
+preview. `plugins: true` adds nothing while no PDF shows (F0, and the idle rows above); it lets any frame of the
+page show a PDF from a source the policy allows, so `frame-src` names `dck-file:` only, `object-src` is
+`'none'` and the guard above keeps the viewer from navigating; PDFium runs in sandboxed renderers of its own.
+The protocol's new rule serves a Markdown file's images only while it is open and only from its folder,
+links resolved, as the plan asked.
+**How to revert:** drop `ui/src/viewers`, `ui/src/files/file-modes.ts`, `editor/code-highlight.ts`,
+`styles/viewers.css` and `markdown.css`, `image-head.ts`, `markdown-links.ts` and `markdown-headings.ts` and
+`mergeRegions` in the core, `frame-guard.ts` with its handlers and `plugins: true` in `main.ts`, the
+`files:assets`, `files:release` and `files:bytes` channels, the SVG address and the image policy in the
+protocol, the `filePreview` action, the `files.image.*`, `files.markdown.*`, `files.svg.*`,
+`files.pdf.*` and `files.merge.*` entries, `marked`, `dompurify` and `@codemirror/lang-markdown`, the page
+policy's new sources, and give `load` its card for every kind but text again.

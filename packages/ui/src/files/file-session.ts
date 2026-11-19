@@ -293,11 +293,24 @@ export function createFileSession(deps: FileSessionDeps) {
       })
     },
     retry: () => save(),
-    // The two sides of a conflict for Compare
+    // The three versions of a conflict for Compare: the text read last, the user's and the disk's
     compare: () =>
       problem?.kind === 'conflict' && problem.disk
-        ? { disk: problem.disk.text, mine: editor.text() }
+        ? { base: base.text, disk: problem.disk.text, mine: editor.text() }
         : undefined,
+    // Compare's Done: the picked text is already in the editor (one step Ctrl+Z takes back); it is saved
+    // over what the disk holds now
+    resolve(text: string) {
+      if (problem?.kind !== 'conflict' || problem.disk === undefined) return
+      const { disk } = problem
+      editor.reload(text, true)
+      change(() => {
+        base = disk
+        dirty = true
+        problem = undefined
+      })
+      schedule()
+    },
     dispose() {
       disposed = true
       stopTimer()

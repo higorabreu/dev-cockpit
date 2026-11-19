@@ -1,4 +1,4 @@
-import { FILE_LIMITS, FILE_SCHEME, type FileStore, type Logger, mediaTypeOf } from '@dck/core'
+import { FILE_LIMITS, FILE_SCHEME, type FileStore, type Logger, servedTypeOf } from '@dck/core'
 
 export interface FileProtocolOptions {
   // The path the window opened under this id; undefined for any other id
@@ -12,8 +12,11 @@ const ADDRESS = /^\/([0-9a-f-]{1,64})$/
 
 const refused = () => new Response(null, { status: 404 })
 
-// Serves the bytes of an image or a PDF the user opened in this session, and nothing else: no other path,
-// no folder, no remote address
+// An image is only ever drawn; framed by mistake, an SVG would run its scripts in this origin
+const IMAGE_POLICY = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+
+// Serves the bytes of an image, an SVG or a PDF the user opened in this session, or an image of an open
+// Markdown file's folder, and nothing else: no other path, no folder, no remote address
 export function createFileProtocol(options: FileProtocolOptions) {
   const { store, logger } = options
   return async (request: Request): Promise<Response> => {
@@ -23,7 +26,7 @@ export function createFileProtocol(options: FileProtocolOptions) {
         ? ADDRESS.exec(url.pathname)?.[1]
         : undefined
     const path = id === undefined || request.method !== 'GET' ? undefined : options.pathOf(id)
-    const type = path === undefined ? undefined : mediaTypeOf(path)
+    const type = path === undefined ? undefined : servedTypeOf(path)
     if (path === undefined || type === undefined) {
       logger.warn('file address refused')
       return refused()
@@ -38,6 +41,7 @@ export function createFileProtocol(options: FileProtocolOptions) {
         'content-type': type,
         'x-content-type-options': 'nosniff',
         'cache-control': 'no-store',
+        ...(type.startsWith('image/') ? { 'content-security-policy': IMAGE_POLICY } : {}),
       },
     })
   }

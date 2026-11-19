@@ -63,6 +63,8 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     ],
     ['search match mark in the scrollbar', rgb(color.warning), rgb(color.bg), GRAPHIC],
     ['critical on the surface', rgb(color.critical), surface, TEXT],
+    // A field that holds no valid entry (Go to line) draws its edge in the critical color on its fill
+    ['invalid field edge on the window', rgb(color.critical), rgb(color.bg), GRAPHIC],
     // A diff's code stays primary text on every tint; numbers and signs take the line's own ink
     ['code on an added line', fg, rgb(color.diffAdd), TEXT],
     ['code on an added word', fg, rgb(color.diffAddWord), TEXT],
@@ -104,7 +106,8 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
 
   // Every text the editor draws, the plain text and each syntax role, comments included, on every ground it
   // can sit on: the window, a selection (focused or not, and a matching bracket: one tint), a search match
-  // and the current one, the lines a merge took from the disk and the sides of Compare. The indent guides
+  // and the current one, the lines a merge took from the disk, the sides of Compare and a Markdown preview's
+  // code block. The indent guides
   // are decorative
   const { indentGuide: _decorative, ...roles } = syntax
   const grounds: ReadonlyArray<readonly [string, Rgb]> = [
@@ -114,6 +117,8 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     ['the current search match', rgb(color.searchCurrent)],
     ['a line from the disk', rgb(color.diffAdd)],
     ['a removed line', rgb(color.diffRemove)],
+    // A code block of the Markdown preview sits on the surface
+    ['a code block of the preview', surface],
   ]
   const code = [['plain text', color.fg] as const, ...Object.entries(roles)].flatMap(
     ([name, hex]) =>

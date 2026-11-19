@@ -64,8 +64,6 @@ export const cockpitTheme = EditorView.theme({
   },
   '.cm-search-mark.current': { height: '3px', backgroundColor: 'var(--fg)' },
   '.cm-from-disk': { backgroundColor: 'var(--diff-add)' },
-  '.cm-compare-added': { backgroundColor: 'var(--diff-add)' },
-  '.cm-compare-removed': { backgroundColor: 'var(--diff-remove)' },
   '.cm-bracket-1, .cm-bracket-1 *': { color: 'var(--syntax-bracket1)' },
   '.cm-bracket-2, .cm-bracket-2 *': { color: 'var(--syntax-bracket2)' },
   '.cm-bracket-3, .cm-bracket-3 *': { color: 'var(--syntax-bracket3)' },
@@ -83,7 +81,24 @@ export const cockpitTheme = EditorView.theme({
     backgroundSize: 'calc(var(--indent-columns) * 1ch) 100%',
     pointerEvents: 'none',
   },
-  '.cm-panels': { backgroundColor: 'var(--surface)', color: 'var(--fg)' },
-  '.cm-panels.cm-panels-top': { borderBottom: '1px solid var(--line)' },
+  // The find widget and Go to line hang from the header's border at the top right, over the code, left of
+  // the scrollbar and its marks (styles/editor.css draws them). CodeMirror still reads their height as a
+  // scroll margin, so a match it scrolls to never lands under them
+  '.cm-panels': { backgroundColor: 'transparent', color: 'var(--fg)' },
+  '.cm-panels.cm-panels-top': {
+    position: 'absolute',
+    top: '0',
+    left: 'auto',
+    right: 'calc(var(--size-scrollbar) + 8px)',
+    maxWidth: 'calc(100% - var(--size-scrollbar) - 16px)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    border: 'none',
+    // The drawer slides out from under the header's edge, never over it
+    overflow: 'hidden',
+    pointerEvents: 'none',
+  },
+  '.cm-panels-top > .cm-panel': { pointerEvents: 'auto' },
   '.cm-panels.cm-panels-bottom': { borderTop: '1px solid var(--line)' },
 })
