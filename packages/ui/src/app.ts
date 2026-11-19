@@ -24,6 +24,7 @@ import {
   openTab,
   type ProgramStatus,
   type Project,
+  recentEntries,
   relativePath,
   renameTab,
   reorderTabs,
@@ -45,7 +46,6 @@ import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
 import { createFileRanker, startRankWorker } from './file-search/file-ranker.ts'
 import { createFileSearch } from './file-search/file-search.ts'
 import { createFileTabs, type LeaveAnswer } from './files/file-tabs.ts'
-import { recentLabel } from './files/path-parts.ts'
 import { createHoldMenuController } from './hold-menu/hold-menu-controller.ts'
 import { setFullHeight } from './kit/layout-mode.ts'
 import { showRailDot } from './kit/rail-dot.ts'
@@ -401,17 +401,19 @@ export async function startApp(
     return roots.get(cwd)
   }
 
-  // The file segment's right click: the tab's recent files to switch to, and Close file
+  // The file segment's right click: the tab's recent files to switch to, then Save and Close file under a
+  // divider, which stay in view when a short window scrolls the list
   function openFileMenu(tabId: string, x: number, y: number) {
     const current = fileTabs.appendix(tabId)?.path
     const recent = fileTabs.recent(tabId).filter((path) => path !== current)
     const files =
       recent.length === 0
         ? [{ label: i18n.t('files.noRecent'), enabled: false, run: () => undefined }]
-        : recent.map((path) => ({
-            label: recentLabel(path, recent),
+        : recentEntries(recent, rootOf(tabId)).map((entry) => ({
+            label: entry.name,
+            ...(entry.folder === undefined ? {} : { detail: entry.folder }),
             enabled: true,
-            run: () => void fileTabs.openFile(tabId, path),
+            run: () => void fileTabs.openFile(tabId, entry.path),
           }))
     const save = {
       label: i18n.t('files.save'),
@@ -424,14 +426,10 @@ export async function startApp(
       enabled: true,
       run: () => void fileTabs.closeFile(tabId),
     }
-    menu.open(
-      [...files, save, close],
-      x,
-      y,
-      !document.body.classList.contains('full'),
-      () => focusActive(),
-      { caption: i18n.t('files.recent') },
-    )
+    menu.open(files, x, y, !document.body.classList.contains('full'), () => focusActive(), {
+      caption: i18n.t('files.recent'),
+      footer: [save, close],
+    })
   }
 
   // The toggle key, the hold menu and the tab's menu: between the terminal (with its review) and the file

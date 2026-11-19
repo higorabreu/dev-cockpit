@@ -16,11 +16,3 @@ export function pathParts(path: string, root: string | undefined): PathParts {
   const { folders, name } = pathPieces(shortPath(path, root))
   return { folders, name }
 }
-
-// The name alone, or with its parent folder when another recent file has the same name
-export function recentLabel(path: string, others: readonly string[]): string {
-  const name = fileName(path)
-  const repeated = others.some((other) => other !== path && fileName(other) === name)
-  const parent = partsOf(path).at(-2)
-  return repeated && parent ? `${parent}/${name}` : name
-}
