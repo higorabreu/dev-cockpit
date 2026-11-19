@@ -1,6 +1,5 @@
 import {
   type AboutLink,
-  acceleratorFromEvent,
   type ConnectionStatus,
   type Connector,
   connectedFirst,
