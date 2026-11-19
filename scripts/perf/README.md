@@ -104,3 +104,38 @@ viewer added while it showed and after. The results go to `<work>/viewers.json`.
 - The latencies pool every sample of every run (median and p95); cold start, memory and CPU are the median
   of the per run values.
 - The CPU sampling resolution is one clock tick (10 ms) over the window: 0.1 point of a core at 10 s.
+
+## The file view's candidates (`files/`)
+
+`files/` measures what the file view of [plans/files.md](../../plans/files.md) would load, inside a built
+cockpit's own page; the numbers are in [plans/files-measurements.md](../../plans/files-measurements.md).
+Its packages are not part of the workspace: `files/package.json` pins them and npm installs them there.
+
+```bash
+cd scripts/perf/files && npm install && node build.mjs     # bundles src/ into dist/
+node build.mjs --sizes                                     # what each candidate weighs, minified and gzip
+node fixtures.cjs /tmp/dck-f0/fixtures                     # texts, README, images, PDF, a small repository
+node listing.cjs <repository> /tmp/dck-f0/<name>.paths     # git and ripgrep listing times
+node measure.cjs --electron <binary> --lists /tmp/dck-f0/<name>.paths   # every scenario, 3 runs
+```
+
+- `hook.cjs` goes into the cockpit's main process through `NODE_OPTIONS`, as `inject.cjs` does, and opens a
+  socket on which `measure.cjs` runs code in the page (`executeJavaScript`, no DevTools session) and takes
+  screenshots (`capturePage`). `preload.cjs` serves the page's file reads over IPC, as the file view will
+  get them, and the renderer's heap numbers.
+- `src/bench.js` is imported into the page with a dynamic `import()`, as the file view would load the editor,
+  and mounts each candidate over the tab: CodeMirror (`editor.js`, cursor blink by a timer), its Lezer
+  grammars (`lezer.js`), Shiki as a CodeMirror plugin (`shiki.js`), images, Markdown and pdf.js
+  (`viewers.js`) and a fuzzy ranking of paths (`rank.js`). F4 can start from these files.
+- Each scenario is a fresh launch: memory (PSS of every process, as the idle phase, and the page's JS heap
+  after `gc()`) before anything, after the bench loads, after the editor's code loads and after the file
+  opens; the open's steps timed in the page; key to echo typed with `xdotool` into a new line in the middle
+  of the file, from the `keydown` time stamp to the end of the frame that shows the letter.
+- The cockpit's CSP blocks WebAssembly and its window has no plugins: while it runs, the script adds
+  `'wasm-unsafe-eval'` and `dck-file:` sources to the built `index.html` (for Shiki's Oniguruma engine and
+  the protocol rows) and, for the Chromium PDF scenarios only, `plugins: true` to the built `main.cjs`, and
+  puts both back after each launch.
+- `--phases protocol` (not in the default list) loads an image and the PDF through a `dck-file:` scheme
+  that the hook registers and serves as the file view's bridge does, with `--fixtures` as its folder.
+- `--phases shots` saves the side by side screenshots; run it on a display twice the usual size (for
+  example `Xvfb :97 -screen 0 2800x1520x24`), since the page is drawn at a device scale factor of 2.
