@@ -63,6 +63,9 @@ const texts: SearchTexts = {
   count: (current, total) => `${current} of ${total}`,
 }
 
+// The open drawer, not the copy of a closed one that slides away (find-field.ts)
+const LIVE = '.cm-panels-top:not(.fv-drawer-ghost)'
+
 const views: EditorView[] = []
 afterEach(() => {
   for (const view of views.splice(0)) {
@@ -83,7 +86,7 @@ function setUp() {
   })
   views.push(view)
   const field = (name: string) =>
-    view.dom.querySelector<HTMLInputElement>(`.fv-find-field[name="${name}"]`)
+    view.dom.querySelector<HTMLInputElement>(`${LIVE} .fv-find-field[name="${name}"]`)
   const selected = (input: HTMLInputElement | null) =>
     input ? input.value.slice(input.selectionStart ?? 0, input.selectionEnd ?? 0) : undefined
   const type = (name: string, text: string) => {
@@ -175,7 +178,7 @@ describe('the search bar keys', () => {
     openReplace(view)
 
     // Assert
-    expect(field('replace')?.closest('.fv-search-row')?.hasAttribute('hidden')).toBe(false)
+    expect(field('replace')?.closest('.fv-replace-row')?.hasAttribute('inert')).toBe(false)
     expect(document.activeElement).toBe(field('replace'))
     expect(selected(field('replace'))).toBe('delta')
     expect(getSearchQuery(view.state).search).toBe('alpha')

@@ -1707,7 +1707,12 @@ catalog entries.
   `F3`/`Shift+F3`, `Ctrl+H` (`⌥⌘F`) with the replace row, `Ctrl+Alt+Enter` (`⌥⌘Enter`) replaces all from
   the replace field; a key with its widget open focuses the field and selects its text, and from the text a
   selection on one line becomes the query first; never a toggle: `Esc` closes either and the focus goes back
-  to the text. The header's Find and Go to line buttons do what their keys do. Their words come from the
+  to the text. The header's Find and Go to line buttons do what their keys do. Motion (the maintainer's rule,
+  2026-11-19): the drawer slides down from under the header's edge over `--motion-fast` with
+  `--motion-easing`, transform and opacity only, and a copy of it slides back up when it closes (CodeMirror
+  takes the panel out at once); the replace row opens and closes with its height; a key that only refocuses
+  an open drawer moves nothing, nothing moves per key typed, the field has the focus from the first frame,
+  and with reduced motion it all appears at once. Their words come from the
   catalogs; the editor uses no other CodeMirror surface (no tooltips, completion, lint, fold gutter or
   selection match highlight).
 - **Saving and the disk:** `ui/src/files/file-session.ts` keeps the base and runs saves and the disk's

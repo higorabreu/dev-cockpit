@@ -8,8 +8,10 @@
   max-width: 100%;
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto 24px 24px 24px;
+  grid-template-rows: auto minmax(0, 0fr);
   align-items: center;
-  gap: 4px 2px;
+  gap: 0 2px;
+  overflow: hidden;
   padding: 4px;
   border: 1px solid var(--line);
   border-top: 0;
@@ -19,19 +21,33 @@
   font-size: 12px;
 }
 
+.fv-search[data-replace] {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
 /* Each row's controls sit in the widget's columns, so the replace field lines up under the query */
 .fv-search-row {
   display: contents;
 }
 
-.fv-search-row[hidden] {
-  display: none;
+/* The replace row opens with its height: its track grows from nothing to its content */
+.fv-replace-row {
+  grid-column: 1 / -1;
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  min-height: 0;
+  /* Room for the focused field's ring, which sits 1px outside it */
+  overflow: clip;
+  overflow-clip-margin: 1px;
 }
 
 .fv-search-actions {
   grid-column: 3 / span 4;
   display: flex;
   gap: 2px;
+  margin-top: 4px;
 }
 
 /* A field and what belongs to it (the toggles, a count) in one 24px box in JetBrains Mono */
@@ -65,8 +81,9 @@
 }
 
 /* The replace field under the query field */
-.fv-search-row + .fv-search-row > .fv-find-box {
+.fv-replace-row > .fv-find-box {
   grid-column: 2;
+  margin-top: 4px;
 }
 
 .fv-find-field {
@@ -181,5 +198,36 @@
   .fv-search-count {
     min-width: 0;
     padding: 0 2px;
+  }
+}
+
+/* Opening, the drawer slides down from under the header's edge; closing, a copy of it slides back up
+   (find-field.ts). Transform and opacity only, and nothing per key typed. The replace row opens with its
+   height. With reduced motion everything appears at once */
+@media (prefers-reduced-motion: no-preference) {
+  .fv-search {
+    transition: grid-template-rows var(--motion-fast) var(--motion-easing);
+  }
+
+  .cm-panels-top > .fv-search {
+    animation: fv-drawer-in var(--motion-fast) var(--motion-easing);
+  }
+
+  .fv-drawer-ghost > .fv-search {
+    animation: fv-drawer-out var(--motion-fast) var(--motion-easing) forwards;
+  }
+}
+
+@keyframes fv-drawer-in {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes fv-drawer-out {
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
   }
 }

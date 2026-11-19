@@ -56,6 +56,9 @@ const texts: GoToTexts = {
   position: (total) => `of ${total}`,
 }
 
+// The open drawer, not the copy of a closed one that slides away (find-field.ts)
+const LIVE = '.cm-panels-top:not(.fv-drawer-ghost)'
+
 const views: EditorView[] = []
 afterEach(() => {
   for (const view of views.splice(0)) {
@@ -72,7 +75,7 @@ function setUp(doc = 'one\ntwo\nthree\nfour\n') {
     state: EditorState.create({ doc, extensions: goToLineBar(() => texts) }),
   })
   views.push(view)
-  const field = () => view.dom.querySelector<HTMLInputElement>('.fv-goto-field')
+  const field = () => view.dom.querySelector<HTMLInputElement>(`${LIVE} .fv-goto-field`)
   const enter = (text: string) => {
     const input = field()
     if (!input) throw new Error('expected the go to line field')

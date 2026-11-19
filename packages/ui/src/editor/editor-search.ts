@@ -24,7 +24,7 @@ import {
 } from '@codemirror/view'
 import { h, icon } from '../panel/dom.ts'
 import { closeGoToLine } from './editor-goto.ts'
-import { fieldBox, focusField } from './find-field.ts'
+import { fieldBox, focusField, slideOut } from './find-field.ts'
 
 // What the bar says, from the catalogs
 export interface SearchTexts {
@@ -173,15 +173,15 @@ function createSearchPanel(view: EditorView, mac: boolean, texts: () => SearchTe
     find,
     h('span', { class: 'fv-find-toggles' }, matchCase, wholeWord, regexp),
   )
+  // Folded to no height and out of the keys' reach until the chevron or Ctrl+H opens it
   const replaceRow = h(
     'div',
-    { class: 'fv-search-row' },
+    { class: 'fv-replace-row', inert: true },
     fieldBox(replace),
     h('span', { class: 'fv-search-actions' }, replaceOne, replaceEvery),
   )
   const marks = h('div', { class: 'cm-search-marks', 'aria-hidden': 'true' })
   let found: MatchCount | undefined
-  replaceRow.hidden = true
   const dom = h(
     'div',
     { class: 'fv-search' },
@@ -227,7 +227,8 @@ function createSearchPanel(view: EditorView, mac: boolean, texts: () => SearchTe
   }
 
   function showReplace(shown = true) {
-    replaceRow.hidden = !shown
+    replaceRow.inert = !shown
+    dom.toggleAttribute('data-replace', shown)
     expand.setAttribute('aria-expanded', String(shown))
     if (shown) focusField(replace)
   }
@@ -308,6 +309,7 @@ function createSearchPanel(view: EditorView, mac: boolean, texts: () => SearchTe
       clearTimeout(recount)
       marks.remove()
       panels.delete(view)
+      slideOut(view, dom)
     },
   }
 }

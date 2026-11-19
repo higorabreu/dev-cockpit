@@ -3,7 +3,7 @@ import { EditorSelection, type Extension, Facet, StateEffect, StateField } from 
 import { type Command, EditorView, keymap, type Panel, showPanel } from '@codemirror/view'
 import { keys } from '../kit/keys.ts'
 import { h, icon } from '../panel/dom.ts'
-import { fieldBox, focusField } from './find-field.ts'
+import { fieldBox, focusField, slideOut } from './find-field.ts'
 
 // What the bar says, from the catalogs
 export interface GoToTexts {
@@ -144,6 +144,7 @@ function createGoToPanel(view: EditorView): Panel {
     update(update) {
       if (update.docChanged) showInside()
     },
+    destroy: () => slideOut(view, dom),
   }
 }
 

@@ -97,6 +97,8 @@ export const cockpitTheme = EditorView.theme({
     flexDirection: 'column',
     alignItems: 'flex-end',
     border: 'none',
+    // The drawer slides out from under the header's edge, never over it
+    overflow: 'hidden',
     pointerEvents: 'none',
   },
   '.cm-panels-top > .cm-panel': { pointerEvents: 'auto' },
