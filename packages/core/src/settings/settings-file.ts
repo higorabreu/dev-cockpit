@@ -32,6 +32,12 @@ export type SettingsFileState =
 
 export const settingsFileOk: SettingsFileState = { kind: 'ok', issues: [] }
 
+// Where the host keeps settings.json, so the window opens it in a tab of its own at that folder
+export interface SettingsFileLocation {
+  readonly path: string
+  readonly folder: string
+}
+
 const PREVIEW_MAX = 60
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

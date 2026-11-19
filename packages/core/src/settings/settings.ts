@@ -292,6 +292,8 @@ export interface SettingsView {
   readonly fresh: boolean
   // Whether the file could be read and which of its values were not used as written
   readonly file: SettingsFileState
+  // Where settings.json is: the window never auto saves it, so a half-typed JSON is never applied
+  readonly path: string
 }
 
 export interface SettingsUpdate extends SettingsView {

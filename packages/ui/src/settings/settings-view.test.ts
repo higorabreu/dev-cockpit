@@ -20,6 +20,8 @@ import { createKeymap, type Keyboard } from '../platform/keymap.ts'
 import type { SettingsClient } from './settings-client.ts'
 import { createSettingsView } from './settings-view.ts'
 
+const SETTINGS_PATH = '/home/ana/.config/dck/settings.json'
+
 function fakeSettings(
   locked: readonly string[] = [],
   initial: Settings = defaultSettings,
@@ -37,9 +39,16 @@ function fakeSettings(
     async update(patch) {
       patches.push(patch)
       if (file.kind === 'invalid')
-        return { settings: current, locked, fresh: false, file, rejected: Object.keys(patch) }
+        return {
+          settings: current,
+          locked,
+          fresh: false,
+          file,
+          path: SETTINGS_PATH,
+          rejected: Object.keys(patch),
+        }
       current = mergeSettings(current, patch)
-      return { settings: current, locked, fresh: false, file, rejected: [] }
+      return { settings: current, locked, fresh: false, file, path: SETTINGS_PATH, rejected: [] }
     },
     onChange: (listener) => {
       listeners.add(listener)
@@ -50,10 +59,13 @@ function fakeSettings(
       fileListeners.add(listener)
       return () => void fileListeners.delete(listener)
     },
-    openFile: async () => {
-      opens += 1
-      return opens < 2
-    },
+    path: () => SETTINGS_PATH,
+    openFile: async () => ({ path: SETTINGS_PATH, folder: '/home/ana/.config/dck' }),
+  }
+  // The app's opener: the first open finds the file, the second does not
+  const openFile = async () => {
+    opens += 1
+    return opens < 2
   }
   const emit = (changed: readonly string[]) => {
     for (const listener of listeners) listener(current, changed)
@@ -62,7 +74,7 @@ function fakeSettings(
     file = next
     for (const listener of fileListeners) listener(next)
   }
-  return { client, patches, emit, emitFile, opens: () => opens }
+  return { client, openFile, patches, emit, emitFile, opens: () => opens }
 }
 
 // The host's side of the Updates row: its state, the checks asked and the change listeners
@@ -133,6 +145,7 @@ function open(
       onClose: () => {
         closed = true
       },
+      openFile: settings.openFile,
       previewOpacity: () => undefined,
       keymap: createKeymap(keyboard),
     },
@@ -957,12 +970,12 @@ describe('settings view, the settings file', () => {
     view.close()
   })
 
-  it('should open the file from the header button and say so when no app opened it', async () => {
+  it('should open the file from the header button and say so when there was no file to open', async () => {
     // Arrange
     const { body, opens, view } = open()
     const button = body.querySelector<HTMLButtonElement>('[data-focus="set-open-file"]')
 
-    // Act: the fake host opens the file the first time only
+    // Act: the fake opener finds the file the first time only
     button?.click()
     await settle()
     const opened = body.querySelector('.sfile-failed')
@@ -973,7 +986,7 @@ describe('settings view, the settings file', () => {
     expect(button?.getAttribute('data-tip')).toBe('Open the settings file')
     expect(opened).toBeNull()
     expect(opens()).toBe(2)
-    expect(body.querySelector('.sfile-failed')?.textContent).toBe('No app opened settings.json.')
+    expect(body.querySelector('.sfile-failed')?.textContent).toBe('Could not open settings.json.')
     view.close()
   })
 

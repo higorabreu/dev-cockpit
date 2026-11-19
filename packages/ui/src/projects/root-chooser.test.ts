@@ -17,7 +17,14 @@ function memorySettings(initial: Settings = defaultSettings) {
     async update(patch: SettingsPatch) {
       patches.push(patch)
       current = mergeSettings(current, patch)
-      return { settings: current, locked: [], fresh: false, file: settingsFileOk, rejected: [] }
+      return {
+        settings: current,
+        locked: [],
+        fresh: false,
+        file: settingsFileOk,
+        path: '/home/ana/.config/dck/settings.json',
+        rejected: [],
+      }
     },
   }
 }

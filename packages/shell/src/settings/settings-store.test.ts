@@ -385,6 +385,18 @@ describe('createSettingsStore ensureFile', () => {
     expect(JSON.parse(await readFile(file, 'utf8'))).toEqual(defaultSettings)
   })
 
+  it('should tell the window where the file is when it reads the settings', async () => {
+    // Arrange
+    const store = make()
+
+    // Act
+    const view = await store.load()
+
+    // Assert
+    expect(view.path).toBe(file)
+    expect(store.get().path).toBe(file)
+  })
+
   it('should leave the file as it is when one exists', async () => {
     await make().update({ theme: 'light' })
     await writeFile(file, '// mine\n{}')

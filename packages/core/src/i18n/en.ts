@@ -410,7 +410,7 @@ export const en: Record<MessageKey, string> = {
   'settings.updates.current': 'Up to date',
   'settings.ref.settings': 'Settings',
   'settings.file.open': 'Open the settings file',
-  'settings.file.openFailed': 'No app opened settings.json.',
+  'settings.file.openFailed': 'Could not open settings.json.',
   'settings.file.invalid': 'settings.json has an error at line {line}, column {column}.',
   'settings.file.openWarnings.one': 'Open the settings file: 1 warning',
   'settings.file.openWarnings.other': 'Open the settings file: {count} warnings',

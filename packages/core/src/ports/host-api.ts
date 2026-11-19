@@ -8,7 +8,7 @@ import type { SystemFontsInfo } from '../fonts/fonts.ts'
 import type { ErrorBody } from '../ipc/protocol.ts'
 import type { Result } from '../result.ts'
 import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
-import type { SettingsFileState } from '../settings/settings-file.ts'
+import type { SettingsFileLocation, SettingsFileState } from '../settings/settings-file.ts'
 import type { SavedTabs } from '../tabs/saved-tabs.ts'
 import type { UpdateState } from '../updates/updater.ts'
 import type { AgentProfile } from './agent.ts'
@@ -97,8 +97,8 @@ export interface HostApi {
     onChange(listener: (settings: Settings, changed: readonly string[]) => void): Unsubscribe
     // Whether settings.json reads and which of its values were not used as written
     onFile(listener: (file: SettingsFileState) => void): Unsubscribe
-    // In the system's default editor, written first when there is none; false when nothing opened it
-    openFile(): Promise<boolean>
+    // Written first when there is none; undefined when the host could not write it
+    openFile(): Promise<SettingsFileLocation | undefined>
   }
   // By connector id; only the enabled connectors this app implements are listed or answered
   readonly connections: {

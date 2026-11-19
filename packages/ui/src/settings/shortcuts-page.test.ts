@@ -39,6 +39,8 @@ let close: () => void = () => undefined
 
 afterEach(() => close())
 
+const SETTINGS_PATH = '/home/ana/.config/dck/settings.json'
+
 // The Settings screen on its Shortcuts page, over a settings client that keeps what it is given
 function openShortcuts(
   initial: Settings = defaultSettings,
@@ -58,12 +60,20 @@ function openShortcuts(
     async update(patch) {
       patches.push(patch)
       current = mergeSettings(current, patch)
-      return { settings: current, locked: [], fresh: false, file, rejected: [] }
+      return {
+        settings: current,
+        locked: [],
+        fresh: false,
+        file,
+        path: SETTINGS_PATH,
+        rejected: [],
+      }
     },
     onChange: () => () => undefined,
     file: () => file,
     onFile: () => () => undefined,
-    openFile: async () => true,
+    path: () => SETTINGS_PATH,
+    openFile: async () => ({ path: SETTINGS_PATH, folder: '/home/ana/.config/dck' }),
   }
   const keymap = createKeymap(keyboard, () => current.shortcuts.keys)
   const view = createSettingsView(
@@ -73,6 +83,7 @@ function openShortcuts(
       api,
       i18n: createTranslator('en'),
       onClose: () => undefined,
+      openFile: async () => true,
       previewOpacity: () => undefined,
       keymap,
     },

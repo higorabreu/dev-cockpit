@@ -69,6 +69,7 @@ import { createQuitCard } from './quit/quit-card.ts'
 import { createReviewTabs } from './review/review-tabs.ts'
 import { applyOpacity } from './settings/preferences.ts'
 import type { SettingsClient } from './settings/settings-client.ts'
+import { autoSaveOf, createSettingsFileTab } from './settings/settings-file-tab.ts'
 import { createSettingsView } from './settings/settings-view.ts'
 import { createNotice } from './tabs/notice.ts'
 import { createSessionWatcher } from './tabs/sessions-watcher.ts'
@@ -300,6 +301,7 @@ export async function startApp(
       api,
       i18n,
       onClose: () => focusActive(),
+      openFile: () => settingsFile.open(),
       previewOpacity: applyOpacity,
       keymap,
     },
@@ -372,7 +374,7 @@ export async function startApp(
     host: (tabId) => tabViews.get(tabId)?.element,
     // The header writes the path from the project, as the tab's tooltip and the recent list do
     cwd: (tabId) => rootOf(tabId) ?? watcher.get(tabId)?.cwd,
-    autoSave: () => settings.current().files.autoSave,
+    autoSave: autoSaveOf(settings),
     autoMerge: () => settings.current().files.autoMerge,
     ask: askLeave,
     onChange() {
@@ -384,6 +386,17 @@ export async function startApp(
     after(milliseconds, task) {
       const timer = setTimeout(task, milliseconds)
       return () => clearTimeout(timer)
+    },
+  })
+
+  const settingsFile = createSettingsFileTab({
+    locate: () => settings.openFile(),
+    tabs: () => state,
+    update,
+    openTab: (cwd) => open({ cwd }),
+    files: fileTabs,
+    closeSettings() {
+      if (settingsView.isOpen()) settingsView.close()
     },
   })
 
@@ -1186,7 +1199,7 @@ export async function startApp(
     'system:full-height': () => api.window.toggleFullHeight(),
     'system:theme': toggleTheme,
     'system:settings': () => settingsView.open(),
-    'system:settings-file': () => void settings.openFile(),
+    'system:settings-file': () => void settingsFile.open(),
     'system:panel': togglePanel,
     // The hold menu offers it only while a newer release can be taken
     'system:update': () =>
