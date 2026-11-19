@@ -1707,13 +1707,14 @@ catalog entries.
   with the reason, offers Reload (undoable), Keep mine and Compare, and auto save waits. Compare shows the
   disk's version and the user's side by side, read only, the differing lines tinted; picking hunks from
   three versions is left for F4b. A file deleted on disk gets Save again and Close file; a failed save says
-  why with Try again. Every quit from the menus, the tray or the quit card (D75) asks the window last
-  (`shell/src/quit/quit-files.ts`, channels `quit:settle-files` and `quit:files-settled`): it writes the
-  pending saves through the same check within 2 s and lets the app quit; a file left in conflict, deleted or
-  not saved shows its strip and keeps the app open until the user decides; with auto save off each file with
-  edits asks Save, Don't save or Cancel. While the user is asked the host shows the window and waits; a
-  window that does not answer within 2.5 s does not keep the app from quitting. A logout or a shutdown quits
-  as before.
+  why with Try again. Every quit from the menus, the tray or the quit card (D75), closing the last window
+  (`close-guard.ts`) and the restart after an update (D71; a cancel keeps the update ready) ask the window
+  last (`shell/src/quit/quit-files.ts`, channels `quit:settle-files` and `quit:files-settled`): it writes
+  the pending saves through the same check within 2 s and lets the app quit; a file left in conflict,
+  deleted or not saved shows its strip and keeps the app open until the user decides; with auto save off
+  each file with edits asks Save, Don't save or Cancel. While the user is asked the host shows the window
+  and waits; a window that does not answer within 2.5 s does not keep the app from quitting. A logout or a
+  shutdown quits as before.
 - **Recent files:** each tab keeps its last 10 files (paths only), offered by the segment's menu and by the
   file search's empty query. With `window.restoreTabs` a saved tab keeps its open file and its recent list;
   on start the file comes back over its tab, hidden, if it still opens, and is read again only when it
@@ -1737,4 +1738,5 @@ and Shortcuts row, the file view's wiring in `app.ts` (the pick of the file sear
 app), the `syntax` tokens with their checks, `editorconfig.ts` and `line-edits.ts` in the core, the
 `files:editorconfig` and `files:ignored` channels with the `GitIgnoreCheck` port and `git-ignore.ts`, the
 `file` and `recent` fields of a saved tab, `shell/src/quit/quit-files.ts` with the `quit:settle-files` and
-`quit:files-settled` channels, the `files.*` catalog entries and the CodeMirror packages.
+`quit:files-settled` channels, the `files.*` catalog entries and the CodeMirror packages, and give the last
+window's close and the update's restart their direct quit again.

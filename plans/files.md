@@ -142,6 +142,15 @@ before it is kept.
 - [ ] F5. Entries: Ctrl+click on a path (amends D40), the review's button.
 - [ ] F6. Decision (and D13's text, which still names Ctrl+Shift+O for projects), README, perf report updated, checks in the real app with screenshots, both themes.
 
+## Later
+
+- **Raise the size limits toward VS Code's, after measuring** (the maintainer, 2026-11-19; nothing changes
+  now). Today: colors to 2 MB, editing to 5 MB, read only to 50 MB, the card above. VS Code: colors to 20 MB
+  or 300 000 lines, editing to about 1 GB with a confirmation, extensions to 50 MB (`textModel.ts` in
+  `src/vs/editor/common/model/` and `files.ts` in `src/vs/platform/files/common/`). To measure: editing
+  without colors up to 50 MB; colors up to about 10 MB with the parse kept to the visible range; "Open
+  anyway" above 50 MB.
+
 ## Why a toggle key and not Esc
 
 Esc cannot leave the file: the editor uses it (close its search, drop extra cursors, leave a completion, a
