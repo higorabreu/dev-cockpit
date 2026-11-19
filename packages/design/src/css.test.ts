@@ -47,4 +47,10 @@ describe('buildCss', () => {
     expect(css).toContain('--size-scrollbar: 8px;')
     expect(css).toContain('--size-scrollbar-thumb: 4px;')
   })
+
+  it('should define each syntax role for both themes when building the css', () => {
+    expect(css).toContain('--syntax-storage: #79a6cf;')
+    expect(css).toContain('--syntax-storage: #2b5f8f;')
+    expect(css).toContain('--syntax-indent-guide: #232323;')
+  })
 })

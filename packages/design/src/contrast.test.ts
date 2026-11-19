@@ -131,4 +131,38 @@ describe('contrastChecks', () => {
 
     expect(failures.map((check) => check.name)).toContain('selected terminal text')
   })
+
+  it('should check every syntax role on the editor and the readable ones on its tints when checking each theme', () => {
+    for (const theme of themeNames) {
+      const names = contrastChecks(tokens, theme).map((check) => check.name)
+      const roles = Object.keys(tokens.themes[theme].syntax).filter(
+        (name) => name !== 'indentGuide',
+      )
+
+      for (const name of roles) expect(names).toContain(`syntax ${name} on the editor`)
+      for (const name of roles.filter((role) => role !== 'comment'))
+        expect(names).toEqual(
+          expect.arrayContaining([
+            `syntax ${name} on a selection`,
+            `syntax ${name} on a line from the disk`,
+          ]),
+        )
+      expect(names).not.toContain('syntax indentGuide on the editor')
+    }
+  })
+
+  it('should report a syntax color too close to the editor background when it is', () => {
+    const dark = tokens.themes.dark
+    const dim = {
+      ...tokens,
+      themes: {
+        ...tokens.themes,
+        dark: { ...dark, syntax: { ...dark.syntax, comment: '#2a2a2a' } },
+      },
+    }
+
+    const failures = contrastChecks(dim, 'dark').filter((check) => !check.passes)
+
+    expect(failures.map((check) => check.name)).toContain('syntax comment on the editor')
+  })
 })

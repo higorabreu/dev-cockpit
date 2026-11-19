@@ -13,7 +13,7 @@ const GRAPHIC = 3
 
 // Derived fills follow the same mix CSS does with color-mix
 export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly ContrastCheck[] {
-  const { color, terminal } = tokens.themes[theme]
+  const { color, terminal, syntax } = tokens.themes[theme]
   const rgb = (hex: string): Rgb => parseHex(hex)
   const surface = rgb(color.surface)
   const fg = rgb(color.fg)
@@ -92,7 +92,21 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
       ([name, hex]) => [`terminal ${name} on the window`, rgb(hex), rgb(color.bg), TEXT] as const,
     )
 
-  return [...pairs, ...ansi].map(([name, foreground, background, minimum]) => {
+  // The editor draws code on the window, under a selection or a search match (the selected line's tint) and
+  // on the lines a merge took from the disk (the added line's tint). The indent guides are decorative, and
+  // the comments, as the maintainer chose them, reach 4.5:1 on the window only
+  const { indentGuide: _decorative, ...roles } = syntax
+  const code = Object.entries(roles).flatMap(([name, hex]) => [
+    [`syntax ${name} on the editor`, rgb(hex), rgb(color.bg), TEXT] as const,
+    ...(name === 'comment'
+      ? []
+      : ([
+          [`syntax ${name} on a selection`, rgb(hex), selectedLine(color.bg), TEXT],
+          [`syntax ${name} on a line from the disk`, rgb(hex), rgb(color.diffAdd), TEXT],
+        ] as const)),
+  ])
+
+  return [...pairs, ...ansi, ...code].map(([name, foreground, background, minimum]) => {
     const ratio = contrastRatio(foreground, background)
     return { name, ratio, minimum, passes: ratio >= minimum }
   })
