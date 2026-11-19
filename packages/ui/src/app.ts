@@ -545,9 +545,11 @@ export async function startApp(
   function renderTabs() {
     const files = new Map(
       state.tabs.flatMap((tab) => {
+        // Asked for every tab, so a path hovered in its terminal is already written from the project
+        const root = rootOf(tab.id)
         const appendix = fileTabs.appendix(tab.id)
         if (!appendix) return []
-        return [[tab.id, { ...appendix, path: shortPath(appendix.path, rootOf(tab.id)) }] as const]
+        return [[tab.id, { ...appendix, path: shortPath(appendix.path, root) }] as const]
       }),
     )
     tabBar.render(state, attention.marks(), hiddenReviews(), files)
