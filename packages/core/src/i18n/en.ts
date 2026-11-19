@@ -633,4 +633,5 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-INS-004': 'The download failed',
   'error.DCK-INS-005': 'Corrupted download; nothing was installed',
   'error.DCK-INS-006': 'The installation failed',
+  'error.DCK-FIL-001': 'The file does not exist',
 }

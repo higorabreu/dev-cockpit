@@ -632,6 +632,7 @@ export const ptBR = {
   'error.DCK-INS-004': 'Falha no download',
   'error.DCK-INS-005': 'Download corrompido; nada foi instalado',
   'error.DCK-INS-006': 'A instalação falhou',
+  'error.DCK-FIL-001': 'O arquivo não existe',
 } as const
 
 export type MessageKey = keyof typeof ptBR

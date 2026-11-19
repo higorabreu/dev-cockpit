@@ -1,3 +1,4 @@
+import { saveStep } from '../files/disk-change.ts'
 import { type ErrorBody, errorBody } from '../ipc/protocol.ts'
 import type {
   Cancel,
@@ -6,6 +7,9 @@ import type {
   Display,
   DockWindow,
   DownloadedFile,
+  FileChange,
+  FileStamp,
+  FileStore,
   InstallOutcome,
   Point,
   PtyExit,
@@ -247,5 +251,67 @@ export class FakeUpdateInstaller implements UpdateInstaller {
   }
   async discard(file: string) {
     this.discarded.push(file)
+  }
+}
+
+// FNV-1a: a stand-in for the adapter's SHA-256, distinct enough for a few test files
+function fakeHash(bytes: Uint8Array) {
+  let hash = 0x811c9dc5
+  for (const byte of bytes) hash = Math.imul(hash ^ byte, 0x01000193) >>> 0
+  return hash.toString(16)
+}
+
+// Files in memory by path, with the calls the code made; `emit` plays a change another program made
+export class MemoryFileStore implements FileStore {
+  readonly files = new Map<string, { bytes: Uint8Array; mtimeMs: number }>()
+  readonly calls: string[] = []
+  private readonly listeners = new Map<string, Set<(change: FileChange) => void>>()
+  private time = 1000
+
+  put(path: string, content: string | Uint8Array) {
+    const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content
+    this.files.set(path, { bytes, mtimeMs: this.time++ })
+  }
+  stampOf(path: string): FileStamp | undefined {
+    const file = this.files.get(path)
+    return file && { size: file.bytes.length, mtimeMs: file.mtimeMs, hash: fakeHash(file.bytes) }
+  }
+  emit(path: string, change: FileChange) {
+    for (const listener of this.listeners.get(path) ?? []) listener(change)
+  }
+
+  async stat(path: string) {
+    this.calls.push(`stat ${path}`)
+    const file = this.files.get(path)
+    return file
+      ? ok({ size: file.bytes.length, mtimeMs: file.mtimeMs })
+      : fail(errorBody('DCK-FIL-001', path))
+  }
+  async head(path: string, length: number) {
+    this.calls.push(`head ${path}`)
+    const file = this.files.get(path)
+    return file ? ok(file.bytes.subarray(0, length)) : fail(errorBody('DCK-FIL-001', path))
+  }
+  async read(path: string) {
+    this.calls.push(`read ${path}`)
+    const file = this.files.get(path)
+    const stamp = this.stampOf(path)
+    return file && stamp ? ok({ bytes: file.bytes, stamp }) : fail(errorBody('DCK-FIL-001', path))
+  }
+  async write(path: string, bytes: Uint8Array, expected: FileStamp | null) {
+    this.calls.push(`write ${path}`)
+    const disk = this.stampOf(path)
+    if (saveStep(expected, disk) === 'conflict') return ok({ kind: 'changed' as const, disk })
+    this.put(path, bytes)
+    return ok({ kind: 'written' as const, stamp: this.stampOf(path) as FileStamp })
+  }
+  watch(path: string, _since: FileStamp | undefined, listener: (change: FileChange) => void) {
+    this.calls.push(`watch ${path}`)
+    const listeners = this.listeners.get(path) ?? new Set()
+    listeners.add(listener)
+    this.listeners.set(path, listeners)
+    return ok(() => {
+      listeners.delete(listener)
+    })
   }
 }
