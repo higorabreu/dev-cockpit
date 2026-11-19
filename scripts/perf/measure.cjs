@@ -5,6 +5,7 @@ const fs = require('node:fs')
 const net = require('node:net')
 const os = require('node:os')
 const path = require('node:path')
+const { pathToFileURL } = require('node:url')
 const { parseArgs } = require('node:util')
 
 const here = __dirname
@@ -431,9 +432,16 @@ async function waitFor(check, timeout, step = 100) {
   return false
 }
 
-// The CLI as the GNOME shortcut of the packaged app runs it: Electron as Node on the bundled dck.mjs
-function bundleCli(build, context) {
-  const outfile = path.join(context.work, `dck-${build.name}.mjs`)
+// The CLI as the GNOME shortcut of the packaged app runs it: Electron as Node on the bundled dck.mjs. A
+// build that has the packaging's own buildCli (D30, after 0.12.0) splits what `toggle` does not load into
+// `cli/` beside it; an older build is one file
+async function bundleCli(build, context) {
+  const outfile = path.join(context.work, `cli-${build.name}`, 'dck.mjs')
+  const own = path.join(build.path, 'packages', 'shell', 'scripts', 'cli-bundle.mjs')
+  if (fs.existsSync(own)) {
+    await (await import(pathToFileURL(own).href)).buildCli(outfile)
+    return outfile
+  }
   const esbuild = require(path.join(build.path, 'packages', 'shell', 'node_modules', 'esbuild'))
   const jsonc = path.join(
     build.path,
@@ -632,6 +640,24 @@ function sizeOf(target) {
   return fs.readdirSync(target).reduce((sum, name) => sum + sizeOf(path.join(target, name)), 0)
 }
 
+// The UI's JavaScript every start parses: the entry and what it imports statically; the rest loads by
+// import() on first use (the editor, its grammars, the Markdown and PDF viewers)
+function startJavaScript(ui) {
+  const html = fs.readFileSync(path.join(ui, 'index.html'), 'utf8')
+  const seen = new Set()
+  const walk = (file) => {
+    if (seen.has(file)) return
+    seen.add(file)
+    const text = fs.readFileSync(path.join(ui, file), 'utf8')
+    for (const [, name] of text.matchAll(
+      /\bimport\s*(?:[\w${},\s*]+from\s*)?["']\.\/([^"']+\.js)["']/g,
+    ))
+      walk(path.join(path.dirname(file), name))
+  }
+  for (const [, file] of html.matchAll(/(?:src|href)="\.\/([^"]+\.js)"/g)) walk(file)
+  return [...seen].reduce((sum, file) => sum + sizeOf(path.join(ui, file)), 0)
+}
+
 function sizePhase(build) {
   const shell = path.join(build.path, 'packages', 'shell', 'dist')
   const ui = path.join(shell, 'ui')
@@ -650,6 +676,7 @@ function sizePhase(build) {
     daemonJs: kb(sizeOf(path.join(shell, 'daemon.cjs'))),
     preloadJs: kb(sizeOf(path.join(shell, 'preload.cjs'))),
     uiJs: kb(filesUnder(ui, (n) => n.endsWith('.js'))),
+    uiStartJs: kb(startJavaScript(ui)),
     uiCss: kb(filesUnder(ui, (n) => n.endsWith('.css'))),
     uiFonts: kb(filesUnder(ui, (n) => /\.(woff2?|ttf)$/.test(n))),
     ui: kb(sizeOf(ui)),
@@ -875,11 +902,12 @@ function tables(results) {
         ['daemon.cjs', (s) => s.size?.daemonJs, 0],
         ['preload.cjs', (s) => s.size?.preloadJs, 0],
         ['ui JavaScript', (s) => s.size?.uiJs, 0],
+        ['ui JavaScript loaded at start', (s) => s.size?.uiStartJs, 0],
         ['ui CSS', (s) => s.size?.uiCss, 0],
         ['ui fonts', (s) => s.size?.uiFonts, 0],
         ['ui total', (s) => s.size?.ui, 0],
         ['node_modules (node-pty, unpruned)', (s) => s.size?.nodeModules, 0],
-        ['dck CLI bundle (dck.mjs)', (s) => s.size?.cliJs, 0],
+        ['dck CLI, what toggle loads (dck.mjs)', (s) => s.size?.cliJs, 0],
       ]),
     )
   }
@@ -998,7 +1026,8 @@ async function main() {
       tui: [],
       list: [],
     }
-    if (phases.includes('probe') || phases.includes('size')) build.cli = bundleCli(build, context)
+    if (phases.includes('probe') || phases.includes('size'))
+      build.cli = await bundleCli(build, context)
     if (phases.includes('size')) results.builds[build.name].size = sizePhase(build)
   }
   const started = Date.now()

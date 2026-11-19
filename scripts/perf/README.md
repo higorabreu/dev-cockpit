@@ -56,9 +56,10 @@ of one core: a large value there marks a noisy sample.
   - **hotkey to window**: from the toggle request to the end of the first frame after the page turns
     visible, warm (hidden for about 1 s) and cold-ish (hidden for `--cold-wait` seconds), by two paths:
     `socket` sends `window.toggle` on the daemon's socket (the IPC part of any toggle), and `cli` runs the
-    `dck` CLI bundled as the `.deb` bundles it, with Electron as Node, which is what the GNOME shortcut of
-    the packaged app runs (D30). In dev mode and outside GNOME the key goes to Electron's `globalShortcut`
-    and skips both the CLI and the daemon, so `socket` is an upper bound for it.
+    `dck` CLI bundled as the `.deb` bundles it (by the build's own `buildCli` when it has one), with
+    Electron as Node, which is what the GNOME shortcut of the packaged app runs (D30). In dev mode and
+    outside GNOME the key goes to Electron's `globalShortcut` and skips both the CLI and the daemon, so
+    `socket` is an upper bound for it.
 - **idle**: a clean launch (no probe), the window shown and focused at an idle bash prompt. Memory is the
   PSS (and RSS) from `/proc/<pid>/smaps_rollup` of the main process, every Chromium child and the daemon;
   the shells in the tabs are left out. CPU is `utime + stime` from `/proc/<pid>/stat` and
@@ -73,8 +74,10 @@ of one core: a large value there marks a noisy sample.
   then the diff, while the probe stamps every frame of the page's main thread with
   `requestAnimationFrame`, where the lists draw their rows: frames per second, p95 interval, share of
   frames over 20 ms and the pixels scrolled. Builds without the review (before 0.6.0) report nothing.
-- **size**: the size of `packages/shell/dist` and its parts, and of the CLI bundled as the `.deb` ships
-  it. The `.deb` itself is `pnpm package` (Electron is most of it); the script does not build it.
+- **size**: the size of `packages/shell/dist` and its parts, the UI's JavaScript loaded at start (the
+  entry and what it imports statically; the rest loads by `import()` on first use), and the CLI bundled as
+  the `.deb` ships it (its `dck.mjs`, what `toggle` loads). The `.deb` itself is `pnpm package` (Electron
+  is most of it); the script does not build it.
 
 ## The file view: editor and viewers
 
