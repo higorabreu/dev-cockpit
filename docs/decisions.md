@@ -2035,7 +2035,8 @@ turn the GPU off on Linux again (D50) or find the memory.
 
 **Decision:** "Open the settings file" (the Settings screen's file button and the hold menu's System item)
 opens `settings.json` inside the cockpit, no longer in the system's default editor (D65): a new tab whose
-terminal starts in the file's folder, named `settings.json` as a name the user can rename, with the file
+terminal starts in the file's folder, named after the Settings screen ("Settings", "Configurações") as a
+name the user can rename, so the tab reads `Configurações │ settings.json`, with the file
 shown over it, and the Settings screen closes. A second open goes to the tab that already has the file
 open. That one file is saved only with Ctrl+S (⌘S on a Mac) whatever `files.autoSave` says, so it keeps the
 unsaved ring and the question when leaving it with edits; auto save is a per-path decision (`autoSaveOf`
@@ -2043,7 +2044,8 @@ in `ui/src/settings/settings-file-tab.ts`) and `SettingsView` gives the window t
 restored on start with the file open keeps the rule. The host still picks the file: `settings:open-file`
 takes no path, writes the file when there is none and returns its path and folder, refused unless both are
 absolute.
-**Reason:** the maintainer's choice on 2026-11-19, over opening it over the active tab and over auto save:
+**Reason:** the maintainer's choice on 2026-11-19, over opening it over the active tab and over auto save,
+and of the name over `settings.json` twice:
 a tab of its own keeps the user's work where it was, and a half-typed JSON is never applied, since the
 window applies any valid save at once and an invalid one only shows where the error is.
 **How to revert:** in `shell/src/main.ts` open the file again with `shell.openPath` after `ensureFile`,

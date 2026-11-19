@@ -23,6 +23,7 @@ function setup(written = true) {
   let settingsOpen = true
   const opener = createSettingsFileTab({
     locate: async () => (written ? LOCATION : undefined),
+    tabName: () => 'Settings',
     tabs: () => state,
     update: (next) => {
       state = next
@@ -62,7 +63,7 @@ function setup(written = true) {
 }
 
 describe('createSettingsFileTab', () => {
-  it('should open settings.json in a new tab at its folder named after it and close the screen when no tab has it', async () => {
+  it('should open settings.json in a new tab named Settings at its folder and close the screen when no tab has it', async () => {
     // Arrange
     const { opener, state, folders, shown, settingsOpen } = setup()
 
@@ -73,7 +74,7 @@ describe('createSettingsFileTab', () => {
     expect(opened).toBe(true)
     expect(state().tabs).toEqual([
       { id: 'tab-1', label: 'Tab 1' },
-      { id: 'tab-2', label: 'settings.json', autoLabel: 'Tab 2' },
+      { id: 'tab-2', label: 'Settings', autoLabel: 'Tab 2' },
     ])
     expect(state().activeId).toBe('tab-2')
     expect(folders.get('tab-2')).toBe('/home/ana/.config/dck')

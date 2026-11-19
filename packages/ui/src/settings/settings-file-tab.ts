@@ -1,6 +1,5 @@
 import { activateTab, renameTab, type SettingsFileLocation, type TabsState } from '@dck/core'
 import type { FileTabs } from '../files/file-tabs.ts'
-import { fileName } from '../files/path-parts.ts'
 import type { SettingsClient } from './settings-client.ts'
 
 export interface SettingsFileTabDeps {
@@ -12,10 +11,12 @@ export interface SettingsFileTabDeps {
   openTab(cwd: string): Promise<string>
   readonly files: Pick<FileTabs, 'appendix' | 'openFile'>
   closeSettings(): void
+  // The new tab's name, the Settings screen's title in the interface's language
+  tabName(): string
 }
 
 // settings.json opens inside the cockpit, in a tab of its own at its folder (D91): the tab that already
-// shows it, else a new one named after the file, which the user can rename as any other
+// shows it, else a new one named Settings, which the user can rename as any other
 export function createSettingsFileTab(deps: SettingsFileTabDeps) {
   return {
     // False when the host could not write the file, so there is nothing to open
@@ -27,7 +28,7 @@ export function createSettingsFileTab(deps: SettingsFileTabDeps) {
         .tabs()
         .tabs.find((tab) => deps.files.appendix(tab.id)?.path === location.path)
       const id = holder?.id ?? (await deps.openTab(location.folder))
-      const named = holder ? deps.tabs() : renameTab(deps.tabs(), id, fileName(location.path))
+      const named = holder ? deps.tabs() : renameTab(deps.tabs(), id, deps.tabName())
       deps.update(activateTab(named, id))
       await deps.files.openFile(id, location.path)
       return true

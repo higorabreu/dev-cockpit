@@ -395,6 +395,7 @@ export async function startApp(
     update,
     openTab: (cwd) => open({ cwd }),
     files: fileTabs,
+    tabName: () => i18n.t('settings.title'),
     closeSettings() {
       if (settingsView.isOpen()) settingsView.close()
     },
