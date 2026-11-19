@@ -1825,7 +1825,7 @@ drop the review's Open file button, `o`, `openingLine` and `lineToOpen`; write t
 the header from the absolute path and the tab's folder again and drop `shortPath`, `recentEntries` and the
 `review:root` channel; set `MAX_RECENT_FILES` back to 10 and put the menu's footer back in its list.
 
-## D85. Hairlines are borders of one token, and the bars and the side by side headers sit on whole device pixels
+## D86. Hairlines are borders of one token, and the bars and the side by side headers sit on whole device pixels
 
 **Decision:** every 1px line in the line color is a border of `--size-hairline` (1px), never a filled box,
 a box shadow or a box moved by a half translate: Chromium snaps a border to whole device pixels (one at

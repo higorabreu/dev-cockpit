@@ -1,6 +1,6 @@
 # Hairlines and the side by side headers
 
-**Status:** Done (D85).
+**Status:** Done (D86).
 
 Reported by the maintainer on 2026-11-19 (Ubuntu, GNOME, fractional scale, a drop-down anchored at the
 top): the 1px lines are not all the same thickness and change with the window's height, and the panel's
@@ -68,5 +68,5 @@ view's keeps Inter 12px (6.56px), so their x-heights already matched.
   `--size-header`, divider inside; the panel header draws its own divider; the two paths share a baseline.
 - [x] T4. The dock controller snaps an anchored or dragged height to whole device pixels of the display;
   the Wayland screen keeps the monitor's scale. Tests.
-- [x] T5. `styles/hairlines.test.ts`; decision D85; screenshots in the real app at 1.25, 1.5 and 2, both
+- [x] T5. `styles/hairlines.test.ts`; decision D86; screenshots in the real app at 1.25, 1.5 and 2, both
   themes, full height and two anchored heights.
