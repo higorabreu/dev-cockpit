@@ -1689,12 +1689,27 @@ catalog entries.
   the indentation and the final newline; without one the indentation is guessed from the file. The line
   break is the file's: CRLF stays CRLF, a file that mixes them keeps its carriage returns as characters. The
   cursor blinks with the terminal's timer (D58), never with CodeMirror's animation.
-- **Search inside the file:** `@codemirror/search` with a bar of the cockpit's own controls at the top: find
-  and replace fields, match case, whole word and regular expression toggles (pressed with an outline too),
-  "3 of 12" counted up to 2000 matches and again 150 ms after typing stops, previous and next. Keys:
-  `Ctrl+F` (`⌘F`), `Enter`/`Shift+Enter` and `F3`/`Shift+F3`, `Ctrl+H` (`⌥⌘F`) with the replace row,
-  `Ctrl+G` to a line (`⌃G` on a Mac, where `⌘G` finds the next), `Esc` closes the bar and stays in the file;
-  the selection seeds the query. Its words and CodeMirror's phrases come from the catalogs.
+- **Search inside the file:** `@codemirror/search` with a find widget of the cockpit's own controls, a
+  drawer that hangs from the header's bottom border at the top right of the editor, left of the scrollbar
+  and its match marks (the maintainer's choice on 2026-11-19, over a full-width bar and a floating card):
+  no top border, the other sides a 1px `--line` border with bottom radii, the header's border running on
+  above it, over the code without pushing it down. CodeMirror reads its height as a scroll margin, so a
+  match it steps to never lands under it. Its first row: a chevron for the replace row, the query (24px,
+  JetBrains Mono) with the match case, whole word and regular expression toggles inside its right end
+  (pressed with an outline too), "3 of 12" counted up to 2000 matches and again 150 ms after typing stops,
+  previous, next and close; the second: the replace field under the query, Replace and Replace all as icons.
+  A query with no match turns the field's edge to `--critical` and the count says "No results". About
+  420px wide, the fields shrink in a narrow editor. Go to line (`Ctrl+G`, `⌃G` on a Mac, where `⌘G` finds
+  the next) is the same drawer, shorter, in the same corner (one at a time): a field with "of 245" inside,
+  an Enter cap and close; it takes `12`, `12:4`, `12,4` and `:12`, clamps a line past the end to the last,
+  and an entry that is not a line turns the edge critical and says "Not a line" inside the field. CodeMirror's
+  own go to line dialog is gone. Keys, as VS Code: `Ctrl+F` (`⌘F`), `Enter`/`Shift+Enter` and
+  `F3`/`Shift+F3`, `Ctrl+H` (`⌥⌘F`) with the replace row, `Ctrl+Alt+Enter` (`⌥⌘Enter`) replaces all from
+  the replace field; a key with its widget open focuses the field and selects its text, and from the text a
+  selection on one line becomes the query first; never a toggle: `Esc` closes either and the focus goes back
+  to the text. The header's Find and Go to line buttons do what their keys do. Their words come from the
+  catalogs; the editor uses no other CodeMirror surface (no tooltips, completion, lint, fold gutter or
+  selection match highlight).
 - **Saving and the disk:** `ui/src/files/file-session.ts` keeps the base and runs saves and the disk's
   changes one after the other, so a change that arrives during a save is checked once the save resolves.
   With `files.autoSave` on, a pause of 1 s, going to the terminal, leaving the tab, hiding the window and

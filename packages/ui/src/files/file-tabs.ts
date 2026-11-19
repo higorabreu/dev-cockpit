@@ -11,7 +11,7 @@ import {
 import type { CodeEditor, CodeEditorOptions, CompareOptions } from '../editor/code-editor.ts'
 import { h } from '../panel/dom.ts'
 import { sizeText } from '../review/file-head.ts'
-import { editorPhrases, searchTexts } from './editor-texts.ts'
+import { editorPhrases, goToTexts, searchTexts } from './editor-texts.ts'
 import { createFileSession, type FileMark, type FileSession } from './file-session.ts'
 import { createStrip } from './file-strip.ts'
 import { createFileView, type FileHead, type FileNote, type FileView } from './file-view.ts'
@@ -198,6 +198,7 @@ export function createFileTabs(deps: FileTabsDeps) {
       label: t('files.a11y.editor', { name: fileName(file.path) }),
       phrases: editorPhrases(t),
       searchTexts: () => searchTexts(t),
+      goToTexts: () => goToTexts(t),
       onUserChange: () => entry.session?.edited(),
       onSave: () => void entry.session?.save(),
     })

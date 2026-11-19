@@ -63,6 +63,8 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     ],
     ['search match mark in the scrollbar', rgb(color.warning), rgb(color.bg), GRAPHIC],
     ['critical on the surface', rgb(color.critical), surface, TEXT],
+    // A field that holds no valid entry (Go to line) draws its edge in the critical color on its fill
+    ['invalid field edge on the window', rgb(color.critical), rgb(color.bg), GRAPHIC],
     // A diff's code stays primary text on every tint; numbers and signs take the line's own ink
     ['code on an added line', fg, rgb(color.diffAdd), TEXT],
     ['code on an added word', fg, rgb(color.diffAddWord), TEXT],

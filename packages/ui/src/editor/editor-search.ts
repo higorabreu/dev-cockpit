@@ -3,7 +3,6 @@ import {
   findNext,
   findPrevious,
   getSearchQuery,
-  gotoLine,
   openSearchPanel,
   replaceAll,
   replaceNext,
@@ -24,6 +23,8 @@ import {
   type ViewUpdate,
 } from '@codemirror/view'
 import { h, icon } from '../panel/dom.ts'
+import { closeGoToLine } from './editor-goto.ts'
+import { fieldBox, focusField } from './find-field.ts'
 
 // What the bar says, from the catalogs
 export interface SearchTexts {
@@ -42,6 +43,9 @@ export interface SearchTexts {
   readonly invalid: string
   count(current: number, total: number, more: boolean): string
 }
+
+// Replace all from the replace field, as VS Code has it
+const REPLACE_ALL_KEY = { pc: 'Ctrl+Alt+Enter', mac: '⌥⌘Enter' } as const
 
 // Counting stops here: past it the bar says "+" rather than walk a huge file on every key
 export const MAX_COUNTED = 2000
@@ -100,20 +104,25 @@ function drawMarks(view: EditorView, marks: HTMLElement, found: MatchCount | und
 
 const ICONS = {
   chevron: '<path d="M9 6l6 6-6 6"/>',
-  up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
-  down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+  up: '<path d="M12 19V5M5 12l7-7 7 7"/>',
+  down: '<path d="M12 5v14M19 12l-7 7-7-7"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
+  replaceOne: '<path d="M4 7h10M4 12h7"/><path d="M14 15l3 3 4-6"/>',
+  replaceAll:
+    '<path d="M4 6h10M4 11h10M4 16h6"/><path d="M13 17l2.5 2.5L20 14"/><path d="M17 9l1.5 1.5L21 7"/>',
 } as const
 
-// Each open bar, so the replace key can show its second row
-const panels = new WeakMap<EditorView, { showReplace(): void }>()
+// Each open widget, so its keys can reach its fields
+const panels = new WeakMap<EditorView, { focusFind(): void; showReplace(): void }>()
 
-function createSearchPanel(view: EditorView, texts: () => SearchTexts): Panel {
+// The widget at the top right of the editor, as VS Code's find widget: the query with its toggles, the
+// count, previous, next and close; the chevron shows the replace row under it
+function createSearchPanel(view: EditorView, mac: boolean, texts: () => SearchTexts): Panel {
   const t = texts()
   let query = getSearchQuery(view.state)
   const field = (name: string, label: string, value: string) =>
     h('input', {
-      class: 'fv-search-field',
+      class: 'fv-find-field',
       type: 'text',
       name,
       value,
@@ -158,33 +167,26 @@ function createSearchPanel(view: EditorView, texts: () => SearchTexts): Panel {
   const next = button(ICONS.down, t.next, 'Enter')
   const close = button(ICONS.close, t.close, 'Esc')
   const count = h('span', { class: 'fv-search-count', role: 'status' })
-  const replaceOne = h('button', { type: 'button', class: 'fv-search-text' }, t.replaceOne)
-  const replaceEvery = h('button', { type: 'button', class: 'fv-search-text' }, t.replaceAll)
-  const replaceRow = h('div', { class: 'fv-search-row' }, replace, replaceOne, replaceEvery)
+  const replaceOne = button(ICONS.replaceOne, t.replaceOne, 'Enter')
+  const replaceEvery = button(ICONS.replaceAll, t.replaceAll, REPLACE_ALL_KEY[mac ? 'mac' : 'pc'])
+  const findBox = fieldBox(
+    find,
+    h('span', { class: 'fv-find-toggles' }, matchCase, wholeWord, regexp),
+  )
+  const replaceRow = h(
+    'div',
+    { class: 'fv-search-row' },
+    fieldBox(replace),
+    h('span', { class: 'fv-search-actions' }, replaceOne, replaceEvery),
+  )
   const marks = h('div', { class: 'cm-search-marks', 'aria-hidden': 'true' })
   let found: MatchCount | undefined
   replaceRow.hidden = true
   const dom = h(
     'div',
     { class: 'fv-search' },
-    expand,
-    h(
-      'div',
-      { class: 'fv-search-rows' },
-      h(
-        'div',
-        { class: 'fv-search-row' },
-        find,
-        matchCase,
-        wholeWord,
-        regexp,
-        count,
-        previous,
-        next,
-        close,
-      ),
-      replaceRow,
-    ),
+    h('div', { class: 'fv-search-row' }, expand, findBox, count, previous, next, close),
+    replaceRow,
   )
 
   let recount: ReturnType<typeof setTimeout> | undefined
@@ -193,13 +195,13 @@ function createSearchPanel(view: EditorView, texts: () => SearchTexts): Panel {
     found = undefined
     if (!query.search) {
       count.textContent = ''
-      delete count.dataset.empty
+      findBox.removeAttribute('data-invalid')
       drawMarks(view, marks, found)
       return
     }
     if (!query.valid) {
       count.textContent = texts().invalid
-      count.dataset.empty = 'true'
+      findBox.setAttribute('data-invalid', '')
       drawMarks(view, marks, found)
       return
     }
@@ -207,7 +209,8 @@ function createSearchPanel(view: EditorView, texts: () => SearchTexts): Panel {
     drawMarks(view, marks, found)
     count.textContent =
       found.total === 0 ? texts().none : texts().count(found.current, found.total, found.more)
-    count.toggleAttribute('data-empty', found.total === 0)
+    // No match: the field's edge in the critical color, and the count says it in words
+    findBox.toggleAttribute('data-invalid', found.total === 0)
   }
 
   function commit() {
@@ -226,7 +229,7 @@ function createSearchPanel(view: EditorView, texts: () => SearchTexts): Panel {
   function showReplace(shown = true) {
     replaceRow.hidden = !shown
     expand.setAttribute('aria-expanded', String(shown))
-    if (shown) replace.select()
+    if (shown) focusField(replace)
   }
 
   const run = (command: Command) => () => {
@@ -244,7 +247,8 @@ function createSearchPanel(view: EditorView, texts: () => SearchTexts): Panel {
       }
       if (event.key !== 'Enter') return
       event.preventDefault()
-      if (input === replace) replaceNext(view)
+      if (input === replace && (event.ctrlKey || event.metaKey) && event.altKey) replaceAll(view)
+      else if (input === replace) replaceNext(view)
       else if (event.shiftKey) findPrevious(view)
       else findNext(view)
     })
@@ -268,7 +272,10 @@ function createSearchPanel(view: EditorView, texts: () => SearchTexts): Panel {
     top: true,
     mount() {
       view.dom.append(marks)
-      panels.set(view, { showReplace })
+      panels.set(view, {
+        focusFind: () => focusField(find),
+        showReplace,
+      })
       find.select()
       showCount()
     },
@@ -305,23 +312,57 @@ function createSearchPanel(view: EditorView, texts: () => SearchTexts): Panel {
   }
 }
 
-// The search bar opened on the replace field, as Ctrl+H (⌥⌘F) opens it
-const openReplace: Command = (view) => {
+// A selection on one line becomes the query, as CodeMirror and VS Code seed it; longer ones are no query
+const MAX_SEED = 200
+
+// The editor's selection as the new query, keeping the toggles; nothing when it is empty or spans lines
+function seedFromSelection(view: EditorView) {
+  const { from, to } = view.state.selection.main
+  const text = view.state.sliceDoc(from, to)
+  if (text === '' || text.length > MAX_SEED || /[\r\n]/.test(text)) return
+  const current = getSearchQuery(view.state)
+  const seeded = current.regexp ? text.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&') : text
+  if (current.search === seeded) return
+  const query = new SearchQuery({
+    search: seeded,
+    replace: current.replace,
+    caseSensitive: current.caseSensitive,
+    wholeWord: current.wholeWord,
+    regexp: current.regexp,
+  })
+  view.dispatch({ effects: setSearchQuery.of(query) })
+}
+
+// Ctrl+F (⌘F) and the header's Find, as VS Code has them: the bar opens, or, open already, its field takes
+// the focus with the query selected; from the text, a selection there becomes the query first (from the
+// bar, what the user typed stays). Never a toggle: Esc closes the bar
+export const openFind: Command = (view) => {
+  closeGoToLine(view)
+  const panel = panels.get(view)
+  if (!searchPanelOpen(view.state) || !panel) return openSearchPanel(view)
+  if (view.hasFocus) seedFromSelection(view)
+  panel.focusFind()
+  return true
+}
+
+// Ctrl+H (⌥⌘F): the same for the replace row, which opens under the query with its text selected
+export const openReplace: Command = (view) => {
+  closeGoToLine(view)
   if (!searchPanelOpen(view.state)) openSearchPanel(view)
+  else if (view.hasFocus) seedFromSelection(view)
   panels.get(view)?.showReplace()
   return true
 }
 
-// The editor's keys for the search, as the plan lists them; on the Mac ⌘G stays find next and ⌃G goes to
-// a line, as in VS Code
+// The editor's keys for the search, as the plan lists them; on the Mac ⌘G stays find next (⌃G goes to a
+// line, editor-goto.ts), as in VS Code
 function searchKeys(mac: boolean): KeyBinding[] {
   const scope = 'editor search-panel'
   return [
-    { key: 'Mod-f', run: openSearchPanel, scope, preventDefault: true },
+    { key: 'Mod-f', run: openFind, scope, preventDefault: true },
     { key: 'F3', run: findNext, shift: findPrevious, scope, preventDefault: true },
     { key: 'Escape', run: closeSearchPanel, scope },
     { key: 'Mod-d', run: selectNextOccurrence, preventDefault: true },
-    { key: 'Ctrl-g', run: gotoLine, preventDefault: true },
     ...(mac
       ? [
           { key: 'Mod-g', run: findNext, shift: findPrevious, scope, preventDefault: true },
@@ -333,6 +374,6 @@ function searchKeys(mac: boolean): KeyBinding[] {
 
 // The search bar at the top of the file, drawn with the cockpit's own controls and words
 export const searchBar = (mac: boolean, texts: () => SearchTexts): Extension => [
-  search({ top: true, createPanel: (view) => createSearchPanel(view, texts) }),
+  search({ top: true, createPanel: (view) => createSearchPanel(view, mac, texts) }),
   keymap.of(searchKeys(mac)),
 ]

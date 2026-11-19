@@ -1,6 +1,5 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { bracketMatching, indentUnit } from '@codemirror/language'
-import { gotoLine, openSearchPanel } from '@codemirror/search'
 import {
   Annotation,
   Compartment,
@@ -23,13 +22,14 @@ import {
 import type { EditorConfig, LineEdit, LineEnding, LineRange } from '@dck/core'
 import { timerBlink } from './editor-blink.ts'
 import { bracketsAndDocTags, indentGuides } from './editor-extras.ts'
-import { type SearchTexts, searchBar } from './editor-search.ts'
+import { type GoToTexts, goToLineBar, openGoToLine } from './editor-goto.ts'
+import { openFind, type SearchTexts, searchBar } from './editor-search.ts'
 import { languageFor, syntaxColors } from './editor-syntax.ts'
 import { cockpitTheme } from './editor-theme.ts'
 import { changedSpan, guessIndent } from './line-span.ts'
 
 export { type CompareOptions, createCompare } from './compare-editors.ts'
-export type { SearchTexts }
+export type { GoToTexts, SearchTexts }
 
 export interface CodeEditorOptions {
   readonly parent: HTMLElement
@@ -46,6 +46,7 @@ export interface CodeEditorOptions {
   // CodeMirror's own words (the go to line bar, what a screen reader hears), from the catalogs
   readonly phrases: Readonly<Record<string, string>>
   searchTexts(): SearchTexts
+  goToTexts(): GoToTexts
   // A change the user made, never one of reload, merge or the final newline
   onUserChange(): void
   // Ctrl+S (⌘S)
@@ -68,7 +69,7 @@ export interface CodeEditor {
   // `.editorconfig`'s insert_final_newline: true when a line break was added
   ensureFinalNewline(): boolean
   setReadOnly(readOnly: boolean): void
-  // The search bar and the go to line bar, as their keys open them
+  // The search bar and the go to line bar, as their keys open them: never a toggle, Esc closes them
   find(): void
   askLine(): void
   destroy(): void
@@ -169,6 +170,7 @@ export function createCodeEditor(options: CodeEditorOptions): CodeEditor {
       timerBlink,
       bracketMatching(),
       searchBar(options.mac, options.searchTexts),
+      goToLineBar(options.goToTexts),
       keymap.of([
         { key: 'Mod-s', run: save, preventDefault: true },
         ...defaultKeymap,
@@ -246,10 +248,10 @@ export function createCodeEditor(options: CodeEditorOptions): CodeEditor {
       view.dispatch({ effects: readOnly.reconfigure(EditorState.readOnly.of(value)) })
     },
     find() {
-      openSearchPanel(view)
+      openFind(view)
     },
     askLine() {
-      gotoLine(view)
+      openGoToLine(view)
     },
     destroy: () => view.destroy(),
   }
