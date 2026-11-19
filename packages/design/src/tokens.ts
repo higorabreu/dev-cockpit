@@ -68,6 +68,9 @@ export interface ThemeTokens {
     readonly diffRemove: string
     readonly diffRemoveWord: string
     readonly diffRemoveInk: string
+    // The editor's search: a quiet solid tint under every match, a stronger one under the current match
+    readonly searchMatch: string
+    readonly searchCurrent: string
   }
   readonly overlay: {
     readonly scroll: string

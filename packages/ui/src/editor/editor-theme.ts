@@ -40,11 +40,9 @@ export const cockpitTheme = EditorView.theme({
     backgroundColor: 'var(--diff-remove)',
     outline: 'none',
   },
-  '.cm-searchMatch': {
-    backgroundColor: 'var(--line-selected)',
-    outline: '1px solid var(--muted)',
-  },
-  '.cm-searchMatch.cm-searchMatch-selected': { outline: '2px solid var(--fg)' },
+  // Solid tints, a quiet one under every match and a stronger one under the current match
+  '.cm-searchMatch': { backgroundColor: 'var(--search-match)' },
+  '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'var(--search-current)' },
   '.cm-from-disk': { backgroundColor: 'var(--diff-add)' },
   '.cm-compare-added': { backgroundColor: 'var(--diff-add)' },
   '.cm-compare-removed': { backgroundColor: 'var(--diff-remove)' },

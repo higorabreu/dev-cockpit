@@ -132,23 +132,44 @@ describe('contrastChecks', () => {
     expect(failures.map((check) => check.name)).toContain('selected terminal text')
   })
 
-  it('should check every syntax role on the editor and the readable ones on its tints when checking each theme', () => {
+  it('should check every syntax role, comments included, on every ground of the editor when checking each theme', () => {
     for (const theme of themeNames) {
       const names = contrastChecks(tokens, theme).map((check) => check.name)
       const roles = Object.keys(tokens.themes[theme].syntax).filter(
         (name) => name !== 'indentGuide',
       )
 
-      for (const name of roles) expect(names).toContain(`syntax ${name} on the editor`)
-      for (const name of roles.filter((role) => role !== 'comment'))
+      for (const name of [...roles, 'plain text'])
         expect(names).toEqual(
           expect.arrayContaining([
+            `syntax ${name} on the editor`,
             `syntax ${name} on a selection`,
+            `syntax ${name} on a search match`,
+            `syntax ${name} on the current search match`,
             `syntax ${name} on a line from the disk`,
+            `syntax ${name} on a removed line`,
           ]),
         )
+      expect(names).toContain('syntax comment on a selection')
       expect(names).not.toContain('syntax indentGuide on the editor')
     }
+  })
+
+  it('should report the current search match when its tint is too strong for the comments', () => {
+    const light = tokens.themes.light
+    const strong = {
+      ...tokens,
+      themes: {
+        ...tokens.themes,
+        light: { ...light, color: { ...light.color, searchCurrent: '#c9b37a' } },
+      },
+    }
+
+    const failures = contrastChecks(strong, 'light').filter((check) => !check.passes)
+
+    expect(failures.map((check) => check.name)).toContain(
+      'syntax comment on the current search match',
+    )
   })
 
   it('should report a syntax color too close to the editor background when it is', () => {

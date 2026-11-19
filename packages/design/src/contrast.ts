@@ -92,21 +92,26 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
       ([name, hex]) => [`terminal ${name} on the window`, rgb(hex), rgb(color.bg), TEXT] as const,
     )
 
-  // The editor draws code on the window, under a selection or a search match (the selected line's tint) and
-  // on the lines a merge took from the disk and the sides of Compare (the added and removed lines' tints).
-  // The indent guides are decorative; the comments, as the maintainer chose them, reach 4.5:1 on the
-  // window only
+  // Every text the editor draws, the plain text and each syntax role, comments included, on every ground it
+  // can sit on: the window, a selection (focused or not, and a matching bracket: one tint), a search match
+  // and the current one, the lines a merge took from the disk and the sides of Compare. The indent guides
+  // are decorative
   const { indentGuide: _decorative, ...roles } = syntax
-  const code = Object.entries(roles).flatMap(([name, hex]) => [
-    [`syntax ${name} on the editor`, rgb(hex), rgb(color.bg), TEXT] as const,
-    ...(name === 'comment'
-      ? []
-      : ([
-          [`syntax ${name} on a selection`, rgb(hex), selectedLine(color.bg), TEXT],
-          [`syntax ${name} on a line from the disk`, rgb(hex), rgb(color.diffAdd), TEXT],
-          [`syntax ${name} on a removed line`, rgb(hex), rgb(color.diffRemove), TEXT],
-        ] as const)),
-  ])
+  const grounds: ReadonlyArray<readonly [string, Rgb]> = [
+    ['the editor', rgb(color.bg)],
+    ['a selection', selectedLine(color.bg)],
+    ['a search match', rgb(color.searchMatch)],
+    ['the current search match', rgb(color.searchCurrent)],
+    ['a line from the disk', rgb(color.diffAdd)],
+    ['a removed line', rgb(color.diffRemove)],
+  ]
+  const code = [['plain text', color.fg] as const, ...Object.entries(roles)].flatMap(
+    ([name, hex]) =>
+      grounds.map(
+        ([ground, background]) =>
+          [`syntax ${name} on ${ground}`, rgb(hex), background, TEXT] as const,
+      ),
+  )
 
   return [...pairs, ...ansi, ...code].map(([name, foreground, background, minimum]) => {
     const ratio = contrastRatio(foreground, background)
