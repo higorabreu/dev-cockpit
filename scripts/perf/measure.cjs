@@ -966,17 +966,18 @@ async function main() {
   const context = {
     work,
     display: options.display,
-    electron:
-      options.electron ??
-      path.join(
-        builds[0].path,
-        'packages',
-        'shell',
-        'node_modules',
-        'electron',
-        'dist',
-        'electron',
-      ),
+    // Resolved here: Electron starts from the launch's own home, where a relative path means nothing
+    electron: options.electron
+      ? path.resolve(options.electron)
+      : path.join(
+          builds[0].path,
+          'packages',
+          'shell',
+          'node_modules',
+          'electron',
+          'dist',
+          'electron',
+        ),
     keys: Number(options.keys),
     toggles: Number(options.toggles),
     coldWait: Number(options['cold-wait']),

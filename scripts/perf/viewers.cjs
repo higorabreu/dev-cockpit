@@ -229,9 +229,10 @@ async function main() {
     display: options.display,
     fixtures: path.resolve(options.fixtures),
     keys: Number(options.keys),
-    electron:
-      options.electron ??
-      path.join(build.path, 'packages', 'shell', 'node_modules', 'electron', 'dist', 'electron'),
+    // Resolved here: Electron starts from the launch's own home, where a relative path means nothing
+    electron: options.electron
+      ? path.resolve(options.electron)
+      : path.join(build.path, 'packages', 'shell', 'node_modules', 'electron', 'dist', 'electron'),
     running: new Set(),
   }
   const server = await ensureDisplay(context.display)
