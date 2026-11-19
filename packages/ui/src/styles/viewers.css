@@ -87,7 +87,7 @@
 }
 
 .fv-body[data-mode="split"] > .fv-rendered {
-  border-left: 1px solid var(--line);
+  border-left: var(--size-hairline) solid var(--line);
 }
 
 /* Side by side needs the room of two columns of text; narrower, the editor alone stays */
@@ -157,7 +157,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--size-hairline) solid var(--line);
   font-size: 12px;
 }
 
@@ -200,7 +200,7 @@
 
 .mp-conflict {
   margin: 6px 8px;
-  border: 1px solid var(--line);
+  border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-medium);
   overflow: hidden;
   outline: none;
