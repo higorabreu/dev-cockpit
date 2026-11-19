@@ -602,8 +602,7 @@ export const ptBR = {
   'settings.autoMerge.hint':
     'Linhas que outro programa mudou longe das suas se juntam às suas edições.',
   'settings.openPathsInCockpit': 'Abrir no cockpit os caminhos do terminal',
-  'settings.openPathsInCockpit.hint':
-    'Desligado, um caminho de arquivo clicado no terminal abre no app do sistema; {key}+clique abre do outro jeito.',
+  'settings.openPathsInCockpit.hint': 'Desligado, abrem no app do sistema. {key}+clique inverte.',
 
   'files.toggle': 'Alternar arquivo e terminal',
   'files.show': 'Mostrar arquivo',
