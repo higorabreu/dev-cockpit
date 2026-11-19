@@ -30,6 +30,7 @@ describe('createKeymap labels', () => {
     ['opacityUp', 'Ctrl+Shift+↑', '⇧⌘↑'],
     ['clearTerminal', 'Ctrl+Shift+K', '⌘K'],
     ['toggleFile', 'Ctrl+Shift+Space', '⇧⌘Space'],
+    ['filePreview', 'Ctrl+Shift+J', '⇧⌘J'],
   ] as const)('should label %s as %s on a PC and %s on a Mac', (id, onPc, onMac) => {
     expect(pc.label(id)).toBe(onPc)
     expect(mac.label(id)).toBe(onMac)

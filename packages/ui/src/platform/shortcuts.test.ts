@@ -34,6 +34,7 @@ function bind(keyboard: Keyboard, custom: CustomKeys = {}) {
     changeFontSize: record('changeFontSize'),
     clearTerminal: record('clearTerminal'),
     toggleFile: record('toggleFile'),
+    togglePreview: record('togglePreview'),
   }
   unbind = bindShortcuts(
     actions,
@@ -198,6 +199,14 @@ describe('bindShortcuts', () => {
     press({ key: ' ', code: 'Space', metaKey: true, shiftKey: true })
 
     expect(ran).toEqual(['toggleFile'])
+  })
+
+  it('should switch a Markdown file or an SVG between its views with Ctrl+Shift+J', () => {
+    const ran = bind('pc')
+
+    press({ key: 'J', code: 'KeyJ', ctrlKey: true, shiftKey: true })
+
+    expect(ran).toEqual(['togglePreview'])
   })
 
   it('should open a tab with Ctrl+Shift+T when the keyboard is a PC one', () => {

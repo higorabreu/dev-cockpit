@@ -63,6 +63,8 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     clearTerminal: [{ ...CS, key: 'k' }],
     // Esc stays with the editor and Ctrl+` is a dead key on ABNT2 (plans/files.md)
     toggleFile: [{ ...CS, key: ' ' }],
+    // Ctrl+Shift+V, VS Code's, pastes in the terminal
+    filePreview: [{ ...CS, key: 'j' }],
   },
   // Cmd where Terminal.app and VS Code use it, so Ctrl stays with the shell
   mac: {
@@ -105,6 +107,7 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     clearTerminal: [{ ...M, key: 'k' }],
     // ⌘Space and ⌥⌘Space are Spotlight's, ⌃Space and ⌃⌥Space the input sources', ⌃⌘Space the emoji viewer
     toggleFile: [{ ...MS, key: ' ' }],
+    filePreview: [{ ...MS, key: 'j' }],
   },
 }
 

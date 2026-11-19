@@ -132,7 +132,7 @@ describe('contrastChecks', () => {
     expect(failures.map((check) => check.name)).toContain('selected terminal text')
   })
 
-  it('should check every syntax role, comments included, on every ground of the editor when checking each theme', () => {
+  it('should check every syntax role, comments included, on every ground of the editor and the preview when checking each theme', () => {
     for (const theme of themeNames) {
       const names = contrastChecks(tokens, theme).map((check) => check.name)
       const roles = Object.keys(tokens.themes[theme].syntax).filter(
@@ -148,6 +148,7 @@ describe('contrastChecks', () => {
             `syntax ${name} on the current search match`,
             `syntax ${name} on a line from the disk`,
             `syntax ${name} on a removed line`,
+            `syntax ${name} on a code block of the preview`,
           ]),
         )
       expect(names).toContain('syntax comment on a selection')
@@ -196,5 +197,16 @@ describe('contrastChecks', () => {
     const failures = contrastChecks(dim, 'dark').filter((check) => !check.passes)
 
     expect(failures.map((check) => check.name)).toContain('syntax comment on the editor')
+  })
+
+  it('should check the edge of an invalid field as a graphic when checking each theme', () => {
+    for (const theme of themeNames) {
+      const edge = contrastChecks(tokens, theme).find(
+        (check) => check.name === 'invalid field edge on the window',
+      )
+
+      expect(edge?.minimum).toBe(3)
+      expect(edge?.passes).toBe(true)
+    }
   })
 })

@@ -364,6 +364,7 @@ export async function startApp(
     editorKeys: {
       find: keymap.commandLabel('f'),
       goToLine: keymap.chordLabel({ ctrl: true, key: 'g' }),
+      done: keymap.commandLabel('Enter'),
     },
     host: (tabId) => tabViews.get(tabId)?.element,
     cwd: (tabId) => watcher.get(tabId)?.cwd,
@@ -1106,6 +1107,7 @@ export async function startApp(
     toggleFullHeight: () => api.window.toggleFullHeight(),
     clearTerminal: () => activeSession()?.clear(),
     toggleFile: () => state.activeId && toggleFile(state.activeId),
+    togglePreview: () => state.activeId && fileTabs.togglePreview(state.activeId),
     nextFinished() {
       const id = attention.nextUnseen(state.activeId)
       if (id) update(activateTab(state, id))
@@ -1114,6 +1116,9 @@ export async function startApp(
       void settings.update({ opacity: stepOpacity(settings.current().opacity, direction) })
     },
     changeFontSize(delta: number | 'reset') {
+      // Over an image the font keys zoom it, as an image viewer's Ctrl and + − 0
+      const step = delta === 'reset' ? 'fit' : delta > 0 ? 1 : -1
+      if (state.activeId !== undefined && fileTabs.zoom(state.activeId, step)) return
       const size =
         delta === 'reset'
           ? defaultSettings.fontSize

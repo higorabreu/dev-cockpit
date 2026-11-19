@@ -28,7 +28,7 @@ import { languageFor, syntaxColors } from './editor-syntax.ts'
 import { cockpitTheme } from './editor-theme.ts'
 import { changedSpan, guessIndent } from './line-span.ts'
 
-export { type CompareOptions, createCompare } from './compare-editors.ts'
+export { highlightCode } from './code-highlight.ts'
 export type { GoToTexts, SearchTexts }
 
 export interface CodeEditorOptions {
@@ -49,6 +49,8 @@ export interface CodeEditorOptions {
   goToTexts(): GoToTexts
   // A change the user made, never one of reload, merge or the final newline
   onUserChange(): void
+  // Any change of the text, the cockpit's own included (a Markdown preview beside it follows)
+  onTextChange?(): void
   // Ctrl+S (⌘S)
   onSave(): void
 }
@@ -66,6 +68,10 @@ export interface CodeEditor {
   markLines(ranges: readonly LineRange[], milliseconds: number): void
   // From 1; the cursor goes to the line's start, in the middle of the view
   goToLine(line: number): void
+  // From 1: the first line in view, and a line brought to the top of the view (the Markdown preview keeps
+  // the nearest heading in view when the user switches)
+  topLine(): number
+  scrollToLine(line: number): void
   // `.editorconfig`'s insert_final_newline: true when a line break was added
   ensureFinalNewline(): boolean
   setReadOnly(readOnly: boolean): void
@@ -188,6 +194,7 @@ export function createCodeEditor(options: CodeEditorOptions): CodeEditor {
           (transaction) => transaction.docChanged && !transaction.annotation(external),
         )
         if (typed) options.onUserChange()
+        if (update.docChanged) options.onTextChange?.()
       }),
     ],
   })
@@ -237,6 +244,15 @@ export function createCodeEditor(options: CodeEditorOptions): CodeEditor {
         selection: EditorSelection.cursor(target.from),
         effects: EditorView.scrollIntoView(target.from, { y: 'center' }),
       })
+    },
+    topLine() {
+      const block = view.lineBlockAtHeight(view.scrollDOM.scrollTop)
+      return view.state.doc.lineAt(block.from).number
+    },
+    scrollToLine(line) {
+      const { doc } = view.state
+      const target = doc.line(Math.max(1, Math.min(line, doc.lines)))
+      view.dispatch({ effects: EditorView.scrollIntoView(target.from, { y: 'start' }) })
     },
     ensureFinalNewline() {
       const { doc, lineBreak } = view.state

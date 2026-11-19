@@ -4,14 +4,19 @@ import {
   FILE_LIMITS,
   type FileChange,
   type HostApi,
+  mediaTypeOf,
   type OpenedFile,
   rememberFile,
   type Translator,
 } from '@dck/core'
-import type { CodeEditor, CodeEditorOptions, CompareOptions } from '../editor/code-editor.ts'
+import type { CodeEditor, CodeEditorOptions } from '../editor/code-editor.ts'
 import { h } from '../panel/dom.ts'
 import { sizeText } from '../review/file-head.ts'
+import { type ImageTexts, showImage, type ZoomStep } from '../viewers/image-view.ts'
+import { createMergePicker, type MergePicker } from '../viewers/merge-picker.ts'
+import { showPdf } from '../viewers/pdf-view.ts'
 import { editorPhrases, goToTexts, searchTexts } from './editor-texts.ts'
+import { createFileModes, type FileModes } from './file-modes.ts'
 import { createFileSession, type FileMark, type FileSession } from './file-session.ts'
 import { createStrip } from './file-strip.ts'
 import { createFileView, type FileHead, type FileNote, type FileView } from './file-view.ts'
@@ -21,7 +26,8 @@ import { fileName, pathParts } from './path-parts.ts'
 // so nothing of CodeMirror loads with the cockpit
 export interface EditorModule {
   createCodeEditor(options: CodeEditorOptions): CodeEditor
-  createCompare(options: CompareOptions): { destroy(): void }
+  // A Markdown preview's code block in the editor's colors
+  highlightCode(code: string, language: string): Promise<DocumentFragment | undefined>
 }
 
 // What the tab bar draws of a tab's file (the appendix)
@@ -45,11 +51,16 @@ export interface QuitSteps {
 }
 
 export interface FileTabsDeps {
-  readonly api: Pick<HostApi, 'files' | 'paths'>
+  readonly api: Pick<HostApi, 'files' | 'paths' | 'external'>
   readonly i18n: Translator
   readonly mac: boolean
   // The editor's own keys as this keyboard writes them, for the header's tooltips
-  readonly editorKeys: { readonly find: string; readonly goToLine: string }
+  readonly editorKeys: {
+    readonly find: string
+    readonly goToLine: string
+    // Compare's Done (Ctrl+Enter, ⌘Enter)
+    readonly done: string
+  }
   // The tab's own element, which the file covers
   host(tabId: string): HTMLElement | undefined
   // The tab's folder, for the header's path
@@ -75,7 +86,12 @@ interface Entry {
   session?: FileSession
   editor?: CodeEditor
   editorHost?: HTMLElement
-  compare?: { destroy(): void }
+  // An image or a PDF shown in place of the editor
+  viewer?: { focus(): void; destroy(): void; zoom?(step: ZoomStep): void }
+  // A Markdown file's preview or an SVG's image beside its editor
+  modes?: FileModes
+  // Compare on a conflict: the three versions to pick from
+  picker?: MergePicker
   opened?: OpenedFile
   watching?: boolean
 }
@@ -106,14 +122,25 @@ export function createFileTabs(deps: FileTabsDeps) {
   }
 
   function renderHead(entry: Entry) {
-    if (entry.view && entry.head) entry.view.renderHead(entry.head, limitText(entry.head.note))
+    if (!entry.view || !entry.head) return
+    // Find and Go to line only while the editor shows
+    const editing = entry.head.editing && entry.modes?.mode() !== 'rendered' && !entry.picker
+    entry.view.renderHead({ ...entry.head, editing }, limitText(entry.head.note))
   }
 
   function closeCompare(entry: Entry) {
-    entry.compare?.destroy()
-    entry.compare = undefined
-    if (entry.editorHost) entry.editorHost.hidden = false
+    entry.picker?.destroy()
+    entry.picker = undefined
+    entry.view?.body.removeAttribute('data-picking')
   }
+
+  const imageTexts = (path: string): ImageTexts => ({
+    zoomIn: t('files.image.zoomIn'),
+    zoomOut: t('files.image.zoomOut'),
+    fit: t('files.image.fit'),
+    actual: t('files.image.actual'),
+    image: t('files.image.label', { name: fileName(path) }),
+  })
 
   function renderStrip(tabId: string, entry: Entry) {
     const problem = entry.session?.problem()
@@ -136,39 +163,74 @@ export function createFileTabs(deps: FileTabsDeps) {
               closeFile: () => void closeFile(tabId),
               retry: () => void session.retry(),
             },
-            entry.compare !== undefined,
+            entry.picker !== undefined,
           )
         : undefined,
     )
   }
 
-  async function toggleCompare(tabId: string, entry: Entry) {
-    if (entry.compare) {
+  // Compare: the three versions with a choice per conflict; Done puts the result in the editor
+  function toggleCompare(tabId: string, entry: Entry) {
+    if (entry.picker) {
       closeCompare(entry)
       renderStrip(tabId, entry)
+      renderHead(entry)
       entry.editor?.focus()
       return
     }
-    const sides = entry.session?.compare()
+    const versions = entry.session?.compare()
     const file = entry.opened
-    if (!sides || !file || !('base' in file) || !entry.view) return
-    const module = await deps.loadEditor()
-    if (entries.get(tabId) !== entry || entry.compare) return
-    if (entry.editorHost) entry.editorHost.hidden = true
-    entry.compare = module.createCompare({
+    if (!versions || !file || !('base' in file) || !entry.view) return
+    const session = entry.session
+    const back = () => {
+      closeCompare(entry)
+      renderStrip(tabId, entry)
+      renderHead(entry)
+      entry.editor?.focus()
+    }
+    entry.view.body.setAttribute('data-picking', '')
+    entry.picker = createMergePicker({
       parent: entry.view.body,
-      path: entry.path,
-      disk: sides.disk,
-      mine: sides.mine,
-      lineEnding: file.base.lineEnding,
-      colors: file.size <= FILE_LIMITS.colorBytes,
-      labels: { disk: t('files.compare.disk'), mine: t('files.compare.mine') },
+      ...versions,
+      lineBreak: file.base.lineEnding === 'crlf' ? '\r\n' : '\n',
+      doneKey: deps.editorKeys.done,
+      texts: {
+        mine: t('files.compare.mine'),
+        disk: t('files.compare.disk'),
+        useMine: t('files.merge.useMine'),
+        useDisk: t('files.merge.useDisk'),
+        useBoth: t('files.merge.useBoth'),
+        done: t('files.merge.done'),
+        cancel: t('files.merge.cancel'),
+        next: t('files.merge.next'),
+        previous: t('files.merge.previous'),
+        label: t('files.merge.label'),
+        conflict: (index, total) => t('files.merge.conflict', { index, total }),
+        chosen: (choice) => t(`files.merge.chosen.${choice}`),
+        left: (count) => t('files.merge.left', { count }),
+        unchanged: (count) => t('files.merge.unchanged', { count }),
+      },
+      done(text) {
+        closeCompare(entry)
+        session?.resolve(text)
+        renderHead(entry)
+        entry.editor?.focus()
+      },
+      cancel: back,
     })
     renderStrip(tabId, entry)
+    renderHead(entry)
+    entry.picker.focus()
   }
 
   function dispose(entry: Entry) {
     closeCompare(entry)
+    const drawn = entry.viewer !== undefined || entry.modes !== undefined
+    entry.viewer?.destroy()
+    entry.modes?.destroy()
+    // What Chromium decoded for an image, an SVG or a preview's pictures goes with them
+    if (drawn) api.files.clearImageCache()
+    if (entry.opened?.kind === 'markdown') api.files.release(entry.path)
     entry.session?.dispose()
     entry.editor?.destroy()
     entry.view?.dispose()
@@ -200,6 +262,7 @@ export function createFileTabs(deps: FileTabsDeps) {
       searchTexts: () => searchTexts(t),
       goToTexts: () => goToTexts(t),
       onUserChange: () => entry.session?.edited(),
+      onTextChange: () => entry.modes?.textChanged(),
       onSave: () => void entry.session?.save(),
     })
     const session = createFileSession({
@@ -214,15 +277,94 @@ export function createFileTabs(deps: FileTabsDeps) {
       onChange() {
         renderStrip(tabId, entry)
         deps.onChange()
+        // A save or a reload: an SVG's image shows what the disk now holds
+        const stamp = session.base().stamp.hash
+        if (stamp !== drawnStamp) {
+          drawnStamp = stamp
+          entry.modes?.saved()
+        }
       },
       reopen: () => void load(tabId, file.path),
     })
+    let drawnStamp = file.base.stamp.hash
     session.setFinalNewline(config.insertFinalNewline === true)
     Object.assign(entry, { editor, editorHost, session })
+    mountModes(tabId, entry, file, module)
     const watched = await api.files.watch(file.path, file.base.stamp)
     entry.watching = watched.ok
     if (line !== undefined) editor.goToLine(line)
-    if (entry.shown) editor.focus()
+    if (entry.shown) focusEntry(entry)
+  }
+
+  // A Markdown file's preview (up to FILE_LIMITS.previewBytes) or an SVG's image beside the editor
+  function mountModes(
+    tabId: string,
+    entry: Entry,
+    file: Extract<OpenedFile, { base: unknown }>,
+    module: EditorModule,
+  ) {
+    const { view, editor, editorHost, session } = entry
+    if (!view || !editor || !editorHost || !session) return
+    const svg = file.kind === 'text' && file.url !== undefined
+    if (file.kind === 'markdown' && file.size > FILE_LIMITS.previewBytes) {
+      view.setInfo(t('files.markdown.tooLarge', { size: sizeText(i18n, FILE_LIMITS.previewBytes) }))
+      return
+    }
+    if (file.kind !== 'markdown' && !svg) return
+    entry.modes = createFileModes({
+      kind: svg ? 'svg' : 'markdown',
+      path: file.path,
+      t,
+      body: view.body,
+      editorHost,
+      editor,
+      ...(svg && file.url ? { url: file.url } : {}),
+      imageTexts: imageTexts(file.path),
+      assets: (paths) => api.files.assets(file.path, paths),
+      highlight: module.highlightCode,
+      openLink: (url) => api.external.openLink(url),
+      openFile: (path, line) => void openFile(tabId, path, line),
+      flush: () => session.flush(),
+      onChange: () => renderHead(entry),
+    })
+    view.tools.replaceChildren(entry.modes.tools)
+    renderHead(entry)
+  }
+
+  // An image drawn from its bitmap, with its zoom in the header, or the card past FILE_LIMITS.imagePixels
+  async function mountImage(entry: Entry, file: Extract<OpenedFile, { kind: 'image' }>) {
+    const view = entry.view
+    if (!view) return
+    const loaded = await showImage({
+      parent: view.body,
+      url: file.url,
+      vector: false,
+      texts: imageTexts(file.path),
+      bytes: () => api.files.bytes(file.path),
+      type: mediaTypeOf(file.path),
+    })
+    if (entry.view !== view || !view.element.isConnected) {
+      if (loaded.kind === 'shown') loaded.view.destroy()
+      return
+    }
+    if (loaded.kind === 'failed') {
+      view.showMessage(t('files.image.failed'))
+      return
+    }
+    const { width, height } = loaded.kind === 'shown' ? loaded.view.size : loaded.size
+    const size = t('files.image.size', { width, height })
+    const parts = [size, sizeText(i18n, file.size), file.animated && t('files.image.firstFrame')]
+    view.setInfo(parts.filter(Boolean).join(' · '))
+    if (loaded.kind === 'too-large') {
+      view.showCard(file, t('files.image.tooLarge', { width, height }))
+      return
+    }
+    entry.viewer = loaded.view
+    // An animation shows its first frame here; the system's app plays it
+    const play = h('button', { type: 'button', class: 'fv-link' }, t('files.openExternal'))
+    play.addEventListener('click', () => api.paths.openFile(file.path))
+    view.tools.replaceChildren(...(file.animated ? [play] : []), loaded.view.tools)
+    if (entry.shown) loaded.view.focus()
   }
 
   // Reads the file and shows it over the tab, in place of the one there
@@ -263,10 +405,14 @@ export function createFileTabs(deps: FileTabsDeps) {
       return
     }
     entry.opened = opened.value
-    // F4b gives an image, a PDF and the Markdown preview views of their own here; until then a card
-    if (opened.value.kind === 'text' || opened.value.kind === 'markdown')
-      await mountEditor(tabId, entry, opened.value, line)
-    else view.showCard(opened.value)
+    const file = opened.value
+    if (file.kind === 'text' || file.kind === 'markdown')
+      await mountEditor(tabId, entry, file, line)
+    else if (file.kind === 'image') await mountImage(entry, file)
+    else if (file.kind === 'pdf') {
+      view.setInfo(sizeText(i18n, file.size))
+      entry.viewer = showPdf(view.body, file.url, t('files.pdf.label', { name: fileName(path) }))
+    } else view.showCard(file)
   }
 
   // With auto save on the edits are written; off, or when the disk is in conflict, the user is asked.
@@ -294,13 +440,31 @@ export function createFileTabs(deps: FileTabsDeps) {
     }
     entry.shown = shown
     entry.view?.setShown(shown)
-    if (shown) entry.editor?.focus()
+    if (shown) focusEntry(entry)
     else {
       // Going back to the terminal saves first, so the agent and the shell see the file as typed
       void entry.session?.flush()
       deps.focusTerminal(tabId)
     }
     deps.onChange()
+  }
+
+  // The keys go to what the file shows: Compare, the image, the PDF, the preview, else the editor
+  function focusEntry(entry: Entry) {
+    if (entry.picker) entry.picker.focus()
+    else if (entry.viewer) entry.viewer.focus()
+    else if (!entry.modes?.focus()) entry.editor?.focus()
+  }
+
+  async function openFile(tabId: string, path: string, line?: number) {
+    const entry = entries.get(tabId)
+    if (entry?.path === path && !entry.pending) {
+      show(tabId, true)
+      if (line !== undefined) entry.editor?.goToLine(line)
+      return
+    }
+    if (entry && !(await leave(tabId, entry))) return
+    await load(tabId, path, line)
   }
 
   async function closeFile(tabId: string): Promise<boolean> {
@@ -360,16 +524,7 @@ export function createFileTabs(deps: FileTabsDeps) {
       }
       return true
     },
-    async openFile(tabId: string, path: string, line?: number) {
-      const entry = entries.get(tabId)
-      if (entry?.path === path && !entry.pending) {
-        show(tabId, true)
-        if (line !== undefined) entry.editor?.goToLine(line)
-        return
-      }
-      if (entry && !(await leave(tabId, entry))) return
-      await load(tabId, path, line)
-    },
+    openFile,
     show,
     // The toggle key, the header's button, the menus: between the terminal (with its review) and the file
     toggle(tabId: string) {
@@ -392,9 +547,24 @@ export function createFileTabs(deps: FileTabsDeps) {
     focus(tabId: string): boolean {
       const entry = entries.get(tabId)
       if (!entry?.shown) return false
-      if (entry.editor) entry.editor.focus()
+      if (entry.editor || entry.viewer) focusEntry(entry)
       else entry.view?.element.focus()
       return true
+    },
+    // The font keys zoom an image that shows; false leaves them to the terminal's font
+    zoom(tabId: string, step: ZoomStep): boolean {
+      const entry = entries.get(tabId)
+      if (!entry?.shown) return false
+      if (entry.viewer?.zoom) {
+        entry.viewer.zoom(step)
+        return true
+      }
+      return entry.modes?.zoom(step) ?? false
+    },
+    // The preview key: a Markdown file between its text and its preview, an SVG between image and code
+    togglePreview(tabId: string) {
+      const entry = entries.get(tabId)
+      if (entry?.shown && !entry.picker) void entry.modes?.toggle()
     },
     // Leaving the tab or hiding the window saves what auto save would
     flush(tabId: string) {

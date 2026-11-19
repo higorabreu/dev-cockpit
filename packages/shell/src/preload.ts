@@ -8,7 +8,7 @@ import type {
   ViewSnapshot,
 } from '@dck/core'
 import { type HostApi, hostChannels } from '@dck/core/host-api'
-import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import { contextBridge, ipcRenderer, webFrame, webUtils } from 'electron'
 
 function subscribe<Args extends unknown[]>(channel: string, listener: (...args: Args) => void) {
   const handler = (_event: unknown, ...args: Args) => listener(...args)
@@ -57,6 +57,10 @@ const api: HostApi = {
     onChange: (listener) => subscribe<[string, FileChange]>(hostChannels.filesChanged, listener),
     editorConfig: (path) => ipcRenderer.invoke(hostChannels.filesEditorConfig, path),
     ignored: (path) => ipcRenderer.invoke(hostChannels.filesIgnored, path),
+    assets: (document, paths) => ipcRenderer.invoke(hostChannels.filesAssets, { document, paths }),
+    release: (document) => ipcRenderer.send(hostChannels.filesRelease, document),
+    bytes: (path) => ipcRenderer.invoke(hostChannels.filesBytes, path),
+    clearImageCache: () => webFrame.clearCache(),
   },
   notifications: {
     show: (notification) => ipcRenderer.send(hostChannels.notificationsShow, notification),

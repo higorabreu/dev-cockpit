@@ -64,8 +64,6 @@ export const cockpitTheme = EditorView.theme({
   },
   '.cm-search-mark.current': { height: '3px', backgroundColor: 'var(--fg)' },
   '.cm-from-disk': { backgroundColor: 'var(--diff-add)' },
-  '.cm-compare-added': { backgroundColor: 'var(--diff-add)' },
-  '.cm-compare-removed': { backgroundColor: 'var(--diff-remove)' },
   '.cm-bracket-1, .cm-bracket-1 *': { color: 'var(--syntax-bracket1)' },
   '.cm-bracket-2, .cm-bracket-2 *': { color: 'var(--syntax-bracket2)' },
   '.cm-bracket-3, .cm-bracket-3 *': { color: 'var(--syntax-bracket3)' },

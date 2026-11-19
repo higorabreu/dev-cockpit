@@ -38,6 +38,8 @@ function fakeEditors() {
           applyLineEdits: () => undefined,
           markLines: () => undefined,
           goToLine: () => undefined,
+          topLine: () => 1,
+          scrollToLine: () => undefined,
           ensureFinalNewline: () => false,
           setReadOnly: () => undefined,
           find: () => undefined,
@@ -50,11 +52,12 @@ function fakeEditors() {
           type(next) {
             text = next
             options.onUserChange()
+            options.onTextChange?.()
           },
         })
         return editor
       },
-      createCompare: () => ({ destroy: () => undefined }),
+      highlightCode: async () => undefined,
     },
   }
 }
@@ -69,6 +72,8 @@ function setup(options: { autoSave?: boolean; answer?: LeaveAnswer } = {}) {
   const opener = createFileOpener({ store, urlOf: () => 'dck-file://open/x' })
   const listeners: ((path: string, change: FileChange) => void)[] = []
   const opened: string[] = []
+  const released: string[] = []
+  const links: string[] = []
   const files: HostApi['files'] = {
     pathOf: () => '',
     open: (path) => opener.open(path),
@@ -84,6 +89,10 @@ function setup(options: { autoSave?: boolean; answer?: LeaveAnswer } = {}) {
       return path.startsWith(ROOT) ? [{ dir: ROOT, text: '[*.ts]\nindent_size = 4\n' }] : []
     },
     ignored: async (path) => path.endsWith('.env'),
+    assets: async (_document, paths) => paths.map(() => null),
+    release: (document) => void released.push(document),
+    bytes: async () => undefined,
+    clearImageCache: () => undefined,
   }
   const host = document.createElement('div')
   document.body.append(host)
@@ -95,10 +104,11 @@ function setup(options: { autoSave?: boolean; answer?: LeaveAnswer } = {}) {
     api: {
       files,
       paths: { openFile: (path: string) => void opened.push(path) } as HostApi['paths'],
+      external: { open: () => undefined, openLink: (url: string) => void links.push(url) },
     },
     i18n: createTranslator('en'),
     mac: false,
-    editorKeys: { find: 'Ctrl+F', goToLine: 'Ctrl+G' },
+    editorKeys: { find: 'Ctrl+F', goToLine: 'Ctrl+G', done: 'Ctrl+Enter' },
     host: () => host,
     cwd: () => ROOT,
     autoSave: () => options.autoSave ?? true,
@@ -127,6 +137,8 @@ function setup(options: { autoSave?: boolean; answer?: LeaveAnswer } = {}) {
     disk,
     emit,
     opened,
+    released,
+    links,
     changes: () => changes,
   }
 }
@@ -407,5 +419,115 @@ describe('file tabs before the app quits', () => {
     expect(host.querySelector('.fv-strip')?.textContent).toContain('This file changed on disk')
     expect(disk(LOGIN)).toBe('export const a = 3\n')
     expect(asked).toEqual([])
+  })
+
+  it('should show Edit, Preview and Side by side for a Markdown file and switch with the preview key', async () => {
+    // Arrange
+    const { tabs, host } = setup()
+    await tabs.openFile('tab-1', NOTES)
+    const pressed = () =>
+      [...host.querySelectorAll('.fv-mode')].map((button) => [
+        button.textContent,
+        button.getAttribute('aria-pressed'),
+      ])
+
+    // Act
+    const before = pressed()
+    tabs.togglePreview('tab-1')
+    await settled()
+
+    // Assert
+    expect(before).toEqual([
+      ['Edit', 'true'],
+      ['Preview', 'false'],
+      ['Side by side', 'false'],
+    ])
+    expect(pressed()[1]).toEqual(['Preview', 'true'])
+    expect(host.querySelector('.fv-body')?.getAttribute('data-mode')).toBe('rendered')
+    expect(host.querySelector('.fv-head [data-tip="Find"]')).toBeNull()
+  })
+
+  it('should keep a Markdown file past the preview limit in the editor and say so', async () => {
+    // Arrange
+    const { tabs, host, store } = setup()
+    const big = `${ROOT}/CHANGELOG.md`
+    store.put(big, '# Log\n'.repeat(FILE_LIMITS.previewBytes / 6 + 1))
+
+    // Act
+    await tabs.openFile('tab-1', big)
+    tabs.togglePreview('tab-1')
+
+    // Assert
+    expect(host.querySelector('.fv-mode')).toBeNull()
+    expect(host.querySelector('.fv-info')?.textContent).toBe('Preview up to 200 KB')
+    expect(host.querySelector('.fv-body')?.hasAttribute('data-mode')).toBe(false)
+  })
+
+  it('should stop serving a Markdown file images when the file closes', async () => {
+    const { tabs, released } = setup()
+    await tabs.openFile('tab-1', NOTES)
+
+    await tabs.closeFile('tab-1')
+
+    expect(released).toEqual([NOTES])
+  })
+
+  it('should open an SVG as its image with a Code button that switches to the editor', async () => {
+    // Arrange
+    const { tabs, host, store, editors } = setup()
+    const logo = `${ROOT}/logo.svg`
+    store.put(logo, '<svg xmlns="http://www.w3.org/2000/svg"/>')
+    await tabs.openFile('tab-1', logo)
+    const code = host.querySelector('.fv-mode')
+
+    // Act
+    const before = host.querySelector('.fv-body')?.getAttribute('data-mode')
+    tabs.togglePreview('tab-1')
+    await settled()
+
+    // Assert
+    expect(before).toBe('rendered')
+    expect(code?.textContent).toBe('Code')
+    expect(code?.getAttribute('data-tip-shortcut')).toBe('filePreview')
+    expect(code?.getAttribute('aria-pressed')).toBe('true')
+    expect(host.querySelector('.fv-body')?.getAttribute('data-mode')).toBe('source')
+    expect(editors.made).toHaveLength(1)
+  })
+
+  it('should show a PDF in a frame from the file protocol with its size in the header', async () => {
+    const { tabs, host, store } = setup()
+    store.put(`${ROOT}/manual.pdf`, '%PDF-1.7')
+
+    await tabs.openFile('tab-1', `${ROOT}/manual.pdf`)
+
+    expect(host.querySelector('iframe.pdf-view')?.getAttribute('src')).toBe('dck-file://open/x')
+    expect(host.querySelector('.fv-info')?.textContent).toBe('8 B')
+  })
+
+  it('should put the picked versions in the editor and settle the conflict when Compare is done', async () => {
+    // Arrange
+    const { tabs, editors, store, emit, host } = setup({ autoSave: false })
+    await tabs.openFile('tab-1', LOGIN)
+    editors.made[0]?.type('export const a = 2\n')
+    store.put(LOGIN, 'export const a = 3\n')
+    emit(LOGIN, { kind: 'changed', stamp: store.stampOf(LOGIN) as FileStamp })
+    await settled()
+    await settled()
+    const compare = [...host.querySelectorAll<HTMLButtonElement>('.fv-strip .fv-action')].find(
+      (button) => button.textContent === 'Compare',
+    )
+
+    // Act
+    compare?.click()
+    const useDisk = [...host.querySelectorAll<HTMLButtonElement>('.mp-conflict .fv-action')].find(
+      (button) => button.textContent === 'Use disk',
+    )
+    useDisk?.click()
+    host.querySelector<HTMLButtonElement>('.mp-bar .fv-action.primary')?.click()
+
+    // Assert
+    expect(editors.made[0]?.editor.text()).toBe('export const a = 3\n')
+    expect(host.querySelector('.merge-picker')).toBeNull()
+    expect(tabs.appendix('tab-1')?.mark).toBe('unsaved')
   })
 })

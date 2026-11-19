@@ -74,6 +74,15 @@ export interface HostApi {
     editorConfig(path: string): Promise<readonly EditorConfigFile[]>
     // Whether git leaves a file opened before out; false outside a repository
     ignored(path: string): Promise<boolean>
+    // For a Markdown file opened before: an address for each image path under its folder, in order, null
+    // for a path refused (outside the folder, not an image, missing); valid until `release`
+    assets(document: string, paths: readonly string[]): Promise<readonly (string | null)[]>
+    // The Markdown file closed: its images' addresses stop answering
+    release(document: string): void
+    // The bytes of an image opened before, to decode it at the size it shows; undefined for any other
+    bytes(path: string): Promise<Uint8Array<ArrayBuffer> | undefined>
+    // Frees the decoded images Chromium keeps once a viewer is gone
+    clearImageCache(): void
   }
   readonly notifications: {
     show(notification: TabNotification): void
@@ -236,6 +245,9 @@ export const hostChannels = {
   filesChanged: 'files:changed',
   filesEditorConfig: 'files:editorconfig',
   filesIgnored: 'files:ignored',
+  filesAssets: 'files:assets',
+  filesRelease: 'files:release',
+  filesBytes: 'files:bytes',
   notificationsShow: 'notifications:show',
   notificationsClick: 'notifications:click',
   environmentInspect: 'environment:inspect',
