@@ -610,7 +610,6 @@ export const en: Record<MessageKey, string> = {
   'files.showTerminal': 'Show terminal',
   'files.close': 'Close file',
   'files.recent': 'Recent files',
-  'files.noRecent': 'No other recent files',
   'files.unsaved': 'Unsaved changes',
   'files.conflict': 'Changed on disk',
   'files.deletedMark': 'Deleted on disk',

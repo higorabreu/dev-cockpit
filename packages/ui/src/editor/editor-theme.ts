@@ -41,12 +41,12 @@ export const cockpitTheme = EditorView.theme({
     backgroundColor: 'var(--diff-remove)',
     outline: 'none',
   },
-  // Solid tints, a quiet one under every match and a stronger one under the current match, which a 2px
-  // underline in the warning color also tells by shape
+  // VS Code's hues, as strong as the comments' contrast allows: orange under every match, gold under the
+  // current one, which a 1px outline in the warning color tells by shape, since its tint cannot be brighter
   '.cm-searchMatch': { backgroundColor: 'var(--search-match)' },
   '.cm-searchMatch.cm-searchMatch-selected': {
     backgroundColor: 'var(--search-current)',
-    boxShadow: 'inset 0 -2px 0 var(--warning)',
+    boxShadow: 'inset 0 0 0 var(--size-hairline) var(--warning)',
   },
   // The lines with matches, beside the scrollbar (editor-search.ts); the current one in the foreground
   '.cm-search-marks': {

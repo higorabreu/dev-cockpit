@@ -156,10 +156,10 @@ describe('contrastChecks', () => {
     }
   })
 
-  it('should check the current search match underline as a graphic when checking each theme', () => {
+  it('should check the current search match outline as a graphic when checking each theme', () => {
     for (const theme of themeNames) {
       const checks = contrastChecks(tokens, theme).filter((check) =>
-        check.name.startsWith('current search match underline'),
+        check.name.startsWith('current search match outline'),
       )
 
       expect(checks).toHaveLength(2)

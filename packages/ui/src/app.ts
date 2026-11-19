@@ -45,6 +45,7 @@ import {
 import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
 import { createFileRanker, startRankWorker } from './file-search/file-ranker.ts'
 import { createFileSearch } from './file-search/file-search.ts'
+import { fileMenu } from './files/file-menu.ts'
 import { createFileTabs, type LeaveAnswer } from './files/file-tabs.ts'
 import { createHoldMenuController } from './hold-menu/hold-menu-controller.ts'
 import { setFullHeight } from './kit/layout-mode.ts'
@@ -408,15 +409,12 @@ export async function startApp(
   function openFileMenu(tabId: string, x: number, y: number) {
     const current = fileTabs.appendix(tabId)?.path
     const recent = fileTabs.recent(tabId).filter((path) => path !== current)
-    const files =
-      recent.length === 0
-        ? [{ label: i18n.t('files.noRecent'), enabled: false, run: () => undefined }]
-        : recentEntries(recent, rootOf(tabId)).map((entry) => ({
-            label: entry.name,
-            ...(entry.folder === undefined ? {} : { detail: entry.folder }),
-            enabled: true,
-            run: () => void fileTabs.openFile(tabId, entry.path),
-          }))
+    const files = recentEntries(recent, rootOf(tabId)).map((entry) => ({
+      label: entry.name,
+      ...(entry.folder === undefined ? {} : { detail: entry.folder }),
+      enabled: true,
+      run: () => void fileTabs.openFile(tabId, entry.path),
+    }))
     const save = {
       label: i18n.t('files.save'),
       enabled: fileTabs.appendix(tabId)?.mark === 'unsaved',
@@ -428,10 +426,9 @@ export async function startApp(
       enabled: true,
       run: () => void fileTabs.closeFile(tabId),
     }
-    menu.open(files, x, y, !document.body.classList.contains('full'), () => focusActive(), {
-      caption: i18n.t('files.recent'),
-      footer: [save, close],
-    })
+    const { actions, options } = fileMenu(files, i18n.t('files.recent'), [save, close])
+    const above = !document.body.classList.contains('full')
+    menu.open(actions, x, y, above, () => focusActive(), options)
   }
 
   // The toggle key, the hold menu and the tab's menu: between the terminal (with its review) and the file
