@@ -3,6 +3,13 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.13.1](https://github.com/higorabreu/dev-cockpit/compare/v0.13.0...v0.13.1) (2026-11-19)
+
+
+### Performance Improvements
+
+* render the Linux window with the GPU again ([#127](https://github.com/higorabreu/dev-cockpit/issues/127)) ([b371185](https://github.com/higorabreu/dev-cockpit/commit/b3711856ca992ab7b7d4891bb19adae8f1750e67))
+
 ## [0.13.0](https://github.com/higorabreu/dev-cockpit/compare/v0.12.0...v0.13.0) (2026-11-19)
 
 
