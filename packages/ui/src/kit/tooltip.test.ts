@@ -30,7 +30,7 @@ describe('installTooltips', () => {
 
     const tip = document.getElementById('tooltip')
     expect(tip?.hidden).toBe(false)
-    expect(tip?.textContent).toBe('Review openCtrl+Shift+D')
+    expect(tip?.textContent).toBe('Review open Ctrl+Shift+D')
     expect(holder.getAttribute('aria-describedby')).toBe('tooltip')
   })
 
@@ -66,7 +66,7 @@ describe('installTooltips', () => {
     vi.advanceTimersByTime(500)
 
     // Assert
-    expect(document.getElementById('tooltip')?.textContent).toBe('New tabCtrl+Alt+N')
+    expect(document.getElementById('tooltip')?.textContent).toBe('New tab Ctrl+Alt+N')
   })
 
   it('should draw the modifier and a mouse as caps and the action as a word when the key is held for a click', () => {
@@ -121,5 +121,42 @@ describe('installTooltips', () => {
     const tip = document.getElementById('tooltip')
     expect(tip?.querySelectorAll('kbd.key')).toHaveLength(3)
     expect(tip?.querySelector('.gesture')).toBeNull()
+  })
+
+  it('should allow a break only after each separator when the tip is a path', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const segment = document.createElement('button')
+    segment.dataset.tip = 'acme-api/src/auth/login.ts'
+    segment.dataset.tipPath = ''
+    segment.dataset.tipKey = 'Ctrl+Shift+Space'
+    document.body.append(segment)
+
+    // Act
+    segment.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    vi.advanceTimersByTime(500)
+
+    // Assert
+    const tip = document.getElementById('tooltip')
+    const breaks = [...(tip?.querySelectorAll('wbr') ?? [])].map(
+      (mark) => mark.previousSibling?.textContent,
+    )
+    expect(breaks).toEqual(['acme-api/', 'src/', 'auth/'])
+    expect(tip?.textContent).toBe('acme-api/src/auth/login.ts Ctrl+Shift+Space')
+  })
+
+  it('should part the keys from the text with a space that collapses when they wrap', () => {
+    // Arrange
+    vi.useFakeTimers()
+    const holder = iconWithTip()
+
+    // Act
+    holder.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    vi.advanceTimersByTime(500)
+
+    // Assert
+    const keys = document.querySelector('#tooltip > .keys')
+    expect(keys?.previousElementSibling?.className).toBe('tip-gap')
+    expect(keys?.previousElementSibling?.textContent).toBe(' ')
   })
 })

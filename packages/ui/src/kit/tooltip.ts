@@ -25,12 +25,15 @@ interface TipHint {
 export interface TipRegion extends TipHint {
   readonly text: string
   readonly box: TipBox
+  // A file path, which wraps only after a separator
+  readonly path?: boolean
 }
 
 interface Candidate extends TipHint {
   readonly anchor: HTMLElement
   readonly text: string
   readonly box?: TipBox
+  readonly path?: boolean
 }
 
 const regions = new WeakMap<HTMLElement, TipRegion>()
@@ -53,19 +56,41 @@ function isTruncated(element: HTMLElement): boolean {
 let shortcutLabel: (id: string) => string | undefined = () => undefined
 
 const tipOf = (anchor: HTMLElement, text: string): Candidate => {
+  // `data-tip-path`: the text is a file path, which wraps only after a separator
+  const tip = anchor.hasAttribute('data-tip-path') ? { anchor, text, path: true } : { anchor, text }
   const shortcut = anchor.getAttribute('data-tip-shortcut')
   const key =
     anchor.getAttribute('data-tip-key') ?? (shortcut ? shortcutLabel(shortcut) : undefined)
-  if (!key) return { anchor, text }
+  if (!key) return tip
   // A left click with the key held: `data-tip-gesture` is what it does, `data-tip-click` its spoken name
   const action = anchor.getAttribute('data-tip-gesture')
   const click = anchor.getAttribute('data-tip-click')
-  return action && click ? { anchor, text, key, gesture: { click, action } } : { anchor, text, key }
+  return action && click ? { ...tip, key, gesture: { click, action } } : { ...tip, key }
+}
+
+// A space before the keys keeps them apart from the text, and collapses when they wrap to a line of
+// their own, so they line up with the text's left edge instead of sitting indented
+function gap(): HTMLElement {
+  const space = document.createElement('span')
+  space.className = 'tip-gap'
+  space.textContent = ' '
+  return space
 }
 
 function hintOf({ key, gesture: held }: TipHint): HTMLElement[] {
   if (!key) return []
-  return [held ? gesture(key, held) : keys(key, 'compact')]
+  return held ? [gesture(key, held)] : [gap(), keys(key, 'compact')]
+}
+
+// A break is allowed after each separator, so a long path never wraps inside a name
+export function pathText(path: string): Node[] {
+  return path
+    .split(/(?<=[\\/])/)
+    .flatMap((part, index) =>
+      index === 0
+        ? [document.createTextNode(part)]
+        : [document.createElement('wbr'), document.createTextNode(part)],
+    )
 }
 
 // `data-tip` always shows the given text; text cut by an ellipsis shows its full content
@@ -132,7 +157,8 @@ export function installTooltips(options: TooltipOptions = {}) {
     if (!anchor.isConnected) return
     // A text of several lines, such as a list of commits, keeps each one on its own line, cut by the width
     const lines = text.split('\n')
-    const body = lines.length > 1 ? lines.map((line) => tipLine(line)) : [text]
+    const single = candidate.path ? pathText(text) : [text]
+    const body = lines.length > 1 ? lines.map((line) => tipLine(line)) : single
     tip.toggleAttribute('data-lines', lines.length > 1)
     tip.replaceChildren(...body, ...hintOf(candidate))
     // A stale position squeezes the tooltip against the edge and wraps the text, and the measurement comes out wrong
