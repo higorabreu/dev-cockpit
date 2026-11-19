@@ -142,9 +142,31 @@ missed; the three runs' p95 read 19.2, 18.7 and 17.5 ms. Percentiles of the fram
   terminal's frame ends 1 to 2 ms after its DOM change. Nothing animates: with the editor focused and idle
   the renderer uses 1.3 to 1.5 points of a core against 0.5 to 0.6 at a prompt and the GPU process the same
   0.2 (an ad hoc check, 2 launches), where the CSS blink D58 removed cost 2 to 3 points and kept every frame
-  running. Likely, the frames each key brings after its echo (CodeMirror's measure, the parser's recolor)
-  keep Chromium's frame clock ticking long enough that the next key now and then lands between two ticks; a
-  trace would tell. D83 read 9.1 ms median and 13.3 p95 in the middle of the 1 MB file, with 120 keys.
+  running. D83 read 9.1 ms median and 13.3 p95 in the middle of the 1 MB file, with 120 keys.
+
+  Followed up the same day with the echo alone (2 launches of 80 keys per case, the probe also stamping
+  the start of the frame):
+
+  | Case | median | p95 |
+  | --- | --- | --- |
+  | TypeScript, keys 90 to 150 ms apart (as above) | 6.6 to 7.5 | 17.1 to 17.8 |
+  | TypeScript, keys 300 to 400 ms apart | 7.9 | 17.6 |
+  | The same text as a `.txt` file (no language) | 4.7 to 5.1 | 6.7 to 8.8 |
+  | TypeScript without the highlight style | 6.2 | 13.9 |
+  | TypeScript without the bracket colors and doc tags, the indent guides or the bracket matching (one at a time) | 6.4 to 6.8 | 15.6 to 16.9 |
+  | TypeScript, the window at 30% of the height | 6.7 | 15.8 |
+
+  The tail comes with a language and with no single extension: neither the spacing of the keys nor the
+  size of the view moves it, so it is not the frame clock left running by the last key. It lies inside
+  the frame: from the start of the frame (the probe's `requestAnimationFrame`) to its end, 1.2 ms median
+  and 8.0 p95 for TypeScript against 1.1 and 1.6 for the `.txt`, while the start of the frame comes 2.9
+  ms after the DOM change (5.7 p95) against 1.7 (3.1). CodeMirror's own JavaScript in it is small: one
+  measure per key, 0.5 ms median and 6.1 ms at most (`requestAnimationFrame` timed in an instrumented
+  build). What remains is Chromium's style, layout and paint of the frame, or a pause of the page's V8
+  between the frame and its commit (a garbage collection is the candidate, since a parse allocates on
+  every key). A DevTools trace cannot tell: with a DevTools session attached the page draws a frame every
+  10 ms and the tail disappears. Electron's own trace (`contentTracing`) writes Perfetto's binary
+  format, which needs Perfetto's trace processor to read.
 - **The CLI toggle is back under budget**: 95.8 to 52.8 ms median, 117.5 to 66.8 p95, from #112 (D30's
   update), which ships a 91 KB `dck.mjs` with only the socket code in place of 972 KB.
 - **The viewers** read as in D85, within the noise: the PNG 437 ms against 500, the JPEG 154 against 195,
@@ -328,16 +350,18 @@ once here) is 88 MB and installs 271 MB: the Electron runtime is 265 MB of that,
 
 ## Watch next
 
-- **Broken now: key to echo in the editor at p95** (18.8 ms against 16; median 7.0). Trace a few keys (a
-  Chromium trace of the renderer's frames) to find what draws after each echo and whether it can join the
-  echo's frame or wait for idle. The terminal's p95 (9.0) is the target. The baseline's two broken budgets
-  are fixed: the terminal's p95 by the timer blink (0.12.0) and the CLI toggle by #112.
-- **Least headroom: memory.** The idle cockpit holds at 263 of 300 MB, but a file is not free once open: the
-  first text adds 22 MB (the editor's code and a grammar), a 1 MB file 17 MB more and a 5 MB file 38, and
-  closing a file gives back little until a collection. A cockpit that opened a 1 MB file sits near 300 MB,
-  one with the 5 MB file open past it, and the PNG viewer adds 156 MB while it shows. Next: memory a minute
-  after the last file closes (does the heap come back?), and whether the 5 MB limit for editing should
-  wait for that.
+- **Broken now: key to echo in the editor at p95** (18.8 ms against 16; median 7.0), on this machine
+  without a GPU. The tail is one frame late on about one key in ten, only with a language (above).
+  Rerun `viewers.cjs` on the maintainer's machine before changing anything, then a Perfetto trace of
+  `contentTracing` (no DevTools session) to split style, layout, paint and garbage collection. The
+  baseline's two broken budgets are fixed: the terminal's p95 by the timer blink (0.12.0) and the CLI
+  toggle by #112.
+- **Memory with a file open is an accepted tradeoff** (the maintainer, 2026-11-19, D88): the 300 MB budget
+  holds for the idle cockpit (263 MB), and an open file adds what it needs. The first text adds 22 MB (the
+  editor's code and a grammar), a 1 MB file 17 MB more and a 5 MB file 38, and closing a file gives back
+  little until a collection: a cockpit with a 1 MB file open sits near 300 MB, one with the 5 MB file past
+  it, and the PNG viewer adds 156 MB while it shows. Still worth knowing: the memory a minute after the
+  last file closes (does the heap come back?).
 - **Keep the editor out of the boot path.** The size table's "UI JavaScript loaded at start" row (767 KB)
   is the check: a static import of anything under `ui/src/editor` or `ui/src/viewers` would move the 1645
   KB loaded on demand into every start.

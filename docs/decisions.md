@@ -1988,3 +1988,16 @@ for something closer to VS Code; of three variants in the real app (VS Code's ex
 outline, VS Code's older blue gray with an outline) they chose the gold with an outline.
 **How to revert:** put back `searchMatch` and `searchCurrent` (dark `#2e2a12` and `#382e0c`, light `#f5e8bf`
 and `#f1dc9a`) and the 2px warning underline in `editor-theme.ts`, with its contrast check.
+
+## D88. The idle memory budget holds with no file open; an open file adds what it needs
+
+**Decision:** the 300 MB idle budget of AGENTS.md is measured with no file ever opened, where the cockpit
+holds at 263 MB with the file editor shipped. An open file costs what it needs on top: the editor's code and
+a grammar 22 MB the first time, a 1 MB file 17 MB more, a 5 MB file 38, a 4000x3000 image 156 MB while it
+shows. The perf report keeps measuring both, and nothing loads for files before the first one opens.
+**Reason:** measured in F6 (`plans/performance.md`, "The file editor"): with a 1 MB file open the cockpit
+sits near 300 MB and with a 5 MB file past it. The maintainer accepted it as the price of editing in place
+on 2026-11-19.
+**How to revert:** hold the budget with files open too, by lowering `FILE_LIMITS` (`core/src/files`) or
+freeing the editor's code and the file's buffers once the last file closes, and say so in AGENTS.md.
+
