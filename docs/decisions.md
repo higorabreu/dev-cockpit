@@ -119,6 +119,8 @@ selection): window (F9 or F12, F11, Ctrl+Shift+Up and Down, Ctrl+Shift+L, Ctrl p
 Ctrl+Shift+B panel, Ctrl+Shift+O projects) and agent flow (Ctrl+Shift+D diff, Ctrl+Shift+E its layout (D48), Ctrl+Shift+J next waiting
 session, Ctrl+Shift+Y and N to approve and deny). The first prototype's Ctrl+K and Ctrl+B were dropped
 because they collide with Claude.
+**Since then:** there is no command palette and project search moved to Ctrl+Shift+P (D32); Ctrl+Shift+O
+is the file search of the tab's project (D82).
 
 ## D14. Terminal: renderer, copy and paste
 
@@ -1909,7 +1911,7 @@ in `ui/src/viewers`, the Markdown and SVG modes in `ui/src/files/file-modes.ts`.
   dck-file:`, `object-src 'none'`; `default-src 'self'` covers the rest, so scripts and fetches stay as
   they were. `https:` in `img-src` is for the remote images the user asks for in a preview.
 **Reason:** the plan and the maintainer's choices of 2026-11-19, and F0's measurements
-([files-measurements.md](../plans/files-measurements.md) on the spike branch). Measured on Linux under Xvfb
+([files-measurements.md](../plans/files-measurements.md)). Measured on Linux under Xvfb
 with `scripts/perf/viewers.cjs` (each viewer in a launch of its own, median of 3 runs, PSS of every process
 against the moment before the file opened):
 

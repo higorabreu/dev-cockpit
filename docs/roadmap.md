@@ -22,11 +22,22 @@ The full list is in [CHANGELOG.md](../CHANGELOG.md), generated from the commits.
 - **0.10.0:** every interface key and the hold menu trigger can be changed (D69); the review reads inside
   submodules and lists every changed file, and the panel's Git rows open it (D70); opt-in updates from
   GitHub releases (D71) and an About page (D72); the first Apple Silicon `.dmg` attached to a release.
-- **0.11.0** (the open release pull request): a dot on the Sessions and Work buttons while something
+- **0.11.0:** a dot on the Sessions and Work buttons while something
   waits (D73); a compact update notice on a narrow window and middle click to close a tab (D74); the Mac's
   right click menu and `⌘Q` asking while a tab runs a program (D75); `npx @devcockpit/install` (D76); the
   terminal's real background color and a readable selection in the light theme; untracked files read for
   the review in process.
+- **0.12.0:** the window goes full height when its edge is dragged to the top (D80); the terminal cursor
+  blinks with a timer instead of a per-frame animation (D58).
+- **0.13.0** (the open release pull request): files open over their tab
+  ([plans/files.md](../plans/files.md)):
+  - a file search on `Ctrl+Shift+O` (D82);
+  - an editor that saves by itself and merges a change on disk (D81, D83), with VS Code's search hues
+    (D87);
+  - images, SVG, Markdown previews and PDF, and Compare per conflict (D85);
+  - paths from the terminal and the review open at their line (D84).
+
+  Every hairline is one device pixel (D86), and `dck toggle` loads only its socket code.
 
 ## Why this order
 
@@ -50,8 +61,7 @@ planning against the calendar, project actions for ops, Windows packaging. The m
 Silicon `.dmg` with each release since 0.10.0 and is still being tested on real Macs; what is left is in
 [plans/macos.md](../plans/macos.md).
 
-**Editing files** (asked by the maintainer, 2026-11-17): find a file of the project the way VS Code's quick
-open and the cockpit's project search do, and edit it in place. To weigh before a plan: the editor (CodeMirror
-6 is light and reads the language and `.editorconfig` to keep the indentation; Monaco is VS Code's own but
-costs tens of MB against the idle budget; or the user's terminal editor in a tab), and saving safely while
-an agent may be changing the same file.
+**Editing files** (asked by the maintainer, 2026-11-17) shipped in 0.13.0: CodeMirror 6 loaded on first
+use, Lezer's colors, autosave with a merge of a change on disk, and the viewers for images, SVG, Markdown
+and PDF ([plans/files.md](../plans/files.md), D81 to D87). Next for it, noted only: larger size limits
+after measuring, user themes, and a smooth cursor and scrolling.
