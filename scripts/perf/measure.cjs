@@ -722,7 +722,7 @@ function tables(results) {
   out.push(
     table(
       'Idle memory (MB, PSS of every Electron process plus the daemon; terminals excluded)',
-      '300',
+      '350',
       [
         ['1 tab, shown', (s) => s.memory.shown1.pss, 0],
         ['1 tab, hidden', (s) => s.memory.hidden1.pss, 0],

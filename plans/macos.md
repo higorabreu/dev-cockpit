@@ -58,7 +58,7 @@ tester, following the script of MAC-T12). No criterion is "done" with code alone
 | C7 | Tab, copy and paste shortcuts work with the table of Q3; the tooltip shows the Mac symbols | Linux (logic) and Mac |
 | C8 | Start with the system turns on and off and opens hidden | Linux (generated file) and Mac |
 | C9 | Inside the dck terminal, `git`, `docker` and `claude` are found as in Terminal.app, even with the app opened from Finder | Mac |
-| C10 | The budgets of `AGENTS.md` measured on the Mac: key echo in 16 ms, hotkey to window under 100 ms, idle under 300 MB, cold start under 2 s | Mac |
+| C10 | The budgets of `AGENTS.md` measured on the Mac: key echo in 16 ms, hotkey to window under 100 ms, idle under 350 MB, cold start under 2 s | Mac |
 | C11 | Linux does not regress: the full gate and the `.deb` stay the same | Linux |
 
 ## Tasks

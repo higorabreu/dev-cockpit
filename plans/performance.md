@@ -356,13 +356,14 @@ once here) is 88 MB and installs 271 MB: the Electron runtime is 265 MB of that,
   `contentTracing` (no DevTools session) to split style, layout, paint and garbage collection. The
   baseline's two broken budgets are fixed: the terminal's p95 by the timer blink (0.12.0) and the CLI
   toggle by #112.
-- **The GPU is on again on Linux (D89).** On the maintainer's 4K screen it halved the editor's echo
-  (25.3 to 12.5 ms median, 44.9 to 19.3 p95). Idle memory with it is to be measured there: D50 read 276 to
-  293 MB with the GPU on that machine, and this container, without a GPU, reads 324 against 264.
-- **Memory with a file open is an accepted tradeoff** (the maintainer, 2026-11-19, D88): the 300 MB budget
-  holds for the idle cockpit (263 MB), and an open file adds what it needs. The first text adds 22 MB (the
+- **The GPU is on again on Linux (D89), and the idle budget is 350 MB (D90).** On the maintainer's 4K screen
+  the GPU halved the editor's echo (25.3 to 12.5 ms median, 44.9 to 19.3 p95) and the idle cockpit measured
+  322 MB there with it (313 hidden), against about 263 without. Least headroom is still memory: 28 MB under
+  the new budget.
+- **Memory with a file open is an accepted tradeoff** (the maintainer, 2026-11-19, D88): the idle budget
+  holds for the idle cockpit, and an open file adds what it needs. The first text adds 22 MB (the
   editor's code and a grammar), a 1 MB file 17 MB more and a 5 MB file 38, and closing a file gives back
-  little until a collection: a cockpit with a 1 MB file open sits near 300 MB, one with the 5 MB file past
+  little until a collection: a cockpit without the GPU and a 1 MB file open sat near 300 MB, one with the 5 MB file past
   it, and the PNG viewer adds 156 MB while it shows. Still worth knowing: the memory a minute after the
   last file closes (does the heap come back?).
 - **Keep the editor out of the boot path.** The size table's "UI JavaScript loaded at start" row (767 KB)

@@ -2017,3 +2017,15 @@ start did not get worse in the container.
 **How to revert:** call `app.disableHardwareAcceleration()` before the app is ready in `shell/src/main.ts`,
 for Linux only, as D50 did.
 
+## D90. The idle memory budget is 350 MB
+
+**Decision:** the idle budget of AGENTS.md (shell plus daemon, no file open) goes from 300 to 350 MB, in
+AGENTS.md, the perf script's table and the plans that cite it. D88 still applies: an open file adds what it
+needs on top.
+**Reason:** with the GPU on again (D89), the idle cockpit measured 322 MB on the maintainer's Ubuntu
+(3840x2160 at scale 2; 313 hidden, 322 with 5 tabs) on 2026-11-19, against about 263 without it. The
+maintainer chose the GPU and a 350 MB budget over the GPU off, which leaves the editor's echo at 25 ms on that
+screen, and over trimming 25 MB elsewhere first.
+**How to revert:** set the budget back to 300 MB in AGENTS.md, `scripts/perf/measure.cjs` and the plans, and
+turn the GPU off on Linux again (D50) or find the memory.
+
