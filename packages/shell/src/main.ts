@@ -87,6 +87,7 @@ import { createWindowRequests } from './platform/window-requests.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
+import { createCloseGuard } from './quit/close-guard.ts'
 import { registerQuitBridge } from './quit/quit-bridge.ts'
 import { createQuitFiles } from './quit/quit-files.ts'
 import { createQuitGuard } from './quit/quit-guard.ts'
@@ -519,6 +520,9 @@ app.whenReady().then(async () => {
     quit: () => quitFiles.request(),
   })
   registerQuitBridge({ ipcMain: ipc, guard: quitGuard, files: quitFiles })
+  const closeGuard = createCloseGuard(() => quitFiles.request())
+  window.on('close', (event) => closeGuard.close(event))
+  app.on('before-quit', () => closeGuard.quitting())
   // The app menu's Quit (⌘Q) and the menu bar icon's; a logout or shutdown quits without asking
   const quit = platform.asksBeforeQuit ? () => void quitGuard.request() : () => quitFiles.request()
 

@@ -158,6 +158,12 @@ export async function startApp(
     updates: api.updates,
     agentTabs: () => state.tabs.filter((tab) => watcher.get(tab.id)?.activity === 'agent').length,
     saveTabs: () => saveTabsNow(),
+    // The window shows already: the user pressed Restart in it
+    beforeRestart: () =>
+      fileTabs.beforeQuit({
+        asking: () => undefined,
+        reveal: (tabId) => update(activateTab(state, tabId)),
+      }),
     done: () => focusActive(),
     openMenu(actions, anchor, caption) {
       // Off the bar on the terminal's side, its right edge on the icon's
