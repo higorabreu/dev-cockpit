@@ -34,6 +34,16 @@ export interface FileAppendix {
 
 export type LeaveAnswer = 'save' | 'discard' | 'cancel'
 
+// How long a quit waits for the pending saves before it goes on
+export const QUIT_SAVE_MS = 2000
+
+export interface QuitSteps {
+  // The user is about to be asked about a file: the host shows the window and waits without a limit
+  asking(): void
+  // Brings the tab forward, its file on screen
+  reveal(tabId: string): void
+}
+
 export interface FileTabsDeps {
   readonly api: Pick<HostApi, 'files' | 'paths'>
   readonly i18n: Translator
@@ -303,7 +313,52 @@ export function createFileTabs(deps: FileTabsDeps) {
     return true
   }
 
+  // A file the disk took away from the user's edits: a conflict, a deletion or a save that failed
+  const needsDecision = (session: FileSession) => {
+    const kind = session.problem()?.kind
+    return (
+      session.isDirty() && (kind === 'conflict' || kind === 'deleted' || kind === 'save-failed')
+    )
+  }
+
+  function reveal(tabId: string, steps: QuitSteps) {
+    steps.reveal(tabId)
+    show(tabId, true)
+  }
+
   return {
+    // Before the app quits: the pending saves are written within QUIT_SAVE_MS through the usual check; a
+    // file in conflict shows its strip and keeps the app open; with auto save off each file with edits
+    // asks Save, Don't save or Cancel. True lets the app quit
+    async beforeQuit(steps: QuitSteps): Promise<boolean> {
+      const sessions = [...entries].flatMap(([tabId, entry]) =>
+        entry.session ? [[tabId, entry, entry.session] as const] : [],
+      )
+      let stop: () => void = () => undefined
+      const limit = new Promise<void>((resolve) => {
+        stop = deps.after(QUIT_SAVE_MS, resolve)
+      })
+      await Promise.race([Promise.all(sessions.map(([, , session]) => session.flush())), limit])
+      stop()
+      const blocked = sessions.find(([, , session]) => needsDecision(session))
+      let asked = false
+      const ask = () => {
+        if (!asked) steps.asking()
+        asked = true
+      }
+      if (blocked) {
+        ask()
+        reveal(blocked[0], steps)
+        return false
+      }
+      for (const [tabId, entry, session] of sessions) {
+        if (!session.isDirty()) continue
+        ask()
+        reveal(tabId, steps)
+        if (!(await leave(tabId, entry))) return false
+      }
+      return true
+    },
     async openFile(tabId: string, path: string, line?: number) {
       const entry = entries.get(tabId)
       if (entry?.path === path && !entry.pending) {

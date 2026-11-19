@@ -149,6 +149,8 @@ const api: HostApi = {
   quit: {
     onAsk: (listener) => subscribe<[number]>(hostChannels.quitAsk, listener),
     answer: (quit) => ipcRenderer.send(hostChannels.quitAnswer, quit),
+    onSettleFiles: (listener) => subscribe<[]>(hostChannels.quitSettleFiles, listener),
+    filesSettled: (answer) => ipcRenderer.send(hostChannels.quitFilesSettled, answer),
   },
   window: {
     toggleFullHeight: () => ipcRenderer.send(hostChannels.windowToggleFullHeight),

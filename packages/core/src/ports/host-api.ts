@@ -201,6 +201,10 @@ export interface HostApi {
     onAsk(listener: (running: number) => void): Unsubscribe
     // True quits; false keeps the cockpit open
     answer(quit: boolean): void
+    // Before any quit: write the pending saves and answer whether the app may quit ('asking' while the
+    // user decides about a file)
+    onSettleFiles(listener: () => void): Unsubscribe
+    filesSettled(answer: 'quit' | 'stay' | 'asking'): void
   }
   readonly window: {
     toggleFullHeight(): void
@@ -285,6 +289,8 @@ export const hostChannels = {
   updatesChanged: 'updates:changed',
   quitAsk: 'quit:ask',
   quitAnswer: 'quit:answer',
+  quitSettleFiles: 'quit:settle-files',
+  quitFilesSettled: 'quit:files-settled',
   windowToggleFullHeight: 'window:toggle-full-height',
   windowResize: 'window:resize',
   windowResizeEnd: 'window:resize-end',

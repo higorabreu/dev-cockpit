@@ -319,3 +319,93 @@ describe('file tabs', () => {
     expect(tabs.has('tab-1')).toBe(false)
   })
 })
+
+describe('file tabs before the app quits', () => {
+  const steps = () => {
+    const events: string[] = []
+    return {
+      events,
+      asking: () => void events.push('asking'),
+      reveal: (tabId: string) => void events.push(`reveal ${tabId}`),
+    }
+  }
+
+  it('should write the pending auto save and let the app quit without asking', async () => {
+    // Arrange
+    const { tabs, editors, disk, asked } = setup()
+    await tabs.openFile('tab-1', LOGIN)
+    editors.made[0]?.type('export const a = 9\n')
+    const quit = steps()
+
+    // Act
+    const allowed = await tabs.beforeQuit(quit)
+
+    // Assert
+    expect(allowed).toBe(true)
+    expect(disk(LOGIN)).toBe('export const a = 9\n')
+    expect(quit.events).toEqual([])
+    expect(asked).toEqual([])
+  })
+
+  it('should ask about a file with edits when auto save is off and stay on cancel', async () => {
+    // Arrange
+    const { tabs, editors, asked } = setup({ autoSave: false, answer: 'cancel' })
+    await tabs.openFile('tab-1', LOGIN)
+    tabs.show('tab-1', false)
+    editors.made[0]?.type('changed\n')
+    const quit = steps()
+
+    // Act
+    const allowed = await tabs.beforeQuit(quit)
+
+    // Assert
+    expect(allowed).toBe(false)
+    expect(quit.events).toEqual(['asking', 'reveal tab-1'])
+    expect(tabs.isShown('tab-1')).toBe(true)
+    expect(asked).toEqual(['login.ts'])
+  })
+
+  it('should save the file and quit when the user answers save', async () => {
+    const { tabs, editors, disk } = setup({ autoSave: false, answer: 'save' })
+    await tabs.openFile('tab-1', LOGIN)
+    editors.made[0]?.type('kept\n')
+
+    const allowed = await tabs.beforeQuit(steps())
+
+    expect(allowed).toBe(true)
+    expect(disk(LOGIN)).toBe('kept\n')
+  })
+
+  it('should quit without writing when the user answers do not save', async () => {
+    const { tabs, editors, disk } = setup({ autoSave: false, answer: 'discard' })
+    await tabs.openFile('tab-1', LOGIN)
+    editors.made[0]?.type('dropped\n')
+
+    const allowed = await tabs.beforeQuit(steps())
+
+    expect(allowed).toBe(true)
+    expect(disk(LOGIN)).toBe('export const a = 1\n')
+  })
+
+  it('should show the conflict and stay open when the save meets a change on disk', async () => {
+    // Arrange
+    const { tabs, editors, store, disk, asked, host } = setup()
+    await tabs.openFile('tab-1', LOGIN)
+    tabs.show('tab-1', false)
+    editors.made[0]?.type('export const a = 2\n')
+    store.put(LOGIN, 'export const a = 3\n')
+    const quit = steps()
+
+    // Act
+    const allowed = await tabs.beforeQuit(quit)
+
+    // Assert
+    expect(allowed).toBe(false)
+    expect(quit.events).toEqual(['asking', 'reveal tab-1'])
+    expect(tabs.appendix('tab-1')?.mark).toBe('conflict')
+    expect(tabs.isShown('tab-1')).toBe(true)
+    expect(host.querySelector('.fv-strip')?.textContent).toContain('This file changed on disk')
+    expect(disk(LOGIN)).toBe('export const a = 3\n')
+    expect(asked).toEqual([])
+  })
+})

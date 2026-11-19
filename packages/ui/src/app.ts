@@ -1331,6 +1331,14 @@ export async function startApp(
   api.window.onOpenSettings(() => settingsView.open())
   api.updates.onChange((update) => updateNotice.show(update))
   api.quit.onAsk((running) => quitCard.ask(running))
+  // Before any quit the files are saved, or the user decides about the ones that cannot be
+  api.quit.onSettleFiles(async () => {
+    const quit = await fileTabs.beforeQuit({
+      asking: () => api.quit.filesSettled('asking'),
+      reveal: (tabId) => update(activateTab(state, tabId)),
+    })
+    api.quit.filesSettled(quit ? 'quit' : 'stay')
+  })
   // A change that arrived first is newer than this answer
   void api.updates.state().then((update) => {
     if (!updateNotice.current()) updateNotice.show(update)
