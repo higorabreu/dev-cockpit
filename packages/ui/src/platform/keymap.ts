@@ -46,6 +46,8 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     reviewSend: [{ ...CS, key: 'Enter' }],
     theme: [{ ...CS, key: 'l' }],
     projects: [{ ...CS, key: 'p' }],
+    // Ctrl+P stays with the shell (D13); the Shortcuts page offers it in one click
+    fileSearch: [{ ...CS, key: 'o' }],
     views: [{ ...CS, key: 'm' }],
     panel: [{ ...CS, key: 'b' }],
     fullHeight: [{ key: 'F11' }],
@@ -82,6 +84,8 @@ const KEYMAPS: Record<Keyboard, Record<ShortcutId, Chords>> = {
     reviewSend: [{ ...MS, key: 'Enter' }],
     theme: [{ ...MS, key: 'l' }],
     projects: [{ ...MS, key: 'p' }],
+    // Quick open as in VS Code; Cmd leaves Ctrl+P to the shell
+    fileSearch: [{ ...M, key: 'p' }],
     views: [{ ...MS, key: 'm' }],
     panel: [{ ...MS, key: 'b' }],
     // F11 shows the desktop on a Mac; Ctrl+Cmd+F is its full screen key

@@ -1,5 +1,6 @@
 import {
   acceleratorFromEvent,
+  type Chord,
   chordFromEvent,
   type HoldTrigger,
   holdTriggerProblem,
@@ -9,6 +10,7 @@ import {
   type SettingsPatch,
   type SettingsUpdate,
   type ShortcutId,
+  sameChord,
   type Translator,
 } from '@dck/core'
 import { keyCap, keys as keyCaps } from '../kit/keys.ts'
@@ -28,7 +30,8 @@ export interface ShortcutsPageContext {
   // Per setting key, shown under the row's name: a recording's refusal, and a calmer note
   readonly errors: Map<string, string>
   readonly notes: Map<string, string>
-  row(key: string, label: string, control: Child, hint?: string): HTMLElement
+  // `more` sits under the row's name, such as an offer of another key
+  row(key: string, label: string, control: Child, hint?: string, more?: Child): HTMLElement
   labelId(key: string): string
   disabled(key: string): boolean
   commit(patch: SettingsPatch, errorKey?: string): Promise<SettingsUpdate>
@@ -41,7 +44,7 @@ export interface ShortcutsPageContext {
 const GROUPS: ReadonlyArray<readonly [MessageKey, readonly ShortcutId[]]> = [
   ['menu.cat.tabs', ['newTab', 'closeTab', 'renameTab', 'nextTab', 'previousTab', 'clearTerminal']],
   ['settings.group.review', ['review', 'reviewLayout', 'reviewSend']],
-  ['settings.group.window', ['projects', 'views', 'panel', 'settings', 'fullHeight']],
+  ['settings.group.window', ['projects', 'fileSearch', 'views', 'panel', 'settings', 'fullHeight']],
   [
     'settings.group.appearance',
     ['theme', 'opacityUp', 'opacityDown', 'fontBigger', 'fontSmaller', 'fontReset'],
@@ -59,6 +62,7 @@ const ACTION_LABELS: Readonly<Record<ShortcutId, MessageKey>> = {
   reviewLayout: 'review.layout.toggle',
   reviewSend: 'review.send',
   projects: 'projects.search',
+  fileSearch: 'fileSearch.search',
   views: 'views.open',
   panel: 'menu.system.panel',
   settings: 'settings.ref.settings',
@@ -70,6 +74,9 @@ const ACTION_LABELS: Readonly<Record<ShortcutId, MessageKey>> = {
   fontSmaller: 'settings.ref.fontSmaller',
   fontReset: 'settings.ref.fontReset',
 }
+
+// Quick open's key in VS Code and Zed; the shell reads it as the previous line, so it is offered, not taken
+const CTRL_P: Chord = { ctrl: true, key: 'p' }
 
 const settingKey = (slot: KeySlot) =>
   slot === 'toggleWindow' || slot === 'holdTrigger' ? `shortcuts.${slot}` : `shortcuts.keys.${slot}`
@@ -409,7 +416,29 @@ export function createShortcutsPage(ctx: ShortcutsPageContext) {
       key,
       t(ACTION_LABELS[id]),
       pending?.slot === id ? pendingControl(pending) : button,
+      undefined,
+      id === 'fileSearch' && ctrlPOffer(),
     )
+  }
+
+  // One click gives the file search Ctrl+P, through the same placement as a recorded key; on a Mac its
+  // own key is already ⌘P
+  function ctrlPOffer(): HTMLElement | undefined {
+    const taken = keymap.chords('fileSearch').some((chord) => sameChord(chord, CTRL_P))
+    if (mac || taken || pending?.slot === 'fileSearch' || recording === 'fileSearch')
+      return undefined
+    const offer = h(
+      'button',
+      {
+        type: 'button',
+        class: 'sdisclose',
+        'data-focus': 'set-key-ctrl-p',
+        disabled: ctx.disabled(settingKey('fileSearch')),
+      },
+      t('settings.fileSearch.ctrlP', { key: keymap.chordLabel(CTRL_P) }),
+    )
+    offer.addEventListener('click', () => decide('fileSearch', { kind: 'chord', chord: CTRL_P }))
+    return offer
   }
 
   return {

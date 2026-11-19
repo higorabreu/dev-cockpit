@@ -1,6 +1,5 @@
 import { searchItems, type Translate } from '@dck/core'
 import { closeButton, keyHint } from '../kit/panel-frame.ts'
-import { watchOverflow } from '../kit/scrollbar.ts'
 import { h } from '../panel/dom.ts'
 import type { Keymap } from '../platform/keymap.ts'
 
@@ -49,7 +48,6 @@ export function createProjectSearch(elements: SearchElements, deps: SearchDeps) 
     )
   }
   drawHint()
-  watchOverflow(results)
   const row = h('div', { class: 'prow' })
   input.replaceWith(row)
   row.append(
@@ -160,6 +158,10 @@ export function createProjectSearch(elements: SearchElements, deps: SearchDeps) 
 
   return {
     isOpen,
+    // Another search takes its place
+    close() {
+      if (isOpen()) close()
+    },
     open(items: readonly SearchEntry[]) {
       needsRoot = false
       input.disabled = false

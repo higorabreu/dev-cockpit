@@ -16,6 +16,7 @@ import type { DiffOutcome, DiffRequest } from './diff-source.ts'
 import type { ComposeStatus } from './environment.ts'
 import type { FileChange, FileStamp, FileWrite } from './file-store.ts'
 import type { TabNotification } from './notifier.ts'
+import type { FileListing, GitOthers, WalkResult } from './project-files.ts'
 import type { Project } from './projects.ts'
 import type { PtyExit, Unsubscribe } from './pty.ts'
 import type { SessionActivityInfo, SessionSnapshot } from './session.ts'
@@ -147,6 +148,15 @@ export interface HostApi {
     // The agents the cockpit recognizes, with how to connect each one
     profiles(): Promise<readonly AgentProfile[]>
   }
+  // The files of a tab's folder for the file search, names only, never content
+  readonly fileSearch: {
+    // Git's view of the folder's repository (its tracked files first), or a bounded walk outside one
+    list(cwd: string): Promise<FileListing>
+    // The untracked and ignored files of a root a partial listing named; empty for any other folder
+    others(root: string): Promise<GitOthers>
+    // A closed ignored folder a listing named, two levels at a time; empty for any other folder
+    expand(root: string, folder: string): Promise<WalkResult>
+  }
   readonly projects: {
     list(): Promise<readonly Project[]>
     touch(path: string): void
@@ -247,6 +257,9 @@ export const hostChannels = {
   sessionInspect: 'session:inspect',
   agentSignal: 'agent:signal',
   agentProfiles: 'agent:profiles',
+  fileSearchList: 'file-search:list',
+  fileSearchOthers: 'file-search:others',
+  fileSearchExpand: 'file-search:expand',
   projectsList: 'projects:list',
   projectsTouch: 'projects:touch',
   projectsToggleFavorite: 'projects:toggle-favorite',
