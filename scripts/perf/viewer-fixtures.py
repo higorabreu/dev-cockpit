@@ -1,5 +1,6 @@
 # The files viewers.cjs opens: a 4000x3000 PNG, a 2.4 MB JPEG, an SVG, a 100 KB README with a relative
-# and a remote image, a 50-page PDF with a web link, and a small text that closes each viewer.
+# and a remote image, a 50-page PDF with a web link, TypeScript of 10 KB, 1 MB and 5 MB, and a small text
+# that closes each viewer.
 # Needs Pillow and reportlab. Usage: python3 viewer-fixtures.py <folder>
 import os
 import random
@@ -15,6 +16,7 @@ media = os.path.join(root, 'media')
 docs = os.path.join(root, 'docs')
 os.makedirs(os.path.join(docs, 'img'), exist_ok=True)
 os.makedirs(media, exist_ok=True)
+os.makedirs(os.path.join(root, 'src'), exist_ok=True)
 rng = random.Random(3)
 
 
@@ -112,3 +114,52 @@ for number in range(1, 51):
     pdf.drawString(width / 2, 1.2 * cm, str(number))
     pdf.showPage()
 pdf.save()
+
+
+# Blocks of TypeScript up to a size: colored up to 2 MB and editable up to 5 MB (D83), so the largest stays
+# just under 5 MB. The small one ends with the line viewers.cjs types its letters into
+def typescript(name, size, last=''):
+    lines = ["import { readFile } from 'node:fs/promises'", '']
+    total = sum(len(line) + 1 for line in lines) + len(last)
+    number = 0
+    while True:
+        number += 1
+        block = [
+            f'// Orders of batch {number}, priced in cents',
+            f'export interface Order{number} {{',
+            '  readonly id: string',
+            '  readonly total: number',
+            '  readonly lines: readonly { sku: string; quantity: number }[]',
+            '}',
+            '',
+            f'export async function loadOrders{number}(path: string): Promise<Order{number}[]> {{',
+            "  const text = await readFile(path, 'utf8')",
+            f'  const limit = {rng.randrange(1000)}',
+            f'  return JSON.parse(text).filter((order: Order{number}) => order.total > limit)',
+            '}',
+            '',
+            f'export class Ledger{number} {{',
+            '  private readonly entries = new Map<string, number>()',
+            '',
+            f'  add(order: Order{number}): void {{',
+            '    this.entries.set(order.id, (this.entries.get(order.id) ?? 0) + order.total)',
+            '  }',
+            '',
+            '  get sum(): number {',
+            '    return [...this.entries.values()].reduce((sum, value) => sum + value, 0)',
+            '  }',
+            '}',
+            '',
+        ]
+        length = sum(len(line) + 1 for line in block)
+        if total + length > size:
+            break
+        lines += block
+        total += length
+    with open(os.path.join(root, 'src', name), 'w') as out:
+        out.write('\n'.join(lines) + '\n' + last)
+
+
+typescript('orders-10k.ts', 10 * 1024, '// dck-echo:\n')
+typescript('orders-1mb.ts', 1024 * 1024)
+typescript('orders-5mb.ts', 5 * 1024 * 1024)

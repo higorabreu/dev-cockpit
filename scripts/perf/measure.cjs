@@ -1040,6 +1040,7 @@ module.exports = {
   median,
   memoryOf,
   processesOf,
+  quantile,
   quit,
   readEvents,
   round,
