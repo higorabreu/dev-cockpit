@@ -1801,8 +1801,9 @@ maintainer's changes to F4a asked on the way.
   `core/src/files/short-path.ts`, Windows separators kept and case ignored). The host answers the
   repository through `review:root` (`DiffSource.root`), which follows `--show-superproject-working-tree` up;
   the window asks once per folder and draws the tabs again when it answers.
-- **Tooltips:** a path tooltip (`data-tip-path`) breaks only after a separator (a `<wbr>` after each), never
-  inside a name, within the design system's maximum width. The keys beside any tooltip's text follow a space
+- **Tooltips:** a path tooltip (`data-tip-path`) breaks only after a separator (a `<wbr>` after each, each
+  name kept whole, a hyphen in it too), within the design system's maximum width; only a name longer than
+  a line (48 characters) is cut where the line ends. The keys beside any tooltip's text follow a space
   that collapses when they wrap, instead of an 8px left margin, so a keys row of its own starts at the
   text's left edge; this was the shared tooltip's (`kit/tooltip.ts`), fixed there for every tooltip.
 - **Tab menus in a short window:** the shared menu (`tabs/tab-menu.ts`: the tab's right click, the file

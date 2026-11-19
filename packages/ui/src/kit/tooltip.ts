@@ -92,14 +92,25 @@ function hintOf({ key, gesture: held, alternate }: TipHint): HTMLElement[] {
   return [gesture(key, held), ...(alternate ? [gesture(alternate.key, alternate.gesture)] : [])]
 }
 
-// A break is allowed after each separator, so a long path never wraps inside a name
+// About what fits on a line of the tooltip's width: a longer name is cut where the line ends rather than
+// overflow it
+const MAX_KEPT_NAME = 48
+
+function namePiece(part: string): Node {
+  if (part.length > MAX_KEPT_NAME) return document.createTextNode(part)
+  const name = document.createElement('span')
+  name.className = 'tip-name'
+  name.textContent = part
+  return name
+}
+
+// A break is allowed after each separator and nowhere else, not even after a hyphen inside a name, so a
+// long path never wraps inside a name; only a name too long for a line is cut
 export function pathText(path: string): Node[] {
   return path
     .split(/(?<=[\\/])/)
     .flatMap((part, index) =>
-      index === 0
-        ? [document.createTextNode(part)]
-        : [document.createElement('wbr'), document.createTextNode(part)],
+      index === 0 ? [namePiece(part)] : [document.createElement('wbr'), namePiece(part)],
     )
 }
 

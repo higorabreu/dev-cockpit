@@ -21,6 +21,11 @@
   color: var(--muted);
 }
 
+/* A folder or file name of a path tooltip (`pathText`): it breaks only after its separator */
+#tooltip .tip-name {
+  white-space: nowrap;
+}
+
 #tooltip > .tip-gap {
   word-spacing: 5px;
 }

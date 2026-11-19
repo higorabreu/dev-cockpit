@@ -142,6 +142,7 @@ describe('installTooltips', () => {
       (mark) => mark.previousSibling?.textContent,
     )
     expect(breaks).toEqual(['acme-api/', 'src/', 'auth/'])
+    expect(tip?.querySelectorAll('.tip-name')).toHaveLength(4)
     expect(tip?.textContent).toBe('acme-api/src/auth/login.ts Ctrl+Shift+Space')
   })
 
