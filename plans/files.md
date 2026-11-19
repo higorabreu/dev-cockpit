@@ -1,6 +1,6 @@
 # Open and edit files in the cockpit
 
-**Status:** Done, shipping in 0.13.0. Agreed with the maintainer on 2026-11-19; the syntax colors decided by
+**Status:** Done, shipped in 0.13.0. Agreed with the maintainer on 2026-11-19; the syntax colors decided by
 F0. F4a: the file over the tab and the editor, D83; F4b: the viewers and Compare, D85; F5: the entries,
 D84; later fixes D86 and D87. F6 measured it ([performance.md](performance.md), "The file editor"): every
 budget holds but the key to echo in the editor at p95 (18.8 ms against 16), left to trace.

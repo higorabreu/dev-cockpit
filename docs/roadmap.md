@@ -29,7 +29,7 @@ The full list is in [CHANGELOG.md](../CHANGELOG.md), generated from the commits.
   the review in process.
 - **0.12.0:** the window goes full height when its edge is dragged to the top (D80); the terminal cursor
   blinks with a timer instead of a per-frame animation (D58).
-- **0.13.0** (the open release pull request): files open over their tab
+- **0.13.0:** files open over their tab
   ([plans/files.md](../plans/files.md)):
   - a file search on `Ctrl+Shift+O` (D82);
   - an editor that saves by itself and merges a change on disk (D81, D83), with VS Code's search hues
