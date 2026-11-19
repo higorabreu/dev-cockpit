@@ -179,6 +179,12 @@ export const settingsSchema = z.preprocess(
       // The branch the user compares a repository with, by the repository's folder
       bases: reviewBasesSchema,
     }),
+    files: section({
+      // A pause in typing, leaving the file, the terminal or the window saves (VS Code's files.autoSave)
+      autoSave: z.boolean().catch(true),
+      // A change on disk away from the user's edited lines joins them instead of asking (D81)
+      autoMerge: z.boolean().catch(true),
+    }),
     extensions: section({
       // Managed by `dck ext enable` and `dck ext disable`, not by the settings screen
       disabled: extensionIds,

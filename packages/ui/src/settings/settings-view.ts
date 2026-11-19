@@ -1030,6 +1030,21 @@ export function createSettingsView(
             t('settings.reviewLayout.hint'),
           ),
         ),
+        group(
+          t('settings.group.files'),
+          row(
+            'files.autoSave',
+            t('settings.autoSave'),
+            checkbox('files.autoSave'),
+            t('settings.autoSave.hint'),
+          ),
+          row(
+            'files.autoMerge',
+            t('settings.autoMerge'),
+            checkbox('files.autoMerge'),
+            t('settings.autoMerge.hint'),
+          ),
+        ),
       ],
       shortcuts: shortcuts.groups(),
       projects: [

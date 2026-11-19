@@ -579,6 +579,11 @@ export const en: Record<MessageKey, string> = {
   'settings.reviewLayout.auto': 'Automatic',
   'settings.reviewLayout.side': 'Side by side',
   'settings.reviewLayout.stacked': 'Stacked',
+  'settings.group.files': 'Files',
+  'settings.autoSave': 'Save files automatically',
+  'settings.autoSave.hint': 'After a pause in typing, and when you leave the file.',
+  'settings.autoMerge': 'Merge changes made on disk',
+  'settings.autoMerge.hint': 'Lines another program changed away from yours join your edits.',
 
   'error.DCK-IPC-001': 'Unknown method',
   'error.DCK-IPC-002': 'The method failed',

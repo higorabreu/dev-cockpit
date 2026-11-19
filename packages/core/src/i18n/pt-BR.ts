@@ -578,6 +578,12 @@ export const ptBR = {
   'settings.reviewLayout.auto': 'Automático',
   'settings.reviewLayout.side': 'Lado a lado',
   'settings.reviewLayout.stacked': 'Empilhado',
+  'settings.group.files': 'Arquivos',
+  'settings.autoSave': 'Salvar arquivos automaticamente',
+  'settings.autoSave.hint': 'Após uma pausa na digitação e ao sair do arquivo.',
+  'settings.autoMerge': 'Mesclar mudanças feitas no disco',
+  'settings.autoMerge.hint':
+    'Linhas que outro programa mudou longe das suas se juntam às suas edições.',
 
   'error.DCK-IPC-001': 'Método desconhecido',
   'error.DCK-IPC-002': 'O método falhou',
