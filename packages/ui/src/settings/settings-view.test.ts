@@ -1114,6 +1114,24 @@ describe('settings view fonts and cursor', () => {
     ])
     view.close()
   })
+
+  it('should turn off saving and merging files when their boxes are cleared in the Files group', async () => {
+    // Arrange
+    const { body, patches, view } = open()
+    const box = (key: string) =>
+      body.querySelector<HTMLInputElement>(`[data-focus="set-files.${key}"]`)
+
+    // Act
+    const checked = [box('autoSave')?.checked, box('autoMerge')?.checked]
+    box('autoSave')?.click()
+    box('autoMerge')?.click()
+    await settle()
+
+    // Assert
+    expect(checked).toEqual([true, true])
+    expect(patches).toEqual([{ files: { autoSave: false } }, { files: { autoMerge: false } }])
+    view.close()
+  })
 })
 
 describe('settings view, about', () => {

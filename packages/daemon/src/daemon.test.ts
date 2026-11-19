@@ -97,7 +97,7 @@ describe('startDaemon', () => {
 
     const result = await cli.request('agent.signal', { ptyId: 3, state: 'done' })
 
-    expect(result.ok).toBe(false)
+    expect(!result.ok && result.error.data?.code).toBe('DCK-IPC-003')
   })
 
   it('should report its protocol version when asked for info', async () => {

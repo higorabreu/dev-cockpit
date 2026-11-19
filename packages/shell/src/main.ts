@@ -7,6 +7,7 @@ import { createComposeInspector } from '@dck/adapter-docker-cli'
 import { createGitHubReleaseSource } from '@dck/adapter-github'
 import { createJsoncSettingsText } from '@dck/adapter-jsonc'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
+import { createNodeFileStore } from '@dck/adapter-node-fs'
 import {
   createGitDiffSource,
   createGitFiles,
@@ -27,6 +28,7 @@ import {
   createTranslator,
   createUpdater,
   errorBody,
+  FILE_SCHEME,
   fail,
   hostChannels,
   localeFor,
@@ -45,6 +47,7 @@ import {
   ipcMain,
   Menu,
   Notification,
+  protocol,
   screen,
   session,
   Tray,
@@ -65,6 +68,8 @@ import { createToggleKeyBinder } from './electron/toggle-key-binder.ts'
 import { buildTrayMenu } from './electron/tray-menu.ts'
 import { createWindowSender } from './electron/window-sender.ts'
 import { registerFileSearchBridge } from './file-search/file-search-bridge.ts'
+import { createFileProtocol } from './files/file-protocol.ts'
+import { registerFilesBridge } from './files/files-bridge.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
@@ -116,6 +121,11 @@ process.on('unhandledRejection', (reason) => {
 if (!usesGpu(process.platform)) app.disableHardwareAcceleration()
 
 if (!app.requestSingleInstanceLock()) app.quit()
+
+// Before the app is ready, as Electron requires: images and PDFs the user opened reach the page through it
+protocol.registerSchemesAsPrivileged([
+  { scheme: FILE_SCHEME, privileges: { standard: true, secure: true, stream: true } },
+])
 
 app.whenReady().then(async () => {
   // checkProfile already logged why; app.exit is reliable only once the app is ready
@@ -424,6 +434,13 @@ app.whenReady().then(async () => {
     },
   })
 
+  const fileStore = createNodeFileStore({ logger })
+  const files = registerFilesBridge({ ipcMain: ipc, store: fileStore, logger, send })
+  protocol.handle(
+    FILE_SCHEME,
+    createFileProtocol({ pathOf: files.mediaPath, store: fileStore, logger }),
+  )
+
   // A development run may read a local test feed; the packaged app always reads GitHub (D71)
   const updateFeed = app.isPackaged ? undefined : process.env.DCK_UPDATE_FEED
   const updater = createUpdater({
@@ -674,6 +691,7 @@ app.whenReady().then(async () => {
     stopWatchingSettings()
     link.stop()
     bridge.killAll()
+    files.closeAll()
     toggleKey.release()
   })
 })

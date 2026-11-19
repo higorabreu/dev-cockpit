@@ -106,6 +106,12 @@ importers:
         specifier: workspace:^
         version: link:../../core
 
+  packages/adapters/node-fs:
+    dependencies:
+      '@dck/core':
+        specifier: workspace:^
+        version: link:../../core
+
   packages/adapters/node-git:
     dependencies:
       '@dck/core':
@@ -239,6 +245,9 @@ importers:
       '@dck/adapter-node-fetch':
         specifier: workspace:^
         version: link:../adapters/node-fetch
+      '@dck/adapter-node-fs':
+        specifier: workspace:^
+        version: link:../adapters/node-fs
       '@dck/adapter-node-git':
         specifier: workspace:^
         version: link:../adapters/node-git

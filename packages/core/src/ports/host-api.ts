@@ -2,6 +2,7 @@ import type { AboutLink } from '../about/about.ts'
 import type { AgentSignal } from '../attention/agent-signal.ts'
 import type { Connector } from '../connectors/connector.ts'
 import type { DiffFile } from '../diff/diff.ts'
+import type { OpenedFile } from '../files/file-opener.ts'
 import type { SystemFontsInfo } from '../fonts/fonts.ts'
 import type { ErrorBody } from '../ipc/protocol.ts'
 import type { Result } from '../result.ts'
@@ -13,6 +14,7 @@ import type { AgentProfile } from './agent.ts'
 import type { ConnectionFields, ConnectionStatus, DisabledConnector } from './connections.ts'
 import type { DiffOutcome, DiffRequest } from './diff-source.ts'
 import type { ComposeStatus } from './environment.ts'
+import type { FileChange, FileStamp, FileWrite } from './file-store.ts'
 import type { TabNotification } from './notifier.ts'
 import type { FileListing, GitOthers, WalkResult } from './project-files.ts'
 import type { Project } from './projects.ts'
@@ -53,6 +55,20 @@ export interface HostApi {
   readonly files: {
     // Where a file or folder dropped on the window lives on disk (a DOM File); empty when it has no path
     pathOf(file: object): string
+    // Any file by its absolute path: its kind, with its text and base when it is text
+    open(path: string): Promise<Result<OpenedFile, ErrorBody>>
+    // Only a text opened before and not read only, in the encoding it was read in, and only while the
+    // disk holds `expected` (null: no file there); a conflict comes back with what the disk holds
+    save(
+      path: string,
+      text: string,
+      expected: FileStamp | null,
+    ): Promise<Result<FileWrite, ErrorBody>>
+    // Only a file opened before; its changes come through `onChange` until each watch is undone.
+    // `since` is the stamp of what the window holds
+    watch(path: string, since: FileStamp | undefined): Promise<Result<null, ErrorBody>>
+    unwatch(path: string): void
+    onChange(listener: (path: string, change: FileChange) => void): Unsubscribe
   }
   readonly notifications: {
     show(notification: TabNotification): void
@@ -204,6 +220,11 @@ export const hostChannels = {
   ptyExit: 'pty:exit',
   clipboardRead: 'clipboard:read',
   clipboardWrite: 'clipboard:write',
+  filesOpen: 'files:open',
+  filesSave: 'files:save',
+  filesWatch: 'files:watch',
+  filesUnwatch: 'files:unwatch',
+  filesChanged: 'files:changed',
   notificationsShow: 'notifications:show',
   notificationsClick: 'notifications:click',
   environmentInspect: 'environment:inspect',

@@ -18,6 +18,7 @@
     "@dck/adapter-linux-proc": "workspace:^",
     "@dck/adapter-macos-proc": "workspace:^",
     "@dck/adapter-node-fetch": "workspace:^",
+    "@dck/adapter-node-fs": "workspace:^",
     "@dck/adapter-node-git": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
     "@dck/adapter-node-walk": "workspace:^",

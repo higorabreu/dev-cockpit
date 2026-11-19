@@ -65,6 +65,11 @@
         },
         {
           "type": "json",
+          "path": "packages/adapters/node-fs/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "packages/adapters/node-git/package.json",
           "jsonpath": "$.version"
         },

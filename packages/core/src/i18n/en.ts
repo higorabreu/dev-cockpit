@@ -593,6 +593,11 @@ export const en: Record<MessageKey, string> = {
   'settings.reviewLayout.auto': 'Automatic',
   'settings.reviewLayout.side': 'Side by side',
   'settings.reviewLayout.stacked': 'Stacked',
+  'settings.group.files': 'Files',
+  'settings.autoSave': 'Save files automatically',
+  'settings.autoSave.hint': 'After a pause in typing, and when you leave the file.',
+  'settings.autoMerge': 'Merge changes made on disk',
+  'settings.autoMerge.hint': 'Lines another program changed away from yours join your edits.',
 
   'error.DCK-IPC-001': 'Unknown method',
   'error.DCK-IPC-002': 'The method failed',
@@ -647,4 +652,8 @@ export const en: Record<MessageKey, string> = {
   'error.DCK-INS-004': 'The download failed',
   'error.DCK-INS-005': 'Corrupted download; nothing was installed',
   'error.DCK-INS-006': 'The installation failed',
+  'error.DCK-FIL-001': 'The file does not exist',
+  'error.DCK-FIL-002': 'The file could not be read',
+  'error.DCK-FIL-003': 'The file could not be saved',
+  'error.DCK-FIL-004': 'Changes to the file on disk cannot be followed',
 }

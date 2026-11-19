@@ -1,5 +1,6 @@
 import type {
   AgentSignal,
+  FileChange,
   PtyExit,
   Settings,
   SettingsFileState,
@@ -48,6 +49,12 @@ const api: HostApi = {
   },
   files: {
     pathOf: (file) => webUtils.getPathForFile(file as File),
+    open: (path) => ipcRenderer.invoke(hostChannels.filesOpen, path),
+    save: (path, text, expected) =>
+      ipcRenderer.invoke(hostChannels.filesSave, { path, text, expected }),
+    watch: (path, since) => ipcRenderer.invoke(hostChannels.filesWatch, { path, since }),
+    unwatch: (path) => ipcRenderer.send(hostChannels.filesUnwatch, path),
+    onChange: (listener) => subscribe<[string, FileChange]>(hostChannels.filesChanged, listener),
   },
   notifications: {
     show: (notification) => ipcRenderer.send(hostChannels.notificationsShow, notification),
