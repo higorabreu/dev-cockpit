@@ -3,7 +3,14 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { MERGE_LIMITS, type MergeOutcome, mergeThreeWay, type TextEdit } from './merge.ts'
+import {
+  MERGE_LIMITS,
+  type MergeOutcome,
+  mergeRegions,
+  mergeThreeWay,
+  resolveRegions,
+  type TextEdit,
+} from './merge.ts'
 
 const folder = mkdtempSync(join(tmpdir(), 'dck-merge-'))
 afterAll(() => rmSync(folder, { recursive: true, force: true }))
@@ -258,5 +265,72 @@ describe('mergeThreeWay', () => {
       if (!git.clean) expect(ours.kind).toBe('conflict')
     }
     expect(cleanBoth).toBeGreaterThan(50)
+  })
+})
+
+describe('mergeRegions', () => {
+  it('should merge what one side changed and leave the same lines changed apart when both did', () => {
+    // Arrange
+    const base = lines('a b c d e f g')
+    const mine = lines('a B c d e f G1')
+    const disk = lines('a b c D e f G2')
+
+    // Act
+    const regions = mergeRegions(base, mine, disk)
+
+    // Assert
+    expect(regions).toEqual([
+      { kind: 'merged', source: 'base', lines: ['a\n'] },
+      { kind: 'merged', source: 'mine', lines: ['B\n'] },
+      { kind: 'merged', source: 'base', lines: ['c\n'] },
+      { kind: 'merged', source: 'disk', lines: ['D\n'] },
+      { kind: 'merged', source: 'base', lines: ['e\n', 'f\n'] },
+      { kind: 'conflict', base: ['g\n'], mine: ['G1\n'], disk: ['G2\n'] },
+    ])
+  })
+
+  it('should take a change once when both sides made the same one', () => {
+    const regions = mergeRegions(lines('a b'), lines('a X'), lines('a X'))
+
+    expect(regions).toEqual([
+      { kind: 'merged', source: 'base', lines: ['a\n'] },
+      { kind: 'merged', source: 'both', lines: ['X\n'] },
+    ])
+  })
+
+  it('should keep a merge git would make when no region is a conflict', () => {
+    // Arrange
+    const base = lines('a b c d e f g h')
+    const mine = lines('a B c d e f g h')
+    const disk = lines('a b c d e f g H')
+
+    // Act
+    const text = resolveRegions(mergeRegions(base, mine, disk), [], '\n')
+
+    // Assert
+    expect(text).toBe(gitMerge(base, mine, disk).text)
+  })
+})
+
+describe('resolveRegions', () => {
+  const base = lines('a b c d e f')
+  const mine = lines('a M1 c d e M2')
+  const disk = lines('a D1 c d e D2')
+
+  it('should write each conflict as the user chose when every conflict has a choice', () => {
+    const regions = mergeRegions(base, mine, disk)
+
+    expect(resolveRegions(regions, ['mine', 'disk'], '\n')).toBe(lines('a M1 c d e D2'))
+    expect(resolveRegions(regions, ['both', 'mine'], '\n')).toBe(lines('a M1 D1 c d e M2'))
+  })
+
+  it('should give nothing while a conflict has no choice', () => {
+    expect(resolveRegions(mergeRegions(base, mine, disk), ['mine'], '\n')).toBeUndefined()
+  })
+
+  it('should break the line between both sides when the user side ends the file without one', () => {
+    const regions = mergeRegions('a\nb', 'a\nmine', 'a\ndisk')
+
+    expect(resolveRegions(regions, ['both'], '\r\n')).toBe('a\nmine\r\ndisk')
   })
 })

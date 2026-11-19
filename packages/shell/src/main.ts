@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, openSync, readFileSync, watch, writeFileSync } from 'node:fs'
 import { realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { createComposeInspector } from '@dck/adapter-docker-cli'
 import { createGitHubReleaseSource } from '@dck/adapter-github'
 import { createJsoncSettingsText } from '@dck/adapter-jsonc'
@@ -71,6 +71,7 @@ import { createWindowSender } from './electron/window-sender.ts'
 import { registerFileSearchBridge } from './file-search/file-search-bridge.ts'
 import { createFileProtocol } from './files/file-protocol.ts'
 import { registerFilesBridge } from './files/files-bridge.ts'
+import { downloadAllowed, frameNavigation, isPdfViewer } from './files/frame-guard.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
@@ -221,12 +222,29 @@ app.whenReady().then(async () => {
       preload: join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
+      // Chromium's PDF viewer, the only plugin Electron still has; a PDF the user opened shows in a frame
+      // from `dck-file:` (the page's policy lets no other source frame or embed one)
+      plugins: true,
     },
   })
   platform.window.place(window)
   // Page content never opens an Electron window nor leaves the app; links go to the browser through the host
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
+  // A PDF's frame keeps to the PDF: a web link in it goes to the browser, anything else stays put
+  window.webContents.on('will-frame-navigate', (event) => {
+    const pdfShown = window.webContents.mainFrame.framesInSubtree.some((frame) =>
+      isPdfViewer(frame.url),
+    )
+    const verdict = frameNavigation(event.url, event.isMainFrame, {
+      initiator: event.initiator?.url,
+      pdfShown,
+    })
+    if (verdict === 'allow') return
+    event.preventDefault()
+    logger.info('frame navigation refused', { external: verdict === 'external' })
+    if (verdict === 'external') void electronShell.openExternal(event.url)
+  })
   const send = createWindowSender(window)
 
   const systemScreen = createElectronScreen(
@@ -444,11 +462,24 @@ app.whenReady().then(async () => {
     ignore: createGitIgnoreCheck(),
     logger,
     send,
+    realPath: (path) => realpath(path).catch(() => undefined),
   })
   protocol.handle(
     FILE_SCHEME,
     createFileProtocol({ pathOf: files.mediaPath, store: fileStore, logger }),
   )
+  // The PDF viewer's download button saves the file it shows through the system's dialog, under its name;
+  // nothing else downloads
+  window.webContents.session.on('will-download', (event, item) => {
+    const id = URL.parse(item.getURL())?.pathname.slice(1)
+    const path = id === undefined ? undefined : files.mediaPath(id)
+    if (!downloadAllowed(item.getURL()) || path === undefined) {
+      event.preventDefault()
+      logger.info('download refused')
+      return
+    }
+    item.setSaveDialogOptions({ defaultPath: basename(path) })
+  })
 
   // A development run may read a local test feed; the packaged app always reads GitHub (D71)
   const updateFeed = app.isPackaged ? undefined : process.env.DCK_UPDATE_FEED

@@ -1,7 +1,7 @@
 # Open and edit files in the cockpit
 
-**Status:** Agreed with the maintainer on 2026-11-19; the syntax colors decided by F0. F0 to F3 done, F4 in
-progress (F4a: the file over the tab and the editor, D83).
+**Status:** Agreed with the maintainer on 2026-11-19; the syntax colors decided by F0. F0 to F4 done (F4a:
+the file over the tab and the editor, D83; F4b: the viewers and Compare, D85; F5: the entries, D84); F6 left.
 
 Asked by the maintainer on 2026-11-17 (roadmap backlog, "Editing files") and refined on 2026-11-19: find a
 file of the tab's project and open it in the cockpit, text and code to edit, and the common non-text files
@@ -131,14 +131,21 @@ before it is kept.
   (D81).
 - [x] F3. File search: the project's files (`git ls-files`, else a bounded walk), fuzzy match, the ignored
   group and the step into an ignored folder, key.
-- [ ] F4. File view over the tab: editor, image, Markdown, PDF, card; switch key; recent list. In progress:
+- [x] F4. File view over the tab: editor, image, Markdown, PDF, card; switch key; recent list.
   - [x] F4a (D83). The appendix in the tab bar with its marks and menus, `Ctrl+Shift+Space` (`⇧⌘Space`),
     the editor (CodeMirror, Lezer colors, the palette in `tokens.json`, `.editorconfig`, line endings kept,
     timer blink), the search inside the file, auto save, the strips for a merge, a conflict (Compare as two
     read only columns) and a deletion, the recent list kept with the tab, the card for every other kind,
     the file search's pick opening here, and the open files saved before the app quits.
-  - [ ] F4b. Image, Markdown preview and PDF views in place of the card (`load` in
-    `ui/src/files/file-tabs.ts` is the seam); the three-way Compare that picks hunk by hunk.
+  - [x] F4b (D85). Images drawn from a bitmap of at most 2048 px with fit, zoom (the font keys, `1`, the
+    header's buttons, Ctrl and the wheel) and pan, a checkerboard under transparency, the card past 50
+    megapixels and the first frame of an animation; SVG as an image with Code (`Ctrl+Shift+J`); Markdown
+    with Edit, Preview and Side by side (marked and DOMPurify loaded on first use, up to 200 KB, code
+    blocks in the editor's colors, links to the browser, to a file or to a heading, images of the file's
+    folder through the protocol and remote ones on request); PDF in Chromium's viewer with its web links
+    sent to the browser and its download through the system's dialog; Compare as a three-way picker with
+    Use mine, Use disk and Use both per conflict; the card for the rest. The editor's search and Go to
+    line became a drawer under the header (D83).
 - [x] F5. Entries: Ctrl+click on a path at its line (amends D40), Ctrl+Shift+click and
   `files.openPathsInCockpit` for the system's app, the review's Open file button and `o` (D84).
 - [ ] F6. Decision (and D13's text, which still names Ctrl+Shift+O for projects), README, perf report updated, checks in the real app with screenshots, both themes.

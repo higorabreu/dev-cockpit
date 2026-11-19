@@ -1,10 +1,9 @@
 import type { Translate } from '@dck/core'
+import type { GoToTexts } from '../editor/editor-goto.ts'
 import type { SearchTexts } from '../editor/editor-search.ts'
 
-// CodeMirror's own words, from the catalogs: the go to line bar and what a screen reader hears
+// CodeMirror's own words, from the catalogs: what a screen reader hears
 export const editorPhrases = (t: Translate): Record<string, string> => ({
-  'Go to line': t('files.phrase.goToLine'),
-  go: t('files.phrase.go'),
   'current match': t('files.phrase.currentMatch'),
   'on line': t('files.phrase.onLine'),
   'replaced $ matches': t('files.phrase.replacedMatches'),
@@ -27,4 +26,13 @@ export const searchTexts = (t: Translate): SearchTexts => ({
   invalid: t('files.search.invalid'),
   count: (current, total, more) =>
     t(more ? 'files.search.countMany' : 'files.search.count', { current, total }),
+})
+
+export const goToTexts = (t: Translate): GoToTexts => ({
+  label: t('files.phrase.goToLine'),
+  placeholder: t('files.goTo.placeholder'),
+  invalid: t('files.goTo.invalid'),
+  go: t('files.phrase.go'),
+  close: t('files.goTo.close'),
+  position: (total) => t('files.goTo.position', { total }),
 })

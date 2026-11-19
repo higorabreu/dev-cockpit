@@ -135,3 +135,104 @@ export function mergeThreeWay(base: string, mine: string, disk: string): MergeOu
   out.push(...baseLines.slice(baseAt))
   return { kind: 'merged', text: out.join(''), edits, fromDisk }
 }
+
+// A stretch of the three-way picker: lines every version agrees on or that only one side changed, already
+// merged (`source` says where they came from), or a conflict the user settles
+export type MergeRegion =
+  | {
+      readonly kind: 'merged'
+      readonly source: 'base' | 'mine' | 'disk' | 'both'
+      readonly lines: readonly string[]
+    }
+  | {
+      readonly kind: 'conflict'
+      readonly base: readonly string[]
+      readonly mine: readonly string[]
+      readonly disk: readonly string[]
+    }
+
+export type ConflictChoice = 'mine' | 'disk' | 'both'
+
+// The picker reads larger changes than a merge on its own does; past this the whole file is one conflict
+const PICKER_EDITS = 20_000
+
+// The regions of a three-way merge for the user to pick from, grouped as `mergeThreeWay` and git group
+// them, with no limit on how much the disk changed
+export function mergeRegions(base: string, mine: string, disk: string): MergeRegion[] {
+  const baseLines = splitLines(base)
+  const mineLines = splitLines(mine)
+  const diskLines = splitLines(disk)
+  const mineHunks = diffLines(baseLines, mineLines, PICKER_EDITS)
+  const diskHunks = diffLines(baseLines, diskLines, PICKER_EDITS)
+  if (mineHunks === undefined || diskHunks === undefined)
+    return [{ kind: 'conflict', base: baseLines, mine: mineLines, disk: diskLines }]
+  const regions: MergeRegion[] = []
+  const push = (source: 'base' | 'mine' | 'disk' | 'both', lines: readonly string[]) => {
+    if (lines.length > 0) regions.push({ kind: 'merged', source, lines })
+  }
+  let baseAt = 0
+  const all = [
+    ...mineHunks.map((hunk) => ({ ...hunk, side: 'mine' as const })),
+    ...diskHunks.map((hunk) => ({ ...hunk, side: 'disk' as const })),
+  ]
+  for (const group of groups(all)) {
+    const from = Math.min(...group.map((hunk) => hunk.aStart))
+    const to = Math.max(...group.map((hunk) => hunk.aEnd))
+    push('base', baseLines.slice(baseAt, from))
+    const ofMine = group.filter((hunk) => hunk.side === 'mine')
+    const ofDisk = group.filter((hunk) => hunk.side === 'disk')
+    const mineVersion = sideLines(baseLines, mineLines, ofMine, from, to)
+    const diskVersion = sideLines(baseLines, diskLines, ofDisk, from, to)
+    if (ofMine.length === 0) push('disk', diskVersion)
+    else if (ofDisk.length === 0) push('mine', mineVersion)
+    else if (mineVersion.join('') === diskVersion.join('')) push('both', mineVersion)
+    else
+      regions.push({
+        kind: 'conflict',
+        base: baseLines.slice(from, to),
+        mine: mineVersion,
+        disk: diskVersion,
+      })
+    baseAt = to
+  }
+  push('base', baseLines.slice(baseAt))
+  return regions
+}
+
+// Both sides of a conflict, the user's first as git's union does; a last line without its break gets
+// `lineBreak`, so the disk's first line does not run on from it
+function union(
+  region: { readonly mine: readonly string[]; readonly disk: readonly string[] },
+  lineBreak: string,
+) {
+  const last = region.mine.at(-1)
+  if (last === undefined || last.endsWith('\n') || region.disk.length === 0)
+    return [...region.mine, ...region.disk]
+  return [...region.mine.slice(0, -1), last + lineBreak, ...region.disk]
+}
+
+// The text the user's choices make, one per conflict in order; undefined while a conflict has none
+export function resolveRegions(
+  regions: readonly MergeRegion[],
+  choices: readonly (ConflictChoice | undefined)[],
+  lineBreak: string,
+): string | undefined {
+  const out: string[] = []
+  let conflict = 0
+  for (const region of regions) {
+    if (region.kind === 'merged') {
+      out.push(...region.lines)
+      continue
+    }
+    const choice = choices[conflict++]
+    if (choice === undefined) return undefined
+    out.push(
+      ...(choice === 'mine'
+        ? region.mine
+        : choice === 'disk'
+          ? region.disk
+          : union(region, lineBreak)),
+    )
+  }
+  return out.join('')
+}

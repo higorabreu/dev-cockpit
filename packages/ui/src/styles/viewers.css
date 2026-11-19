@@ -1,0 +1,265 @@
+/* What a file shows besides the editor (ui/src/viewers): an image, a PDF, a Markdown file's preview or an
+   SVG's image beside its code, and Compare's three-way picker; and the header's controls for them */
+
+.fv-tools-slot,
+.fv-tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.fv-tools + .fv-tools {
+  margin-left: 6px;
+}
+
+.fv-info {
+  flex: none;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.fv-info:empty {
+  display: none;
+}
+
+/* Edit, Preview, Side by side and an SVG's Code: a pressed one gains a ring as well as the fill */
+.fv-mode,
+.fv-zoom {
+  flex: none;
+  height: 24px;
+  min-width: 24px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+}
+
+.fv-zoom:has(svg) {
+  padding: 0;
+}
+
+.fv-mode:hover,
+.fv-zoom:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.fv-mode[aria-pressed="true"],
+.fv-zoom[aria-pressed="true"] {
+  background: var(--tab-active);
+  color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--control-line);
+}
+
+.fv-mode:focus-visible,
+.fv-zoom:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 0;
+}
+
+.fv-zoom-level {
+  min-width: 5ch;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* Source, rendered or both: the editor and the rendered side share the body */
+.fv-rendered {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+}
+
+.fv-body[data-mode="source"] > .fv-rendered,
+.fv-body[data-mode="rendered"] > .fv-editor,
+.fv-body[data-picking] > :not(.merge-picker) {
+  display: none;
+}
+
+.fv-body[data-mode="split"] > .fv-editor {
+  flex: 1 1 0;
+}
+
+.fv-body[data-mode="split"] > .fv-rendered {
+  border-left: 1px solid var(--line);
+}
+
+/* Side by side needs the room of two columns of text; narrower, the editor alone stays */
+@media (max-width: 900px) {
+  .fv-mode-split,
+  .fv-body[data-mode="split"] > .fv-rendered {
+    display: none;
+  }
+}
+
+/* An image drawn from its bitmap on a canvas the size of the view; transparent parts over a quiet
+   checkerboard of two surface tokens. It takes the keys when it shows, as the editor does, without a ring
+   around the whole view */
+.image-view {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  outline: none;
+}
+
+.image-view[data-pan] {
+  cursor: grab;
+}
+
+.image-view[data-dragging] {
+  cursor: grabbing;
+}
+
+.iv-backdrop {
+  position: absolute;
+  background-color: var(--surface);
+  background-image: conic-gradient(
+    var(--line) 25%,
+    transparent 0 50%,
+    var(--line) 0 75%,
+    transparent 0
+  );
+  background-size: 16px 16px;
+}
+
+.iv-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.pdf-view {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: var(--bg);
+}
+
+/* Compare: the three versions, a block per conflict with both sides and its choice */
+.merge-picker {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mp-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.mp-status {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.mp-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 0;
+  font-family: var(--editor-font-family, var(--font-mono));
+  font-size: var(--editor-font-size, var(--font-size-terminal));
+  line-height: 1.5;
+}
+
+.mp-line {
+  min-height: 1.5em;
+  padding: 0 12px 0 16px;
+  white-space: pre;
+}
+
+.mp-lines.mine {
+  background: var(--diff-add);
+}
+
+.mp-lines.disk {
+  background: var(--diff-remove);
+}
+
+.mp-fold {
+  margin: 2px 0;
+  padding: 2px 16px;
+  background: var(--surface);
+  color: var(--muted);
+  font: 12px var(--font-sans);
+}
+
+.mp-conflict {
+  margin: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-medium);
+  overflow: hidden;
+  outline: none;
+}
+
+/* The conflict the keys act on: a stronger edge, and the bar names it */
+.mp-conflict[data-current] {
+  border-color: var(--control-line);
+  box-shadow: 0 0 0 1px var(--control-line);
+}
+
+.mp-conflict:focus-visible {
+  box-shadow: 0 0 0 2px var(--fg);
+}
+
+.mp-conflict-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--surface);
+  font: 12px var(--font-sans);
+}
+
+.mp-conflict-name {
+  color: var(--muted);
+}
+
+.mp-choice {
+  font-weight: 500;
+}
+
+.mp-side-name {
+  padding: 2px 16px;
+  background: var(--surface);
+  color: var(--muted);
+  font: 11px var(--font-sans);
+}
+
+/* The side kept: a bar at its edge as well as the pressed button and the words in the head */
+.mp-conflict[data-choice="mine"] .mp-side.mine,
+.mp-conflict[data-choice="disk"] .mp-side.disk,
+.mp-conflict[data-choice="both"] .mp-side {
+  box-shadow: inset 3px 0 0 var(--fg);
+}
+
+.fv-action[aria-pressed="true"] {
+  border-color: var(--fg);
+  background: var(--tab-active);
+}
+
+.fv-action.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.fv-action:disabled {
+  border-color: var(--line);
+  background: none;
+  color: var(--muted);
+}

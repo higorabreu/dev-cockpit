@@ -22,6 +22,8 @@ export interface ShortcutActions {
   changeFontSize(delta: number | 'reset'): void
   clearTerminal(): void
   toggleFile(): void
+  // A Markdown file between its text and its preview, an SVG between its image and its code
+  togglePreview(): void
 }
 
 // Listened for in the capture phase: the app's keys never reach the shell
@@ -49,6 +51,7 @@ export function bindShortcuts(actions: ShortcutActions, keymap: Keymap): () => v
     fontReset: () => actions.changeFontSize('reset'),
     clearTerminal: actions.clearTerminal,
     toggleFile: actions.toggleFile,
+    filePreview: actions.togglePreview,
   }
   const handle = (event: KeyboardEvent) => {
     if (inputGate.blocked) return

@@ -12,23 +12,25 @@ const repository = path.join(here, '..', '..')
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const log = (...parts) => console.error(`[${new Date().toISOString().slice(11, 19)}]`, ...parts)
 
-const { values: options, positionals } = parseArgs({
-  allowPositionals: true,
-  options: {
-    runs: { type: 'string', default: '3' },
-    keys: { type: 'string', default: '60' },
-    toggles: { type: 'string', default: '8' },
-    'cold-wait': { type: 'string', default: '15' },
-    'cpu-seconds': { type: 'string', default: '10' },
-    phases: { type: 'string', default: 'probe,idle,tui,list,size' },
-    display: { type: 'string', default: ':95' },
-    electron: { type: 'string' },
-    work: { type: 'string', default: path.join(os.tmpdir(), 'dck-perf') },
-    out: { type: 'string' },
-    tables: { type: 'string' },
-    help: { type: 'boolean', default: false },
-  },
-})
+// Read when the script runs, not when viewers.cjs borrows its helpers
+const readOptions = () =>
+  parseArgs({
+    allowPositionals: true,
+    options: {
+      runs: { type: 'string', default: '3' },
+      keys: { type: 'string', default: '60' },
+      toggles: { type: 'string', default: '8' },
+      'cold-wait': { type: 'string', default: '15' },
+      'cpu-seconds': { type: 'string', default: '10' },
+      phases: { type: 'string', default: 'probe,idle,tui,list,size' },
+      display: { type: 'string', default: ':95' },
+      electron: { type: 'string' },
+      work: { type: 'string', default: path.join(os.tmpdir(), 'dck-perf') },
+      out: { type: 'string' },
+      tables: { type: 'string' },
+      help: { type: 'boolean', default: false },
+    },
+  })
 
 const usage = `Usage: node scripts/perf/measure.cjs [options] [name=repository ...]
 
@@ -297,7 +299,11 @@ function makeRepository(folder) {
   for (const [i, file] of files.entries()) fs.writeFileSync(path.join(folder, file), body(i, 1))
 }
 
-async function launch(build, context, { probe = false, tui = false, repository = false } = {}) {
+async function launch(
+  build,
+  context,
+  { probe = false, tui = false, repository = false, cd = undefined } = {},
+) {
   const work = path.join(context.work, 'launch')
   const run = runFolder(context.work)
   prepareHome(work, run)
@@ -327,6 +333,7 @@ async function launch(build, context, { probe = false, tui = false, repository =
       : {}),
     ...(tui ? { DCK_PERF_TUI: path.join(here, 'tui.cjs') } : {}),
     ...(repository ? { DCK_PERF_CD: project } : {}),
+    ...(cd ? { DCK_PERF_CD: cd } : {}),
   }
   const spawnedAt = Date.now()
   const child = spawn(
@@ -889,6 +896,7 @@ function tables(results) {
 // ---------- main ----------
 
 async function main() {
+  const { values: options, positionals } = readOptions()
   if (options.help) {
     process.stdout.write(usage)
     return
@@ -1025,7 +1033,24 @@ async function main() {
   process.stdout.write(tables(results))
 }
 
-main().catch((error) => {
-  console.error(error)
-  process.exit(1)
-})
+module.exports = {
+  ensureDisplay,
+  launch,
+  log,
+  median,
+  memoryOf,
+  processesOf,
+  quit,
+  readEvents,
+  round,
+  settleShown,
+  sleep,
+  waitEvent,
+  x,
+}
+
+if (require.main === module)
+  main().catch((error) => {
+    console.error(error)
+    process.exit(1)
+  })
