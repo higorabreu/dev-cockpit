@@ -951,7 +951,10 @@ async function main() {
       )
     }
   }
-  const missing = ['Xvfb', 'xdotool'].filter(
+  // Xvfb only when nothing answers on the display: a run on the desktop uses the desktop's own server
+  const needed =
+    x(options.display, 'getdisplaygeometry').status === 0 ? ['xdotool'] : ['Xvfb', 'xdotool']
+  const missing = needed.filter(
     (tool) => spawnSync('sh', ['-c', `command -v ${tool}`]).status !== 0,
   )
   if (missing.length > 0) throw new Error(`missing tools: ${missing.join(', ')}`)
