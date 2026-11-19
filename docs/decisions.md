@@ -1675,14 +1675,18 @@ catalog entries.
   "Open in the system's app". The colors are the palette the maintainer chose, "dck vivo, suave": roles in
   `tokens.json` (`syntax.*`, both themes) mapped to Lezer's tags in `editor-syntax.ts`, brackets colored by
   depth and a doc comment's `@tags`, both from the parse tree of the visible lines, indent guides as 1px
-  lines per level for the visible lines, the terminal's font family and size with ligatures on. Every role
-  reaches 4.5:1 on the editor's background in both themes, and all but the comments also on a selection or
-  search match and on the added and removed tints (tested in `packages/design`). The chrome (gutter, line
-  numbers, cursor, selection, matching brackets, search matches, panels) is a CodeMirror theme over the
-  cockpit's tokens: matching brackets take the selection's solid tint, never an outline, and the line
-  numbers keep room for three digits, so the text never moves at line 10 or 100. `.editorconfig` files from
-  the file's folder up to one marked `root` (channel `files:editorconfig`, a parser in `core/src/files`)
-  give the indentation and the final newline; without one the indentation is guessed from the file. The line
+  lines per level for the visible lines, the terminal's font family and size with ligatures on. The
+  maintainer took the comments a step lighter in dark (#969696) and darker in light (#5c5c5c) than the mock,
+  so every role and the plain text, comments included, reach 4.5:1 on all six grounds of the editor: its
+  background, a selection (focused or not, one tint, which a matching bracket shares), a search match, the
+  current match, a line from the disk and a removed line (tested in `packages/design`). The editor has no
+  active line tint; the active line shows in the gutter. The chrome (gutter, line numbers, cursor,
+  selection, matching brackets, search matches, panels) is a CodeMirror theme over the cockpit's tokens:
+  matching brackets take the selection's solid tint and search matches two of their own (`searchMatch` under
+  every match, the stronger `searchCurrent` under the current one), never an outline, and the line numbers
+  keep room for three digits, so the text never moves at line 10 or 100. `.editorconfig` files from the
+  file's folder up to one marked `root` (channel `files:editorconfig`, a parser in `core/src/files`) give
+  the indentation and the final newline; without one the indentation is guessed from the file. The line
   break is the file's: CRLF stays CRLF, a file that mixes them keeps its carriage returns as characters. The
   cursor blinks with the terminal's timer (D58), never with CodeMirror's animation.
 - **Search inside the file:** `@codemirror/search` with a bar of the cockpit's own controls at the top: find
@@ -1703,7 +1707,13 @@ catalog entries.
   with the reason, offers Reload (undoable), Keep mine and Compare, and auto save waits. Compare shows the
   disk's version and the user's side by side, read only, the differing lines tinted; picking hunks from
   three versions is left for F4b. A file deleted on disk gets Save again and Close file; a failed save says
-  why with Try again.
+  why with Try again. Every quit from the menus, the tray or the quit card (D75) asks the window last
+  (`shell/src/quit/quit-files.ts`, channels `quit:settle-files` and `quit:files-settled`): it writes the
+  pending saves through the same check within 2 s and lets the app quit; a file left in conflict, deleted or
+  not saved shows its strip and keeps the app open until the user decides; with auto save off each file with
+  edits asks Save, Don't save or Cancel. While the user is asked the host shows the window and waits; a
+  window that does not answer within 2.5 s does not keep the app from quitting. A logout or a shutdown quits
+  as before.
 - **Recent files:** each tab keeps its last 10 files (paths only), offered by the segment's menu and by the
   file search's empty query. With `window.restoreTabs` a saved tab keeps its open file and its recent list;
   on start the file comes back over its tab, hidden, if it still opens, and is read again only when it
@@ -1726,4 +1736,5 @@ it as a function, as the mock and a call show it.
 and Shortcuts row, the file view's wiring in `app.ts` (the pick of the file search goes back to the system's
 app), the `syntax` tokens with their checks, `editorconfig.ts` and `line-edits.ts` in the core, the
 `files:editorconfig` and `files:ignored` channels with the `GitIgnoreCheck` port and `git-ignore.ts`, the
-`file` and `recent` fields of a saved tab, the `files.*` catalog entries and the CodeMirror packages.
+`file` and `recent` fields of a saved tab, `shell/src/quit/quit-files.ts` with the `quit:settle-files` and
+`quit:files-settled` channels, the `files.*` catalog entries and the CodeMirror packages.

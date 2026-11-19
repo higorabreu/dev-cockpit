@@ -136,7 +136,7 @@ before it is kept.
     the editor (CodeMirror, Lezer colors, the palette in `tokens.json`, `.editorconfig`, line endings kept,
     timer blink), the search inside the file, auto save, the strips for a merge, a conflict (Compare as two
     read only columns) and a deletion, the recent list kept with the tab, the card for every other kind,
-    and the file search's pick opening here.
+    the file search's pick opening here, and the open files saved before the app quits.
   - [ ] F4b. Image, Markdown preview and PDF views in place of the card (`load` in
     `ui/src/files/file-tabs.ts` is the seam); the three-way Compare that picks hunk by hunk.
 - [ ] F5. Entries: Ctrl+click on a path (amends D40), the review's button.
