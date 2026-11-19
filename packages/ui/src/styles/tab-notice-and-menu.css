@@ -196,8 +196,7 @@ button.notice-icon:focus-visible {
 
 #tab-menu .menu-divider {
   flex: none;
-  height: 1px;
-  background: var(--line);
+  border-top: var(--size-hairline) solid var(--line);
 }
 
 /* The folder that tells two files of one name apart, after the name as the file search writes it */
