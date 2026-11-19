@@ -16,14 +16,16 @@ const layers = readdirSync(import.meta.dirname)
     })
   })
 
+// A rule may name several layers at once ("#search, #files")
 const zOf = (selector: string) =>
-  layers.find((layer) => layer.selector === selector)?.z ?? Number.NaN
+  layers.find((layer) => layer.selector.split(',').some((one) => one.trim() === selector))?.z ??
+  Number.NaN
 
 // The quit card asks before the app goes, and a tooltip names what is under the pointer: both above the menu
 const ABOVE_MENU = ['#quit', '#tooltip']
 
 describe('hold menu stacking', () => {
-  it('should draw the hold menu above every other layer when Settings, a view, the search or the tab list is open', () => {
+  it('should draw the hold menu above every other layer when Settings, a view, a search or the tab list is open', () => {
     const menu = zOf('#menu')
 
     const covering = layers.filter(
@@ -32,7 +34,7 @@ describe('hold menu stacking', () => {
     )
 
     expect(covering).toEqual([])
-    for (const overlay of ['#settings', '#views', '#search', '#tab-list', '#tab-menu'])
+    for (const overlay of ['#settings', '#views', '#search', '#files', '#tab-list', '#tab-menu'])
       expect(zOf(overlay)).toBeLessThan(menu)
   })
 

@@ -857,7 +857,7 @@ export function createSettingsView(
     i18n,
     errors,
     notes,
-    row: (key, label, control, hint) => row(key, label, control, hint),
+    row: (key, label, control, hint, more) => row(key, label, control, hint, true, more),
     labelId,
     disabled,
     commit,

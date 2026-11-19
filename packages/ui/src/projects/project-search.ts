@@ -160,6 +160,10 @@ export function createProjectSearch(elements: SearchElements, deps: SearchDeps) 
 
   return {
     isOpen,
+    // Another search takes its place
+    close() {
+      if (isOpen()) close()
+    },
     open(items: readonly SearchEntry[]) {
       needsRoot = false
       input.disabled = false

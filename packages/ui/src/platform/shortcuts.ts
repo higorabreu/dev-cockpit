@@ -15,6 +15,7 @@ export interface ShortcutActions {
   openSettings(): void
   openViews(): void
   searchProjects(): void
+  searchFiles(): void
   togglePanel(): void
   toggleFullHeight(): void
   changeOpacity(direction: 1 | -1): void
@@ -36,6 +37,7 @@ export function bindShortcuts(actions: ShortcutActions, keymap: Keymap): () => v
     reviewSend: actions.sendReview,
     theme: actions.toggleTheme,
     projects: actions.searchProjects,
+    fileSearch: actions.searchFiles,
     views: actions.openViews,
     panel: actions.togglePanel,
     fullHeight: actions.toggleFullHeight,

@@ -1,6 +1,7 @@
 import {
   type AgentEvent,
   type AgentProfile,
+  absolutePath,
   activateTab,
   activateTabAt,
   type ComposeStatus,
@@ -39,6 +40,8 @@ import {
   tabsToSave,
 } from '@dck/core'
 import { CONNECT_ITEM, createAgentConnect } from './agents/agent-connect.ts'
+import { createFileRanker, startRankWorker } from './file-search/file-ranker.ts'
+import { createFileSearch } from './file-search/file-search.ts'
 import { createHoldMenuController } from './hold-menu/hold-menu-controller.ts'
 import { setFullHeight } from './kit/layout-mode.ts'
 import { showRailDot } from './kit/rail-dot.ts'
@@ -101,6 +104,10 @@ export interface AppElements {
   readonly searchInput: HTMLInputElement
   readonly searchResults: HTMLElement
   readonly searchHint: HTMLElement
+  readonly files: HTMLElement
+  readonly filesInput: HTMLInputElement
+  readonly filesResults: HTMLElement
+  readonly filesHint: HTMLElement
   readonly views: HTMLElement
   readonly settings: HTMLElement
   readonly settingsBody: HTMLElement
@@ -212,7 +219,46 @@ export async function startApp(
       favorite: project.favorite === true,
     }))
 
+  const fileSearch = createFileSearch(
+    {
+      overlay: elements.files,
+      input: elements.filesInput,
+      results: elements.filesResults,
+      hint: elements.filesHint,
+    },
+    {
+      list: (cwd) => api.fileSearch.list(cwd),
+      others: (root) => api.fileSearch.others(root),
+      expand: (root, folder) => api.fileSearch.expand(root, folder),
+      ranker: createFileRanker(startRankWorker),
+      // Until the file view exists (F4, which replaces this line), a picked file opens as a Ctrl+click on
+      // a path does: in the system's app (D40)
+      onPick: (root, path) => api.paths.openFile(absolutePath(root, path)),
+      onClose: () => focusActive(),
+      i18n,
+      keymap,
+    },
+  )
+
+  // The tab's folder as the shell has it now: the user may have just run cd
+  async function tabFolder(): Promise<string | undefined> {
+    const id = state.activeId
+    if (id === undefined) return undefined
+    const ptyId = sessions.get(id)?.ptyId
+    const fresh = ptyId === undefined ? undefined : await api.session.activity(ptyId)
+    return fresh?.cwd ?? watcher.get(id)?.cwd
+  }
+
+  // The same key again, with the search open, widens it to the files git ignores
+  function searchFiles() {
+    if (fileSearch.isOpen()) return fileSearch.toggleWiden()
+    if (search.isOpen()) search.close()
+    // The recent files come with the file view (F1); until then the empty query lists the project
+    void fileSearch.open(tabFolder(), () => [])
+  }
+
   function searchProjects() {
+    fileSearch.close()
     if (rootChooser.needed()) search.askForRoot()
     else void refreshProjects().then(() => search.open(searchEntries()))
   }
@@ -773,6 +819,7 @@ export async function startApp(
       translateStatic(i18n)
       panel.retranslate()
       search.retranslate()
+      fileSearch.retranslate()
       viewsView.retranslate()
       reviews.retranslate()
       for (const view of tabViews.values()) view.retranslate()
@@ -887,6 +934,7 @@ export async function startApp(
     openSettings: () => settingsView.open(),
     openViews: () => void viewsView.open(),
     searchProjects,
+    searchFiles,
     togglePanel,
     toggleFullHeight: () => api.window.toggleFullHeight(),
     clearTerminal: () => activeSession()?.clear(),
@@ -929,6 +977,7 @@ export async function startApp(
     'system:update': () =>
       updateNotice.current()?.canInstall ? api.updates.install() : api.updates.openRelease(),
     'project:search': searchProjects,
+    'file:search': searchFiles,
     'views:open': () => void viewsView.open(),
   }
 
@@ -979,6 +1028,11 @@ export async function startApp(
             id: 'project:search',
             label: `${i18n.t('projects.search')}…`,
             shortcut: keymap.label('projects'),
+          },
+          {
+            id: 'file:search',
+            label: `${i18n.t('files.search')}…`,
+            shortcut: keymap.label('fileSearch'),
           },
           { id: 'views:open', label: i18n.t('views.open'), shortcut: keymap.label('views') },
           ...projects.map((project) => ({

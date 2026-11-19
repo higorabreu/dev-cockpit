@@ -27,6 +27,7 @@ function bind(keyboard: Keyboard, custom: CustomKeys = {}) {
     openSettings: record('openSettings'),
     openViews: record('openViews'),
     searchProjects: record('searchProjects'),
+    searchFiles: record('searchFiles'),
     togglePanel: record('togglePanel'),
     toggleFullHeight: record('toggleFullHeight'),
     changeOpacity: record('changeOpacity'),
@@ -185,5 +186,41 @@ describe('bindShortcuts', () => {
 
     // Assert
     expect(ran).toEqual(['newTab'])
+  })
+
+  it('should search files with Ctrl+Shift+O and leave Ctrl+P to the shell when the keyboard is a PC one', () => {
+    // Arrange
+    const ran = bind('pc')
+
+    // Act
+    press({ key: 'O', code: 'KeyO', ctrlKey: true, shiftKey: true })
+    const shell = press({ key: 'p', code: 'KeyP', ctrlKey: true })
+
+    // Assert
+    expect(ran).toEqual(['searchFiles'])
+    expect(shell.defaultPrevented).toBe(false)
+  })
+
+  it('should search files with Cmd+P when the keyboard is a Mac one', () => {
+    // Arrange
+    const ran = bind('mac')
+
+    // Act
+    press({ key: 'p', code: 'KeyP', metaKey: true })
+
+    // Assert
+    expect(ran).toEqual(['searchFiles'])
+  })
+
+  it('should search files with Ctrl+P when the user gave it that key', () => {
+    // Arrange
+    const ran = bind('pc', { fileSearch: 'Ctrl+P' })
+
+    // Act
+    press({ key: 'p', code: 'KeyP', ctrlKey: true })
+    press({ key: 'O', code: 'KeyO', ctrlKey: true, shiftKey: true })
+
+    // Assert
+    expect(ran).toEqual(['searchFiles'])
   })
 })

@@ -15,6 +15,7 @@ export const SHORTCUT_IDS = [
   'reviewLayout',
   'reviewSend',
   'projects',
+  'fileSearch',
   'views',
   'panel',
   'settings',
