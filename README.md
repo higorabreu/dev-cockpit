@@ -183,6 +183,7 @@ Mac, `pnpm package:mac` builds the `.app` and the `.dmg` in `release/`.
 | `Ctrl+Shift+O` | File search in the tab's project, `⌘P` on a Mac; the files git ignores show when what you type finds them, and the same key again includes them all. Settings, Shortcuts offers `Ctrl+P` in one click |
 | `Ctrl+Shift+Space` | Between the tab's terminal and its open file |
 | `Ctrl+Shift+J` | A Markdown file between its text and its preview, an SVG between its image and its code |
+| `Ctrl+F`, `Ctrl+H`, `Ctrl+G` | Inside a file: find, replace and go to line, in a drawer under the file's header; each key swaps one for the other (`Enter` or `F3` next match, `Esc` closes). `Ctrl+D` selects the next occurrence and `Ctrl+S` saves at once |
 | `Ctrl +`, `-`, `0` over an image | Zoom in, out and fit (`1` actual size, arrows or a drag pan) |
 | `Ctrl+Shift+M` | Work screen: pull requests, merge requests and tasks |
 | `Ctrl+Shift+B` | Side panel |
@@ -199,7 +200,8 @@ On a Mac the cockpit's keys use `⌘` where the Mac does and leave Ctrl to the s
 clears, `⌘,` opens Settings, `⌃⌘F` switches the full height (`F11` shows the desktop there) and the
 cockpit's own keys are `⇧⌘` and the same letter (`⇧⌘D` the review). Hold the right `⌘` for the action
 wheel. At the prompt `⌘←` and `⌘→` go to the ends of the line, `⌘⌫` deletes to its start, `⌥←` and `⌥→`
-move by word and `⌥⌦` deletes the next word; a full-screen program gets the raw key. The left Option is
+move by word and `⌥⌦` deletes the next word; a full-screen program gets the raw key. In a file `⌘F`
+finds, `⌥⌘F` replaces, `⌘G` goes to the next match and `⌃G` to a line, as in VS Code. The left Option is
 Meta (`⌥B`, `⌥F`) and the right one types accents and symbols (Settings, Option as Meta), and `⌥`+drag
 selects inside programs that use the mouse. `F12` needs `fn` unless the F keys are set as standard
 function keys.
@@ -232,7 +234,8 @@ shortcut if the global key is refused.
 fonts, the terminal's font, size and cursor (block, bar or underline, blinking or not), which Option is
 Meta on a Mac, window height, whether the panel opens at full height, reopening the tabs on start, the
 review layout, global key, hold menu key or button, every interface key, projects folder and how deep to
-search it, start with the system, the threshold to notify a long command, the hint to connect an agent,
+search it, whether files save and merge a change on disk by themselves and where a path clicked in the
+terminal opens, start with the system, the threshold to notify a long command, the hint to connect an agent,
 and the GitHub, GitLab and Jira connections; an About page shows the version, the updates and the
 project's links. Everything applies at once. Settings live in a `settings.json` that can also be edited by
 hand, like VS Code's: the button beside the screen's close (or Open the settings file in the hold menu's
@@ -273,6 +276,8 @@ this README are recorded from the built app by [scripts/media](scripts/media/REA
 - Connectors are built in (GitHub, GitLab and Jira Cloud); third-party connectors are not done. The keys
   inside a panel (the review's single keys, the arrows of a list) cannot be changed.
 - The file view is a light editor (CodeMirror): no language servers, completion or multi-file tabs.
+  Syntax colors go up to 2 MB, editing up to 5 MB and a read only view up to 50 MB; past that, the file
+  shows a card that opens it in the system's app.
 - The GNOME tray icon opens the menu and does not toggle the window directly.
 
 ## License

@@ -1,9 +1,183 @@
-# Performance baseline
+# Performance
 
-Measured on 2026-11-19 so the next features (an in-app editor first) can be weighed against numbers. The
-script is `scripts/perf/measure.cjs` ([README](../scripts/perf/README.md)); rerun it on any build to compare.
+The budgets of [AGENTS.md](../AGENTS.md) and of the file view ([files.md](files.md), "Budgets of its own"),
+measured with `scripts/perf/` ([README](../scripts/perf/README.md)); rerun it on any build to compare. Two
+rounds so far, both on 2026-11-19 on the same machine: the [baseline](#baseline-v020-to-v0110) of five
+builds before the file editor, then [the file editor](#the-file-editor-f6) (F6), v0.12.0 against `main`
+with the editor. Compare numbers within a round; across rounds only roughly.
 
-## How
+## The file editor (F6)
+
+### How
+
+- **Builds**, each from source in its own `git worktree` with `pnpm install --frozen-lockfile` and
+  `pnpm build`: v0.12.0 (`f6aeca8`, the last release without the file editor) and `main` (`6b8efa0`:
+  v0.12.0 plus the file store #113, the file search #115, the editor #116, file paths #118, the viewers
+  #119, the fixes to #124 and the CLI's lazy load #112). Both ask for Electron `^45.3.0` and ran on the same
+  45.3.0 binary.
+- **Machine**: the baseline's container (4 cores, 16 GB, no GPU, shared with other agent sessions), Xvfb
+  1400x760x24 without a window manager or compositor, so a frame ends when Chromium commits it. Load
+  average 0.0 to 0.4. Another session worked during part of the first run: the rest of the machine used up
+  to 17 points of a core during v0.12.0's CPU samples, and one v0.12.0 launch drew its first prompt at 829
+  ms. Absolute numbers belong to this machine; the maintainer's Ubuntu (GNOME Wayland, real display) adds
+  up to a refresh interval to each latency.
+- **Runs**: `measure.cjs`, 3 launches per build and phase, twice: every phase, then probe and size again
+  once the script bundled the CLI as the `.deb` does since #112 (two builds, `dck.mjs` with only what
+  `toggle` loads; the first run bundled one file, which no longer ships, and read 104 ms for `main`). The
+  latency, cold start and size rows below come from the second run, memory, CPU and the list from the
+  first; what both measured agrees within the noise (terminal echo 4.3 and 4.4 ms median in the first, 4.0
+  and 4.1 in the second). `viewers.cjs` on `main`, 3 runs, now with the editor's rows. Time: 17 minutes for
+  the first run, 9 for the second, 10 for the viewers.
+
+### Budgets at a glance
+
+**Bold** marks a broken budget.
+
+| Budget | Target | v0.12.0 | main |
+| --- | --- | --- | --- |
+| Key to echo, terminal (median / p95) | 16 ms | 4.0 / 9.6 | 4.1 / 9.0 |
+| Hotkey to window, socket (median / p95) | 100 ms | 8.3 / 10.9 | 8.5 / 12.0 |
+| Hotkey to window, CLI, the GNOME shortcut of the `.deb` (median / p95) | 100 ms | 95.8 / **117.5** | 52.8 / 66.8 |
+| Cold start, first prompt drawn | 2000 ms | 411 | 382 |
+| Idle memory, 1 tab shown / 5 tabs hidden | 300 MB | 262 / 261 | 263 / 263 |
+| 1000 item list | 60 fps | 60.0 | 60.0 |
+| Nothing added to idle memory while no file was ever opened | 0 | | +1 MB, within the runs' spread |
+| Opening a 1 MB file | 150 ms | | 46 (colored at 88) |
+| Key to echo in the editor (median / p95) | 16 ms | | 7.0 / **18.8** |
+| Memory added by an open file, per kind | reported | | [File view](#file-view) |
+
+Everything holds but the editor's echo at p95. The CLI toggle, broken in the baseline and in v0.12.0, holds
+again since #112.
+
+### Boot and idle, no file opened
+
+| | v0.12.0 | main | Budget |
+| --- | --- | --- | --- |
+| Key to echo, median / p95 (ms) | 4.0 / 9.6 | 4.1 / 9.0 | 16 |
+| Key to echo, median to the DOM change (ms) | 3.0 | 3.0 | |
+| Hotkey, socket, warm, median / p95 (ms) | 8.3 / 10.9 | 8.5 / 12.0 | 100 |
+| Hotkey, socket, cold-ish, median (ms) | 9.0 | 8.3 | 100 |
+| Hotkey, CLI, warm, median / p95 (ms) | 95.8 / **117.5** | 52.8 / 66.8 | 100 |
+| Hotkey, CLI, cold-ish, median (ms) | 97.8 | 61.3 | 100 |
+| Cold start, first prompt (ms) | 411 | 382 | 2000 |
+| Cold start, runs (fastest to slowest) | 397 to 418 | 345 to 429 | |
+| app ready / page loaded (ms) | 176 / 306 | 146 / 283 | |
+| Memory, 1 tab, shown / hidden (MB) | 262 / 250 | 263 / 251 | 300 |
+| Memory, 5 tabs, shown / hidden (MB) | 261 / 261 | 262 / 263 | 300 |
+| Memory, RSS sum, 1 tab shown (MB) | 606 | 610 | |
+| main / GPU / renderer / daemon, 1 tab (MB) | 85 / 19 / 64 / 43 | 85 / 18 / 66 / 42 | |
+| CPU, idle prompt, shown / hidden (% of a core) | 0.9 / 1.3 | 1.0 / 1.5 | |
+| CPU, TUI, shown / hidden (% of a core) | 5.3 / 2.4 | 5.0 / 2.1 | |
+| Review's file list and diff, fps (frames over 20 ms) | 60.0 / 60.0 (0) | 60.0 / 60.0 (0) | 60 |
+
+Memory, CPU and the list are the medians of 3 runs; `main`'s runs read 262 to 265 MB shown. The first
+run's cold start read 492 ms for v0.12.0 (runs 385 to 829, the busy minute above) and 383 for `main`.
+
+| Size (KB) | v0.12.0 | main |
+| --- | --- | --- |
+| `main.cjs` | 1110 | 1168 |
+| `daemon.cjs` | 877 | 893 |
+| UI JavaScript, all | 692 | 2412 |
+| UI JavaScript loaded at start | 692 | 767 |
+| UI CSS | 69 | 87 |
+| `dck.mjs`, what `toggle` loads | 972 | 91 |
+| `packages/shell/dist` without maps | 66664 | 68480 |
+
+UI JavaScript "loaded at start" is the entry and what it imports statically (`xterm`, the cursor blink);
+the rest of `main`'s 2412 KB is 127 chunks loaded by `import()`: CodeMirror (the `code-editor` chunk and its
+packages), one per language of `@codemirror/language-data`, marked and DOMPurify.
+
+### File view
+
+`viewers.cjs` on `main`: each file in a launch of its own, opened from the file search (`Ctrl+Shift+O`,
+Enter), median of 3 runs. First paint is from Enter to the end of the frame that shows the file; colors to
+the frame where a line first holds a highlighted token (the TypeScript grammar loads with the first
+TypeScript file of each launch). Memory is the PSS of every process of the launch against the moment
+before the file opened; every row but the first opens after a small Markdown file, so the editor's code is
+already loaded.
+
+| File | first paint (ms) | colors (ms) | PSS added, shown (MB) | peak (MB) | after another file replaced it (MB) | processes added |
+| --- | --- | --- | --- | --- | --- | --- |
+| TypeScript 10 KB, first file of the launch | 60 | 109 | 21.6 | 25.7 | 26.2 | 0 |
+| TypeScript 10 KB | 36 | 72 | 4.6 | 6.9 | 7.2 | 0 |
+| TypeScript 1 MB | 46 | 88 | 16.5 | 17.0 | 17.7 | 0 |
+| TypeScript 5 MB, editable, no colors | 101 | | 37.6 | 37.6 | 39.9 | 0 |
+| PNG 4000x3000 | 437 | | 156.0 | 194.1 | 102.6 | 0 |
+| JPEG 3600x2400 (2.4 MB) | 154 | | 33.5 | 33.5 | 11.8 | 0 |
+| SVG | 94 | | 20.8 | 20.8 | 2.5 | 0 |
+| README 100 KB, preview | 123 | | 29.0 | 30.1 | 16.5 | 0 |
+| PDF 50 pages | 88 (frame loaded) | | 85.8 | 85.8 | 16.7 | 3 while it shows, 0 after |
+
+| Key to echo in the editor (ms) | median | p95 | Budget |
+| --- | --- | --- | --- |
+| to the end of the frame | 7.0 | **18.8** | 16 |
+| to the DOM change | 2.4 | 3.2 | |
+
+180 letters typed with `xdotool` at the end of the 10 KB file's last line, 90 to 150 ms apart, none
+missed; the three runs' p95 read 19.2, 18.7 and 17.5 ms. Percentiles of the frame: 6.2 (p25), 7.0, 10.6
+(p75), 17.1 (p90), 18.8 (p95).
+
+### What changed and why
+
+- **With no file opened, nothing measurable moved.** Idle memory is 263 MB against 262 (`main`'s runs 262 to
+  265), the renderer 66 MB against 64 for the 75 KB more JavaScript at start (the file search, the file
+  tab, its menus and strips); CPU, terminal echo, the socket toggle and the list are flat, and cold start is
+  382 ms against 411 (383 against 492 in the first run). The plan's first budget holds.
+- **The editor stays out of the boot path.** The UI's JavaScript grew from 692 to 2412 KB, but what a
+  start parses only from 692 to 767 KB: CodeMirror, every grammar, marked and DOMPurify load by `import()`
+  on the first file that needs them. The CSS (69 to 87 KB, the editor's and the viewers' styles) and
+  `main.cjs` (+58 KB: the file store, its watch, the merge, the protocol) do load at start, within the
+  cold start's noise.
+- **The editor's first load costs 60 ms and 22 MB.** A first 10 KB file shows 60 ms after Enter (36 ms once
+  the code is loaded) and colors at 109 ms; its 21.6 MB, against 4.6 for the same file later, are
+  CodeMirror and the TypeScript grammar. Nothing frees them when the file closes (26 MB after, the code
+  stays loaded and the heap waits for a collection).
+- **Opening a 1 MB file: 46 ms, colored at 88**, a third of the 150 ms budget; the 5 MB file shows in 101 ms,
+  without colors as D83 set. CodeMirror draws only the viewport, so the time grows with the read and the
+  copy over IPC more than with the text; memory grows with it: 4.6, 16.5 and 37.6 MB for 10 KB, 1 MB and 5
+  MB. D83 read 80 ms to a colored 1 MB file when it was the first file of the launch.
+- **Key to echo in the editor: median 7.0 ms holds, p95 18.8 breaks.** CodeMirror is not the cost: the
+  letter is in the DOM 2.4 ms after the key (3.2 p95). The rest is the wait for a frame: half the keys get
+  one within 4.5 ms of the DOM change, and one in four waits 8 to 17 ms, up to a refresh interval, where the
+  terminal's frame ends 1 to 2 ms after its DOM change. Nothing animates: with the editor focused and idle
+  the renderer uses 1.3 to 1.5 points of a core against 0.5 to 0.6 at a prompt and the GPU process the same
+  0.2 (an ad hoc check, 2 launches), where the CSS blink D58 removed cost 2 to 3 points and kept every frame
+  running. D83 read 9.1 ms median and 13.3 p95 in the middle of the 1 MB file, with 120 keys.
+
+  Followed up the same day with the echo alone (2 launches of 80 keys per case, the probe also stamping
+  the start of the frame):
+
+  | Case | median | p95 |
+  | --- | --- | --- |
+  | TypeScript, keys 90 to 150 ms apart (as above) | 6.6 to 7.5 | 17.1 to 17.8 |
+  | TypeScript, keys 300 to 400 ms apart | 7.9 | 17.6 |
+  | The same text as a `.txt` file (no language) | 4.7 to 5.1 | 6.7 to 8.8 |
+  | TypeScript without the highlight style | 6.2 | 13.9 |
+  | TypeScript without the bracket colors and doc tags, the indent guides or the bracket matching (one at a time) | 6.4 to 6.8 | 15.6 to 16.9 |
+  | TypeScript, the window at 30% of the height | 6.7 | 15.8 |
+
+  The tail comes with a language and with no single extension: neither the spacing of the keys nor the
+  size of the view moves it, so it is not the frame clock left running by the last key. It lies inside
+  the frame: from the start of the frame (the probe's `requestAnimationFrame`) to its end, 1.2 ms median
+  and 8.0 p95 for TypeScript against 1.1 and 1.6 for the `.txt`, while the start of the frame comes 2.9
+  ms after the DOM change (5.7 p95) against 1.7 (3.1). CodeMirror's own JavaScript in it is small: one
+  measure per key, 0.5 ms median and 6.1 ms at most (`requestAnimationFrame` timed in an instrumented
+  build). What remains is Chromium's style, layout and paint of the frame, or a pause of the page's V8
+  between the frame and its commit (a garbage collection is the candidate, since a parse allocates on
+  every key). A DevTools trace cannot tell: with a DevTools session attached the page draws a frame every
+  10 ms and the tail disappears. Electron's own trace (`contentTracing`) writes Perfetto's binary
+  format, which needs Perfetto's trace processor to read.
+- **The CLI toggle is back under budget**: 95.8 to 52.8 ms median, 117.5 to 66.8 p95, from #112 (D30's
+  update), which ships a 91 KB `dck.mjs` with only the socket code in place of 972 KB.
+- **The viewers** read as in D85, within the noise: the PNG 437 ms against 500, the JPEG 154 against 195,
+  the SVG, the README and the PDF within 10 ms. What stays after the PNG closes (103 MB) is mostly the main
+  process's read buffers, freed at its next collection (D85).
+
+## Baseline, v0.2.0 to v0.11.0
+
+Measured on 2026-11-19 so the next features (an in-app editor first) could be weighed against numbers.
+
+### How
 
 - **Builds**, each from source in its own `git worktree` with `pnpm install --frozen-lockfile` and
   `pnpm build`: v0.2.0 (the oldest tag), v0.6.0, v0.9.0, `main` (= v0.11.0, `75e6232`) and `next`, the
@@ -29,11 +203,11 @@ script is `scripts/perf/measure.cjs` ([README](../scripts/perf/README.md)); reru
   and thread over 10 s, as a share of one core, the window hidden with `window.toggle` and 3 s to settle.
 - **Time**: one full run (5 builds, 3 runs, every phase) took 43 minutes; one build takes about 9.
 
-## Results
+### Results
 
 Budgets from AGENTS.md. **Bold** marks a broken budget.
 
-### Key to echo (ms)
+#### Key to echo (ms)
 
 From the `keydown` time stamp to the end of the frame that draws the letter, at an idle bash prompt, keys
 90 to 150 ms apart.
@@ -44,7 +218,7 @@ From the `keydown` time stamp to the end of the frame that draws the letter, at 
 | p95 | **22.2** | **23.1** | **23.1** | **23.2** | 14.0 | 16 |
 | median to the DOM change | 11.7 | 10.8 | 11.3 | 10.4 | 3.2 | |
 
-### Hotkey to visible window (ms)
+#### Hotkey to visible window (ms)
 
 From the toggle request to the end of the first frame after the page turns visible. `socket` sends
 `window.toggle` to the daemon (the IPC part of every toggle; in dev mode and outside GNOME the key goes to
@@ -64,7 +238,7 @@ Where the CLI path goes (median of 15 launches of `dck --help`, which loads the 
 Electron as Node with an empty script takes 49 ms; loading the bundle adds 42 ms in v0.2.0 (826 KB) and
 51 ms in main (952 KB). The socket, `show()` and the first frame add the 11 ms above.
 
-### Cold start (ms)
+#### Cold start (ms)
 
 From spawning Electron to the end of the frame that first draws the prompt.
 
@@ -75,7 +249,7 @@ From spawning Electron to the end of the frame that first draws the prompt.
 | app ready | 170 | 150 | 174 | 176 | 183 | |
 | page loaded | 277 | 262 | 304 | 329 | 308 | |
 
-### Idle memory (MB)
+#### Idle memory (MB)
 
 PSS from `smaps_rollup` of the main process, every Chromium child and the daemon; the shells in the tabs
 are left out. RSS adds shared pages once per process and overstates the total.
@@ -91,7 +265,7 @@ are left out. RSS adds shared pages once per process and overstates the total.
 
 The two zygotes (27) and the network service (24 to 26) make up the rest.
 
-### Idle CPU (% of one core)
+#### Idle CPU (% of one core)
 
 Renderer is the process total (its main thread / `Compositor`), GPU the process total
 (`VizCompositorThread`). The TUI redraws a four line block 10 times a second with the cursor hidden, as
@@ -112,7 +286,7 @@ Claude Code's Ink does. No budget; for the trend.
 | TUI | hidden | renderer / main / daemon | 0.7 / 1.1 / 0.3 | 0.8 / 1.2 / 0.3 | 0.7 / 1.1 / 0.3 | 0.8 / 1.1 / 0.4 | 0.8 / 1.2 / 0.4 |
 | | | total | 2.1 | 2.3 | 2.1 | 2.2 | 2.3 |
 
-### A 1000 item list at 60 fps
+#### A 1000 item list at 60 fps
 
 The virtualized list here is the review's file index (and its diff, one scroll for every file). A tab
 whose folder has 1000 changed files opens its review (Ctrl+Shift+D) and the wheel turns 50 notches a
@@ -129,7 +303,7 @@ review.
 
 Both scrolled the full 12000 px asked, with no frame over 20 ms in any run.
 
-### Size (KB)
+#### Size (KB)
 
 | | v0.2.0 | v0.6.0 | v0.9.0 | main | next |
 | --- | --- | --- | --- | --- | --- |
@@ -145,7 +319,7 @@ Both scrolled the full 12000 px asked, with no frame over 20 ms in any run.
 once here) is 88 MB and installs 271 MB: the Electron runtime is 265 MB of that, the app 3.8 MB and the CLI
 0.96 MB.
 
-## What changed and why
+### What changed and why, to v0.11.0
 
 - **Memory, v0.2.0 to v0.6.0: 313 to 262 MB, back under budget.** The GPU process went from 74 to 20 MB
   when the window stopped using the GPU on Linux (D50, `c1774b1`, #50). Nothing since has moved the total:
@@ -176,25 +350,24 @@ once here) is 88 MB and installs 271 MB: the Electron runtime is 265 MB of that,
 
 ## Watch next
 
-- **Broken now:** key to echo p95 in main (23 ms against 16; `next` brings it to 14), and the CLI toggle
-  (105 ms median, 130 ms p95, against 100). For the CLI, loading only what `toggle` needs (a dynamic
-  `import()` for the daemon, `ext` and settings commands) should save most of the 51 ms of bundle
-  evaluation; a V8 compile cache is the other lever. Recheck on the maintainer's machine, where D30 found
-  60 to 70 ms.
-- **Least headroom: memory**, 264 MB of 300 (36 MB, 12%). The renderer is 66 MB of it and grows with every
-  panel. An editor is the first feature that can eat the rest: CodeMirror 6 is small, while Monaco costs
-  tens of MB (roadmap). Load the editor with a dynamic `import()` on first use, so it costs nothing until a
-  file is opened, and run the idle phase with a file open before choosing.
-- **Key echo in an editor** does not cross the PTY, but it shares the renderer's frames. Any per-frame
-  animation brings back the frame slot wait measured here: CodeMirror 6 blinks its cursor with a CSS
-  animation (`drawSelection`'s `cursorBlinkRate`), the same shape D58 removed from the terminal, so blink
-  it with a timer or turn the blink off.
-- **Cold start**, 430 of 2000 ms, has room, but it grew by a third in five releases, mostly through
-  `main.cjs` and the UI bundle. An editor bundled into the boot path would add its parse time to every
-  start; loading it on first use avoids that.
-- **Large files**: the review already keeps 60 fps with 16 DOM rows for 1000 files. An editor has to keep
-  rendering only the viewport the same way (CodeMirror 6 does) and keep long lines and syntax work off
-  the frame.
-- **TUI rendering**, about 5 points of a core per busy tab shown, is untouched by the cursor change; the
-  WebGL candidate in `plans/terminal-rendering.md` is the open lever, and the script's `tui` phase is its
-  test.
+- **Broken now: key to echo in the editor at p95** (18.8 ms against 16; median 7.0), on this machine
+  without a GPU. The tail is one frame late on about one key in ten, only with a language (above).
+  Rerun `viewers.cjs` on the maintainer's machine before changing anything, then a Perfetto trace of
+  `contentTracing` (no DevTools session) to split style, layout, paint and garbage collection. The
+  baseline's two broken budgets are fixed: the terminal's p95 by the timer blink (0.12.0) and the CLI
+  toggle by #112.
+- **Memory with a file open is an accepted tradeoff** (the maintainer, 2026-11-19, D88): the 300 MB budget
+  holds for the idle cockpit (263 MB), and an open file adds what it needs. The first text adds 22 MB (the
+  editor's code and a grammar), a 1 MB file 17 MB more and a 5 MB file 38, and closing a file gives back
+  little until a collection: a cockpit with a 1 MB file open sits near 300 MB, one with the 5 MB file past
+  it, and the PNG viewer adds 156 MB while it shows. Still worth knowing: the memory a minute after the
+  last file closes (does the heap come back?).
+- **Keep the editor out of the boot path.** The size table's "UI JavaScript loaded at start" row (767 KB)
+  is the check: a static import of anything under `ui/src/editor` or `ui/src/viewers` would move the 1645
+  KB loaded on demand into every start.
+- **Cold start**, 382 of 2000 ms, has room; `main.cjs` keeps growing (1110 to 1168 KB with the file store).
+- **Large files**: colors to 2 MB and editing to 5 MB hold the open under 110 ms; raising them toward VS
+  Code's (files.md, "Later") should rerun these rows with 10 and 50 MB fixtures and the echo in a large
+  colored file, where the parser's work after a key is largest.
+- **TUI rendering**, about 5 points of a core per busy tab shown, is unchanged; the WebGL candidate in
+  `plans/terminal-rendering.md` is the open lever, and the script's `tui` phase is its test.

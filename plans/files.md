@@ -1,7 +1,9 @@
 # Open and edit files in the cockpit
 
-**Status:** Agreed with the maintainer on 2026-11-19; the syntax colors decided by F0. F0 to F4 done (F4a:
-the file over the tab and the editor, D83; F4b: the viewers and Compare, D85; F5: the entries, D84); F6 left.
+**Status:** Done, shipped in 0.13.0. Agreed with the maintainer on 2026-11-19; the syntax colors decided by
+F0. F4a: the file over the tab and the editor, D83; F4b: the viewers and Compare, D85; F5: the entries,
+D84; later fixes D86 and D87. F6 measured it ([performance.md](performance.md), "The file editor"): every
+budget holds but the key to echo in the editor at p95 (18.8 ms against 16), left to trace.
 
 Asked by the maintainer on 2026-11-17 (roadmap backlog, "Editing files") and refined on 2026-11-19: find a
 file of the tab's project and open it in the cockpit, text and code to edit, and the common non-text files
@@ -102,7 +104,8 @@ before it is kept.
   protocol that serves only a path the user opened, never a remote URL.
 - **Budgets of its own** (checked by the perf script): nothing added to idle memory while no file was ever
   opened; opening a 1 MB file in under 150 ms; key to echo in the editor within 16 ms; the memory added by
-  an open file, per kind, reported.
+  an open file, per kind, reported. The idle budget of 300 MB holds with no file open; what an open file
+  adds is an accepted tradeoff (D88).
 
 ## Cost of each kind, to measure before keeping it
 
@@ -148,7 +151,10 @@ before it is kept.
     line became a drawer under the header (D83).
 - [x] F5. Entries: Ctrl+click on a path at its line (amends D40), Ctrl+Shift+click and
   `files.openPathsInCockpit` for the system's app, the review's Open file button and `o` (D84).
-- [ ] F6. Decision (and D13's text, which still names Ctrl+Shift+O for projects), README, perf report updated, checks in the real app with screenshots, both themes.
+- [x] F6. D13's text (Ctrl+Shift+O is the file search now), the README (the keys inside a file, the Files
+  settings, the size limits), the roadmap, the perf report with the editor's own rows (`viewers.cjs`:
+  first load, 10 KB, 1 MB and 5 MB files, key to echo in the editor), and an integrated pass in the real
+  app at scales 1, 1.25, 1.5 and 2, both themes, several heights.
 
 ## Later
 
