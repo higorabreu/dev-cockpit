@@ -64,6 +64,18 @@ describe('dck entry point', () => {
     expect(run.stderr).toContain('Uso: dck <comando>')
   })
 
+  it('should report a missing daemon in the language chosen in settings when toggle fails', async () => {
+    // Arrange
+    await writeFile(join(directory, 'settings.json'), JSON.stringify({ language: 'pt-BR' }))
+
+    // Act
+    const run = dck(['toggle'], '', { LANG: 'en_US.UTF-8' })
+
+    // Assert
+    expect(run.status).toBe(69)
+    expect(run.stderr).toContain('Inicie o daemon com: dck daemon')
+  })
+
   it('should answer in english when the terminal speaks a language with no catalog', () => {
     const run = dck(['--help'], '', { LANG: 'de_DE.UTF-8' })
 

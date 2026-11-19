@@ -1,98 +1,27 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
-import { findRepositoryRoot } from '@dck/adapter-extension-files'
-import { createJsoncSettingsText } from '@dck/adapter-jsonc'
-import {
-  connectTo,
-  defaultConfigDir,
-  defaultEndpoint,
-  defaultStateDir,
-} from '@dck/adapter-node-net'
-import {
-  checkProfile,
-  createJsonLogger,
-  createTranslator,
-  environmentLanguages,
-  localeFor,
-  silentLogger,
-} from '@dck/core'
-import { createConnectorViews, startDaemon } from '@dck/daemon'
-import { systemSecretStore } from '@dck/daemon/secret-store'
-import packageJson from '../package.json' with { type: 'json' }
-import { runCli } from './cli.ts'
-import { createExtDeps } from './ext-deps.ts'
-import { settingsFromText } from './settings-file.ts'
+import { connectTo, defaultConfigDir, defaultEndpoint } from '@dck/adapter-node-net'
+import { silentLogger } from '@dck/core'
+import { isDaemonCommand, runDaemonCommand } from './daemon-command.ts'
 
 const endpoint = process.env.DCK_ENDPOINT ?? defaultEndpoint()
+const configDir = process.env.DCK_CONFIG_DIR ?? defaultConfigDir()
 const args = process.argv.slice(2)
+const [command] = args
+const io = {
+  endpoint,
+  connect: (target: string) => connectTo(target, silentLogger),
+  out: (text: string) => process.stdout.write(text),
+  err: (text: string) => process.stderr.write(text),
+}
 
-const logger = createJsonLogger((line) => process.stderr.write(line))
-const profile = args[0] === 'daemon' ? checkProfile(process.env.DCK_PROFILE, logger) : undefined
-
-if (profile?.kind === 'invalid') {
-  process.exitCode = 1
-} else if (profile?.kind === 'valid') {
-  let stopDaemon = async () => process.exit(0)
-  const views = createConnectorViews({
-    stateDir: process.env.DCK_STATE_DIR ?? defaultStateDir(),
-    logger,
-    secrets: systemSecretStore(),
-    profile: profile.profile,
+// The window's global key runs `dck toggle` on every press (D30), so only the socket and the protocol load
+// up front: the settings, the catalogs, the daemon and the extensions come in by import() when needed
+if (isDaemonCommand(command)) {
+  process.exitCode = await runDaemonCommand(command, {
+    ...io,
+    translate: async () => (await import('./full-cli.ts')).translatorForUser(configDir),
   })
-  const started = await startDaemon({
-    endpoint,
-    logger,
-    views,
-    onShutdown: () => void stopDaemon(),
-  })
-  if (!started.ok) {
-    logger.error('daemon did not start', { reason: started.error.message })
-    process.exit(1)
-  }
-  logger.info('daemon started', { endpoint })
-  stopDaemon = async () => {
-    await started.value.stop()
-    process.exit(0)
-  }
-  process.on('SIGINT', stopDaemon)
-  process.on('SIGTERM', stopDaemon)
+} else if (command === 'daemon') {
+  await (await import('./daemon-process.ts')).runDaemonProcess(endpoint)
 } else {
-  const configDir = process.env.DCK_CONFIG_DIR ?? defaultConfigDir()
-  const settingsText = createJsoncSettingsText()
-  const settingsContent = await readFile(join(configDir, 'settings.json'), 'utf8').catch(
-    () => undefined,
-  )
-  // The language chosen in the window's settings, else the terminal's
-  const t = createTranslator(
-    localeFor(
-      settingsFromText(settingsText, settingsContent).language,
-      environmentLanguages(process.env),
-    ),
-  ).t
-  process.exitCode = await runCli(args, {
-    endpoint,
-    t,
-    env: process.env,
-    connect: (target) => connectTo(target, silentLogger),
-    out: (text) => process.stdout.write(text),
-    err: (text) => process.stderr.write(text),
-    ext: createExtDeps({
-      configDir,
-      repositoryRoot: (await findRepositoryRoot(process.cwd())) ?? process.cwd(),
-      appVersion: packageJson.version,
-      logger: silentLogger,
-      text: settingsText,
-      readFile: (path) => readFile(path, 'utf8').catch(() => undefined),
-      writeFile: async (path, text) => {
-        const temporary = `${path}.tmp`
-        return mkdir(dirname(path), { recursive: true })
-          .then(() => writeFile(temporary, text))
-          .then(() => rename(temporary, path))
-          .then(
-            () => true,
-            () => false,
-          )
-      },
-    }),
-  })
+  process.exitCode = await (await import('./full-cli.ts')).runFullCli(args, { ...io, configDir })
 }
