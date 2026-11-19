@@ -238,11 +238,18 @@ async function ensureDisplay(display) {
   const server = spawn('Xvfb', [display, '-screen', '0', '1400x760x24', '-nolisten', 'tcp'], {
     stdio: 'ignore',
   })
-  for (let i = 0; i < 50; i++) {
+  let failed
+  server.on('error', (error) => {
+    failed = error
+  })
+  for (let i = 0; i < 50 && !failed; i++) {
     await sleep(100)
     if (x(display, 'getdisplaygeometry').status === 0) return server
   }
-  throw new Error(`no X server answers on ${display}`)
+  // On a desktop the usual cause is a Wayland session or xdotool missing, not Xvfb
+  throw new Error(
+    `no X server answers on ${display} through xdotool${failed ? `, and Xvfb could not start (${failed.code ?? failed})` : ''}: in a Wayland session log in to an X11 one, and install xdotool`,
+  )
 }
 
 // The daemon's socket lives here: a Unix socket path holds at most 107 bytes

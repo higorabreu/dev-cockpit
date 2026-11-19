@@ -37,7 +37,8 @@ there when no X server answers, so pass your own display, for example `:0`, to m
 and `--out`. One full run of 5 builds with the defaults takes about 45 minutes; one build about 9.
 
 The script types, scrolls and moves the pointer with `xdotool` on that display: on your own desktop, leave
-the keyboard and the pointer alone while it runs.
+the keyboard and the pointer alone while it runs. `xdotool` reaches only X11 windows, so a desktop run needs
+an X11 session (on Ubuntu, "Ubuntu on Xorg" at the login screen); in a Wayland one it finds no display.
 
 The runs go round the builds (run 1 of every build, then run 2, ...) so a busy minute on a shared machine
 does not land on one build. Each CPU table ends with what the rest of the machine used meanwhile, as a share
