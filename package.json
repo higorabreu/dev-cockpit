@@ -21,7 +21,7 @@
     "postinstall": "node scripts/fix-node-pty.mjs"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.6",
+    "@biomejs/biome": "^2.6.8",
     "@types/node": "24",
     "happy-dom": "^21.0.4",
     "typescript": "^7.0.2",
