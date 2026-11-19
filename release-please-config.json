@@ -80,6 +80,11 @@
         },
         {
           "type": "json",
+          "path": "packages/adapters/node-walk/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "packages/adapters/secret-tool/package.json",
           "jsonpath": "$.version"
         },

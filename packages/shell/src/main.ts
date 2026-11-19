@@ -9,17 +9,20 @@ import { createJsoncSettingsText } from '@dck/adapter-jsonc'
 import { createFetchHttpClient } from '@dck/adapter-node-fetch'
 import {
   createGitDiffSource,
+  createGitFiles,
   createGitInspector,
   createGitReviewNotes,
 } from '@dck/adapter-node-git'
 import { connectTo, defaultConfigDir, defaultEndpoint, defaultLogDir } from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
+import { createFolderWalk } from '@dck/adapter-node-walk'
 import {
   type ConnectionFields,
   checkProfile,
   connectorCatalog,
   createConnections,
   createDockController,
+  createFileFinder,
   createJsonLogger,
   createTranslator,
   createUpdater,
@@ -61,6 +64,7 @@ import { createElectronStatusIcon } from './electron/status-icon.ts'
 import { createToggleKeyBinder } from './electron/toggle-key-binder.ts'
 import { buildTrayMenu } from './electron/tray-menu.ts'
 import { createWindowSender } from './electron/window-sender.ts'
+import { registerFileSearchBridge } from './file-search/file-search-bridge.ts'
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
@@ -442,6 +446,16 @@ app.whenReady().then(async () => {
     dismissed: await loadDismissedFile(join(app.getPath('userData'), 'updates.json'), logger),
     logger,
     onChange: (state) => send(hostChannels.updatesChanged, state),
+  })
+  registerFileSearchBridge({
+    ipcMain: ipc,
+    finder: createFileFinder({ git: createGitFiles(), walk: createFolderWalk() }),
+    isFolder: (path) =>
+      stat(path).then(
+        (stats) => stats.isDirectory(),
+        () => false,
+      ),
+    logger,
   })
   registerAboutBridge({
     ipcMain: ipc,

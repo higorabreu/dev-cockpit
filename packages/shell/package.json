@@ -20,6 +20,7 @@
     "@dck/adapter-node-fetch": "workspace:^",
     "@dck/adapter-node-git": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
+    "@dck/adapter-node-walk": "workspace:^",
     "@dck/adapter-node-pty": "workspace:^",
     "@dck/core": "workspace:^",
     "@dck/daemon": "workspace:^",
