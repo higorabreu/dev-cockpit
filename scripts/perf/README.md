@@ -76,6 +76,25 @@ of one core: a large value there marks a noisy sample.
 - **size**: the size of `packages/shell/dist` and its parts, and of the CLI bundled as the `.deb` ships
   it. The `.deb` itself is `pnpm package` (Electron is most of it); the script does not build it.
 
+## The file view's viewers
+
+`viewers.cjs` measures what each viewer of the file view costs (plans/files.md, F4b), on this checkout:
+
+```bash
+python3 scripts/perf/viewer-fixtures.py /tmp/dck-fixtures   # needs Pillow and reportlab
+node scripts/perf/viewers.cjs --fixtures /tmp/dck-fixtures --electron <electron> --runs 3
+```
+
+Each viewer gets a launch of its own (with `inject.cjs` and `probe.cjs`, as the probe phase), whose tab starts
+in the fixtures folder. A small Markdown file opens first, so the editor's code is loaded before anything is
+counted; then the file search (`Ctrl+Shift+O`, typed with `xdotool`) opens the fixture, and the probe
+reports the end of the frame that shows it: an image or an SVG once its bitmap is drawn, the README's
+preview once `Ctrl+Shift+J` has rendered it, a PDF once its frame has loaded Chromium's viewer (the first
+page follows a few milliseconds later and is not seen by the page). Memory is the PSS of the launch 2.5 s
+after the file shows, its highest value sampled every 50 ms meanwhile, and 4 s after the small file
+replaced it, each against the moment before the fixture opened; the table also counts the processes the
+viewer added while it showed and after. The results go to `<work>/viewers.json`.
+
 ## Reading the numbers
 
 - Absolute numbers belong to the machine. Under Xvfb there is no GPU and no compositing manager, the
