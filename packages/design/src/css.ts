@@ -4,7 +4,7 @@ import type { ThemeName, Tokens } from './tokens.ts'
 const kebab = (name: string) => name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
 
 function themeDeclarations(tokens: Tokens, theme: ThemeName): string[] {
-  const { color, overlay } = tokens.themes[theme]
+  const { color, overlay, syntax } = tokens.themes[theme]
   const { mix } = tokens
   const mixed = (share: number, base: string) =>
     `color-mix(in srgb, var(--fg) ${share}%, var(${base}))`
@@ -12,6 +12,7 @@ function themeDeclarations(tokens: Tokens, theme: ThemeName): string[] {
     ...Object.entries(color).map(([name, value]) => `--${kebab(name)}: ${value};`),
     `--bg-rgb: ${parseHex(color.bg).join(', ')};`,
     ...Object.entries(overlay).map(([name, value]) => `--${kebab(name)}: ${value};`),
+    ...Object.entries(syntax).map(([name, value]) => `--syntax-${kebab(name)}: ${value};`),
     `--sector-idle: ${mixed(mix.sectorIdle, '--surface')};`,
     `--sector-selected: ${mixed(mix.sectorSelected, '--surface')};`,
     `--list-selected: ${mixed(mix.listSelected, '--surface')};`,

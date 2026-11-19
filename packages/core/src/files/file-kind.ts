@@ -1,6 +1,8 @@
 import { markedEncoding } from './text-codec.ts'
 
 export const FILE_LIMITS = {
+  // Past this a text shows without syntax colors: a jump deep into it would cost a frame per key (F0)
+  colorBytes: 2 * 1024 * 1024,
   // Past this a text opens read only
   editableBytes: 5 * 1024 * 1024,
   // Past this only the card shows, as for a binary

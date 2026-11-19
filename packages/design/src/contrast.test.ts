@@ -131,4 +131,70 @@ describe('contrastChecks', () => {
 
     expect(failures.map((check) => check.name)).toContain('selected terminal text')
   })
+
+  it('should check every syntax role, comments included, on every ground of the editor when checking each theme', () => {
+    for (const theme of themeNames) {
+      const names = contrastChecks(tokens, theme).map((check) => check.name)
+      const roles = Object.keys(tokens.themes[theme].syntax).filter(
+        (name) => name !== 'indentGuide',
+      )
+
+      for (const name of [...roles, 'plain text'])
+        expect(names).toEqual(
+          expect.arrayContaining([
+            `syntax ${name} on the editor`,
+            `syntax ${name} on a selection`,
+            `syntax ${name} on a search match`,
+            `syntax ${name} on the current search match`,
+            `syntax ${name} on a line from the disk`,
+            `syntax ${name} on a removed line`,
+          ]),
+        )
+      expect(names).toContain('syntax comment on a selection')
+      expect(names).not.toContain('syntax indentGuide on the editor')
+    }
+  })
+
+  it('should check the current search match underline as a graphic when checking each theme', () => {
+    for (const theme of themeNames) {
+      const checks = contrastChecks(tokens, theme).filter((check) =>
+        check.name.startsWith('current search match underline'),
+      )
+
+      expect(checks).toHaveLength(2)
+      expect(checks.every((check) => check.minimum === 3 && check.passes)).toBe(true)
+    }
+  })
+
+  it('should report the current search match when its tint is too strong for the comments', () => {
+    const light = tokens.themes.light
+    const strong = {
+      ...tokens,
+      themes: {
+        ...tokens.themes,
+        light: { ...light, color: { ...light.color, searchCurrent: '#c9b37a' } },
+      },
+    }
+
+    const failures = contrastChecks(strong, 'light').filter((check) => !check.passes)
+
+    expect(failures.map((check) => check.name)).toContain(
+      'syntax comment on the current search match',
+    )
+  })
+
+  it('should report a syntax color too close to the editor background when it is', () => {
+    const dark = tokens.themes.dark
+    const dim = {
+      ...tokens,
+      themes: {
+        ...tokens.themes,
+        dark: { ...dark, syntax: { ...dark.syntax, comment: '#2a2a2a' } },
+      },
+    }
+
+    const failures = contrastChecks(dim, 'dark').filter((check) => !check.passes)
+
+    expect(failures.map((check) => check.name)).toContain('syntax comment on the editor')
+  })
 })

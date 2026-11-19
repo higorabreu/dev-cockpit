@@ -21,6 +21,7 @@ export interface ShortcutActions {
   changeOpacity(direction: 1 | -1): void
   changeFontSize(delta: number | 'reset'): void
   clearTerminal(): void
+  toggleFile(): void
 }
 
 // Listened for in the capture phase: the app's keys never reach the shell
@@ -47,6 +48,7 @@ export function bindShortcuts(actions: ShortcutActions, keymap: Keymap): () => v
     fontSmaller: () => actions.changeFontSize(-1),
     fontReset: () => actions.changeFontSize('reset'),
     clearTerminal: actions.clearTerminal,
+    toggleFile: actions.toggleFile,
   }
   const handle = (event: KeyboardEvent) => {
     if (inputGate.blocked) return

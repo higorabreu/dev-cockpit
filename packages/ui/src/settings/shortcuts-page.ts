@@ -44,6 +44,7 @@ export interface ShortcutsPageContext {
 const GROUPS: ReadonlyArray<readonly [MessageKey, readonly ShortcutId[]]> = [
   ['menu.cat.tabs', ['newTab', 'closeTab', 'renameTab', 'nextTab', 'previousTab', 'clearTerminal']],
   ['settings.group.review', ['review', 'reviewLayout', 'reviewSend']],
+  ['settings.group.files', ['toggleFile']],
   ['settings.group.window', ['projects', 'fileSearch', 'views', 'panel', 'settings', 'fullHeight']],
   [
     'settings.group.appearance',
@@ -58,6 +59,7 @@ const ACTION_LABELS: Readonly<Record<ShortcutId, MessageKey>> = {
   nextTab: 'tabs.next',
   previousTab: 'tabs.previous',
   clearTerminal: 'terminal.clear',
+  toggleFile: 'files.toggle',
   review: 'review.toggle',
   reviewLayout: 'review.layout.toggle',
   reviewSend: 'review.send',

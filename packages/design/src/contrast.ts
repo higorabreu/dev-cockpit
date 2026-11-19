@@ -13,7 +13,7 @@ const GRAPHIC = 3
 
 // Derived fills follow the same mix CSS does with color-mix
 export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly ContrastCheck[] {
-  const { color, terminal } = tokens.themes[theme]
+  const { color, terminal, syntax } = tokens.themes[theme]
   const rgb = (hex: string): Rgb => parseHex(hex)
   const surface = rgb(color.surface)
   const fg = rgb(color.fg)
@@ -52,6 +52,16 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
     // The needs you mark sits on the tab bar and on the active tab or the selected row of the tab list
     ['warning mark on the window', rgb(color.warning), rgb(color.bg), GRAPHIC],
     ['warning mark on the active tab', rgb(color.warning), rgb(color.tabActive), GRAPHIC],
+    // The current search match is told by its warning underline as well as its tint, and the matches out of
+    // view by their marks beside the scrollbar
+    ['current search match underline', rgb(color.warning), rgb(color.bg), GRAPHIC],
+    [
+      'current search match underline on its tint',
+      rgb(color.warning),
+      rgb(color.searchCurrent),
+      GRAPHIC,
+    ],
+    ['search match mark in the scrollbar', rgb(color.warning), rgb(color.bg), GRAPHIC],
     ['critical on the surface', rgb(color.critical), surface, TEXT],
     // A diff's code stays primary text on every tint; numbers and signs take the line's own ink
     ['code on an added line', fg, rgb(color.diffAdd), TEXT],
@@ -92,7 +102,28 @@ export function contrastChecks(tokens: Tokens, theme: ThemeName): readonly Contr
       ([name, hex]) => [`terminal ${name} on the window`, rgb(hex), rgb(color.bg), TEXT] as const,
     )
 
-  return [...pairs, ...ansi].map(([name, foreground, background, minimum]) => {
+  // Every text the editor draws, the plain text and each syntax role, comments included, on every ground it
+  // can sit on: the window, a selection (focused or not, and a matching bracket: one tint), a search match
+  // and the current one, the lines a merge took from the disk and the sides of Compare. The indent guides
+  // are decorative
+  const { indentGuide: _decorative, ...roles } = syntax
+  const grounds: ReadonlyArray<readonly [string, Rgb]> = [
+    ['the editor', rgb(color.bg)],
+    ['a selection', selectedLine(color.bg)],
+    ['a search match', rgb(color.searchMatch)],
+    ['the current search match', rgb(color.searchCurrent)],
+    ['a line from the disk', rgb(color.diffAdd)],
+    ['a removed line', rgb(color.diffRemove)],
+  ]
+  const code = [['plain text', color.fg] as const, ...Object.entries(roles)].flatMap(
+    ([name, hex]) =>
+      grounds.map(
+        ([ground, background]) =>
+          [`syntax ${name} on ${ground}`, rgb(hex), background, TEXT] as const,
+      ),
+  )
+
+  return [...pairs, ...ansi, ...code].map(([name, foreground, background, minimum]) => {
     const ratio = contrastRatio(foreground, background)
     return { name, ratio, minimum, passes: ratio >= minimum }
   })

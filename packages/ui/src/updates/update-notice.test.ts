@@ -5,7 +5,12 @@ import { createNotice } from '../tabs/notice.ts'
 import type { MenuAction } from '../tabs/tab-menu.ts'
 import { createUpdateNotice } from './update-notice.ts'
 
-function setup(options: { agents?: number; canInstall?: boolean; narrow?: boolean } = {}) {
+// The open files are settled before a restart, which then goes on after a turn of the event loop
+const settleFiles = () => new Promise((resolve) => setTimeout(resolve, 0))
+
+function setup(
+  options: { agents?: number; canInstall?: boolean; narrow?: boolean; files?: boolean } = {},
+) {
   document.body.replaceChildren()
   const element = document.createElement('div')
   document.body.append(element)
@@ -36,6 +41,7 @@ function setup(options: { agents?: number; canInstall?: boolean; narrow?: boolea
     updates,
     agentTabs: () => options.agents ?? 0,
     saveTabs: () => void calls.push('saveTabs'),
+    beforeRestart: async () => options.files ?? true,
     done: () => void calls.push('done'),
     openMenu(actions, anchor, caption) {
       const labels = actions.map((action) => action.label)
@@ -100,16 +106,31 @@ describe('createUpdateNotice', () => {
     expect(labels(element)).toEqual(['Downloading 0.10.0', '42%'])
   })
 
-  it('should save the tabs and restart when no agent is running', () => {
+  it('should save the tabs and restart when no agent is running', async () => {
     const { show, button, calls } = setup()
     show({ kind: 'installed', version: '0.10.0' })
 
     button('Restart').click()
+    await settleFiles()
 
-    expect(calls).toEqual(['saveTabs', 'restart', 'done'])
+    expect(calls).toEqual(['done', 'saveTabs', 'restart'])
   })
 
-  it('should ask inline first when a tab has an agent running', () => {
+  it('should keep the update ready and restart nothing when a file needs the user first', async () => {
+    // Arrange
+    const { element, show, button, calls } = setup({ files: false })
+    show({ kind: 'installed', version: '0.10.0' })
+
+    // Act
+    button('Restart').click()
+    await settleFiles()
+
+    // Assert
+    expect(calls).toEqual(['done'])
+    expect(labels(element)).toContain('Restart')
+  })
+
+  it('should ask inline first when a tab has an agent running', async () => {
     const { element, show, button, calls } = setup({ agents: 1 })
     show({ kind: 'installed', version: '0.10.0' })
 
@@ -118,7 +139,8 @@ describe('createUpdateNotice', () => {
     expect(labels(element)).toEqual(['1 tab has an agent running', 'Cancel', 'Restart anyway'])
     expect(calls).toEqual(['done'])
     button('Restart anyway').click()
-    expect(calls).toEqual(['done', 'saveTabs', 'restart', 'done'])
+    await settleFiles()
+    expect(calls).toEqual(['done', 'done', 'saveTabs', 'restart'])
   })
 
   it('should go back to the installed notice when the warning is cancelled', () => {
@@ -209,7 +231,7 @@ describe('createUpdateNotice compact', () => {
     expect(shown?.getAttribute('data-tip')).toBe('Downloading 0.10.0, 42%')
   })
 
-  it('should bring the menu back with the question when Restart is chosen with an agent running', () => {
+  it('should bring the menu back with the question when Restart is chosen with an agent running', async () => {
     // Arrange
     const { element, show, menus, calls } = setup({ narrow: true, agents: 1 })
     show({ kind: 'installed', version: '0.10.0' })
@@ -219,6 +241,7 @@ describe('createUpdateNotice compact', () => {
     choose(menus[0]?.actions ?? [], 'Restart')
     const asked = icon(element)
     choose(menus[1]?.actions ?? [], 'Restart anyway')
+    await settleFiles()
 
     // Assert
     expect(menus.map((menu) => menu.labels)).toEqual([
@@ -229,7 +252,7 @@ describe('createUpdateNotice compact', () => {
     expect(menus.map((menu) => menu.caption)).toEqual([undefined, '1 tab has an agent running'])
     expect(asked?.getAttribute('data-tip')).toBe('1 tab has an agent running')
     expect(asked?.dataset.tone).toBe('warning')
-    expect(calls).toEqual(['saveTabs', 'restart', 'done'])
+    expect(calls).toEqual(['done', 'saveTabs', 'restart'])
   })
 
   it('should close its menu when the update state changes while it is open', () => {
@@ -270,6 +293,7 @@ describe('createUpdateNotice compact', () => {
       updates: {} as HostApi['updates'],
       agentTabs: () => 0,
       saveTabs: () => undefined,
+      beforeRestart: async () => true,
       done: () => undefined,
       openMenu: () => ({ close: () => undefined }),
     })

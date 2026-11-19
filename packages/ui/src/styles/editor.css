@@ -1,0 +1,139 @@
+/* The search bar at the top of a file (editor/editor-search.ts) and CodeMirror's go to line bar, drawn
+   with the cockpit's controls. The editor's own chrome is a CodeMirror theme (editor/editor-theme.ts) */
+.fv-search {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.fv-search-rows {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fv-search-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fv-search-row[hidden] {
+  display: none;
+}
+
+.fv-search-field,
+.cm-panel.cm-gotoLine input {
+  width: 260px;
+  min-width: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-small);
+  background: var(--bg);
+  color: var(--fg);
+  font: 12px / 18px var(--font-mono);
+}
+
+.fv-search-field:focus,
+.cm-panel.cm-gotoLine input:focus {
+  outline: 2px solid var(--fg);
+  outline-offset: 0;
+}
+
+.fv-search-field::placeholder {
+  color: var(--muted);
+}
+
+.fv-search-toggle,
+.fv-search-icon {
+  flex: none;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: none;
+  color: var(--muted);
+  font: 12px var(--font-mono);
+}
+
+.fv-search-toggle:hover,
+.fv-search-icon:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+/* A pressed toggle gains an outline as well as the fill, so its state is not told by color alone */
+.fv-search-toggle[aria-pressed="true"] {
+  background: var(--tab-active);
+  color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--control-line);
+}
+
+.fv-search-icon[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+
+.fv-search-toggle:focus-visible,
+.fv-search-icon:focus-visible,
+.fv-search-text:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 0;
+}
+
+.fv-search-count {
+  min-width: 9ch;
+  padding: 0 4px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fv-search-text {
+  flex: none;
+  padding: 3px 8px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-small);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+}
+
+.fv-search-text:hover {
+  background: var(--hover);
+}
+
+.cm-panel.cm-gotoLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.cm-panel.cm-gotoLine label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.cm-panel.cm-gotoLine input {
+  width: 90px;
+}
+
+.cm-panel.cm-gotoLine .cm-button {
+  padding: 3px 10px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-small);
+  background: none;
+  background-image: none;
+  color: var(--fg);
+  font: inherit;
+}

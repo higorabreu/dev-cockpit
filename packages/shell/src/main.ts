@@ -11,6 +11,7 @@ import { createNodeFileStore } from '@dck/adapter-node-fs'
 import {
   createGitDiffSource,
   createGitFiles,
+  createGitIgnoreCheck,
   createGitInspector,
   createGitReviewNotes,
 } from '@dck/adapter-node-git'
@@ -86,7 +87,9 @@ import { createWindowRequests } from './platform/window-requests.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
 import { createRecencyStore } from './projects/recency-store.ts'
+import { createCloseGuard } from './quit/close-guard.ts'
 import { registerQuitBridge } from './quit/quit-bridge.ts'
+import { createQuitFiles } from './quit/quit-files.ts'
 import { createQuitGuard } from './quit/quit-guard.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
 import { watchSettingsFile } from './settings/settings-watch.ts'
@@ -435,7 +438,13 @@ app.whenReady().then(async () => {
   })
 
   const fileStore = createNodeFileStore({ logger })
-  const files = registerFilesBridge({ ipcMain: ipc, store: fileStore, logger, send })
+  const files = registerFilesBridge({
+    ipcMain: ipc,
+    store: fileStore,
+    ignore: createGitIgnoreCheck(),
+    logger,
+    send,
+  })
   protocol.handle(
     FILE_SCHEME,
     createFileProtocol({ pathOf: files.mediaPath, store: fileStore, logger }),
@@ -493,16 +502,29 @@ app.whenReady().then(async () => {
     logger,
   })
 
+  // Last before any quit from the menus or the quit card: the open files are saved, or the user decides
+  const quitFiles = createQuitFiles({
+    settle: () => send(hostChannels.quitSettleFiles),
+    present: windowRequests.reopen,
+    quit: () => app.quit(),
+    after(milliseconds, task) {
+      const timer = setTimeout(task, milliseconds)
+      return () => clearTimeout(timer)
+    },
+  })
   const quitGuard = createQuitGuard({
     pids: () => bridge.pids(),
     activity: (pid) => sessionInspector.activity(pid),
     // The question is a card in the window, so the window shows first, even from the menu bar icon
     ask: windowRequests.askQuit,
-    quit: () => app.quit(),
+    quit: () => quitFiles.request(),
   })
-  registerQuitBridge({ ipcMain: ipc, guard: quitGuard })
+  registerQuitBridge({ ipcMain: ipc, guard: quitGuard, files: quitFiles })
+  const closeGuard = createCloseGuard(() => quitFiles.request())
+  window.on('close', (event) => closeGuard.close(event))
+  app.on('before-quit', () => closeGuard.quitting())
   // The app menu's Quit (⌘Q) and the menu bar icon's; a logout or shutdown quits without asking
-  const quit = platform.asksBeforeQuit ? () => void quitGuard.request() : () => app.quit()
+  const quit = platform.asksBeforeQuit ? () => void quitGuard.request() : () => quitFiles.request()
 
   activeKey = loaded.settings.shortcuts.toggleWindow
   void toggleKey.bind(activeKey).then((bound) => {

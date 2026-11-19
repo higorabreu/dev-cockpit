@@ -55,6 +55,8 @@ const api: HostApi = {
     watch: (path, since) => ipcRenderer.invoke(hostChannels.filesWatch, { path, since }),
     unwatch: (path) => ipcRenderer.send(hostChannels.filesUnwatch, path),
     onChange: (listener) => subscribe<[string, FileChange]>(hostChannels.filesChanged, listener),
+    editorConfig: (path) => ipcRenderer.invoke(hostChannels.filesEditorConfig, path),
+    ignored: (path) => ipcRenderer.invoke(hostChannels.filesIgnored, path),
   },
   notifications: {
     show: (notification) => ipcRenderer.send(hostChannels.notificationsShow, notification),
@@ -147,6 +149,8 @@ const api: HostApi = {
   quit: {
     onAsk: (listener) => subscribe<[number]>(hostChannels.quitAsk, listener),
     answer: (quit) => ipcRenderer.send(hostChannels.quitAnswer, quit),
+    onSettleFiles: (listener) => subscribe<[]>(hostChannels.quitSettleFiles, listener),
+    filesSettled: (answer) => ipcRenderer.send(hostChannels.quitFilesSettled, answer),
   },
   window: {
     toggleFullHeight: () => ipcRenderer.send(hostChannels.windowToggleFullHeight),

@@ -21,6 +21,32 @@ export interface TerminalPalette {
   readonly brightWhite: string
 }
 
+// Code in the editor by role ("dck vivo, suave", chosen by the maintainer on 2026-11-19), mapped to Lezer's
+// tags in ui/src/editor/editor-syntax.ts; a user theme can override each role
+export interface SyntaxPalette {
+  // Storage and declaration keywords (const, class, private, function)
+  readonly storage: string
+  // Control flow keywords (import, if, return, await) and a doc comment's tags
+  readonly control: string
+  readonly constant: string
+  readonly type: string
+  readonly function: string
+  readonly string: string
+  readonly number: string
+  readonly property: string
+  readonly variable: string
+  readonly operator: string
+  readonly punctuation: string
+  readonly comment: string
+  readonly invalid: string
+  // Brackets by depth, repeating
+  readonly bracket1: string
+  readonly bracket2: string
+  readonly bracket3: string
+  // Decorative: a 1px line per indent level, not read as text
+  readonly indentGuide: string
+}
+
 export interface ThemeTokens {
   readonly color: {
     readonly bg: string
@@ -42,12 +68,16 @@ export interface ThemeTokens {
     readonly diffRemove: string
     readonly diffRemoveWord: string
     readonly diffRemoveInk: string
+    // The editor's search: a quiet solid tint under every match, a stronger one under the current match
+    readonly searchMatch: string
+    readonly searchCurrent: string
   }
   readonly overlay: {
     readonly scroll: string
     readonly scrollHover: string
     readonly scrollActive: string
   }
+  readonly syntax: SyntaxPalette
   readonly terminal: TerminalPalette
 }
 

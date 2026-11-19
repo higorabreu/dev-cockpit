@@ -1,16 +1,19 @@
 import { randomUUID } from 'node:crypto'
-import { isAbsolute } from 'node:path'
+import { dirname, isAbsolute, join } from 'node:path'
 import {
   createFileOpener,
+  type EditorConfigFile,
   encodeText,
   errorBody,
   FILE_LIMITS,
   FILE_SCHEME,
   type FileStore,
   fail,
+  type GitIgnoreCheck,
   hostChannels,
   type Logger,
   ok,
+  parseEditorConfig,
   type TextEncoding,
   type Unsubscribe,
 } from '@dck/core'
@@ -39,9 +42,14 @@ const saveSchema = z.object({
 
 const watchSchema = z.object({ path: pathSchema, since: stampSchema.optional() })
 
+// An `.editorconfig` is a few lines; the walk up stops at the root of the disk or at one marked root
+const MAX_CONFIG_BYTES = 64 * 1024
+const MAX_CONFIG_FOLDERS = 64
+
 export interface FilesBridgeOptions {
   readonly ipcMain: IpcMainApi
   readonly store: FileStore
+  readonly ignore: GitIgnoreCheck
   readonly logger: Logger
   send(channel: string, ...args: unknown[]): void
   // The id in an image's or a PDF's address; random, so the window cannot name a path through it
@@ -57,6 +65,34 @@ interface Opened {
 // window, and never its content in a log
 export function registerFilesBridge(options: FilesBridgeOptions) {
   const { ipcMain, store, logger, send } = options
+
+  // A path of a file the window opened in this session, else undefined
+  const openedPath = (path: unknown, kind: string) => {
+    const parsed = pathSchema.safeParse(path)
+    if (parsed.success && opened.has(parsed.data)) return parsed.data
+    logger.warn('file request refused', { kind })
+    return undefined
+  }
+
+  async function editorConfigs(path: string): Promise<EditorConfigFile[]> {
+    const found: EditorConfigFile[] = []
+    let dir = dirname(path)
+    for (let step = 0; step < MAX_CONFIG_FOLDERS; step++) {
+      const file = join(dir, '.editorconfig')
+      const info = await store.stat(file)
+      const read =
+        info.ok && info.value.size <= MAX_CONFIG_BYTES ? await store.read(file) : undefined
+      if (read?.ok) {
+        const text = new TextDecoder().decode(read.value.bytes)
+        found.push({ dir, text })
+        if (parseEditorConfig(text).root) break
+      }
+      const parent = dirname(dir)
+      if (parent === dir) break
+      dir = parent
+    }
+    return found
+  }
   const newId = options.newId ?? randomUUID
   const opened = new Map<string, Opened>()
   const idByPath = new Map<string, string>()
@@ -138,6 +174,16 @@ export function registerFilesBridge(options: FilesBridgeOptions) {
     if (watching.count > 0) return
     watching.stop()
     watches.delete(path)
+  })
+
+  ipcMain.handle(hostChannels.filesEditorConfig, (_event, path: unknown) => {
+    const file = openedPath(path, 'editorconfig')
+    return file === undefined ? [] : editorConfigs(file)
+  })
+
+  ipcMain.handle(hostChannels.filesIgnored, (_event, path: unknown) => {
+    const file = openedPath(path, 'ignored')
+    return file === undefined ? false : options.ignore.isIgnored(file)
   })
 
   return {

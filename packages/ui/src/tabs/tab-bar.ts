@@ -1,6 +1,8 @@
 import { type AttentionKind, MAX_TAB_NAME, type TabsState, type Translate } from '@dck/core'
+import type { FileAppendix } from '../files/file-tabs.ts'
 import { h, icon } from '../panel/dom.ts'
 import { attentionMark, reviewMark } from './attention-mark.ts'
+import { fileGlyph, fileSegment } from './file-segment.ts'
 
 export interface TabBarCallbacks {
   activate(id: string): void
@@ -12,6 +14,10 @@ export interface TabBarCallbacks {
   reorder(ids: readonly string[]): void
   // The name typed for a tab, or undefined when the edit was cancelled
   rename(id: string, name: string | undefined): void
+  // A click on a segment of a tab with a file: its file (true) or its terminal
+  showFile(id: string, shown: boolean): void
+  // The file segment's right click: its recent files and Close file
+  fileMenu(id: string, x: number, y: number): void
 }
 
 const FADE_PX = 24
@@ -23,6 +29,7 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
   let dragging: HTMLElement | undefined
   let lastActive: string | undefined
   let last: Parameters<typeof render> = [{ tabs: [], activeId: undefined, recent: [] }]
+  const noFiles: ReadonlyMap<string, FileAppendix> = new Map()
   // While a name is being typed the bar does not redraw: a redraw would take the field away
   let editing: { readonly id: string; finish(save: boolean): void } | undefined
   let lastClick: { readonly id: string; readonly at: number } | undefined
@@ -54,13 +61,15 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
     { passive: false },
   )
 
-  // `reviews` are the tabs whose review is open but hidden behind their terminal
+  // `reviews` are the tabs whose review is open but hidden behind their terminal; `files` the tabs with a
+  // file over them
   function render(
     state: TabsState,
     marks: ReadonlyMap<string, AttentionKind> = new Map(),
     reviews: ReadonlySet<string> = new Set(),
+    files: ReadonlyMap<string, FileAppendix> = noFiles,
   ) {
-    last = [state, marks, reviews]
+    last = [state, marks, reviews, files]
     if (editing) return
     // Replacing the children resets the scroll; without saving, the watcher's redraw undoes the user's scroll
     const scrolled = container.scrollLeft
@@ -70,13 +79,13 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
     const activeWasShown = activeInView()
     container.replaceChildren(
       ...state.tabs.map((tab) => {
+        const active = tab.id === state.activeId
+        const file = files.get(tab.id)
         const button = document.createElement('button')
         button.type = 'button'
         button.className = 'tab'
-        button.dataset.id = tab.id
-        button.draggable = true
         button.setAttribute('role', 'tab')
-        button.setAttribute('aria-selected', String(tab.id === state.activeId))
+        button.setAttribute('aria-selected', String(active && !file?.shown))
         const label = document.createElement('span')
         label.className = 'tab-label'
         label.textContent = tab.label
@@ -109,48 +118,56 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
             ),
           )
         }
+        if (file && !active) button.append(fileGlyph(file, t))
         // The first click redraws the bar, so the second lands on a new button and no dblclick comes
         button.addEventListener('click', (event) => {
           const again = lastClick?.id === tab.id && event.timeStamp - lastClick.at < DOUBLE_CLICK_MS
           lastClick = again ? undefined : { id: tab.id, at: event.timeStamp }
           if (again) rename(tab.id)
+          else if (active && file?.shown) callbacks.showFile(tab.id, false)
           else callbacks.activate(tab.id)
         })
         button.addEventListener('contextmenu', (event) => {
           event.preventDefault()
           callbacks.contextMenu(tab.id, event.clientX, event.clientY)
         })
+        // The active tab with a file grows a second segment inside one outline: the terminal and the file
+        const element = file && active ? appendix(tab.id, button, file) : button
+        element.classList.add('tab')
+        element.dataset.id = tab.id
+        element.draggable = true
+        if (active) element.dataset.active = 'true'
         // The middle button closes the tab, as in a browser. On Linux its release would also paste the
         // selection into the focused terminal, and its press would move the focus or start autoscroll
         for (const type of ['mousedown', 'mouseup'] as const)
-          button.addEventListener(type, (event) => {
+          element.addEventListener(type, (event) => {
             if (event.button === 1) event.preventDefault()
           })
-        button.addEventListener('auxclick', (event) => {
+        element.addEventListener('auxclick', (event) => {
           if (event.button !== 1) return
           event.preventDefault()
           if (callbacks.middleClickCloses()) callbacks.close(tab.id)
         })
-        button.addEventListener('dragstart', (event) => {
-          dragging = button
+        element.addEventListener('dragstart', (event) => {
+          dragging = element
           if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
-          button.classList.add('dragging')
+          element.classList.add('dragging')
         })
-        button.addEventListener('dragover', (event) => {
-          if (!dragging || dragging === button) return
+        element.addEventListener('dragover', (event) => {
+          if (!dragging || dragging === element) return
           event.preventDefault()
-          const box = button.getBoundingClientRect()
+          const box = element.getBoundingClientRect()
           container.insertBefore(
             dragging,
-            event.clientX > box.left + box.width / 2 ? button.nextSibling : button,
+            event.clientX > box.left + box.width / 2 ? element.nextSibling : element,
           )
         })
-        button.addEventListener('dragend', () => {
-          button.classList.remove('dragging')
+        element.addEventListener('dragend', () => {
+          element.classList.remove('dragging')
           dragging = undefined
           callbacks.reorder(currentOrder())
         })
-        return button
+        return element
       }),
     )
     container.scrollLeft = scrolled
@@ -158,19 +175,45 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
     if (state.activeId !== lastActive || (activeWasShown && !activeInView())) {
       lastActive = state.activeId
       container
-        .querySelector('[aria-selected="true"]')
+        .querySelector('.tab[data-active]')
         ?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
     }
-    if (focusedId) tabOf(focusedId)?.focus()
+    if (focusedId) focusTab(focusedId)
     syncEdges()
   }
 
   const tabOf = (id: string) =>
     [...container.querySelectorAll<HTMLElement>('.tab')].find((tab) => tab.dataset.id === id)
 
+  // The terminal's segment, a 1px divider and the file's segment, inside one outline
+  function appendix(id: string, terminal: HTMLButtonElement, file: FileAppendix): HTMLElement {
+    terminal.className = 'tab-part tab-terminal'
+    const segment = fileSegment(file, t, true)
+    segment.addEventListener('click', () => callbacks.showFile(id, true))
+    segment.addEventListener('contextmenu', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      callbacks.fileMenu(id, event.clientX, event.clientY)
+    })
+    return h(
+      'div',
+      { class: 'tab-appendix', role: 'presentation' },
+      terminal,
+      h('span', { class: 'tab-divider', 'aria-hidden': 'true' }),
+      segment,
+    )
+  }
+
+  // A tab with a file takes the focus on its terminal segment
+  function focusTab(id: string) {
+    const tab = tabOf(id)
+    const target = tab?.matches('button') ? tab : tab?.querySelector<HTMLElement>('button')
+    target?.focus()
+  }
+
   // Clear of the edges that fade, where the bar's own scroll padding keeps the active tab
   function activeInView(): boolean {
-    const active = container.querySelector('[aria-selected="true"]')
+    const active = container.querySelector('.tab[data-active]')
     if (!active) return false
     const fade = container.dataset.fade
     const start = fade === 'start' || fade === 'both' ? FADE_PX : 0
@@ -197,7 +240,7 @@ export function createTabBar(container: HTMLElement, callbacks: TabBarCallbacks,
       'aria-label': t('tabs.nameField'),
     })
     const field = h('span', { class: 'tab editing', 'data-id': id }, input)
-    if (button.getAttribute('aria-selected') === 'true') field.setAttribute('aria-current', 'true')
+    if (button.dataset.active === 'true') field.setAttribute('aria-current', 'true')
     let done = false
     const finish = (save: boolean) => {
       if (done) return
