@@ -1148,6 +1148,7 @@ full height.
 **How to revert:** drop `dragRatio`, `resizeTo` and `endResize` from `core/src/dock/dock-controller.ts`,
 the `window.resize` and `window.endResize` channels, `ui/src/window/resize-edge.ts`, the `#edge` and
 `#edge-size` elements and styles, and `holdFit` in the terminal session.
+**Amended by D80** (2026-11-19): a drag released at 100% turns full height on instead of saving 100%.
 
 ## D68. On a Mac the terminal edits the line with Cmd and Option, and the right Option types characters
 
@@ -1506,3 +1507,20 @@ the press and the release together, so the hold cannot be measured and the menu 
 **How to revert:** have the controller's `mouseup` call `release()` again and drop `releaseButton`,
 `isSticky`, the `click` hint mode in `hold-menu/menu-view.ts` and its two catalog entries
 (`menu.hint.pick`, `menu.hint.close`).
+
+## D80. Dragging the edge to 100% goes full height, and leaving full height never stays at 100%
+
+**Decision:** on top of D67. A drag of the bottom edge released at 100% turns full height on, as F11 does,
+and saves nothing: the anchored height stays the one from before the drag. Below 100% a drag saves the
+height where it is released, as before, and a drag that starts at full height still leaves it at once.
+Leaving full height (F11, the double click on the edge, the menu) goes back to the anchored height; when
+that height is itself 100%, set in Settings or in the file, it goes to 50% instead and saves it, so the
+slider follows. F11 at an anchored height of 100%, which looks like full height, does the same. With the
+height pinned by `DCK_HEIGHT` the window still goes to 50% and the file keeps its value. The rule lives in
+the dock controller (`toggleFullHeight` returns the height to save, `endResize` returns none at 100%).
+**Reason:** reported by the maintainer on 2026-11-18: a drag to 100% saved 100% as the anchored height, so
+F11 then switched between two windows of the same size and nothing happened, with no height left to go
+back to. The maintainer chose the height from before the drag, and 50% when that one is 100%.
+**How to revert:** in `core/src/dock/dock-controller.ts`, have `endResize` return the ratio when kept
+whatever it is, have `toggleFullHeight` only flip the flag and return nothing, and drop `leftTo` and
+`LEAVE_RATIO`; `main.ts` then saves nothing on F11.

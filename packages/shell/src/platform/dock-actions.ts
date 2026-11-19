@@ -5,8 +5,8 @@ export interface DockActions {
   toggle(): Promise<void>
   show(): Promise<void>
   present(): Promise<void>
-  // Resolves to whether the window is now at full height
-  toggleFullHeight(): Promise<boolean>
+  // Resolves to the anchored height to save when leaving full height changed it (DockController)
+  toggleFullHeight(): Promise<number | undefined>
 }
 
 // Under native Wayland, a show that skips the compositor covers the monitor and slides under the top bar
@@ -20,8 +20,7 @@ export function createDockActions(dock: DockController, area?: WaylandArea): Doc
     present: () => beforeShow().then(() => dock.present()),
     async toggleFullHeight() {
       if (area && !area.current()) await beforeShow()
-      dock.toggleFullHeight()
-      return dock.isFullHeight()
+      return dock.toggleFullHeight()
     },
   }
 }

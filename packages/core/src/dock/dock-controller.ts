@@ -27,7 +27,9 @@ export interface DockController {
   // window again: mapped again without the focus, it opens behind the focused app (no always on top on Wayland)
   present(): void
   hide(): void
-  toggleFullHeight(): void
+  // Switches full height. Leaving it, or pressing it at an anchored height of 100% that looks the same, lands
+  // on half the screen when the anchored height is 100%, and returns that fraction for the caller to save
+  toggleFullHeight(): number | undefined
   // Reapplies the current position and size, for example after the height changes in settings
   refresh(): void
   isFullHeight(): boolean
@@ -37,7 +39,8 @@ export interface DockController {
   // The bottom edge dragged to `height` pixels: the window follows at once and leaves full height. Returns
   // the fraction of the work area it takes
   resizeTo(height: number): number
-  // The end of a drag: kept, it returns the fraction to save; dropped, the window goes back to how it was
+  // The end of a drag: kept, it returns the fraction to save, or nothing when released at 100%, which turns
+  // full height on and leaves the anchored height as it was; dropped, the window goes back to how it was
   endResize(keep: boolean): number | undefined
 }
 
@@ -48,6 +51,8 @@ const TOGGLE_REPEAT_MS = 300
 // Distance in pixels at which a dragged edge settles on half or the whole of the work area
 const SNAP_PX = 12
 const SNAP_RATIOS = [0.5, 1] as const
+// Where leaving full height lands when the anchored height is the whole screen, which would change nothing
+const LEAVE_RATIO = 0.5
 
 // The fraction of the work area a dragged edge stands for: within the limits and snapped. Kept to a
 // thousandth, under a pixel on any screen, so the edge follows the pointer and does not jump on release
@@ -74,8 +79,11 @@ export function createDockController(options: DockOptions): DockController {
   const { screen, window, scheduler } = options
   // While the edge is dragged, the height it is at; the setting changes only when the drag ends
   let dragged: { ratio: number; wasFullHeight: boolean } | undefined
+  // The height leaving full height took in place of an anchored 100%, until the caller saves it
+  let leftTo: number | undefined
   const ratio = () => {
     if (dragged) return dragged.ratio
+    if (leftTo !== undefined) return leftTo
     const value = options.heightRatio
     return typeof value === 'function' ? value() : (value ?? 0.5)
   }
@@ -140,10 +148,16 @@ export function createDockController(options: DockOptions): DockController {
       else show()
     },
     toggleFullHeight() {
-      fullHeight = !fullHeight
+      const anchoredWhole = ratio() >= 1
+      const leaving = fullHeight || anchoredWhole
+      fullHeight = !leaving
+      if (leaving && anchoredWhole) leftTo = LEAVE_RATIO
       placeInPlace()
+      return leaving && anchoredWhole ? LEAVE_RATIO : undefined
     },
     refresh() {
+      // The saved height replaces the one leaving full height took
+      leftTo = undefined
       if (window.isVisible()) placeInPlace()
     },
     isFullHeight: () => fullHeight,
@@ -162,8 +176,11 @@ export function createDockController(options: DockOptions): DockController {
       const ended = dragged
       dragged = undefined
       if (!ended) return undefined
-      if (keep) return ended.ratio
-      fullHeight = ended.wasFullHeight
+      if (keep && ended.ratio < 1) {
+        leftTo = undefined
+        return ended.ratio
+      }
+      fullHeight = keep || ended.wasFullHeight
       placeInPlace()
       return undefined
     },

@@ -29,6 +29,25 @@ function setup(cursor = { x: 300, y: 300 }, ignoresOrigin = false) {
   return { screen, window, scheduler, clock, dock }
 }
 
+// One 1920x1080 display and an anchored height the test can change, as the settings would
+function anchoredAt(initial: number) {
+  let ratio = initial
+  const window = new FakeDockWindow()
+  const dock = createDockController({
+    screen: new FakeScreen([left], { x: 300, y: 300 }),
+    window,
+    scheduler: new FakeScheduler(),
+    heightRatio: () => ratio,
+  })
+  return {
+    dock,
+    window,
+    set: (next: number) => {
+      ratio = next
+    },
+  }
+}
+
 describe('dockBounds', () => {
   it('should anchor to the top of the work area with half the height when not full height', () => {
     const workArea = { x: 1920, y: 32, width: 1920, height: 985 }
@@ -238,6 +257,59 @@ describe('toggleFullHeight', () => {
     expect(window.bounds()).toEqual({ x: 3840, y: 0, width: 1920, height: 1200 })
   })
 
+  it('should leave full height to half the screen and return it when the anchored height is 100%', () => {
+    // Arrange
+    const { dock, window, set } = anchoredAt(0.4)
+    dock.show()
+    dock.toggleFullHeight()
+    set(1)
+    dock.refresh()
+
+    // Act
+    const saved = dock.toggleFullHeight()
+
+    // Assert
+    expect(saved).toBe(0.5)
+    expect(dock.isFullHeight()).toBe(false)
+    expect(window.bounds().height).toBe(540)
+  })
+
+  it('should go to half the screen when switched at an anchored height of 100%', () => {
+    // Arrange
+    const { dock, window } = anchoredAt(1)
+    dock.show()
+
+    // Act
+    const saved = dock.toggleFullHeight()
+
+    // Assert
+    expect(saved).toBe(0.5)
+    expect(dock.fillsHeight()).toBe(false)
+    expect(window.bounds().height).toBe(540)
+  })
+
+  it('should return nothing to save when leaving full height to an anchored height below 100%', () => {
+    const { dock } = anchoredAt(0.4)
+    dock.show()
+    dock.toggleFullHeight()
+
+    expect(dock.toggleFullHeight()).toBeUndefined()
+  })
+
+  it('should follow the saved height again once the settings change after leaving full height', () => {
+    // Arrange
+    const anchored = anchoredAt(1)
+    anchored.dock.show()
+    anchored.dock.toggleFullHeight()
+
+    // Act
+    anchored.set(0.7)
+    anchored.dock.refresh()
+
+    // Assert
+    expect(anchored.window.bounds().height).toBe(756)
+  })
+
   describe('height ratio', () => {
     it('should follow the ratio at the moment of showing when the ratio is a function', () => {
       let ratio = 0.5
@@ -356,6 +428,40 @@ describe('resizeTo', () => {
     dock.resizeTo(500)
     dock.resizeTo(400)
     const saved = dock.endResize(false)
+
+    // Assert
+    expect(saved).toBeUndefined()
+    expect(dock.isFullHeight()).toBe(true)
+    expect(window.bounds().height).toBe(1080)
+  })
+
+  it('should turn full height on and save nothing when the drag ends at 100%', () => {
+    // Arrange
+    const { dock, window } = anchoredAt(0.4)
+    dock.show()
+
+    // Act
+    dock.resizeTo(1075)
+    const saved = dock.endResize(true)
+    const after = { full: dock.isFullHeight(), height: window.bounds().height }
+    dock.toggleFullHeight()
+
+    // Assert
+    expect(saved).toBeUndefined()
+    expect(after).toEqual({ full: true, height: 1080 })
+    expect(window.bounds().height).toBe(432)
+  })
+
+  it('should stay at full height when a drag from full height ends at 100%', () => {
+    // Arrange
+    const { dock, window } = anchoredAt(0.4)
+    dock.show()
+    dock.toggleFullHeight()
+
+    // Act
+    dock.resizeTo(900)
+    dock.resizeTo(1080)
+    const saved = dock.endResize(true)
 
     // Assert
     expect(saved).toBeUndefined()
