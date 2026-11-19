@@ -33,6 +33,7 @@ import {
   type SessionSnapshot,
   type SystemFontsInfo,
   sameSavedTabs,
+  shortPath,
   stepFontSize,
   stepOpacity,
   stepTab,
@@ -366,7 +367,8 @@ export async function startApp(
       goToLine: keymap.chordLabel({ ctrl: true, key: 'g' }),
     },
     host: (tabId) => tabViews.get(tabId)?.element,
-    cwd: (tabId) => watcher.get(tabId)?.cwd,
+    // The header writes the path from the project, as the tab's tooltip and the recent list do
+    cwd: (tabId) => rootOf(tabId) ?? watcher.get(tabId)?.cwd,
     autoSave: () => settings.current().files.autoSave,
     autoMerge: () => settings.current().files.autoMerge,
     ask: askLeave,
@@ -381,6 +383,23 @@ export async function startApp(
       return () => clearTimeout(timer)
     },
   })
+
+  // The outermost repository of each tab's folder, asked once per folder, so a file's path is written
+  // from the project (`shortPath`); a cd to a new folder asks again and draws the tabs when it answers
+  const roots = new Map<string, string | undefined>()
+  function rootOf(tabId: string): string | undefined {
+    const cwd = watcher.get(tabId)?.cwd
+    if (cwd === undefined) return undefined
+    if (!roots.has(cwd)) {
+      if (roots.size > 64) roots.clear()
+      roots.set(cwd, undefined)
+      void api.review.root(cwd).then((root) => {
+        roots.set(cwd, root)
+        if (root !== undefined) renderTabs()
+      })
+    }
+    return roots.get(cwd)
+  }
 
   // The file segment's right click: the tab's recent files to switch to, and Close file
   function openFileMenu(tabId: string, x: number, y: number) {
@@ -521,7 +540,8 @@ export async function startApp(
     const files = new Map(
       state.tabs.flatMap((tab) => {
         const appendix = fileTabs.appendix(tab.id)
-        return appendix ? [[tab.id, appendix] as const] : []
+        if (!appendix) return []
+        return [[tab.id, { ...appendix, path: shortPath(appendix.path, rootOf(tab.id)) }] as const]
       }),
     )
     tabBar.render(state, attention.marks(), hiddenReviews(), files)

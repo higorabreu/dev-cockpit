@@ -41,7 +41,7 @@ export function fileGlyph(appendix: FileAppendix, t: Translate): HTMLElement {
 }
 
 // The active tab's second segment: the glyph, the name (shrinking with an ellipsis, then hidden in a
-// narrow window) and the mark; the whole path and the toggle key in its tooltip
+// narrow window) and the mark; the path from the project (`shortPath`) and the toggle key in its tooltip
 export function fileSegment(appendix: FileAppendix, t: Translate, active: boolean): HTMLElement {
   return h(
     'button',
@@ -52,6 +52,7 @@ export function fileSegment(appendix: FileAppendix, t: Translate, active: boolea
       'aria-selected': String(active && appendix.shown),
       'aria-label': appendix.name,
       'data-tip': appendix.path,
+      'data-tip-path': '',
       'data-tip-shortcut': 'toggleFile',
     },
     icon(FILE_GLYPH, 12),
