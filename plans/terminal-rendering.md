@@ -41,7 +41,7 @@ Baseline, as one core: renderer about 6%, GPU process about 4%, main about 1.3%.
 | --- | --- |
 | TR1 | The CPU of an idle Claude Code tab, window shown, drops clearly below the 14% baseline |
 | TR2 | With the window hidden, the cockpit draws no frames |
-| TR3 | Idle memory stays under the 300 MB budget |
+| TR3 | Idle memory stays under the idle budget (350 MB since D90) |
 | TR4 | The font and the transparency look the same as today, in both themes |
 
 ## Results (2026-11-17, the cheap candidates)

@@ -104,7 +104,7 @@ before it is kept.
   protocol that serves only a path the user opened, never a remote URL.
 - **Budgets of its own** (checked by the perf script): nothing added to idle memory while no file was ever
   opened; opening a 1 MB file in under 150 ms; key to echo in the editor within 16 ms; the memory added by
-  an open file, per kind, reported. The idle budget of 300 MB holds with no file open; what an open file
+  an open file, per kind, reported. The idle budget (350 MB since D90) holds with no file open; what an open file
   adds is an accepted tradeoff (D88).
 
 ## Cost of each kind, to measure before keeping it
