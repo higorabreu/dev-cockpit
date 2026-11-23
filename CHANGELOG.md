@@ -3,6 +3,13 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.14.0](https://github.com/higorabreu/dev-cockpit/compare/v0.13.1...v0.14.0) (2026-11-19)
+
+
+### Features
+
+* open the settings file in a tab of its own, saved only on Ctrl+S ([#130](https://github.com/higorabreu/dev-cockpit/issues/130)) ([0a00df9](https://github.com/higorabreu/dev-cockpit/commit/0a00df9cccbf1c8b8357464b03c6546bbeec265a))
+
 ## [0.13.1](https://github.com/higorabreu/dev-cockpit/compare/v0.13.0...v0.13.1) (2026-11-19)
 
 
