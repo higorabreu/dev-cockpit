@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseThemeFile, themeFileSchema, themeKey } from './theme-file.ts'
+import { parseThemeFile, themeFileBase, themeFileSchema, themeKey } from './theme-file.ts'
 
 describe('parseThemeFile', () => {
   it('should read every group as written when the file is valid', () => {
@@ -86,5 +86,15 @@ describe('themeKey', () => {
     expect(themeKey({ name: 'GitHub', type: 'dark' })).not.toBe(
       themeKey({ name: 'GitHub', type: 'light' }),
     )
+  })
+})
+
+describe('themeFileBase', () => {
+  it('should write plain lowercase words joined by dashes when the name has accents and spaces', () => {
+    expect(themeFileBase('Sálvia copy 2')).toBe('salvia-copy-2')
+  })
+
+  it('should fall back to theme when the name has no letter or digit', () => {
+    expect(themeFileBase('★ ★')).toBe('theme')
   })
 })

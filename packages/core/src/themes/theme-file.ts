@@ -201,6 +201,19 @@ export function parseThemeFile(
   }
 }
 
+// The base of a new theme's file name, from its name: plain lowercase words and dashes
+export function themeFileBase(name: string): string {
+  const base = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/, '')
+  return base || 'theme'
+}
+
 // A theme as the window and the host know it: two themes of one type never share a name
 export const themeKey = (theme: { readonly name: string; readonly type: ThemeType }) =>
   `${theme.type}:${theme.name}`

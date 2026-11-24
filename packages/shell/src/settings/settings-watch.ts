@@ -15,7 +15,7 @@ export interface SettingsWatchDeps {
 }
 
 // One save is a write and a rename, so a burst of events becomes a single reload
-const SETTLE_MS = 150
+export const SETTLE_MS = 150
 
 export function watchSettingsFile(deps: SettingsWatchDeps): () => void {
   const name = basename(deps.file)

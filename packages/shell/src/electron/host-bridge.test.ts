@@ -15,6 +15,7 @@ import {
   type SettingsFileLocation,
   settingsFileOk,
   type TabNotification,
+  type ThemeFile,
 } from '@dck/core'
 import { FakePtyHost, MemoryClipboard } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
@@ -60,6 +61,11 @@ function setup(picked: string | undefined = undefined) {
   const touched: string[] = []
   let autostartOn = false
   let settingsFileOpens = 0
+  const createdThemes: ThemeFile[] = []
+  const themeLocation = {
+    path: '/home/usuario/.config/dck/themes/dusk.json',
+    folder: '/home/usuario/.config/dck/themes',
+  }
   let settingsLocation: SettingsFileLocation | undefined = {
     path: '/home/usuario/.config/dck/settings.json',
     folder: '/home/usuario/.config/dck',
@@ -159,6 +165,13 @@ function setup(picked: string | undefined = undefined) {
         return settingsLocation
       },
     },
+    themes: {
+      list: async () => ({ folder: '/home/usuario/.config/dck/themes', themes: [] }),
+      create: async (theme) => {
+        createdThemes.push(theme)
+        return themeLocation
+      },
+    },
     autostart: {
       isEnabled: async () => autostartOn,
       setEnabled: async (enabled) => {
@@ -240,6 +253,7 @@ function setup(picked: string | undefined = undefined) {
     clipboard,
     sent,
     settingsFileOpens: () => settingsFileOpens,
+    createdThemes,
     setSettingsLocation: (location: SettingsFileLocation | undefined) => {
       settingsLocation = location
     },
@@ -564,6 +578,47 @@ describe('registerHostBridge clipboard and window', () => {
     // Assert
     expect(opened).toBeUndefined()
     expect(warnings.map((warning) => warning.message)).toEqual(['settings file location refused'])
+  })
+
+  it('should write a checked theme and return its location when the interface creates one', async () => {
+    // Arrange
+    const { call, createdThemes } = setup()
+    const theme = {
+      name: 'Dusk',
+      type: 'dark',
+      colors: { bg: '#101418' },
+      terminal: {},
+      syntax: {},
+    }
+
+    // Act
+    const created = await call(hostChannels.themesCreate, theme)
+
+    // Assert
+    expect(created).toEqual({
+      path: '/home/usuario/.config/dck/themes/dusk.json',
+      folder: '/home/usuario/.config/dck/themes',
+    })
+    expect(createdThemes).toEqual([theme])
+  })
+
+  it('should write nothing when the interface creates a theme with a value that is not a color', async () => {
+    // Arrange
+    const { call, createdThemes, warnings } = setup()
+
+    // Act
+    const created = await call(hostChannels.themesCreate, {
+      name: 'Dusk',
+      type: 'dark',
+      colors: { bg: 'url(https://example.com)' },
+      terminal: {},
+      syntax: {},
+    })
+
+    // Assert
+    expect(created).toBeUndefined()
+    expect(createdThemes).toEqual([])
+    expect(warnings.map((warning) => warning.message)).toEqual(['theme to create refused'])
   })
 
   it('should refuse a patch that is not an object when the interface updates settings', () => {
