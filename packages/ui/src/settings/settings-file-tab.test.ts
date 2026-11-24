@@ -14,6 +14,8 @@ const LOCATION: SettingsFileLocation = {
   folder: '/home/ana/.config/dck',
 }
 
+const THEMES = '/home/ana/.config/dck/themes'
+
 // The app around the opener: its tabs, the folder each new one starts in and the file each one shows
 function setup(written = true) {
   let state: TabsState = openTab(emptyTabs, { id: 'tab-1', label: 'Tab 1' })
@@ -110,6 +112,36 @@ describe('createSettingsFileTab', () => {
   })
 })
 
+describe('createSettingsFileTab openAt', () => {
+  it('should open a theme file in a new tab at its folder named as asked when no tab shows it', async () => {
+    // Arrange
+    const { opener, state, folders, shown } = setup()
+    const theme = { path: `${THEMES}/dusk.json`, folder: THEMES }
+
+    // Act
+    const opened = await opener.openAt(theme, 'Theme')
+
+    // Assert
+    const tab = state().tabs.find((found) => found.id === state().activeId)
+    expect(opened).toBe(true)
+    expect(tab?.label).toBe('Theme')
+    expect(folders.get(tab?.id ?? '')).toBe(THEMES)
+    expect(shown.get(tab?.id ?? '')).toBe(theme.path)
+  })
+
+  it('should open nothing when there is no theme file to open', async () => {
+    // Arrange
+    const { opener, state } = setup()
+
+    // Act
+    const opened = await opener.openAt(undefined, 'Theme')
+
+    // Assert
+    expect(opened).toBe(false)
+    expect(state().tabs).toHaveLength(1)
+  })
+})
+
 describe('autoSaveOf', () => {
   const settingsWith = (autoSave: boolean) => ({
     current: () => ({ ...defaultSettings, files: { ...defaultSettings.files, autoSave } }),
@@ -118,7 +150,7 @@ describe('autoSaveOf', () => {
 
   it('should never auto save settings.json and auto save any other file when auto save is on', () => {
     // Arrange
-    const autoSave = autoSaveOf(settingsWith(true))
+    const autoSave = autoSaveOf(settingsWith(true), () => THEMES)
 
     // Act
     const decisions = [autoSave(LOCATION.path), autoSave('/home/ana/acme/src/login.ts')]
@@ -127,9 +159,20 @@ describe('autoSaveOf', () => {
     expect(decisions).toEqual([false, true])
   })
 
+  it('should never auto save a theme file when auto save is on', () => {
+    // Arrange
+    const autoSave = autoSaveOf(settingsWith(true), () => THEMES)
+
+    // Act
+    const decisions = [autoSave(`${THEMES}/dusk.json`), autoSave(`${THEMES}-old/dusk.json`)]
+
+    // Assert
+    expect(decisions).toEqual([false, true])
+  })
+
   it('should auto save no file when auto save is off', () => {
     // Arrange
-    const autoSave = autoSaveOf(settingsWith(false))
+    const autoSave = autoSaveOf(settingsWith(false), () => THEMES)
 
     // Act
     const decision = autoSave('/home/ana/acme/src/login.ts')

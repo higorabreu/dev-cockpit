@@ -4,6 +4,7 @@ import {
   defaultSettings,
   type HostApi,
   mergeSettings,
+  noUserThemes,
   type Settings,
   type SettingsFileState,
   type SettingsPatch,
@@ -12,6 +13,7 @@ import {
 import { afterEach, describe, expect, it } from 'vitest'
 import { inputGate } from '../platform/input-gate.ts'
 import { createKeymap, type Keyboard } from '../platform/keymap.ts'
+import { fixedThemes } from '../themes/themes-client.ts'
 import type { SettingsClient } from './settings-client.ts'
 import { createSettingsView } from './settings-view.ts'
 
@@ -84,6 +86,8 @@ function openShortcuts(
       i18n: createTranslator('en'),
       onClose: () => undefined,
       openFile: async () => true,
+      themes: fixedThemes(noUserThemes('/home/ana/.config/dck/themes')),
+      openThemeFile: async () => true,
       previewOpacity: () => undefined,
       keymap,
     },

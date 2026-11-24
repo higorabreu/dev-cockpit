@@ -125,7 +125,7 @@ function setup(options: { autoSave?: boolean; answer?: LeaveAnswer } = {}) {
     editorKeys: { find: 'Ctrl+F', goToLine: 'Ctrl+G', done: 'Ctrl+Enter' },
     host: () => host,
     cwd: () => ROOT,
-    autoSave: autoSaveOf(settings),
+    autoSave: autoSaveOf(settings, () => '/home/ana/.config/dck/themes'),
     autoMerge: () => true,
     async ask(_tabId, name) {
       asked.push(name)

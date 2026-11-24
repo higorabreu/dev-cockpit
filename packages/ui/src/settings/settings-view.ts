@@ -11,6 +11,7 @@ import {
   type MessageKey,
   noSystemFonts,
   type Settings,
+  type SettingsFileLocation,
   type SettingsIssue,
   type SettingsPatch,
   type SystemFontsInfo,
@@ -26,8 +27,10 @@ import { closeButton } from '../kit/panel-frame.ts'
 import { createSelect } from '../kit/select.ts'
 import { h, icon } from '../panel/dom.ts'
 import type { Keymap } from '../platform/keymap.ts'
+import type { ThemesClient } from '../themes/themes-client.ts'
 import type { SettingsClient } from './settings-client.ts'
 import { createShortcutsPage } from './shortcuts-page.ts'
+import { clearOverridesPatch, createThemeSection, overrideCount } from './theme-section.ts'
 
 type Child = Node | string | false | undefined
 
@@ -74,6 +77,8 @@ const TABS = [
 type TabId = (typeof TABS)[number]['id']
 
 const KEYS_PREFIX = 'shortcuts.keys.'
+// A map of single colors: it differs from the default while it holds any, and resets entry by entry
+const OVERRIDES = 'colorCustomizations'
 
 export function createSettingsView(
   elements: SettingsViewElements,
@@ -84,6 +89,9 @@ export function createSettingsView(
     onClose(): void
     // settings.json in a tab of its own, which closes this screen; false when there was none to open
     openFile(): Promise<boolean>
+    readonly themes: ThemesClient
+    // A theme file in a tab of its own, the same way; false when there was none to open
+    openThemeFile(location: SettingsFileLocation | undefined, name: string): Promise<boolean>
     // Shows the opacity while the control is dragged, before saving
     previewOpacity(value: number): void
     readonly keymap: Keymap
@@ -153,13 +161,17 @@ export function createSettingsView(
   }
 
   const differs = (key: string, current: Settings) =>
-    getPath(current, key) !== getPath(defaultSettings, key)
+    key === OVERRIDES
+      ? overrideCount(current.colorCustomizations) > 0
+      : getPath(current, key) !== getPath(defaultSettings, key)
 
   // A custom key has no default value to write: removing it gives the action its default keys back
   const defaultPatch = (key: string) =>
     key.startsWith(KEYS_PREFIX)
       ? shortcutKeysPatch({ [key.slice(KEYS_PREFIX.length)]: null })
-      : patchFor(key, getPath(defaultSettings, key))
+      : key === OVERRIDES
+        ? clearOverridesPatch(settings.current().colorCustomizations)
+        : patchFor(key, getPath(defaultSettings, key))
 
   function resetButton(key: string): HTMLElement {
     const button = h('button', {
@@ -869,6 +881,18 @@ export function createSettingsView(
     },
   })
 
+  const themeSection = createThemeSection({
+    settings,
+    themes: deps.themes,
+    i18n,
+    row: (key, label, control, hint, more) => row(key, label, control, hint, true, more),
+    labelId,
+    disabled,
+    commit,
+    render,
+    openThemeFile: deps.openThemeFile,
+  })
+
   function render() {
     const pending = focusNext
     const focused = pending ?? document.activeElement?.getAttribute('data-focus')
@@ -898,6 +922,7 @@ export function createSettingsView(
       void commit(
         {
           ...defaultSettings,
+          ...clearOverridesPatch(value.colorCustomizations),
           shortcuts: {
             ...defaultSettings.shortcuts,
             ...shortcutKeysPatch(Object.fromEntries(keys)).shortcuts,
@@ -934,6 +959,7 @@ export function createSettingsView(
               ['system', t('settings.theme.system')],
             ]),
           ),
+          ...themeSection.rows(),
           row(
             'opacity',
             t('settings.opacity'),
@@ -1138,6 +1164,7 @@ export function createSettingsView(
 
   function open(tab: TabId = TABS[0].id) {
     confirmingReset = false
+    themeSection.reset()
     openFailed = false
     activeTab = tab
     errors.clear()

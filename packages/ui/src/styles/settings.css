@@ -603,3 +603,17 @@
   outline-offset: 2px;
   border-radius: var(--radius-small);
 }
+
+/* Under a theme picker: its notes, then its actions as quiet links */
+.stheme-more {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stheme-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 2px;
+}

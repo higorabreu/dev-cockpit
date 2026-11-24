@@ -1,4 +1,11 @@
-import { buildTerminalTheme, type ThemeName, tokens } from '@dck/design'
+import {
+  buildTerminalTheme,
+  type ThemeName,
+  type ThemeTokens,
+  themeVariables,
+  tokens,
+  withTheme,
+} from '@dck/design'
 
 export type ThemeSetting = ThemeName | 'system'
 
@@ -20,14 +27,21 @@ export function watchSystemTheme(onChange: () => void): () => void {
   return () => query.removeEventListener('change', onChange)
 }
 
-export function applyTheme(name: ThemeName) {
-  document.documentElement.dataset.theme = name
+// The stylesheet holds dck's own colors for the first paint; the theme in use goes on the root over them, so
+// the interface and CodeMirror, which read the same variables, change at once
+export function applyTheme(type: ThemeName, theme: ThemeTokens = tokens.themes[type]) {
+  const root = document.documentElement
+  root.dataset.theme = type
+  for (const [name, value] of themeVariables(withTheme(tokens, type, theme), type))
+    root.style.setProperty(name, value)
 }
 
 // xterm derives reverse video and OSC 11 replies from it; terminal.css leaves it unpainted for the opacity
-export const terminalTheme = (name: ThemeName) => ({
-  ...buildTerminalTheme(tokens, name),
-  background: tokens.themes[name].color.bg,
+export const terminalTheme = (type: ThemeName, theme: ThemeTokens = tokens.themes[type]) => ({
+  ...buildTerminalTheme(withTheme(tokens, type, theme), type),
+  background: theme.color.bg,
   // xterm draws the letter under a block cursor in black unless told otherwise, unreadable in light
-  cursorAccent: tokens.themes[name].color.bg,
+  cursorAccent: theme.color.bg,
 })
+
+export type TerminalColors = ReturnType<typeof terminalTheme>

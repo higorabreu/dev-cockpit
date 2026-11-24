@@ -9,6 +9,7 @@ import {
   GITLAB_CONNECTOR,
   type HostApi,
   mergeSettings,
+  noUserThemes,
   type Settings,
   type SettingsFileState,
   type SettingsPatch,
@@ -17,6 +18,7 @@ import {
 } from '@dck/core'
 import { describe, expect, it } from 'vitest'
 import { createKeymap, type Keyboard } from '../platform/keymap.ts'
+import { fixedThemes } from '../themes/themes-client.ts'
 import type { SettingsClient } from './settings-client.ts'
 import { createSettingsView } from './settings-view.ts'
 
@@ -146,6 +148,8 @@ function open(
         closed = true
       },
       openFile: settings.openFile,
+      themes: fixedThemes(noUserThemes('/home/ana/.config/dck/themes')),
+      openThemeFile: async () => true,
       previewOpacity: () => undefined,
       keymap: createKeymap(keyboard),
     },
@@ -186,6 +190,8 @@ describe('settings view selects', () => {
     expect(general).toEqual([
       'set-language',
       'set-theme',
+      'set-colorTheme.dark',
+      'set-colorTheme.light',
       'set-appearance.fontFamily',
       'set-appearance.codeFontFamily',
       'set-terminal.fontFamily',
