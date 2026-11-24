@@ -12,6 +12,7 @@ import { createSelect } from '../kit/select.ts'
 import { h } from '../panel/dom.ts'
 import { activeTheme, contrastFailures, themeCopy } from '../themes/theme-catalog.ts'
 import type { ThemesClient } from '../themes/themes-client.ts'
+import { contrastTip } from './contrast-labels.ts'
 import type { SettingsClient } from './settings-client.ts'
 
 type Child = Node | string | false | undefined
@@ -139,7 +140,7 @@ export function createThemeSection(context: ThemeSectionContext) {
     return h('span', { class: 'stheme-actions' }, create, open)
   }
 
-  // Under a mode's picker: what keeps its theme from being used as written, then the pairs below AA
+  // Under a mode's picker: what keeps its theme from being used as written, then the low contrast line
   function notes(type: ThemeName): Child[] {
     const catalog = themes.catalog()
     const active = activeTheme(catalog, settings.current(), type)
@@ -159,24 +160,31 @@ export function createThemeSection(context: ThemeSectionContext) {
     for (const taken of catalog.taken)
       if (taken.theme?.type === type)
         lines.push(t('settings.colorTheme.taken', { file: taken.file, name: taken.theme.name }))
-    const failures = contrastFailures(active.type, active.tokens)
-    if (failures.length > 0)
-      lines.push(
-        i18n.plural('settings.colorTheme.contrast', failures.length, {
-          pairs: listed(
-            failures.map((check) =>
-              t('settings.colorTheme.pair', {
-                foreground: check.foreground,
-                background: check.background,
-                ratio: check.ratio.toFixed(1),
-                minimum: String(check.minimum),
-              }),
-            ),
-          ),
-        }),
-      )
     if (failed === type) lines.push(t('settings.colorTheme.newFailed'))
-    return lines.map((line) => h('span', { class: 'snote', role: 'status' }, line))
+    return [
+      ...lines.map((line) => h('span', { class: 'snote', role: 'status' }, line)),
+      lowContrast(type),
+    ]
+  }
+
+  // One quiet line with the count; the weakest pairs, in plain words, in its tooltip, which the keyboard
+  // reaches too
+  function lowContrast(type: ThemeName): Child {
+    const active = activeTheme(themes.catalog(), settings.current(), type)
+    const failures = contrastFailures(active.type, active.tokens)
+    if (failures.length === 0) return undefined
+    return h(
+      'span',
+      {
+        class: 'stheme-contrast',
+        role: 'status',
+        tabindex: '0',
+        'data-focus': `set-theme-contrast-${type}`,
+        'data-tip': contrastTip(i18n, failures),
+      },
+      h('span', { class: 'stheme-contrast-dot', 'aria-hidden': 'true' }),
+      i18n.plural('settings.colorTheme.lowContrast', failures.length),
+    )
   }
 
   function themeRow(type: ThemeName, label: MessageKey): HTMLElement {

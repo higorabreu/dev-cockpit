@@ -68,9 +68,10 @@ Agreed with the maintainer on 2026-11-24.
   broken save keeps the last good colors.
 - **Contrast:** every built-in theme, dark and light, passes the existing checks (`contrast.ts`, WCAG AA
   4.5:1 for text on every ground the editor and the terminal draw on, 3:1 for graphics; tested). A user
-  theme or an override is applied anyway; Settings shows a quiet note under the mode's picker listing the
-  pairs below the minimum by their token names (`syntax.comment on colors.searchCurrent 3.2:1`), which is
-  what the user edits. Each check now names its two colors as token references for this.
+  theme or an override is applied anyway; under its picker Settings shows one quiet line in the secondary
+  text counting the pairs below the minimum, and its tooltip names the five weakest in plain words from
+  the catalogs ("Comments on the search highlight: 1.1 of 4.5"). Each check names its two colors as token
+  references, which the window maps to those words.
 - **Built-in themes:** dck (the default, both types), the editor palettes explored on 2026-11-19 over
   dck's interface (Grafite, Sálvia, Terra, Estrutura, Sinal, dck vivo; both types; their colors from the
   mock pages, moved the least needed to pass the checks on every editor ground, the bold and italic of the

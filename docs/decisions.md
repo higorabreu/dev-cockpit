@@ -2085,8 +2085,10 @@ and its wiring in `ui/src/app.ts`, give `autoSave` in `ui/src/files/file-tabs.ts
   name (`themes:create`, checked with zod), makes it the mode's theme and opens it like `settings.json`
   (D91: a tab of its own named Theme, saved only on Ctrl+S; the auto save rule now leaves out the themes
   folder too), and "Open the theme file" for a user theme. A theme or an override below AA is applied
-  anyway; its notes list the pairs below the minimum by their token names, each pair once with its weakest
-  ratio (`syntax.comment on colors.searchCurrent 3.2:1 of 4.5:1`), four named and the rest counted. A row
+  anyway; under its picker one quiet line in the secondary text, with the settings issues' warning dot,
+  counts the pairs below the minimum ("Low contrast in 47 color pairs"), and its tooltip, which the keyboard
+  reaches too, names the five weakest in plain words from the catalogs ("Comments on the search highlight:
+  1.1 of 4.5", the ratio rounded down) and counts the rest; each pair of colors is counted once. A row
   counts the overrides, with the reset that removes them.
 - **Live:** the stylesheet keeps dck's colors for the first paint; the window sets the resolved theme's
   variables on the root (`themeVariables`), so the interface and CodeMirror follow at once, and gives every

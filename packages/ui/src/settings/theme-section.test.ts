@@ -87,7 +87,7 @@ describe('createThemeSection', () => {
     expect(options.map((option) => option.textContent)).not.toContain('Dracula')
   })
 
-  it('should list the pairs below AA under the picker and keep the theme when a user theme is too dim', () => {
+  it('should count the pairs below AA in one quiet line with the pairs in its tooltip when a user theme is too dim', () => {
     // Arrange
     const user = {
       folder: FOLDER,
@@ -100,10 +100,14 @@ describe('createThemeSection', () => {
     const body = draw()
 
     // Assert
-    const notes = [...body.querySelectorAll('[data-setting="colorTheme.dark"] .snote')].map(
-      (note) => note.textContent ?? '',
+    const line = body.querySelector<HTMLElement>(
+      '[data-setting="colorTheme.dark"] .stheme-contrast',
     )
-    expect(notes.some((note) => /color pairs below WCAG AA: .*on colors\.bg/.test(note))).toBe(true)
+    expect(line?.textContent).toMatch(/^Low contrast in \d+ color pairs$/)
+    expect(line?.getAttribute('tabindex')).toBe('0')
+    expect(line?.dataset.tip?.split('\n')[0]).toMatch(/^.+ on .+: \d(\.\d)? of (4\.5|3)$/)
+    expect(line?.hasAttribute('title')).toBe(false)
+    expect(body.querySelector('[data-setting="colorTheme.dark"] .snote')).toBeNull()
     expect(
       body.querySelector('[data-setting="colorTheme.dark"] [data-current="true"]')?.textContent,
     ).toBe('Glare')
