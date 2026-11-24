@@ -2052,3 +2052,50 @@ window applies any valid save at once and an invalid one only shows where the er
 have `settings:open-file` return whether something opened it, drop `ui/src/settings/settings-file-tab.ts`
 and its wiring in `ui/src/app.ts`, give `autoSave` in `ui/src/files/file-tabs.ts` no path again and drop
 `path` from `SettingsView`.
+
+## D92. Color themes per mode, from built-in or user files, with single-color overrides in the settings
+
+**Decision:** phase 1 of [plans/themes.md](../plans/themes.md).
+- **Theme:** one variant, `dark` or `light`, as a JSON file with comments: `name`, `type`, and the colors
+  it changes in `colors` (the cockpit's tokens), `terminal` (the sixteen ANSI colors) and `syntax` (the
+  roles of D83); anything left out is dck's own for the type. The terminal draws on `colors.bg` with
+  `colors.fg` and a derived selection, as before, so a theme has no separate terminal background, text,
+  cursor or selection: the opacity and the contrast pairs depend on them. A role is a color: no bold or
+  italic. A theme is known by its name and type, so a family with both (dck, GitHub) has one name in both
+  pickers; names are not translated.
+- **Built-in** (`packages/design/themes`, credited in its `NOTICE.md`): dck, the editor palettes explored on
+  2026-11-19 over dck's interface (Grafite, Sálvia, Terra, Estrutura, Sinal, dck vivo, both types), GitHub
+  (dark and light), One Dark Pro and Dracula (dark), all MIT, the three most installed color themes of VS
+  Code's Marketplace. Every one passes the contrast checks; a source color that failed a pair moved the
+  least needed, in lightness only, a derived tint giving way first. One Dark Pro's and Dracula's comments
+  moved most (#7f848e to #a4a7ae, #6272a4 to #a6afcb): the cockpit reads them on a selection and on search
+  and diff tints too.
+- **User themes:** files of `themes/` beside `settings.json`, read by the host through the `SettingsText`
+  port, validated value by value (`core/src/themes/theme-file.ts`), the folder watched (or its parent until
+  it exists) and sent to the window on each change (`themes:list`, `themes:changed`). A broken save keeps
+  the last good version; a user theme with a name and type already taken is left out and named in
+  Settings.
+- **Settings:** `theme` stays the mode and Ctrl+Shift+L still toggles it; `colorTheme: { dark, light }`
+  (default `dck`) names each mode's theme, as VS Code's preferred dark and light themes; a name that
+  matches nothing uses dck and says so. `colorCustomizations: { colors, terminal, syntax }` holds single
+  colors over the theme in use, both modes, a bad entry dropped and listed.
+- **Screen:** under the mode, a picker per mode with the design system's select (a user theme shows its
+  file beside its name), and under each one its notes and two quiet links: "New theme from this one" asks
+  the host to write the whole theme (every token, without the overrides) as `<name> copy` under a free file
+  name (`themes:create`, checked with zod), makes it the mode's theme and opens it like `settings.json`
+  (D91: a tab of its own named Theme, saved only on Ctrl+S; the auto save rule now leaves out the themes
+  folder too), and "Open the theme file" for a user theme. A theme or an override below AA is applied
+  anyway; its notes list the pairs below the minimum by their token names, each pair once with its weakest
+  ratio (`syntax.comment on colors.searchCurrent 3.2:1 of 4.5:1`), four named and the rest counted. A row
+  counts the overrides, with the reset that removes them.
+- **Live:** the stylesheet keeps dck's colors for the first paint; the window sets the resolved theme's
+  variables on the root (`themeVariables`), so the interface and CodeMirror follow at once, and gives every
+  terminal its xterm theme again. Nothing animates.
+**Reason:** agreed with the maintainer on 2026-11-24: theme files and single-color overrides first,
+importing a VS Code theme later; the explored palettes plus two or three famous MIT themes; a user theme
+below AA warned about, never refused.
+**How to revert:** drop `packages/design/themes`, `builtin-themes.ts` and `theme.ts` in the design package
+(the checks may keep their color references), `core/src/themes`, the `colorTheme` and
+`colorCustomizations` settings and their catalog entries, `shell/src/themes` with the `themes:*` channels
+and `themes` in the host API, `ui/src/themes` and `settings/theme-section.ts`, and give `applyTheme` and
+`terminalTheme` back the type alone; `openAt` and the themes folder in `autoSaveOf` go with them.

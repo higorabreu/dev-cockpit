@@ -1,6 +1,6 @@
 # Themes
 
-**Status:** In progress (phase 1).
+**Status:** Phase 1 done (D92); phase 2 not started.
 
 ## Goal
 
@@ -63,8 +63,9 @@ Agreed with the maintainer on 2026-11-24.
 - **Creating and editing:** Settings has "New theme from this one": the host writes the current theme,
   complete (every token, so the file shows everything there is to change), as a new file in `themes/`
   named after it (`<name> copy`), and the window opens it in a tab of its own, saved only on Ctrl+S, the
-  way `settings.json` opens (D91; the opener is generalized). A user theme in use also offers "Open the
-  theme file". Saving applies at once; a broken save keeps the last good colors.
+  way `settings.json` opens (D91; the opener is generalized). The copy becomes the mode's theme, so each
+  save shows at once. A user theme in use also offers "Open the theme file". Saving applies at once; a
+  broken save keeps the last good colors.
 - **Contrast:** every built-in theme, dark and light, passes the existing checks (`contrast.ts`, WCAG AA
   4.5:1 for text on every ground the editor and the terminal draw on, 3:1 for graphics; tested). A user
   theme or an override is applied anyway; Settings shows a quiet note under the mode's picker listing the
@@ -103,16 +104,24 @@ Agreed with the maintainer on 2026-11-24.
 
 ## Tasks
 
-- [ ] T1. design: name each contrast check's two colors; build the root variables and the terminal theme
+- [x] T1. design: name each contrast check's two colors; build the root variables and the terminal theme
   from any resolved theme; resolve a theme over the base; built-in themes with their NOTICE; tests.
-- [ ] T2. core: theme keys, theme file schema with issues, `colorTheme` and `colorCustomizations`
+- [x] T2. core: theme keys, theme file schema with issues, `colorTheme` and `colorCustomizations`
   settings, `themes` in the host API and its channels; tests.
-- [ ] T3. shell: theme store (read, keep the last good, create a copy with a free name) and the folder
+- [x] T3. shell: theme store (read, keep the last good, create a copy with a free name) and the folder
   watch; host bridge and preload; tests.
-- [ ] T4. ui: theme catalog and live apply (CSS variables, terminals, editor) wired in the app and on start.
-- [ ] T5. ui: Settings pickers per mode, "New theme from this one", "Open the theme file", the contrast
+- [x] T4. ui: theme catalog and live apply (CSS variables, terminals, editor) wired in the app and on start.
+- [x] T5. ui: Settings pickers per mode, "New theme from this one", "Open the theme file", the contrast
   and file notes; both catalogs; the own-file tab generalized and theme files saved only on Ctrl+S.
-- [ ] T6. docs: D92, this plan, roadmap if it lists themes.
-- [ ] T7. Real app QA: every built-in theme with a colored terminal and a TypeScript file, the Settings
+- [x] T6. docs: D92, this plan, roadmap if it lists themes.
+- [x] T7. Real app QA: every built-in theme with a colored terminal and a TypeScript file, the Settings
   section, the new theme flow, a live edit, a live override, a contrast warning
   (`plans/local/qa/themes/`).
+
+## Left for later
+
+- Phase 2: importing a VS Code theme file.
+- Per-theme override blocks in `colorCustomizations` (`"[Dracula]": {...}`), as VS Code has.
+- Bold and italic per syntax role (the explored palettes used weight; a role is only a color now).
+- A theme's own terminal background, cursor or selection.
+- Removing a theme from the screen: a user theme is deleted by removing its file.
