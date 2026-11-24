@@ -2108,7 +2108,8 @@ slot's children, drop `files/strip-slot.ts`, `kit/after-fade.ts` and `origin` fr
   italic. A theme is known by its name and type, so a family with both (dck, GitHub) has one name in both
   pickers; names are not translated.
 - **Built-in** (`packages/design/themes`, credited in its `NOTICE.md`): dck, the editor palettes explored on
-  2026-11-19 over dck's interface (Grafite, Sálvia, Terra, Estrutura, Sinal, dck vivo, both types), GitHub
+  2026-11-19 over dck's interface (Grafite, Sálvia, Terra, Estrutura, Sinal, dck vivo, both types; since
+  D94 whole themes, with Sálvia and Estrutura merged into Grafite), GitHub
   (dark and light), One Dark Pro and Dracula (dark), all MIT, the three most installed color themes of VS
   Code's Marketplace. Every one passes the contrast checks; a source color that failed a pair moved the
   least needed, in lightness only, a derived tint giving way first. One Dark Pro's and Dracula's comments
@@ -2147,3 +2148,32 @@ memory 322 and 323 MB shown, 310 and 311 hidden, all within the machine's noise.
 `colorCustomizations` settings and their catalog entries, `shell/src/themes` with the `themes:*` channels
 and `themes` in the host API, `ui/src/themes` and `settings/theme-section.ts`, and give `applyTheme` and
 `terminalTheme` back the type alone; `openAt` and the themes folder in `autoSaveOf` go with them.
+
+## D94. dck's palettes are whole themes, and the ones too alike are merged into Grafite
+
+**Decision:** each of dck's palettes colors the whole cockpit, dark and light: the interface (`colors`: a
+ground and surface with a tint of its own, lines, secondary text, accent, active tab, diff and search
+tints), the sixteen ANSI colors and the syntax, still in dck's calm family. Four stay beside dck:
+- **dck vivo:** a deep petrol ground (mint white in light), a teal accent, dck's own syntax colors at full
+  strength and vivid ANSI colors.
+- **Grafite:** a lighter graphite ground (cool grey paper in light), a sage accent, code in a grey
+  hierarchy (declarations brightest, keywords dim, punctuation and comments quiet) with sage strings, and
+  muted ANSI colors.
+- **Terra:** a warm earth ground (sand in light), a terracotta accent, code in four earth hues (ochre
+  constants and numbers, clay functions, sage strings, slate types) and earthy ANSI colors.
+- **Sinal:** a near-black, high-contrast ground (white in light, the panels a step darker), one amber
+  signal for the accent, the active tab and the comments; code in the text color with green strings and
+  blue numbers; ANSI colors neutral but for red, green and amber.
+
+Sálvia and Estrutura are merged into Grafite: all three were grey code with one change (green strings,
+brighter declarations), so on a file without strings Sálvia equaled Grafite and the three read alike; the
+new Grafite keeps both ideas. A mode whose `colorTheme` still names one uses Grafite, the picker shows
+Grafite and one quiet line says "Sálvia is now part of Grafite" (`mergedThemes` in
+`design/src/builtin-themes.ts`); a user theme with that name is used first, as any name. Every theme passes
+the contrast checks; a color that missed a pair moved in lightness only. A test keeps every theme of a type
+on its own window, accent and terminal colors.
+**Reason:** the maintainer saw the six palettes as one theme (2026-11-24): they set only the syntax over
+dck's interface and terminal, and several differed only on a few roles. Asked for whole themes and the
+merging of the ones too alike.
+**How to revert:** restore `salvia-*.json`, `estrutura-*.json` and the palettes' `syntax`-only files from
+before this decision, drop `mergedThemes`, `mergedInto` and the `settings.colorTheme.merged` entries.

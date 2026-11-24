@@ -1,6 +1,6 @@
 # Themes
 
-**Status:** Phase 1 done (D93); phase 2 not started.
+**Status:** Phase 1 done (D93), dck's palettes made whole themes (D94); phase 2 not started.
 
 ## Goal
 
@@ -118,6 +118,38 @@ Agreed with the maintainer on 2026-11-24.
 - [x] T7. Real app QA: every built-in theme with a colored terminal and a TypeScript file, the Settings
   section, the new theme flow, a live edit, a live override, a contrast warning
   (`plans/local/qa/themes/`).
+
+## dck's palettes as whole themes (D94)
+
+The maintainer tried the themes and saw the six palettes as one: they set only `syntax`, over dck's own
+interface and terminal, and on typical code several matched (Sálvia only colored strings and numbers, so on
+code without strings it was Grafite; Estrutura only brightened declarations). Agreed on 2026-11-24: whole
+themes, and the ones too alike merged.
+
+- **The set.** Sálvia and Estrutura join Grafite: three grey palettes, each one change apart, become one
+  monochrome theme with Sálvia's sage strings and Estrutura's bright declarations. dck vivo, Terra and Sinal
+  stay, each different enough on its own idea. dck's family is dck, dck vivo, Grafite, Terra and Sinal,
+  dark and light, beside GitHub, One Dark Pro and Dracula.
+- **Identity.** Each sets every `colors` token, the sixteen ANSI colors and every syntax role, in dark and
+  light: dck vivo on deep petrol (mint white), teal accent, dck's colors at full strength; Grafite on
+  graphite (cool grey paper), sage accent, greys; Terra on warm earth (sand), terracotta, four earth hues;
+  Sinal near black (white with darker panels), high contrast, one amber signal, green strings, blue numbers,
+  amber comments. The semantic colors stay green, amber and red.
+- **Contrast.** Every pair passes; a color that missed one moved in lightness only (listed in the NOTICE).
+- **Old names.** `mergedThemes` maps Sálvia and Estrutura to Grafite: a mode set to either uses Grafite, its
+  picker shows Grafite and a quiet line says it merged. A user theme with that name is used first. Any other
+  unknown name still uses dck and says so.
+
+Tasks:
+
+- [x] T8. design: the four palettes as whole themes, Sálvia and Estrutura removed, `mergedThemes`; tests
+  (contrast, each theme of a type on its own window, accent and terminal colors, merged names point to a
+  built-in of both types).
+- [x] T9. ui: a merged name resolves to its successor, shown in the picker with one note; both catalogs;
+  tests.
+- [x] T10. docs: D94, D93's list, NOTICE, README.
+- [x] T11. Real app QA: every built-in theme, panel, colored terminal and a TypeScript file in one shot;
+  contact sheets per mode (`plans/local/qa/theme-identity/`).
 
 ## Measured
 
