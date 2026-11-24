@@ -5,6 +5,17 @@ import { patchPaths, previewValue, settingsEdits, settingsIssues } from './setti
 const issuesOf = (raw: unknown) => settingsIssues(raw, parseSettings(raw))
 
 describe('settingsIssues', () => {
+  it('should list each color override it dropped when the file holds a bad one', () => {
+    const raw = { colorCustomizations: { colors: { bg: 'black', fg: '#eeeeee' }, editor: {} } }
+
+    const issues = settingsIssues(raw, parseSettings(raw))
+
+    expect(issues).toEqual([
+      { key: 'colorCustomizations.colors.bg', kind: 'dropped', found: '"black"' },
+      { key: 'colorCustomizations.editor', kind: 'unknown', found: '{}' },
+    ])
+  })
+
   it('should list nothing when every value is used as written', () => {
     const raw = { theme: 'light', window: { heightRatio: 0.6 }, extensions: { disabled: [] } }
 

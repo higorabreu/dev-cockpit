@@ -6,6 +6,7 @@ import { EXTENSION_ID_MAX, EXTENSION_ID_PATTERN } from '../extensions/manifest.t
 import { isFontName } from '../fonts/fonts.ts'
 import { PANE_RATIO, SPLIT_PREFERENCES } from '../panes/panes.ts'
 import type { ConnectionFields } from '../ports/connections.ts'
+import { colorLayerSchema, THEME_NAME_MAX } from '../themes/theme-file.ts'
 import { UPDATE_MODES } from '../updates/updater.ts'
 import { isHoldTrigger } from './hold-trigger.ts'
 import type { SettingsFileState } from './settings-file.ts'
@@ -117,6 +118,10 @@ export type CursorStyle = (typeof CURSOR_STYLES)[number]
 export const MAC_OPTION_AS_META = ['left', 'both', 'none'] as const
 export type MacOptionAsMeta = (typeof MAC_OPTION_AS_META)[number]
 
+// The theme a mode uses, by name; one that names no theme is kept and the window uses dck in its place
+export const DEFAULT_COLOR_THEME = 'dck'
+const themeName = z.string().trim().min(1).max(THEME_NAME_MAX).catch(DEFAULT_COLOR_THEME)
+
 // A family name, or null for the default; anything else goes back to the default
 const fontName = z.string().trim().refine(isFontName).nullable().catch(null)
 
@@ -125,6 +130,11 @@ export const settingsSchema = z.preprocess(
   z.object({
     language: z.enum(LANGUAGES).catch('auto'),
     theme: z.enum(THEMES).catch('dark'),
+    // The theme of each mode, as VS Code's preferred dark and light themes
+    colorTheme: section({ dark: themeName, light: themeName }),
+    // Single colors over the theme in use, both modes; an entry that names no token or holds no #rrggbb is
+    // dropped
+    colorCustomizations: colorLayerSchema,
     opacity: bounded(LIMITS.opacity.min, LIMITS.opacity.max, 1),
     fontSize: bounded(LIMITS.fontSize.min, LIMITS.fontSize.max, 16, true),
     appearance: section({
@@ -212,6 +222,14 @@ export function storedAccount(settings: Settings, id: string): ConnectionFields 
   const entry = settings.connections[id]
   if (!entry?.url) return null
   return entry.email === undefined ? { url: entry.url } : { url: entry.url, email: entry.email }
+}
+
+// Colors to set over the theme, or null to remove an override; null removes the entry when the patch is
+// merged, as with the review bases
+export function colorCustomizationsPatch(
+  layer: Partial<Record<keyof Settings['colorCustomizations'], Record<string, string | null>>>,
+): SettingsPatch {
+  return { colorCustomizations: layer } as unknown as SettingsPatch
 }
 
 // The base picked for a repository, or undefined to go back to the one found; null removes the entry
