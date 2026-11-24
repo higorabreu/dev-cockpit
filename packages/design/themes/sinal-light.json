@@ -1,0 +1,21 @@
+{
+  "name": "Sinal",
+  "type": "light",
+  "syntax": {
+    "storage": "#1c1c1c",
+    "control": "#1c1c1c",
+    "constant": "#1c1c1c",
+    "type": "#1c1c1c",
+    "function": "#1c1c1c",
+    "string": "#386650",
+    "number": "#765510",
+    "property": "#1c1c1c",
+    "variable": "#1c1c1c",
+    "operator": "#555555",
+    "punctuation": "#555555",
+    "comment": "#855800",
+    "bracket1": "#555555",
+    "bracket2": "#555555",
+    "bracket3": "#555555"
+  }
+}

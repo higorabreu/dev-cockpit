@@ -4,6 +4,7 @@ import { acceleratorFromEvent } from './accelerator.ts'
 import {
   changedKeys,
   changedPaths,
+  colorCustomizationsPatch,
   defaultSettings,
   LIMITS,
   mergeSettings,
@@ -26,6 +27,8 @@ describe('parseSettings', () => {
     expect(defaultSettings).toEqual({
       language: 'auto',
       theme: 'dark',
+      colorTheme: { dark: 'dck', light: 'dck' },
+      colorCustomizations: { colors: {}, terminal: {}, syntax: {} },
       opacity: 1,
       fontSize: 16,
       appearance: { fontFamily: null, codeFontFamily: null },
@@ -552,5 +555,45 @@ describe('connections, per connector', () => {
     const after = mergeSettings(before, { connections: { gitlab: { url: null } } })
 
     expect(changedKeys(before, after)).toEqual(['connections.gitlab.url'])
+  })
+})
+
+describe('color themes in the settings', () => {
+  it('should keep a theme name as written when it is a short text', () => {
+    const settings = parseSettings({ colorTheme: { dark: ' Dracula ', light: 'GitHub' } })
+
+    expect(settings.colorTheme).toEqual({ dark: 'Dracula', light: 'GitHub' })
+  })
+
+  it('should go back to dck when a mode names no theme', () => {
+    const settings = parseSettings({ colorTheme: { dark: '', light: 42 } })
+
+    expect(settings.colorTheme).toEqual({ dark: 'dck', light: 'dck' })
+  })
+
+  it('should keep only known tokens with a hex color when reading the color customizations', () => {
+    const settings = parseSettings({
+      colorCustomizations: {
+        colors: { bg: '#101010', fg: 'white', nope: '#ffffff' },
+        terminal: { red: '#FF8080' },
+        syntax: { comment: '#999999', bracket4: '#123456' },
+      },
+    })
+
+    expect(settings.colorCustomizations).toEqual({
+      colors: { bg: '#101010' },
+      terminal: { red: '#FF8080' },
+      syntax: { comment: '#999999' },
+    })
+  })
+
+  it('should remove an override when a patch sets it to null', () => {
+    const before = parseSettings({
+      colorCustomizations: { colors: { bg: '#101010', fg: '#eeeeee' } },
+    })
+
+    const after = mergeSettings(before, colorCustomizationsPatch({ colors: { bg: null } }))
+
+    expect(after.colorCustomizations.colors).toEqual({ fg: '#eeeeee' })
   })
 })

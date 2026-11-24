@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { themeNames, tokens } from '@dck/design'
+import { resolveTheme, themeNames, tokens } from '@dck/design'
 import { describe, expect, it } from 'vitest'
 import { terminalTheme } from './theme.ts'
 
@@ -60,5 +60,24 @@ describe('terminalTheme', () => {
         '.xterm .xterm-scrollable-element',
       ]),
     )
+  })
+})
+
+describe('terminalTheme of a resolved theme', () => {
+  it("should take the theme's colors when building the terminal's from a user theme", () => {
+    // Arrange
+    const theme = resolveTheme(tokens, 'dark', [
+      { colors: { bg: '#101418', fg: '#dddddd' }, terminal: { red: '#ff8080' } },
+    ])
+
+    // Act
+    const colors = terminalTheme('dark', theme)
+
+    // Assert
+    expect([colors.background, colors.foreground, colors.red]).toEqual([
+      '#101418',
+      '#dddddd',
+      '#ff8080',
+    ])
   })
 })

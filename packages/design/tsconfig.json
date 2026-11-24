@@ -1,5 +1,5 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "resolveJsonModule": true },
-  "include": ["src", "tokens.json"]
+  "include": ["src", "tokens.json", "themes"]
 }

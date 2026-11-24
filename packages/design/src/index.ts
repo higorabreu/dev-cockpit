@@ -1,5 +1,7 @@
+export * from './builtin-themes.ts'
 export * from './color.ts'
 export * from './contrast.ts'
 export * from './css.ts'
 export * from './terminal.ts'
+export * from './theme.ts'
 export * from './tokens.ts'

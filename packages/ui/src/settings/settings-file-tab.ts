@@ -16,29 +16,38 @@ export interface SettingsFileTabDeps {
 }
 
 // settings.json opens inside the cockpit, in a tab of its own at its folder (D91): the tab that already
-// shows it, else a new one named Settings, which the user can rename as any other
+// shows it, else a new one named Settings, which the user can rename as any other. A theme file opens the
+// same way, named Theme
 export function createSettingsFileTab(deps: SettingsFileTabDeps) {
+  // False when there is no file to open
+  async function openAt(
+    location: SettingsFileLocation | undefined,
+    name: string,
+  ): Promise<boolean> {
+    if (!location) return false
+    deps.closeSettings()
+    const holder = deps
+      .tabs()
+      .tabs.find((tab) => deps.files.appendix(tab.id)?.path === location.path)
+    const id = holder?.id ?? (await deps.openTab(location.folder))
+    const named = holder ? deps.tabs() : renameTab(deps.tabs(), id, name)
+    deps.update(activateTab(named, id))
+    await deps.files.openFile(id, location.path)
+    return true
+  }
   return {
     // False when the host could not write the file, so there is nothing to open
-    async open(): Promise<boolean> {
-      const location = await deps.locate()
-      if (!location) return false
-      deps.closeSettings()
-      const holder = deps
-        .tabs()
-        .tabs.find((tab) => deps.files.appendix(tab.id)?.path === location.path)
-      const id = holder?.id ?? (await deps.openTab(location.folder))
-      const named = holder ? deps.tabs() : renameTab(deps.tabs(), id, deps.tabName())
-      deps.update(activateTab(named, id))
-      await deps.files.openFile(id, location.path)
-      return true
-    },
+    open: async (): Promise<boolean> => openAt(await deps.locate(), deps.tabName()),
+    openAt,
   }
 }
 
-// Auto save is decided per file: settings.json waits for Ctrl+S whatever `files.autoSave` says, so a
-// half-typed JSON is never applied (D91)
+const inside = (folder: string, path: string) =>
+  path.startsWith(`${folder}/`) || path.startsWith(`${folder}\\`)
+
+// Auto save is decided per file: settings.json and the theme files wait for Ctrl+S whatever `files.autoSave`
+// says, so a half-typed JSON is never applied (D91)
 export const autoSaveOf =
-  (settings: Pick<SettingsClient, 'current' | 'path'>) =>
+  (settings: Pick<SettingsClient, 'current' | 'path'>, themesFolder: () => string) =>
   (path: string): boolean =>
-    settings.current().files.autoSave && path !== settings.path()
+    settings.current().files.autoSave && path !== settings.path() && !inside(themesFolder(), path)

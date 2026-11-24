@@ -29,6 +29,9 @@ import {
   type SettingsUpdate,
   type SettingsView,
   type SystemFonts,
+  type ThemeFile,
+  themeFileSchema,
+  type UserThemes,
   VIEW_ID_MAX,
 } from '@dck/core'
 import { z } from 'zod'
@@ -160,6 +163,11 @@ export interface BridgeOptions {
     update(patch: SettingsPatch): Promise<SettingsUpdate>
     openFile(): Promise<SettingsFileLocation | undefined>
   }
+  // The user's themes folder; a theme to create comes from the window and is checked here
+  readonly themes: {
+    list(): Promise<UserThemes>
+    create(theme: ThemeFile): Promise<SettingsFileLocation | undefined>
+  }
   readonly autostart: Autostart
   readonly connections: Connections
   readonly views: ViewsGateway
@@ -248,6 +256,20 @@ export function registerHostBridge(options: BridgeOptions) {
     const parsed = settingsLocationSchema.safeParse(location)
     if (!parsed.success) logger.warn('settings file location refused', { file: location.path })
     return parsed.success ? parsed.data : undefined
+  })
+  ipcMain.handle(hostChannels.themesList, () => options.themes.list())
+  // The window opens the new file in a tab, so its location leaves here checked like the settings file's
+  ipcMain.handle(hostChannels.themesCreate, async (_event, theme: unknown) => {
+    const parsed = themeFileSchema.safeParse(theme)
+    if (!parsed.success) {
+      logger.warn('theme to create refused')
+      return undefined
+    }
+    const location = await options.themes.create(parsed.data)
+    if (location === undefined) return undefined
+    const checked = settingsLocationSchema.safeParse(location)
+    if (!checked.success) logger.warn('theme file location refused', { file: location.path })
+    return checked.success ? checked.data : undefined
   })
   const { connections } = options
   const byId =

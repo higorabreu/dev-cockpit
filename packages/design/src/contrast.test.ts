@@ -210,3 +210,33 @@ describe('contrastChecks', () => {
     }
   })
 })
+
+describe('contrastChecks references', () => {
+  it('should name both colors by their theme file keys when a check reads two tokens', () => {
+    const check = contrastChecks(tokens, 'dark').find(
+      (found) => found.name === 'syntax comment on the current search match',
+    )
+
+    expect(check?.foreground).toBe('syntax.comment')
+    expect(check?.background).toBe('colors.searchCurrent')
+  })
+
+  it('should write a derived fill as the mix CSS makes when a check reads one', () => {
+    const check = contrastChecks(tokens, 'light').find(
+      (found) => found.name === 'selected terminal text',
+    )
+
+    expect(check?.foreground).toBe('colors.fg')
+    expect(check?.background).toBe(
+      `color-mix(colors.fg ${tokens.mix.terminalSelection}%, colors.bg)`,
+    )
+  })
+
+  it('should name a terminal color by its key when checking the ansi colors', () => {
+    const check = contrastChecks(tokens, 'light').find(
+      (found) => found.name === 'terminal brightBlue on the window',
+    )
+
+    expect([check?.foreground, check?.background]).toEqual(['terminal.brightBlue', 'colors.bg'])
+  })
+})

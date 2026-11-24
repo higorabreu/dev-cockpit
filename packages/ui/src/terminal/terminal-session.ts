@@ -1,9 +1,8 @@
 import type { CursorStyle, HostApi, MacOptionAsMeta, PaneGrid, ProgramStatus } from '@dck/core'
-import type { ThemeName } from '@dck/design'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import type { Keymap } from '../platform/keymap.ts'
-import { terminalTheme } from '../platform/theme.ts'
+import type { TerminalColors } from '../platform/theme.ts'
 import { attachClipboard } from './clipboard-behavior.ts'
 import { attachCursorBlink } from './cursor-blink.ts'
 import { attachLineEditing } from './line-editing.ts'
@@ -26,7 +25,7 @@ export interface TerminalSession {
   fit(): void
   // The real cell size of the font and the padding around the cells, while the terminal is on screen
   grid(): PaneGrid | undefined
-  setTheme(name: ThemeName): void
+  setTheme(colors: TerminalColors): void
   setFontSize(size: number): void
   // A CSS font-family list, the chosen family first
   setFontFamily(family: string): void
@@ -46,7 +45,7 @@ export interface TerminalSession {
 export interface SessionOptions {
   readonly host: HTMLElement
   readonly api: HostApi
-  readonly theme: ThemeName
+  readonly theme: TerminalColors
   readonly fontSize: number
   // True while the window's edge is dragged: the grid waits, and the caller fits when it settles
   holdFit?(): boolean
@@ -94,7 +93,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     // xterm selects the word under a Mac's right click; here selecting copies, so it would replace the
     // clipboard before Paste
     rightClickSelectsWord: false,
-    theme: terminalTheme(options.theme),
+    theme: options.theme,
   })
   const fit = new FitAddon()
   terminal.loadAddon(fit)
@@ -214,8 +213,8 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
       lastGrid = undefined
       fit.fit()
     },
-    setTheme: (name) => {
-      terminal.options.theme = terminalTheme(name)
+    setTheme: (colors) => {
+      terminal.options.theme = colors
     },
     // Another font has other cells: measured again and fitted, as a new size is
     setFontFamily: (family) => {

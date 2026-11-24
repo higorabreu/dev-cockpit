@@ -1,0 +1,21 @@
+{
+  "name": "Estrutura",
+  "type": "dark",
+  "syntax": {
+    "storage": "#a0a0a0",
+    "control": "#a0a0a0",
+    "constant": "#b8b8b8",
+    "type": "#e6e6e6",
+    "function": "#ffffff",
+    "string": "#86b89f",
+    "number": "#a0a0a0",
+    "property": "#b8b8b8",
+    "variable": "#b8b8b8",
+    "operator": "#969696",
+    "punctuation": "#969696",
+    "comment": "#969696",
+    "bracket1": "#969696",
+    "bracket2": "#969696",
+    "bracket3": "#969696"
+  }
+}

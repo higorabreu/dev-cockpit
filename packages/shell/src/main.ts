@@ -95,6 +95,8 @@ import { createQuitGuard } from './quit/quit-guard.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
 import { watchSettingsFile } from './settings/settings-watch.ts'
 import { createSavedTabsFile } from './tabs/saved-tabs-file.ts'
+import { createThemeStore } from './themes/theme-store.ts'
+import { watchThemesFolder } from './themes/themes-watch.ts'
 import { registerAboutBridge } from './updates/about-bridge.ts'
 import { loadDismissedFile } from './updates/dismissed-file.ts'
 import { registerUpdateBridge } from './updates/update-bridge.ts'
@@ -203,6 +205,14 @@ app.whenReady().then(async () => {
       return ['shortcuts.toggleWindow']
     },
   })
+  // The window asks for them with the settings: read meanwhile, off the settings' path
+  const themesFolder = join(app.getPath('userData'), 'themes')
+  const themeStore = createThemeStore({
+    folder: themesFolder,
+    text: createJsoncSettingsText(),
+    logger,
+  })
+  void themeStore.load()
   const loaded = await settingsStore.load()
   logger.info('settings loaded', { fresh: loaded.fresh, locked: loaded.locked })
 
@@ -364,6 +374,7 @@ app.whenReady().then(async () => {
           ? { path: settingsFile, folder: dirname(settingsFile) }
           : undefined,
     },
+    themes: themeStore,
     connections,
     views,
     external: {
@@ -590,6 +601,20 @@ app.whenReady().then(async () => {
     logger,
   })
 
+  themeStore.onChange((themes) => send(hostChannels.themesChanged, themes))
+  const stopWatchingThemes = watchThemesFolder({
+    folder: themesFolder,
+    watch: (folder, listener) => watch(folder, listener),
+    onChange: () => void themeStore.reload(),
+    scheduler: {
+      after(milliseconds, task) {
+        const timer = setTimeout(task, milliseconds)
+        return () => clearTimeout(timer)
+      },
+    },
+    logger,
+  })
+
   const daemonScript = join(__dirname, 'daemon.cjs')
 
   async function startDaemonProcess() {
@@ -737,6 +762,7 @@ app.whenReady().then(async () => {
   app.on('before-quit', () => {
     updater.stop()
     stopWatchingSettings()
+    stopWatchingThemes()
     link.stop()
     bridge.killAll()
     files.closeAll()

@@ -603,3 +603,42 @@
   outline-offset: 2px;
   border-radius: var(--radius-small);
 }
+
+/* Under a theme picker: its notes, then its actions as quiet links */
+.stheme-more {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stheme-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+/* A theme below AA: one quiet line with the count, the pairs in its tooltip; the dot is the settings
+   issues' mark */
+.stheme-contrast {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.stheme-contrast:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+  border-radius: var(--radius-small);
+}
+
+.stheme-contrast-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
+}

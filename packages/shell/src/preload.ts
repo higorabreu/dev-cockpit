@@ -5,6 +5,7 @@ import type {
   Settings,
   SettingsFileState,
   UpdateState,
+  UserThemes,
   ViewSnapshot,
 } from '@dck/core'
 import { type HostApi, hostChannels } from '@dck/core/host-api'
@@ -76,6 +77,11 @@ const api: HostApi = {
       subscribe<[Settings, readonly string[]]>(hostChannels.settingsChanged, listener),
     onFile: (listener) => subscribe<[SettingsFileState]>(hostChannels.settingsFile, listener),
     openFile: () => ipcRenderer.invoke(hostChannels.settingsOpenFile),
+  },
+  themes: {
+    list: () => ipcRenderer.invoke(hostChannels.themesList),
+    onChange: (listener) => subscribe<[UserThemes]>(hostChannels.themesChanged, listener),
+    create: (theme) => ipcRenderer.invoke(hostChannels.themesCreate, theme),
   },
   connections: {
     list: () => ipcRenderer.invoke(hostChannels.connectionsList),

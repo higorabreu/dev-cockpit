@@ -1,0 +1,21 @@
+{
+  "name": "Sinal",
+  "type": "dark",
+  "syntax": {
+    "storage": "#e6e6e6",
+    "control": "#e6e6e6",
+    "constant": "#e6e6e6",
+    "type": "#e6e6e6",
+    "function": "#e6e6e6",
+    "string": "#86b89f",
+    "number": "#d6b679",
+    "property": "#e6e6e6",
+    "variable": "#e6e6e6",
+    "operator": "#a0a0a0",
+    "punctuation": "#a0a0a0",
+    "comment": "#e2b055",
+    "bracket1": "#a0a0a0",
+    "bracket2": "#a0a0a0",
+    "bracket3": "#a0a0a0"
+  }
+}

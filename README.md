@@ -234,7 +234,7 @@ shortcut if the global key is refused.
 
 ## Settings
 
-`Ctrl+,` opens the screen: language, theme (dark, light or the system's), opacity, the interface and code
+`Ctrl+,` opens the screen: language, theme (dark, light or the system's) and the color theme of each, opacity, the interface and code
 fonts, the terminal's font, size and cursor (block, bar or underline, blinking or not), which Option is
 Meta on a Mac, window height, whether the panel opens at full height, reopening the tabs on start, the
 review layout, global key, hold menu key or button, every interface key, projects folder and how deep to
@@ -257,6 +257,17 @@ default, with the font of your own terminal (the GNOME Terminal or Ptyxis profil
 monospace font), so a prompt made for it looks the same; its Powerline and Nerd Font symbols come from a
 font installed for them, such as Symbols Nerd Font or a patched font like MesloLGS NF. The terminal follows
 the light or dark theme, including the background color a program asks for and the selection.
+
+### Themes
+
+Each mode has its color theme, picked in Settings: dck's own (the default), dck's editor palettes (Grafite,
+Sálvia, Terra, Estrutura, Sinal, dck vivo), GitHub, One Dark Pro and Dracula. A theme colors the interface,
+every terminal and the editor at once, and every built-in one keeps WCAG AA contrast. "New theme from this
+one" writes a copy into the `themes` folder beside `settings.json` and opens it in a tab of its own, where
+Ctrl+S applies it at once: a JSON file with comments, `name`, `type` (`dark` or `light`) and the colors to
+change in `colors`, `terminal` (the sixteen ANSI colors) and `syntax`; anything left out comes from dck's
+own. Single colors can also go over any theme from `settings.json`, in `colorCustomizations`. A theme below
+AA is used anyway, and Settings says how many pairs of colors read poorly, the weakest in its tooltip.
 
 ## Develop without disturbing the installed one
 

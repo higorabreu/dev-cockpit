@@ -10,6 +10,7 @@ import type { Result } from '../result.ts'
 import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
 import type { SettingsFileLocation, SettingsFileState } from '../settings/settings-file.ts'
 import type { SavedTabs } from '../tabs/saved-tabs.ts'
+import type { ThemeFile, UserThemes } from '../themes/theme-file.ts'
 import type { UpdateState } from '../updates/updater.ts'
 import type { AgentProfile } from './agent.ts'
 import type { ConnectionFields, ConnectionStatus, DisabledConnector } from './connections.ts'
@@ -99,6 +100,15 @@ export interface HostApi {
     onFile(listener: (file: SettingsFileState) => void): Unsubscribe
     // Written first when there is none; undefined when the host could not write it
     openFile(): Promise<SettingsFileLocation | undefined>
+  }
+  // The user's themes, the files of the themes folder beside settings.json
+  readonly themes: {
+    list(): Promise<UserThemes>
+    // A file in the folder was added, saved or removed
+    onChange(listener: (themes: UserThemes) => void): Unsubscribe
+    // Writes a new file in the folder, named after the theme and never over another; undefined when it
+    // could not
+    create(theme: ThemeFile): Promise<SettingsFileLocation | undefined>
   }
   // By connector id; only the enabled connectors this app implements are listed or answered
   readonly connections: {
@@ -258,6 +268,9 @@ export const hostChannels = {
   settingsChanged: 'settings:changed',
   settingsFile: 'settings:file',
   settingsOpenFile: 'settings:open-file',
+  themesList: 'themes:list',
+  themesChanged: 'themes:changed',
+  themesCreate: 'themes:create',
   connectionsList: 'connections:list',
   connectionsDisabled: 'connections:disabled',
   connectionsStatus: 'connections:status',

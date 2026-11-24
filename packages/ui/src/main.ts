@@ -10,6 +10,7 @@ import { installScrollbars } from './kit/scrollbar.ts'
 import { installTooltips } from './kit/tooltip.ts'
 import { createKeymap, keyboardFor } from './platform/keymap.ts'
 import { createSettingsClient } from './settings/settings-client.ts'
+import { createThemesClient } from './themes/themes-client.ts'
 
 const element = (id: string) => {
   const found = document.getElementById(id)
@@ -18,7 +19,11 @@ const element = (id: string) => {
 }
 
 installScrollbars()
-const settings = await createSettingsClient(window.dck)
+// Asked together: the theme in use is known before the first terminal draws
+const [settings, themes] = await Promise.all([
+  createSettingsClient(window.dck),
+  createThemesClient(window.dck),
+])
 // One keymap for the whole window; it reads the custom keys from the settings at each key
 const keymap = createKeymap(
   keyboardFor(navigator.platform),
@@ -65,4 +70,5 @@ await startApp(
   window.dck,
   settings,
   keymap,
+  themes,
 )

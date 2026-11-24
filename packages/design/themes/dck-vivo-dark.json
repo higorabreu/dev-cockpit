@@ -1,0 +1,22 @@
+{
+  "name": "dck vivo",
+  "type": "dark",
+  "syntax": {
+    "storage": "#6fa8dc",
+    "control": "#e48cb4",
+    "constant": "#6fa8dc",
+    "type": "#5cc79a",
+    "function": "#e8c27a",
+    "string": "#e6a487",
+    "number": "#a9d6a6",
+    "property": "#a8c8e8",
+    "variable": "#e6e6e6",
+    "operator": "#e6e6e6",
+    "punctuation": "#b0b0b0",
+    "comment": "#969696",
+    "bracket1": "#e8c27a",
+    "bracket2": "#e48cb4",
+    "bracket3": "#6fa8dc",
+    "indentGuide": "#262626"
+  }
+}

@@ -62,7 +62,7 @@ import { createTabView, type TabView } from './panes/tab-view.ts'
 import { applyAppearance, loadFont, terminalLook } from './platform/appearance.ts'
 import type { Keymap, TabTarget } from './platform/keymap.ts'
 import { bindShortcuts } from './platform/shortcuts.ts'
-import { applyTheme, themeFor, watchSystemTheme } from './platform/theme.ts'
+import { applyTheme, terminalTheme, themeFor, watchSystemTheme } from './platform/theme.ts'
 import { createProjectSearch } from './projects/project-search.ts'
 import { createRootChooser } from './projects/root-chooser.ts'
 import { createQuitCard } from './quit/quit-card.ts'
@@ -78,6 +78,8 @@ import { createTabList } from './tabs/tab-list.ts'
 import { createTabMenu } from './tabs/tab-menu.ts'
 import { type FilePlace, filePathHint, folderPathHint, pathRoute } from './terminal/path-open.ts'
 import { createTerminalSession, type TerminalSession } from './terminal/terminal-session.ts'
+import { activeTheme } from './themes/theme-catalog.ts'
+import type { ThemesClient } from './themes/themes-client.ts'
 import { createUpdateNotice } from './updates/update-notice.ts'
 import { createSeenMarks } from './views/seen-marks.ts'
 import { createViewsView } from './views/views-view.ts'
@@ -136,6 +138,7 @@ export async function startApp(
   api: HostApi,
   settings: SettingsClient,
   keymap: Keymap,
+  themes: ThemesClient,
 ) {
   const { bar, host } = elements
   const sessions = new Map<string, TerminalSession>()
@@ -195,9 +198,11 @@ export async function startApp(
     done: () => focusActive(),
   })
   let state: TabsState = emptyTabs
-  let theme = themeFor(settings.current().theme)
+  // The mode (dark or light, by the setting or the desktop) and the theme the settings give it
+  let mode = themeFor(settings.current().theme)
+  let theme = activeTheme(themes.catalog(), settings.current(), mode)
   let counter = 0
-  applyTheme(theme)
+  applyTheme(theme.type, theme.tokens)
   applyOpacity(settings.current().opacity)
   let projects: readonly Project[] = []
 
@@ -302,6 +307,8 @@ export async function startApp(
       i18n,
       onClose: () => focusActive(),
       openFile: () => settingsFile.open(),
+      themes,
+      openThemeFile: (location, name) => settingsFile.openAt(location, name),
       previewOpacity: applyOpacity,
       keymap,
     },
@@ -374,7 +381,7 @@ export async function startApp(
     host: (tabId) => tabViews.get(tabId)?.element,
     // The header writes the path from the project, as the tab's tooltip and the recent list do
     cwd: (tabId) => rootOf(tabId) ?? watcher.get(tabId)?.cwd,
-    autoSave: autoSaveOf(settings),
+    autoSave: autoSaveOf(settings, () => themes.catalog().folder),
     autoMerge: () => settings.current().files.autoMerge,
     ask: askLeave,
     onChange() {
@@ -853,7 +860,7 @@ export async function startApp(
     const session = await createTerminalSession({
       host: view.element,
       api,
-      theme,
+      theme: terminalTheme(theme.type, theme.tokens),
       fontSize: settings.current().fontSize,
       // The edge being dragged or a pane sliding: the grid waits and fits once at the end
       holdFit: () => heldFit || view.isMoving(),
@@ -1008,17 +1015,25 @@ export async function startApp(
 
   // The shortcut and the menu toggle between light and dark: they become an explicit choice, no longer "system"
   function toggleTheme() {
-    void settings.update({ theme: theme === 'dark' ? 'light' : 'dark' })
+    void settings.update({ theme: mode === 'dark' ? 'light' : 'dark' })
   }
 
+  // The interface and the editor follow the root's variables; each terminal takes its colors again
   function showTheme() {
-    theme = themeFor(settings.current().theme)
-    applyTheme(theme)
-    for (const session of sessions.values()) session.setTheme(theme)
+    mode = themeFor(settings.current().theme)
+    theme = activeTheme(themes.catalog(), settings.current(), mode)
+    applyTheme(theme.type, theme.tokens)
+    const colors = terminalTheme(theme.type, theme.tokens)
+    for (const session of sessions.values()) session.setTheme(colors)
+    if (settingsView.isOpen()) settingsView.rerender()
   }
+  // A theme file saved, added or removed
+  themes.onChange(() => showTheme())
 
   settings.onChange((next, changed) => {
-    if (changed.includes('theme')) showTheme()
+    const colors = ['theme', 'colorTheme', 'colorCustomizations']
+    if (changed.some((key) => colors.some((name) => key === name || key.startsWith(`${name}.`))))
+      showTheme()
     if (changed.includes('language')) {
       i18n.setLocale(localeFor(next.language, navigator.languages))
       translateStatic(i18n)

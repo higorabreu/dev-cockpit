@@ -65,7 +65,9 @@ packages/
   to its own terminal (OSC 7501), which each terminal reads (D59). Nothing in the code knows which agent
   sent it (D37).
 - **Design tokens** in `packages/design/tokens.json` generate the CSS variables and the terminal theme,
-  so the terminal and the panel share one palette.
+  so the terminal and the panel share one palette. A color theme (built-in in `packages/design/themes`,
+  or the user's in the `themes` folder the host reads) recolors those tokens; the window applies the result
+  to the root's variables and to each terminal (D93).
 - **Portability.** No Unix assumption: paths through a library, no fixed `~/.config`, IPC behind an
   interface. The global shortcut has a plan B: `dck toggle`, which the user can bind to any system
   shortcut. macOS runs through its own adapters (Keychain, process inspection, launchd, the panel window)
