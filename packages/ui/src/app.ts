@@ -1426,9 +1426,6 @@ export async function startApp(
   })
   api.window.onShown(() => {
     setTimeout(markActiveSeen, 150)
-    document.body.classList.remove('enter')
-    void document.body.offsetWidth
-    document.body.classList.add('enter')
   })
 
   const [, readFonts] = await Promise.all([refreshProjects(), api.fonts.system()])

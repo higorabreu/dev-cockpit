@@ -2,6 +2,7 @@ import type { MessageKey, OpenedFile, Translator } from '@dck/core'
 import { h, icon } from '../panel/dom.ts'
 import { sizeText } from '../review/file-head.ts'
 import type { PathParts } from './path-parts.ts'
+import { createStripSlot } from './strip-slot.ts'
 
 const TERMINAL =
   '<rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7 9.5l3 2.5-3 2.5M12.5 15H17"/>'
@@ -47,19 +48,14 @@ const CARD_KINDS: Readonly<Record<string, MessageKey>> = {
 export function createFileView(host: HTMLElement, deps: FileViewDeps) {
   const t = deps.i18n.t
   const head = h('div', { class: 'fv-head' })
-  const strip = h('div', { class: 'fv-strip-slot' })
   const body = h('div', { class: 'fv-body' })
   // What a viewer puts in the header: its controls (zoom, Edit and Preview) and a word on the file (its
   // pixel size); kept across the header's redraws
   const tools = h('span', { class: 'fv-tools-slot' })
   const infoSlot = h('span', { class: 'fv-info' })
-  const element = h(
-    'section',
-    { class: 'file-view', tabindex: '-1', hidden: true },
-    head,
-    strip,
-    body,
-  )
+  const element = h('section', { class: 'file-view', tabindex: '-1', hidden: true }, head)
+  const strip = createStripSlot(element)
+  element.append(strip.element, body)
   host.append(element)
   let current: FileHead | undefined
 
@@ -137,9 +133,7 @@ export function createFileView(host: HTMLElement, deps: FileViewDeps) {
       infoSlot.textContent = text
     },
     current: () => current,
-    setStrip(content: HTMLElement | undefined) {
-      strip.replaceChildren(...(content ? [content] : []))
-    },
+    setStrip: strip.set,
     // A kind the editor does not take, or a file past the limit: what it is, its size, and the way out
     showCard(file: OpenedFile, detail?: string) {
       const kind = detail ?? t(CARD_KINDS[file.kind] ?? 'files.card.binary')

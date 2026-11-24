@@ -8,6 +8,7 @@ import {
   type Translator,
   type WalkResult,
 } from '@dck/core'
+import { afterFade } from '../kit/after-fade.ts'
 import { actionHint, closeButton } from '../kit/panel-frame.ts'
 import { h } from '../panel/dom.ts'
 import type { Keymap } from '../platform/keymap.ts'
@@ -149,9 +150,12 @@ export function createFileSearch(elements: FileSearchElements, deps: FileSearchD
     choices = []
     closed = []
     steps.clear()
-    input.value = ''
-    results.replaceChildren()
     deps.onClose()
+    afterFade(overlay, () => {
+      if (isOpen()) return
+      input.value = ''
+      results.replaceChildren()
+    })
   }
 
   function pick() {

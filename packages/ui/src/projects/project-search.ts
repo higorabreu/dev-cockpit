@@ -1,4 +1,5 @@
 import { searchItems, type Translate } from '@dck/core'
+import { afterFade } from '../kit/after-fade.ts'
 import { closeButton, keyHint } from '../kit/panel-frame.ts'
 import { h } from '../panel/dom.ts'
 import type { Keymap } from '../platform/keymap.ts'
@@ -109,9 +110,12 @@ export function createProjectSearch(elements: SearchElements, deps: SearchDeps) 
   function close() {
     overlay.classList.remove('open')
     needsRoot = false
-    input.disabled = false
-    input.value = ''
     onClose()
+    afterFade(overlay, () => {
+      if (isOpen()) return
+      input.disabled = false
+      input.value = ''
+    })
   }
 
   function pick() {
@@ -165,6 +169,7 @@ export function createProjectSearch(elements: SearchElements, deps: SearchDeps) 
     open(items: readonly SearchEntry[]) {
       needsRoot = false
       input.disabled = false
+      input.value = ''
       results.setAttribute('role', 'listbox')
       drawHint()
       entries = items

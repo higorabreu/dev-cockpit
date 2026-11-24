@@ -193,6 +193,54 @@
   display: flex;
 }
 
+/* A strip that comes folds open from under the header and pushes the code down, one that goes folds back up
+   (files/strip-slot.ts). Meanwhile the body keeps the height it has with no strip and the window's edge
+   clips it, so the editor measures once, at the end of an opening or the start of a closing */
+.fv-strip-slot {
+  flex: none;
+}
+
+.fv-strip-fold {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.fv-strip-fold > .fv-strip {
+  align-self: end;
+}
+
+.file-view[data-strip-moving] {
+  overflow: hidden;
+}
+
+.file-view[data-strip-moving] > .fv-body {
+  flex: none;
+  height: calc(100% - var(--size-header));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fv-strip-fold[data-fold="in"] {
+    animation: fv-strip-in var(--motion-fast) var(--motion-easing);
+  }
+
+  .fv-strip-fold[data-fold="out"] {
+    animation: fv-strip-out var(--motion-fast) var(--motion-easing) forwards;
+  }
+}
+
+@keyframes fv-strip-in {
+  from {
+    grid-template-rows: minmax(0, 0fr);
+  }
+}
+
+@keyframes fv-strip-out {
+  to {
+    grid-template-rows: minmax(0, 0fr);
+  }
+}
+
 .fv-editor {
   flex: 1;
   min-width: 0;

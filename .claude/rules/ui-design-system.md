@@ -39,5 +39,12 @@ paths:
   rule lives once in `styles/base.css` for native controls and clickable roles; a clickable element that is
   neither (a `div` row with a click handler) sets it in its own style. A component never sets `cursor:
   default` on a control. Text fields keep the text cursor.
+- **Motion:** only for what opens or closes in place (the side panel, the review pane, a drawer, a strip, a
+  menu, an overlay), to make the change easier to follow; when in doubt, none. `--motion-fast` for small
+  surfaces, `--motion-normal` for panes, easing `--motion-easing`, never a literal duration. Only opacity,
+  transform and the size of what opens, once per open or close; never at rest, per keystroke, on scroll, on
+  a tab switch, on the terminal <-> file toggle, on the window's show and hide (the hotkey's budget) or on
+  the terminal's text. A pane that resizes a terminal keeps its grid and fits once at the end. All of it
+  inside `@media (prefers-reduced-motion: no-preference)` (D92, `styles/motion.test.ts`).
 - Styles for a feature go in its file in `ui/src/styles/`, imported in order by `styles/index.css`.
 - Components are keyboard accessible with the shortcut visible beside the action (see the accessibility rule).

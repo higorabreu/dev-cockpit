@@ -158,6 +158,18 @@ describe('createTabMenu options', () => {
     expect(element.style.top).toBe('294px')
   })
 
+  it('should set its scale origin on the corner nearest the point when it opens above it', () => {
+    // Arrange
+    const { menu, element } = setup()
+    place(element)
+
+    // Act
+    menu.open([{ label: 'Rename', enabled: true, run: () => undefined }], 300, 400, true)
+
+    // Assert
+    expect(element.style.transformOrigin).toBe('0px 100px')
+  })
+
   it('should keep 4 px from the window edge when the aligned menu would overflow it', () => {
     // Arrange
     const { menu, element } = setup()
@@ -232,25 +244,47 @@ describe('placeMenu', () => {
   it('should open on the side asked when the menu fits there', () => {
     const place = placeMenu({ x: 100, y: 250, width: 180, height: 120, above: true }, view)
 
-    expect(place).toEqual({ left: 100, top: 124 })
+    expect(place).toEqual({ left: 100, top: 124, origin: { x: 0, y: 120 } })
   })
 
   it('should open on the other side when only that side has room', () => {
     const place = placeMenu({ x: 100, y: 40, width: 180, height: 120, above: true }, view)
 
-    expect(place).toEqual({ left: 100, top: 46 })
+    expect(place).toEqual({ left: 100, top: 46, origin: { x: 0, y: 0 } })
   })
 
   it('should take the window height with a 4 px margin when it fits on neither side', () => {
     const place = placeMenu({ x: 100, y: 150, width: 180, height: 400, above: false }, view)
 
-    expect(place).toEqual({ left: 100, top: 4, maxHeight: 292 })
+    expect(place).toEqual({ left: 100, top: 4, maxHeight: 292, origin: { x: 0, y: 146 } })
   })
 
   it('should keep 4 px from the right edge when the menu is wider than the room left', () => {
     const place = placeMenu({ x: 700, y: 20, width: 180, height: 40, above: false }, view)
 
     expect(place.left).toBe(616)
+  })
+
+  it('should grow from its bottom right corner when it opens above a point it is aligned to the end of', () => {
+    // Arrange
+    const request = { x: 700, y: 250, width: 180, height: 120, above: true, align: 'end' as const }
+
+    // Act
+    const place = placeMenu(request, view)
+
+    // Assert
+    expect(place.origin).toEqual({ x: 180, y: 120 })
+  })
+
+  it('should grow from the point itself when it is pushed in from the window edge', () => {
+    // Arrange
+    const request = { x: 700, y: 20, width: 180, height: 40, above: false }
+
+    // Act
+    const place = placeMenu(request, view)
+
+    // Assert: 616 from the edge, so the point is 84 px into the menu, on its top edge
+    expect(place.origin).toEqual({ x: 84, y: 0 })
   })
 })
 

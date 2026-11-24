@@ -24,3 +24,17 @@ label:has(> input[type="radio"]),
 label:has(> input:disabled) {
   cursor: default;
 }
+
+/* With reduced motion asked for, nothing moves, whatever a component's own rules say: one net here, so a
+   fade or a turn written outside the no-preference query, or a transition set from code, still ends at once */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
+}
