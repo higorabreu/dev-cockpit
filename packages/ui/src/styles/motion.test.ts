@@ -128,4 +128,25 @@ describe('motion', () => {
     expect(frames.length).toBeGreaterThan(0)
     expect(others).toEqual([])
   })
+
+  it('should end every transition and animation at once when the system asks for reduced motion', () => {
+    // Arrange
+    const net = rules.find(
+      (rule) =>
+        rule.file === 'base.css' &&
+        rule.context === '@media (prefers-reduced-motion: reduce)' &&
+        rule.selector.includes('*'),
+    )
+
+    // Act
+    const values = Object.fromEntries(
+      (net?.declarations ?? []).map((line) => [line.property, line.value]),
+    )
+
+    // Assert
+    expect(values['transition-duration']).toBe('0s !important')
+    expect(values['animation-duration']).toBe('0s !important')
+    expect(values['transition-delay']).toBe('0s !important')
+    expect(values['animation-delay']).toBe('0s !important')
+  })
 })
