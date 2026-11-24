@@ -146,6 +146,21 @@ describe('createThemeSection', () => {
     expect(body.textContent).toContain('No theme is named Gone; dck is used')
   })
 
+  it('should show the successor in the picker and say so when a mode names a merged theme', () => {
+    // Arrange
+    const { draw } = setup(mergeSettings(defaultSettings, { colorTheme: { dark: 'Sálvia' } }))
+
+    // Act
+    const body = draw()
+
+    // Assert
+    expect(body.textContent).toContain('Sálvia is now part of Grafite')
+    expect(body.textContent).not.toContain('No theme is named')
+    expect(
+      body.querySelector('[data-setting="colorTheme.dark"] [data-current="true"]')?.textContent,
+    ).toBe('Grafite')
+  })
+
   it("should write a copy of the mode's theme, use it and open it in a tab when asked for a new theme", async () => {
     // Arrange
     const { draw, created, patches, opened } = setup(

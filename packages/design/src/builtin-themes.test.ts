@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { builtinThemes } from './builtin-themes.ts'
+import { builtinThemes, mergedThemes } from './builtin-themes.ts'
 import { contrastChecks } from './contrast.ts'
 import { resolveTheme, withTheme } from './theme.ts'
 import { tokens } from './tokens.ts'
@@ -45,6 +45,31 @@ describe('builtinThemes', () => {
     })
 
     expect(unknown).toEqual([])
+  })
+
+  it('should give each theme of a type its own window, accent and terminal colors when listing them', () => {
+    for (const type of ['dark', 'light'] as const) {
+      const themes = builtinThemes
+        .filter((theme) => theme.type === type)
+        .map((theme) => resolveTheme(tokens, type, [theme]))
+      const distinct = (pick: (theme: (typeof themes)[number]) => string) =>
+        new Set(themes.map(pick)).size
+
+      expect(distinct((theme) => theme.color.bg)).toBe(themes.length)
+      expect(distinct((theme) => theme.color.accent)).toBe(themes.length)
+      expect(distinct((theme) => JSON.stringify(theme.terminal))).toBe(themes.length)
+    }
+  })
+
+  it('should point each merged theme to a built-in theme of both types', () => {
+    const names = (type: string) =>
+      builtinThemes.filter((theme) => theme.type === type).map((theme) => theme.name)
+
+    for (const [merged, successor] of Object.entries(mergedThemes)) {
+      expect(names('dark')).not.toContain(merged)
+      expect(names('dark')).toContain(successor)
+      expect(names('light')).toContain(successor)
+    }
   })
 
   it('should write every color as six hex digits when reading every built-in theme', () => {

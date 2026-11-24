@@ -268,6 +268,7 @@ export const en: Record<MessageKey, string> = {
   'settings.colorTheme.dark': 'Dark theme',
   'settings.colorTheme.light': 'Light theme',
   'settings.colorTheme.missing': 'No theme is named {name}; dck is used',
+  'settings.colorTheme.merged': '{name} is now part of {theme}',
   'settings.colorTheme.new': 'New theme from this one',
   'settings.colorTheme.newFailed': 'Could not write the new theme.',
   'settings.colorTheme.openFile': 'Open the theme file',
