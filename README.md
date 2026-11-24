@@ -58,6 +58,9 @@ changed, and your pull requests, merge requests and tasks. The clips show exampl
   dropped on it or pasted into it are typed as paths. Selecting copies, and the
   right or middle button pastes (`Ctrl+Shift+C` and `Ctrl+Shift+V` also work). On a Mac the right click
   opens a menu with Copy, Paste and Select all, and `⌘Q` asks first while a tab runs a program.
+- **Themes.** One color theme colors the interface, every terminal and the editor at once, one for the dark
+  mode and one for the light: dck's own, four whole themes of dck's (dck vivo, Grafite, Terra, Sinal),
+  GitHub, One Dark Pro and Dracula, or your own in a JSON file (below).
 
 <p align="center">
   <img src="docs/media/editor.gif" alt="Files in the cockpit, at full height: Ctrl+Shift+O finds src/orders.ts in the acme-api project and opens it over the tab in syntax colors, a number is changed and the hollow ring of unsaved on the tab goes away when it saves by itself, Ctrl+F highlights the matches of a search, the project's README.md opens and Ctrl+Shift+J shows its preview, Ctrl+Shift+Space goes back to the terminal, and a Ctrl+click on src/orders.ts:42:5 in the output of tsc opens the file at that line" width="960">
@@ -234,23 +237,25 @@ shortcut if the global key is refused.
 
 ## Settings
 
-`Ctrl+,` opens the screen: language, theme (dark, light or the system's) and the color theme of each, opacity, the interface and code
-fonts, the terminal's font, size and cursor (block, bar or underline, blinking or not), which Option is
-Meta on a Mac, window height, whether the panel opens at full height, reopening the tabs on start, the
-review layout, global key, hold menu key or button, every interface key, projects folder and how deep to
-search it, whether files save and merge a change on disk by themselves and where a path clicked in the
-terminal opens, start with the system, the threshold to notify a long command, the hint to connect an agent,
-and the GitHub, GitLab and Jira connections; an About page shows the version, the updates and the
-project's links. Everything applies at once. Settings live in a `settings.json` that can also be edited by
-hand, like VS Code's: the button beside the screen's close (or Open the settings file in the hold menu's
-System list) opens it in a tab of its own, at its folder, where only Ctrl+S (⌘S on a Mac) saves it, so a
-half-typed edit never applies; it takes comments and trailing commas, and whatever you save applies at
-once while the screen's own changes keep your comments and layout. A value it cannot use goes back to its
-default or to the nearest limit: the screen marks the file button (its tooltip counts the warnings) and
-the pages that have one and says under each setting what the file holds and what is used instead, and its
-reset writes the right value back; a file that is not valid JSON keeps the last good settings, the controls
-wait, and a line above the page says the line and column to fix. The `DCK_KEY`, `DCK_HEIGHT` and
-`DCK_PROJECTS_ROOT` variables win over the file.
+`Ctrl+,` opens the screen, in pages by subject: General, Appearance, Terminal, Files and review,
+Shortcuts, Projects, Connections, System and About. It holds the language, the mode (dark, light or the
+system's) and its color theme, opacity, the interface and code fonts, the terminal's font, size and cursor
+(block, bar or underline, blinking or not), which Option is Meta on a Mac, window height, whether the
+panel opens at full height, reopening the tabs on start, the review layout, global key, hold menu key or
+button, every interface key, projects folder and how deep to search it, whether files save and merge a
+change on disk by themselves and where a path clicked in the terminal opens, start with the system, the
+threshold to notify a long command, the hint to connect an agent, and the GitHub, GitLab and Jira
+connections; an About page shows the version, the updates and the project's links. Everything applies at
+once. Settings live in a `settings.json` that can also be edited by hand, like VS Code's: the button
+beside the screen's close (or Open the settings file in the hold menu's System list) opens it in a tab of
+its own, at its folder, where only Ctrl+S (⌘S on a Mac) saves it, so a half-typed edit never applies; it
+takes comments and trailing commas, and whatever you save applies at once while the screen's own changes
+keep your comments and layout. A value it cannot use goes back to its default or to the nearest limit: the
+screen marks the file button (its tooltip counts the warnings) and the pages that have one and says under
+each setting what the file holds and what is used instead, and its reset writes the right value back; a
+file that is not valid JSON keeps the last good settings, the controls wait, and a line above the page
+says the line and column to fix. The `DCK_KEY`, `DCK_HEIGHT` and `DCK_PROJECTS_ROOT` variables win over
+the file.
 
 The interface draws with Inter and JetBrains Mono, which ship with the cockpit. The terminal draws, by
 default, with the font of your own terminal (the GNOME Terminal or Ptyxis profile, else the system's
@@ -264,13 +269,14 @@ Each mode has its color theme, picked in Settings: dck's own (the default); dck'
 theme in dark and light: dck vivo (petrol ground, dck's colors at full strength), Grafite (graphite and
 sage, code in greys), Terra (warm earth, four earth hues) and Sinal (near black, one amber signal); and
 GitHub, One Dark Pro and Dracula. Sálvia and Estrutura became part of Grafite, and a mode still set to
-either uses it. A theme colors the interface,
-every terminal and the editor at once, and every built-in one keeps WCAG AA contrast. "New theme from this
-one" writes a copy into the `themes` folder beside `settings.json` and opens it in a tab of its own, where
-Ctrl+S applies it at once: a JSON file with comments, `name`, `type` (`dark` or `light`) and the colors to
-change in `colors`, `terminal` (the sixteen ANSI colors) and `syntax`; anything left out comes from dck's
-own. Single colors can also go over any theme from `settings.json`, in `colorCustomizations`. A theme below
-AA is used anyway, and Settings says how many pairs of colors read poorly, the weakest in its tooltip.
+either uses it. Appearance shows the picker of the mode in use (both when the mode follows the system). A
+theme colors the interface, every terminal and the editor at once, and every built-in one keeps WCAG AA
+contrast. The Copy button beside a picker writes the theme into the `themes` folder beside `settings.json`
+as a theme of your own and opens it in a tab of its own (Edit opens it again later), where Ctrl+S applies
+it at once: a JSON file with comments, `name`, `type` (`dark` or `light`) and the colors to change in
+`colors`, `terminal` (the sixteen ANSI colors) and `syntax`; anything left out comes from dck's own.
+Single colors can also go over any theme from `settings.json`, in `colorCustomizations`. A theme below AA
+is used anyway, and Settings says how many pairs of colors read poorly, the weakest in its tooltip.
 
 ## Develop without disturbing the installed one
 
