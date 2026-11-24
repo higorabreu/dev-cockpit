@@ -93,6 +93,28 @@ describe('activeTheme', () => {
     expect(active.tokens).toEqual(tokens.themes.dark)
   })
 
+  it('should use the successor without calling it missing when the settings name a merged theme', () => {
+    const catalog = createThemeCatalog({ folder: FOLDER, themes: [] })
+
+    const active = activeTheme(catalog, settingsWith('dck', 'Sálvia'), 'light')
+
+    expect(active.missing).toBe(false)
+    expect(active.mergedInto).toBe('Grafite')
+    expect(active.entry.definition).toEqual(catalog.find('Grafite', 'light')?.definition)
+  })
+
+  it('should keep a user theme that took the name of a merged theme', () => {
+    const catalog = createThemeCatalog({
+      folder: FOLDER,
+      themes: [userTheme('estrutura.json', { ...dusk, name: 'Estrutura' })],
+    })
+
+    const active = activeTheme(catalog, settingsWith('Estrutura'), 'dark')
+
+    expect(active.mergedInto).toBeUndefined()
+    expect(active.entry.user?.file).toBe('estrutura.json')
+  })
+
   it('should apply the overrides over the theme when settings.json has some', () => {
     const catalog = createThemeCatalog({ folder: FOLDER, themes: [userTheme('dusk.json', dusk)] })
 

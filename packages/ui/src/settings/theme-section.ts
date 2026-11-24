@@ -83,7 +83,9 @@ export function createThemeSection(context: ThemeSectionContext) {
 
   function picker(type: ThemeName): HTMLElement {
     const key = `colorTheme.${type}`
-    const current = settings.current().colorTheme[type]
+    const named = settings.current().colorTheme[type]
+    // A merged theme's old name shows its successor, which is the theme in use
+    const current = activeTheme(themes.catalog(), settings.current(), type).mergedInto ?? named
     const entries = themes.catalog().of(type)
     const options = entries.map((entry) => ({
       value: entry.definition.name,
@@ -177,7 +179,19 @@ export function createThemeSection(context: ThemeSectionContext) {
       if (taken.theme?.type === type)
         lines.push(t('settings.colorTheme.taken', { file: taken.file, name: taken.theme.name }))
     if (failed === type) lines.push(t('settings.colorTheme.newFailed'))
+    // A merged name is news, not a problem: it reads in the secondary text, not the warning color
+    const merged =
+      active.mergedInto &&
+      h(
+        'span',
+        { class: 'snote snote-quiet', role: 'status' },
+        t('settings.colorTheme.merged', {
+          name: settings.current().colorTheme[type],
+          theme: active.mergedInto,
+        }),
+      )
     return [
+      merged,
       ...lines.map((line) => h('span', { class: 'snote', role: 'status' }, line)),
       lowContrast(type),
     ]

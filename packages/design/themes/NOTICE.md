@@ -9,12 +9,17 @@ way first, toward the window color, as long as it stayed a visible tint.
 
 ## dck's palettes
 
-Grafite, Sálvia, Terra, Estrutura, Sinal and dck vivo are the editor palettes the maintainer explored on
-2026-11-19, over dck's own interface and terminal. Their bold and italic are left out (a syntax role is a
-color), so Estrutura shows its declarations by color: function and type names in the brightest grey. Their
-greys reached 4.5:1 on every editor ground a step lighter in dark (#8c8c8c and #7c7c7c to #969696) and darker
-in light (#6a6a6a to #616161), as dck's own comments did; Sinal's light comment went from #8f5f00 to #855800,
-dck vivo's light type and number from #17734f and #3a6e2a to #166f4c and #396c29.
+dck vivo, Grafite, Terra and Sinal are dck's own, with no outside source. They started as the editor
+palettes the maintainer explored on 2026-11-19 and are whole themes since D94: interface, terminal and
+syntax. Sálvia's sage strings and Estrutura's bright declarations live on in Grafite. A role is a color (no
+bold or italic). Colors moved, in lightness only, to pass every pair:
+
+- dck vivo: light `colors.controlLine` #7f969a to #738a8e, light `syntax.comment` #536a6f to #4a6166.
+- Grafite: dark quiet greys (`operator`, `punctuation`, `comment`, brackets) #989ba0 to #a0a3a8 and
+  keywords #9fa2a7 to #abaeb3; light `colors.controlLine` #868a90 to #7c8086, keywords #5b5f66 to #4e5258,
+  quiet greys #5f636a to #52565c.
+- Terra: dark quiet greys #a69888 to #b0a292; light keywords and quiet greys #6a5c4e to #625448.
+- Sinal: light `syntax.comment` #8a5d00 to #7f5500, light `colors.searchCurrent` #f5dc9a to #f8e4b0.
 
 ## GitHub (`github-dark.json`, `github-light.json`)
 

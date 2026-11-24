@@ -4,6 +4,7 @@ import {
   type ContrastCheck,
   contrastChecks,
   DEFAULT_THEME_NAME,
+  mergedThemes,
   resolveTheme,
   type ThemeDefinition,
   type ThemeName,
@@ -58,6 +59,8 @@ export interface ActiveTheme {
   readonly type: ThemeName
   // The name the settings give this mode matches no theme: dck is in its place
   readonly missing: boolean
+  // The name is a built-in theme merged into this one, which is in its place
+  readonly mergedInto?: string
   // dck's own colors for the type, then the theme, then the user's overrides
   readonly tokens: ThemeTokens
 }
@@ -70,9 +73,14 @@ export function activeTheme(
   settings: ThemeSettings,
   mode: ThemeName,
 ): ActiveTheme {
+  const lookup = (name: string) =>
+    catalog.find(name, mode) ?? catalog.find(name, mode === 'dark' ? 'light' : 'dark')
   const name = settings.colorTheme[mode]
-  const found = catalog.find(name, mode) ?? catalog.find(name, mode === 'dark' ? 'light' : 'dark')
+  const found = lookup(name)
+  const successor = found ? undefined : mergedThemes[name]
+  const merged = successor === undefined ? undefined : lookup(successor)
   const entry = found ??
+    merged ??
     catalog.find(DEFAULT_THEME_NAME, mode) ?? {
       definition: { name: DEFAULT_THEME_NAME, type: mode },
     }
@@ -80,7 +88,8 @@ export function activeTheme(
   return {
     entry,
     type,
-    missing: found === undefined,
+    missing: found === undefined && merged === undefined,
+    ...(merged ? { mergedInto: merged.definition.name } : {}),
     tokens: resolveTheme(tokens, type, [entry.definition, settings.colorCustomizations]),
   }
 }
