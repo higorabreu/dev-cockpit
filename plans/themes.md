@@ -118,6 +118,12 @@ Agreed with the maintainer on 2026-11-24.
   section, the new theme flow, a live edit, a live override, a contrast warning
   (`plans/local/qa/themes/`).
 
+## Measured
+
+`scripts/perf/measure.cjs --runs 2 --phases probe,idle`, `main` (46e854c) against this branch under Xvfb:
+first prompt 468 and 464 ms, key to echo 4.0 ms median both (p95 5.5 and 7.3), hotkey to window 8.7 and
+8.1 ms, idle memory 322 and 323 MB shown, 310 and 311 hidden. No change beyond noise.
+
 ## Left for later
 
 - Phase 2: importing a VS Code theme file.

@@ -2093,7 +2093,9 @@ and its wiring in `ui/src/app.ts`, give `autoSave` in `ui/src/files/file-tabs.ts
   terminal its xterm theme again. Nothing animates.
 **Reason:** agreed with the maintainer on 2026-11-24: theme files and single-color overrides first,
 importing a VS Code theme later; the explored palettes plus two or three famous MIT themes; a user theme
-below AA warned about, never refused.
+below AA warned about, never refused. Measured under Xvfb (`scripts/perf/`, 2 runs, `main` against this
+branch, no user theme): first prompt 468 and 464 ms after spawn, key to echo 4.0 ms median both, idle
+memory 322 and 323 MB shown, 310 and 311 hidden, all within the machine's noise.
 **How to revert:** drop `packages/design/themes`, `builtin-themes.ts` and `theme.ts` in the design package
 (the checks may keep their color references), `core/src/themes`, the `colorTheme` and
 `colorCustomizations` settings and their catalog entries, `shell/src/themes` with the `themes:*` channels
