@@ -48,6 +48,8 @@ export interface MenuPlace {
   readonly top: number
   // Set when the menu fits neither below nor above: it takes the window's height and its list scrolls
   readonly maxHeight?: number
+  // The point inside the menu nearest to where it opened, which it grows from
+  readonly origin: { readonly x: number; readonly y: number }
 }
 
 // Where the menu goes: on the side asked when it fits, else on the other one, else over the whole
@@ -63,10 +65,18 @@ export function placeMenu(
   const above = y - GAP - height
   const fitsBelow = below + height <= view.height - EDGE
   const fitsAbove = above >= EDGE
-  if (request.above ? fitsAbove : fitsBelow) return { left, top: request.above ? above : below }
-  if (request.above ? fitsBelow : fitsAbove) return { left, top: request.above ? below : above }
-  return { left, top: EDGE, maxHeight: Math.max(0, view.height - 2 * EDGE) }
+  const at = (top: number, maxHeight?: number) => ({
+    left,
+    top,
+    ...(maxHeight === undefined ? {} : { maxHeight }),
+    origin: { x: clamp(x - left, width), y: clamp(y - top, maxHeight ?? height) },
+  })
+  if (request.above ? fitsAbove : fitsBelow) return at(request.above ? above : below)
+  if (request.above ? fitsBelow : fitsAbove) return at(request.above ? below : above)
+  return at(EDGE, Math.max(0, view.height - 2 * EDGE))
 }
+
+const clamp = (value: number, max: number) => Math.max(0, Math.min(value, max))
 
 const STEPS: Record<string, (index: number, count: number) => number> = {
   ArrowDown: (index, count) => (index + 1) % count,
@@ -167,6 +177,10 @@ export function createTabMenu(element: HTMLElement) {
       const footerActions = options.footer ?? []
       list.replaceChildren(...actions.map((action) => menuItem(action, close)))
       footer.replaceChildren(...footerActions.map((action) => menuItem(action, close)))
+      // Seen hidden by the style first, so a menu opened again over itself (a right click on another tab)
+      // grows again from its new place (styles/tab-notice-and-menu.css)
+      element.hidden = true
+      element.getBoundingClientRect()
       element.replaceChildren(
         ...caption,
         list,
@@ -183,6 +197,7 @@ export function createTabMenu(element: HTMLElement) {
       )
       element.style.left = `${place.left}px`
       element.style.top = `${place.top}px`
+      element.style.transformOrigin = `${place.origin.x}px ${place.origin.y}px`
       if (place.maxHeight !== undefined) element.style.maxHeight = `${place.maxHeight}px`
       list.scrollTop = 0
       // Otherwise the browser decides, so a menu opened from the keyboard keeps its ring

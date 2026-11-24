@@ -11,7 +11,6 @@
   background: color-mix(in srgb, var(--bg) 55%, transparent);
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--motion-fast) ease;
 }
 
 #search.open,
@@ -24,9 +23,6 @@
 #search:not(.open),
 #files:not(.open) {
   visibility: hidden;
-  transition:
-    opacity var(--motion-fast) ease,
-    visibility 0s linear var(--motion-fast);
 }
 
 #search-box,
@@ -38,6 +34,32 @@
   background: var(--surface);
   border: var(--size-hairline) solid var(--line);
   border-radius: var(--radius-large);
+}
+
+/* Opening, the overlay fades in and its box comes down 4px into place; closing, the reverse, with what it
+   showed (afterFade clears it once gone) while the file or project picked is already there underneath */
+@media (prefers-reduced-motion: no-preference) {
+  #search,
+  #files {
+    transition: opacity var(--motion-fast) var(--motion-easing);
+  }
+
+  #search:not(.open),
+  #files:not(.open) {
+    transition:
+      opacity var(--motion-fast) var(--motion-easing),
+      visibility 0s linear var(--motion-fast);
+  }
+
+  #search-box,
+  #files-box {
+    transition: transform var(--motion-fast) var(--motion-easing);
+  }
+
+  #search:not(.open) > #search-box,
+  #files:not(.open) > #files-box {
+    transform: translateY(-4px);
+  }
 }
 
 /* The divider spans what the selected row's highlight does: the list's scrollbar strip on each side */
