@@ -2077,6 +2077,9 @@ transform and the size of what opens, once per open or close, all inside
   `--motion-fast`, and fade out the same way with what they showed; what was picked is already open and
   focused underneath, and `kit/after-fade.ts` clears the field and the list once the overlay is gone.
 - The hold menu's fade and 97% scale, as before.
+- The window's own entry (the content sliding 14 px down and fading in over 170 ms each time the window
+  showed) is gone, the maintainer's choice on 2026-11-24: the window is whole and still in its first frame,
+  and what is typed right after the hotkey lands on a still screen.
 Never: the terminal <-> file toggle, a tab switch, the window's show and hide (the hotkey's budget is under
 100 ms), typing, key echo, scroll, anything at rest. `styles/motion.test.ts` keeps every transition and
 animation on the tokens, the surfaces above inside the reduced motion query and the keyframes to opacity,
