@@ -3,26 +3,33 @@ import type { ThemeName, Tokens } from './tokens.ts'
 
 const kebab = (name: string) => name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
 
-function themeDeclarations(tokens: Tokens, theme: ThemeName): string[] {
+// Every variable a theme sets on the root, so the window can apply any resolved theme at run time
+export function themeVariables(
+  tokens: Tokens,
+  theme: ThemeName,
+): readonly (readonly [string, string])[] {
   const { color, overlay, syntax } = tokens.themes[theme]
   const { mix } = tokens
   const mixed = (share: number, base: string) =>
     `color-mix(in srgb, var(--fg) ${share}%, var(${base}))`
   return [
-    ...Object.entries(color).map(([name, value]) => `--${kebab(name)}: ${value};`),
-    `--bg-rgb: ${parseHex(color.bg).join(', ')};`,
-    ...Object.entries(overlay).map(([name, value]) => `--${kebab(name)}: ${value};`),
-    ...Object.entries(syntax).map(([name, value]) => `--syntax-${kebab(name)}: ${value};`),
-    `--sector-idle: ${mixed(mix.sectorIdle, '--surface')};`,
-    `--sector-selected: ${mixed(mix.sectorSelected, '--surface')};`,
-    `--list-selected: ${mixed(mix.listSelected, '--surface')};`,
-    `--line-selected: ${mixed(mix.lineSelected, '--bg')};`,
-    `--line-selected-add: ${mixed(mix.lineSelected, '--diff-add')};`,
-    `--line-selected-remove: ${mixed(mix.lineSelected, '--diff-remove')};`,
-    `--icon-idle: ${mixed(mix.iconIdle, '--surface')};`,
-    `color-scheme: ${theme};`,
+    ...Object.entries(color).map(([name, value]) => [`--${kebab(name)}`, value] as const),
+    ['--bg-rgb', parseHex(color.bg).join(', ')],
+    ...Object.entries(overlay).map(([name, value]) => [`--${kebab(name)}`, value] as const),
+    ...Object.entries(syntax).map(([name, value]) => [`--syntax-${kebab(name)}`, value] as const),
+    ['--sector-idle', mixed(mix.sectorIdle, '--surface')],
+    ['--sector-selected', mixed(mix.sectorSelected, '--surface')],
+    ['--list-selected', mixed(mix.listSelected, '--surface')],
+    ['--line-selected', mixed(mix.lineSelected, '--bg')],
+    ['--line-selected-add', mixed(mix.lineSelected, '--diff-add')],
+    ['--line-selected-remove', mixed(mix.lineSelected, '--diff-remove')],
+    ['--icon-idle', mixed(mix.iconIdle, '--surface')],
+    ['color-scheme', theme],
   ]
 }
+
+const themeDeclarations = (tokens: Tokens, theme: ThemeName): string[] =>
+  themeVariables(tokens, theme).map(([name, value]) => `${name}: ${value};`)
 
 function sharedDeclarations(tokens: Tokens): string[] {
   const entries = (prefix: string, values: Readonly<Record<string, string | number>>) =>

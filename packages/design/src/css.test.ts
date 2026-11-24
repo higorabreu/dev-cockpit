@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCss } from './css.ts'
+import { buildCss, themeVariables } from './css.ts'
 import { tokens } from './tokens.ts'
 
 describe('buildCss', () => {
@@ -65,5 +65,21 @@ describe('buildCss', () => {
     expect(css).toContain('--syntax-storage: #79a6cf;')
     expect(css).toContain('--syntax-storage: #2b5f8f;')
     expect(css).toContain('--syntax-indent-guide: #232323;')
+  })
+})
+
+describe('themeVariables', () => {
+  it('should list the same declarations the css carries when building them for a theme', () => {
+    const css = buildCss(tokens)
+
+    const missing = themeVariables(tokens, 'light')
+      .map(([name, value]) => `${name}: ${value};`)
+      .filter((declaration) => !css.includes(declaration))
+
+    expect(missing).toEqual([])
+  })
+
+  it('should end with the color scheme of the type when building the variables', () => {
+    expect(themeVariables(tokens, 'dark').at(-1)).toEqual(['color-scheme', 'dark'])
   })
 })
