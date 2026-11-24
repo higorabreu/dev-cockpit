@@ -2147,3 +2147,20 @@ memory 322 and 323 MB shown, 310 and 311 hidden, all within the machine's noise.
 `colorCustomizations` settings and their catalog entries, `shell/src/themes` with the `themes:*` channels
 and `themes` in the host API, `ui/src/themes` and `settings/theme-section.ts`, and give `applyTheme` and
 `terminalTheme` back the type alone; `openAt` and the themes folder in `autoSaveOf` go with them.
+
+## D94. Settings pages by subject
+
+**Decision:** the settings screen (D29) lists its pages by subject: General (language and window), Appearance,
+Terminal, Files and review, Shortcuts, Projects, Connections, System and About. Appearance groups Theme (the
+mode, then only the theme picker of the mode in use, both "Dark theme" and "Light theme" in System mode,
+then the opacity), Fonts (interface and code) and Advanced (the color overrides with an Edit button that
+opens `settings.json` as D91). Beside each picker a small button copies the theme into a new user theme,
+its full meaning in the tooltip ("Copy", "New theme from this one"), and an Edit button opens a user
+theme's file; they replace D93's two quiet links. A mode changed on the page or by Ctrl+Shift+L redraws it
+with the new mode's picker; a picker the file holds wrongly shows even when its mode is not in use, so its
+warning and reset have a place. Every setting keeps its key, hint, reset and warning, and a page's mark in
+the list follows the rows it holds. The screen still opens on General.
+**Reason:** agreed with the maintainer on 2026-11-24: General had grown to every preference and the theme
+rows showed both modes' pickers and their links at once.
+**How to revert:** put the rows back on the General page in `ui/src/settings/settings-view.ts`, give
+`theme-section.ts` its `rows()` with both pickers and the links, and drop the new catalog entries.

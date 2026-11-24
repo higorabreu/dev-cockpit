@@ -65,8 +65,12 @@ const shownFamily = (family: string) => family.replace(/ Variable$/, '')
 
 const WARNING = '<path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17.5v.01"/>'
 
+// The pages by subject, in the list's order
 const TABS = [
   { id: 'general', label: 'settings.tab.general' },
+  { id: 'appearance', label: 'settings.group.appearance' },
+  { id: 'terminal', label: 'settings.group.terminal' },
+  { id: 'files', label: 'settings.tab.files' },
   { id: 'shortcuts', label: 'settings.group.shortcuts' },
   { id: 'projects', label: 'settings.group.projects' },
   { id: 'connections', label: 'settings.group.connections' },
@@ -295,6 +299,8 @@ export function createSettingsView(
     key: string,
     options: ReadonlyArray<readonly [string, string]>,
     current = String(getPath(settings.current(), key)),
+    // After saving, for a choice that changes which rows the page shows
+    then?: () => void,
   ): HTMLElement {
     const control = createSelect({
       id: `set-${key.replace(/\./g, '-')}`,
@@ -302,7 +308,7 @@ export function createSettingsView(
       value: current,
       labelledBy: labelId(key),
       disabled: disabled(key),
-      onChange: (value) => void commit(patchFor(key, value)),
+      onChange: (value) => void commit(patchFor(key, value)).then(then),
     })
     control.button.dataset.focus = `set-${key}`
     return control.element
@@ -891,6 +897,8 @@ export function createSettingsView(
     commit,
     render,
     openThemeFile: deps.openThemeFile,
+    openSettingsFile: () => void openFile(),
+    hasIssue: (key) => issueOf(key) !== undefined,
   })
 
   function render() {
@@ -949,22 +957,53 @@ export function createSettingsView(
           ),
         ),
         group(
-          t('settings.group.appearance'),
+          t('settings.group.window'),
+          row(
+            'window.heightRatio',
+            t('settings.heightRatio'),
+            percent('window.heightRatio', LIMITS.heightRatio),
+            t('settings.heightRatio.hint'),
+          ),
+          row(
+            'window.panelOnFullHeight',
+            t('settings.panelOnFullHeight'),
+            checkbox('window.panelOnFullHeight'),
+          ),
+          row(
+            'window.restoreTabs',
+            t('settings.restoreTabs'),
+            checkbox('window.restoreTabs'),
+            t('settings.restoreTabs.hint'),
+          ),
+        ),
+      ],
+      appearance: [
+        group(
+          t('settings.group.theme'),
           row(
             'theme',
-            t('settings.theme'),
-            select('theme', [
-              ['dark', t('settings.theme.dark')],
-              ['light', t('settings.theme.light')],
-              ['system', t('settings.theme.system')],
-            ]),
+            t('settings.mode'),
+            // The mode decides which theme pickers the page shows
+            select(
+              'theme',
+              [
+                ['dark', t('settings.theme.dark')],
+                ['light', t('settings.theme.light')],
+                ['system', t('settings.theme.system')],
+              ],
+              undefined,
+              render,
+            ),
           ),
-          ...themeSection.rows(),
+          ...themeSection.pickers(),
           row(
             'opacity',
             t('settings.opacity'),
             percent('opacity', LIMITS.opacity, (fraction) => deps.previewOpacity(fraction)),
           ),
+        ),
+        group(
+          t('settings.group.fonts'),
           row(
             'appearance.fontFamily',
             t('settings.interfaceFont'),
@@ -985,8 +1024,11 @@ export function createSettingsView(
             t('settings.codeFont.hint'),
           ),
         ),
+        group(t('settings.group.advanced'), themeSection.overrides()),
+      ],
+      terminal: [
         group(
-          t('settings.group.terminal'),
+          undefined,
           row(
             'terminal.fontFamily',
             t('settings.terminalFont'),
@@ -1025,39 +1067,8 @@ export function createSettingsView(
               t('settings.macOptionAsMeta.hint'),
             ),
         ),
-        group(
-          t('settings.group.window'),
-          row(
-            'window.heightRatio',
-            t('settings.heightRatio'),
-            percent('window.heightRatio', LIMITS.heightRatio),
-            t('settings.heightRatio.hint'),
-          ),
-          row(
-            'window.panelOnFullHeight',
-            t('settings.panelOnFullHeight'),
-            checkbox('window.panelOnFullHeight'),
-          ),
-          row(
-            'window.restoreTabs',
-            t('settings.restoreTabs'),
-            checkbox('window.restoreTabs'),
-            t('settings.restoreTabs.hint'),
-          ),
-        ),
-        group(
-          t('settings.group.review'),
-          row(
-            'review.layout',
-            t('settings.reviewLayout'),
-            select('review.layout', [
-              ['auto', t('settings.reviewLayout.auto')],
-              ['side', t('settings.reviewLayout.side')],
-              ['stacked', t('settings.reviewLayout.stacked')],
-            ]),
-            t('settings.reviewLayout.hint'),
-          ),
-        ),
+      ],
+      files: [
         group(
           t('settings.group.files'),
           row(
@@ -1077,6 +1088,19 @@ export function createSettingsView(
             t('settings.openPathsInCockpit'),
             checkbox('files.openPathsInCockpit'),
             t('settings.openPathsInCockpit.hint', { key: deps.keymap.click.alternateLabel }),
+          ),
+        ),
+        group(
+          t('settings.group.review'),
+          row(
+            'review.layout',
+            t('settings.reviewLayout'),
+            select('review.layout', [
+              ['auto', t('settings.reviewLayout.auto')],
+              ['side', t('settings.reviewLayout.side')],
+              ['stacked', t('settings.reviewLayout.stacked')],
+            ]),
+            t('settings.reviewLayout.hint'),
           ),
         ),
       ],

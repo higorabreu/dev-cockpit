@@ -604,18 +604,18 @@
   border-radius: var(--radius-small);
 }
 
-/* Under a theme picker: its notes, then its actions as quiet links */
+/* Under a theme picker: its notes and the low contrast line */
 .stheme-more {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.stheme-actions {
+/* A theme picker, or the overrides' count, with its small buttons beside it */
+.stheme-control {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 2px;
+  align-items: center;
+  gap: 8px;
 }
 
 /* A theme below AA: one quiet line with the count, the pairs in its tooltip; the dot is the settings

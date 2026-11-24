@@ -28,11 +28,13 @@ const glare: ThemeFile = {
 function setup(
   initial: Settings = defaultSettings,
   user: UserThemes = { folder: FOLDER, themes: [] },
+  issues: readonly string[] = [],
 ) {
   let current = initial
   const patches: SettingsPatch[] = []
   const created: ThemeFile[] = []
   const opened: { location: SettingsFileLocation | undefined; name: string }[] = []
+  let settingsFileOpens = 0
   const fixed = fixedThemes(user)
   const themes: ThemesClient = {
     ...fixed,
@@ -64,18 +66,27 @@ function setup(
       opened.push({ location, name })
       return true
     },
+    openSettingsFile: () => {
+      settingsFileOpens += 1
+    },
+    hasIssue: (key) => issues.includes(key),
   })
   const draw = () => {
-    document.body.replaceChildren(...section.rows())
+    document.body.replaceChildren(...section.pickers(), section.overrides())
     return document.body
   }
-  return { draw, patches, created, opened }
+  const labels = () =>
+    [...document.body.querySelectorAll('[data-setting^="colorTheme."]')].map((row) => [
+      row.getAttribute('data-setting'),
+      row.querySelector('span')?.textContent,
+    ])
+  return { draw, labels, patches, created, opened, settingsFileOpens: () => settingsFileOpens }
 }
 
 describe('createThemeSection', () => {
   it('should list the built-in themes of each type in its picker when the screen is drawn', () => {
     // Arrange
-    const { draw } = setup()
+    const { draw } = setup(mergeSettings(defaultSettings, { theme: 'light' }))
 
     // Act
     const body = draw()
@@ -137,7 +148,9 @@ describe('createThemeSection', () => {
 
   it('should say dck is used when a mode names no theme', () => {
     // Arrange
-    const { draw } = setup(mergeSettings(defaultSettings, { colorTheme: { light: 'Gone' } }))
+    const { draw } = setup(
+      mergeSettings(defaultSettings, { theme: 'light', colorTheme: { light: 'Gone' } }),
+    )
 
     // Act
     const body = draw()
@@ -176,16 +189,104 @@ describe('createThemeSection', () => {
     )
 
     // Act
-    draw().querySelector<HTMLElement>('[data-focus="set-theme-open-dark"]')?.click()
+    const edit = draw().querySelector<HTMLElement>('[data-focus="set-theme-open-dark"]')
+    edit?.click()
 
     // Assert
+    expect(edit?.textContent).toBe('Edit')
+    expect(edit?.dataset.tip).toBe('Open the theme file')
     expect(opened).toEqual([
       { location: { path: `${FOLDER}/glare.json`, folder: FOLDER }, name: 'Theme' },
     ])
   })
 })
 
+describe('theme pickers by mode', () => {
+  it('should show only the dark picker named Theme when the mode is Dark', () => {
+    // Arrange
+    const { draw, labels } = setup(mergeSettings(defaultSettings, { theme: 'dark' }))
+
+    // Act
+    draw()
+
+    // Assert
+    expect(labels()).toEqual([['colorTheme.dark', 'Theme']])
+  })
+
+  it('should show only the light picker named Theme when the mode is Light', () => {
+    // Arrange
+    const { draw, labels } = setup(mergeSettings(defaultSettings, { theme: 'light' }))
+
+    // Act
+    draw()
+
+    // Assert
+    expect(labels()).toEqual([['colorTheme.light', 'Theme']])
+  })
+
+  it('should show both pickers named by mode when the mode is System', () => {
+    // Arrange
+    const { draw, labels } = setup(mergeSettings(defaultSettings, { theme: 'system' }))
+
+    // Act
+    draw()
+
+    // Assert
+    expect(labels()).toEqual([
+      ['colorTheme.dark', 'Dark theme'],
+      ['colorTheme.light', 'Light theme'],
+    ])
+  })
+
+  it('should also show the other mode picker when settings.json holds it wrongly', () => {
+    // Arrange
+    const { draw, labels } = setup(mergeSettings(defaultSettings, { theme: 'dark' }), undefined, [
+      'colorTheme.light',
+    ])
+
+    // Act
+    draw()
+
+    // Assert
+    expect(labels()).toEqual([
+      ['colorTheme.dark', 'Dark theme'],
+      ['colorTheme.light', 'Light theme'],
+    ])
+  })
+
+  it('should put a short Copy button beside the picker with its full meaning in the tooltip when drawn', () => {
+    // Arrange
+    const { draw } = setup()
+
+    // Act
+    const body = draw()
+
+    // Assert
+    const copy = body.querySelector<HTMLElement>('[data-focus="set-theme-new-dark"]')
+    expect(copy?.textContent).toBe('Copy')
+    expect(copy?.dataset.tip).toBe('New theme from this one')
+    expect(copy?.classList.contains('srecord')).toBe(true)
+    expect(copy?.closest('.stheme-control')?.querySelector('[role="combobox"]')).not.toBeNull()
+    expect(copy?.hasAttribute('title')).toBe(false)
+    expect(body.querySelector('[data-focus="set-theme-open-dark"]')).toBeNull()
+  })
+})
+
 describe('color overrides', () => {
+  it('should open settings.json in its own tab when Edit is pressed beside the overrides', () => {
+    // Arrange
+    const { draw, settingsFileOpens } = setup()
+
+    // Act
+    const edit = draw().querySelector<HTMLElement>('[data-focus="set-overrides-edit"]')
+    edit?.click()
+
+    // Assert
+    expect(edit?.textContent).toBe('Edit')
+    expect(edit?.dataset.tip).toBe('Open the settings file')
+    expect(settingsFileOpens()).toBe(1)
+  })
+
   it('should count every override and clear each one when reset', () => {
     // Arrange
     const layer = { colors: { bg: '#000000' }, terminal: { red: '#ff0000' }, syntax: {} }

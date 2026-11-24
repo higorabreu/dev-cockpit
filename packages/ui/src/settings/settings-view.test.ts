@@ -160,10 +160,13 @@ function open(
     if (!found) throw new Error(`invariant: ${key} has a control`)
     return found
   }
+  const page = (id: string) => body.querySelector<HTMLElement>(`#settings-tab-${id}`)?.click()
   return {
     view,
     body,
     combobox,
+    page,
+    settings: settings.client,
     patches: settings.patches,
     emit: settings.emit,
     emitFile: settings.emitFile,
@@ -178,25 +181,32 @@ const press = (target: HTMLElement, key: string) =>
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe('settings view selects', () => {
-  it('should use the design system select for every choice when the screen is drawn', () => {
-    const { body, view } = open()
+  it('should use the design system select for every choice when each page is drawn', () => {
+    const { body, page, view } = open()
+    const choices = () =>
+      [...body.querySelectorAll('[role="combobox"]')].map((element) =>
+        element.getAttribute('data-focus'),
+      )
 
-    const general = [...body.querySelectorAll('[role="combobox"]')].map((element) =>
-      element.getAttribute('data-focus'),
-    )
-    body.querySelector<HTMLElement>('#settings-tab-shortcuts')?.click()
+    const pages = ['general', 'appearance', 'terminal', 'files'].map((id) => {
+      page(id)
+      return [id, choices(), body.querySelector('select')] as const
+    })
 
-    expect(body.querySelector('select')).toBeNull()
-    expect(general).toEqual([
-      'set-language',
-      'set-theme',
-      'set-colorTheme.dark',
-      'set-colorTheme.light',
-      'set-appearance.fontFamily',
-      'set-appearance.codeFontFamily',
-      'set-terminal.fontFamily',
-      'set-terminal.cursorStyle',
-      'set-review.layout',
+    expect(pages).toEqual([
+      ['general', ['set-language'], null],
+      [
+        'appearance',
+        [
+          'set-theme',
+          'set-colorTheme.dark',
+          'set-appearance.fontFamily',
+          'set-appearance.codeFontFamily',
+        ],
+        null,
+      ],
+      ['terminal', ['set-terminal.fontFamily', 'set-terminal.cursorStyle'], null],
+      ['files', ['set-review.layout'], null],
     ])
     view.close()
   })
@@ -261,16 +271,18 @@ describe('settings view selects', () => {
   })
 
   it('should name each select by its row label when the screen is drawn', () => {
-    const { body, combobox, view } = open()
+    const { body, combobox, page, view } = open()
+    page('appearance')
 
     const labelId = combobox('theme').getAttribute('aria-labelledby') ?? ''
 
-    expect(body.querySelector(`#${labelId}`)?.textContent).toBe('Theme')
+    expect(body.querySelector(`#${labelId}`)?.textContent).toBe('Mode')
     view.close()
   })
 
   it('should save the picked value and keep it and the focus after the redraw when picked by keyboard', async () => {
-    const { combobox, patches, view } = open()
+    const { combobox, page, patches, view } = open()
+    page('appearance')
     const theme = combobox('theme')
     theme.focus()
 
@@ -288,7 +300,8 @@ describe('settings view selects', () => {
 
   it('should save the review layout from its row and bring back Automatic from the same select', async () => {
     const initial = { ...defaultSettings, review: { ...defaultSettings.review, layout: 'side' } }
-    const { body, combobox, patches, view } = open([], api, initial as Settings)
+    const { body, combobox, page, patches, view } = open([], api, initial as Settings)
+    page('files')
     const layout = combobox('review.layout')
     const labelId = layout.getAttribute('aria-labelledby') ?? ''
     const shown = layout.querySelector('[data-current]')?.textContent
@@ -320,13 +333,210 @@ describe('settings view selects', () => {
   })
 
   it('should disable the select of a row locked by the environment when the screen is drawn', () => {
-    const { combobox, view } = open(['language'])
+    const { combobox, page, view } = open(['language'])
 
     const language = combobox('language')
+    page('appearance')
 
     expect(language.disabled).toBe(true)
     expect(language.closest('[data-locked="true"]')).not.toBeNull()
     expect(combobox('theme').disabled).toBe(false)
+    view.close()
+  })
+})
+
+describe('settings view pages', () => {
+  const rows = (body: HTMLElement) =>
+    [...body.querySelectorAll('#settings-panel [data-setting]')].map((row) =>
+      row.getAttribute('data-setting'),
+    )
+  const headings = (body: HTMLElement) =>
+    [...body.querySelectorAll('#settings-panel h2')].map((heading) => heading.textContent)
+
+  it('should list the pages by subject in order when the screen is drawn', () => {
+    // Arrange, Act
+    const { body, view } = open()
+
+    // Assert
+    expect([...body.querySelectorAll('.snav-item')].map((item) => item.textContent)).toEqual([
+      'General',
+      'Appearance',
+      'Terminal',
+      'Files and review',
+      'Shortcuts',
+      'Projects',
+      'Connections',
+      'System',
+      'About',
+    ])
+    view.close()
+  })
+
+  it('should hold only the language and the window when General is shown', () => {
+    // Arrange, Act
+    const { body, view } = open()
+
+    // Assert
+    expect(headings(body)).toEqual(['Language', 'Window'])
+    expect(rows(body)).toEqual([
+      'language',
+      'window.heightRatio',
+      'window.panelOnFullHeight',
+      'window.restoreTabs',
+    ])
+    view.close()
+  })
+
+  it('should group the theme, the fonts and the overrides when Appearance is shown', () => {
+    // Arrange
+    const { body, page, view } = open()
+
+    // Act
+    page('appearance')
+
+    // Assert
+    expect(headings(body)).toEqual(['Theme', 'Fonts', 'Advanced'])
+    expect(rows(body)).toEqual([
+      'theme',
+      'colorTheme.dark',
+      'opacity',
+      'appearance.fontFamily',
+      'appearance.codeFontFamily',
+      'colorCustomizations',
+    ])
+    view.close()
+  })
+
+  it('should hold the terminal settings and the files and review ones on their own pages', () => {
+    // Arrange
+    const { body, page, view } = open([], api, undefined, 'mac')
+
+    // Act
+    page('terminal')
+    const terminal = rows(body)
+    page('files')
+
+    // Assert
+    expect(terminal).toEqual([
+      'terminal.fontFamily',
+      'fontSize',
+      'terminal.cursorStyle',
+      'terminal.cursorBlink',
+      'terminal.macOptionAsMeta',
+    ])
+    expect(headings(body)).toEqual(['Files', 'Review'])
+    expect(rows(body)).toEqual([
+      'files.autoSave',
+      'files.autoMerge',
+      'files.openPathsInCockpit',
+      'review.layout',
+    ])
+    view.close()
+  })
+
+  it('should move through the nine pages with the arrows, Home and End when the list has the focus', () => {
+    // Arrange
+    const { body, view } = open()
+    const selected = () => body.querySelector('.snav-item[aria-selected="true"]')?.id
+    const key = (name: string) => {
+      press(body.querySelector<HTMLElement>('.snav') as HTMLElement, name)
+      return [selected(), document.activeElement?.id]
+    }
+
+    // Act
+    const steps = [key('ArrowDown'), key('ArrowDown'), key('End'), key('ArrowDown'), key('ArrowUp')]
+
+    // Assert
+    expect(steps).toEqual([
+      ['settings-tab-appearance', 'settings-tab-appearance'],
+      ['settings-tab-terminal', 'settings-tab-terminal'],
+      ['settings-tab-about', 'settings-tab-about'],
+      ['settings-tab-general', 'settings-tab-general'],
+      ['settings-tab-about', 'settings-tab-about'],
+    ])
+    view.close()
+  })
+
+  it('should show the light picker in place of the dark one when Light is picked as the mode', async () => {
+    // Arrange
+    const { body, combobox, page, view } = open()
+    page('appearance')
+    const mode = combobox('theme')
+    mode.focus()
+
+    // Act
+    press(mode, 'Enter')
+    press(mode, 'ArrowDown')
+    press(mode, 'Enter')
+    await settle()
+
+    // Assert
+    expect(rows(body).filter((key) => key?.startsWith('colorTheme.'))).toEqual(['colorTheme.light'])
+    expect(document.activeElement).toBe(combobox('theme'))
+    view.close()
+  })
+
+  it('should redraw the pickers of the new mode when the mode changes from outside, as by the shortcut', async () => {
+    // Arrange
+    const { body, emit, page, settings, view } = open()
+    page('appearance')
+
+    // Act
+    await settings.update({ theme: 'system' })
+    emit(['theme'])
+    const system = rows(body).filter((key) => key?.startsWith('colorTheme.'))
+    await settings.update({ theme: 'light' })
+    emit(['theme'])
+
+    // Assert
+    expect(system).toEqual(['colorTheme.dark', 'colorTheme.light'])
+    expect(rows(body).filter((key) => key?.startsWith('colorTheme.'))).toEqual(['colorTheme.light'])
+    view.close()
+  })
+
+  it('should mark the page that now holds each setting the file got wrong', () => {
+    // Arrange
+    const file: SettingsFileState = {
+      kind: 'ok',
+      issues: [
+        { key: 'window.heightRatio', kind: 'adjusted', found: '2', used: '0.95' },
+        { key: 'fontSize', kind: 'adjusted', found: '99', used: '32' },
+        { key: 'review.layout', kind: 'ignored', found: '"wide"', used: '"auto"' },
+        { key: 'colorCustomizations.colors.bg', kind: 'ignored', found: '"red"' },
+      ],
+    }
+
+    // Act
+    const { body, page, view } = open([], api, undefined, 'pc', file)
+    const marked = [...body.querySelectorAll('.snav-item')]
+      .filter((item) => item.querySelector('.snav-mark'))
+      .map((item) => item.id)
+    page('files')
+
+    // Assert
+    expect(marked).toEqual([
+      'settings-tab-general',
+      'settings-tab-appearance',
+      'settings-tab-terminal',
+      'settings-tab-files',
+    ])
+    expect(body.querySelector('[data-setting="review.layout"] .snote')?.textContent).toBe(
+      'In settings.json: "wide". Not valid; using the default.',
+    )
+    view.close()
+  })
+
+  it('should open the file in its own tab when Edit is pressed beside the color overrides', async () => {
+    // Arrange
+    const { body, opens, page, view } = open()
+    page('appearance')
+
+    // Act
+    body.querySelector<HTMLElement>('[data-focus="set-overrides-edit"]')?.click()
+    await settle()
+
+    // Assert
+    expect(opens()).toBe(1)
     view.close()
   })
 })
@@ -882,12 +1092,15 @@ describe('settings view, the settings file', () => {
     }
 
     // Act
-    const { body, view } = open([], api, undefined, 'pc', file)
-    const general = [noteOf(body, 'theme'), noteOf(body, 'terminal.fontFamily')]
-    body.querySelector<HTMLElement>('#settings-tab-system')?.click()
+    const { body, page, view } = open([], api, undefined, 'pc', file)
+    page('appearance')
+    const mode = noteOf(body, 'theme')
+    page('terminal')
+    const font = noteOf(body, 'terminal.fontFamily')
+    page('system')
 
     // Assert
-    expect(general).toEqual([
+    expect([mode, font]).toEqual([
       'In settings.json: "purple". Not valid; using the default.',
       'In settings.json: "Nope;}". Not valid; using the default.',
     ])
@@ -903,8 +1116,8 @@ describe('settings view, the settings file', () => {
       .map((item) => item.id)
 
     // Assert
-    expect(marked).toEqual(['settings-tab-general', 'settings-tab-system'])
-    expect(body.querySelector('#settings-tab-general')?.getAttribute('aria-description')).toBe(
+    expect(marked).toEqual(['settings-tab-appearance', 'settings-tab-system'])
+    expect(body.querySelector('#settings-tab-appearance')?.getAttribute('aria-description')).toBe(
       'Has an invalid value in settings.json',
     )
     view.close()
@@ -912,7 +1125,8 @@ describe('settings view, the settings file', () => {
 
   it('should offer the reset on a setting the file holds wrongly even when the default is in use', async () => {
     // Arrange
-    const { body, patches, view } = open([], api, undefined, 'pc', withIssues)
+    const { body, page, patches, view } = open([], api, undefined, 'pc', withIssues)
+    page('appearance')
     const reset = body.querySelector<HTMLButtonElement>('[data-setting="theme"] .sreset')
 
     // Act
@@ -928,19 +1142,22 @@ describe('settings view, the settings file', () => {
 
   it('should say where the file broke above the page and disable the controls when it is not valid', () => {
     // Arrange, Act
-    const { body, combobox, view } = open([], api, undefined, 'pc', {
+    const { body, combobox, page, view } = open([], api, undefined, 'pc', {
       kind: 'invalid',
       line: 4,
       column: 12,
     })
     const strip = body.querySelector('.smain > .sbroken')
+    page('appearance')
+    const mode = combobox('theme').disabled
+    page('terminal')
 
     // Assert
     expect(strip?.querySelector('p')?.textContent).toBe(
       'settings.json has an error at line 4, column 12.',
     )
     expect(strip?.nextElementSibling?.id).toBe('settings-panel')
-    expect(combobox('theme').disabled).toBe(true)
+    expect(mode).toBe(true)
     expect(body.querySelector<HTMLInputElement>('[data-focus="set-fontSize"]')?.disabled).toBe(true)
     expect(body.querySelector('.sfile-dot')).toBeNull()
     view.close()
@@ -965,7 +1182,8 @@ describe('settings view, the settings file', () => {
 
   it('should draw the warnings at once when the file is saved by hand while the screen is open', () => {
     // Arrange
-    const { body, emitFile, view } = open()
+    const { body, emitFile, page, view } = open()
+    page('appearance')
 
     // Act
     emitFile(withIssues)
@@ -1038,8 +1256,9 @@ describe('settings view fonts and cursor', () => {
 
   it('should name the terminal font of the system in the default option when the host found it', async () => {
     // Arrange
-    const { combobox, view } = open()
+    const { combobox, page, view } = open()
     await settle()
+    page('terminal')
     const font = combobox('terminal.fontFamily')
 
     // Act
@@ -1053,8 +1272,9 @@ describe('settings view fonts and cursor', () => {
 
   it('should save the picked family and null for the default when picked by keyboard', async () => {
     // Arrange
-    const { combobox, patches, view } = open()
+    const { combobox, page, patches, view } = open()
     await settle()
+    page('appearance')
     const font = combobox('appearance.codeFontFamily')
     font.focus()
 
@@ -1084,8 +1304,9 @@ describe('settings view fonts and cursor', () => {
     }
 
     // Act
-    const { combobox, view } = open([], api, initial)
+    const { combobox, page, view } = open([], api, initial)
     await settle()
+    page('terminal')
 
     // Assert
     expect(combobox('terminal.fontFamily').querySelector('[data-current]')?.textContent).toBe(
@@ -1094,9 +1315,10 @@ describe('settings view fonts and cursor', () => {
     view.close()
   })
 
-  it('should save which Option is Meta from the Terminal group when the keyboard is a Mac one', async () => {
+  it('should save which Option is Meta from the Terminal page when the keyboard is a Mac one', async () => {
     // Arrange
-    const { combobox, patches, view } = open([], api, undefined, 'mac')
+    const { combobox, page, patches, view } = open([], api, undefined, 'mac')
+    page('terminal')
     const option = combobox('terminal.macOptionAsMeta')
     const shown = option.querySelector('[data-current="true"]')?.textContent
     option.focus()
@@ -1113,9 +1335,10 @@ describe('settings view fonts and cursor', () => {
     view.close()
   })
 
-  it('should save the bar cursor and its blink from the Terminal group', async () => {
+  it('should save the bar cursor and its blink from the Terminal page', async () => {
     // Arrange
-    const { body, combobox, patches, view } = open()
+    const { body, combobox, page, patches, view } = open()
+    page('terminal')
     const cursor = combobox('terminal.cursorStyle')
     cursor.focus()
 
@@ -1134,9 +1357,10 @@ describe('settings view fonts and cursor', () => {
     view.close()
   })
 
-  it('should turn off saving, merging and opening paths in the cockpit when their boxes are cleared in the Files group', async () => {
+  it('should turn off saving, merging and opening paths in the cockpit when their boxes are cleared in the Files and review page', async () => {
     // Arrange
-    const { body, patches, view } = open()
+    const { body, page, patches, view } = open()
+    page('files')
     const box = (key: string) =>
       body.querySelector<HTMLInputElement>(`[data-focus="set-files.${key}"]`)
 
