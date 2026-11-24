@@ -162,4 +162,19 @@ describe('goToLineBar', () => {
     expect(view.hasFocus).toBe(true)
     expect(closeGoToLine(view)).toBe(false)
   })
+
+  it('should mark the drawer as opening only until its slide ends when it opens', () => {
+    // Arrange
+    const { view } = setUp()
+
+    // Act
+    openGoToLine(view)
+    const drawer = view.dom.querySelector<HTMLElement>(`${LIVE} .fv-goto`)
+    const opening = drawer?.hasAttribute('data-opening')
+    drawer?.dispatchEvent(new Event('animationend'))
+
+    // Assert
+    expect(opening).toBe(true)
+    expect(drawer?.hasAttribute('data-opening')).toBe(false)
+  })
 })

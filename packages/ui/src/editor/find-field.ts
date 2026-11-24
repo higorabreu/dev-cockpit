@@ -22,6 +22,15 @@ export function focusField(input: HTMLInputElement) {
 // The slide lasts --motion-fast; past this the copy goes even if no animation ran (a hidden window)
 const SLIDE_LIMIT_MS = 400
 
+// The drawer slides down only while it opens (styles/editor.css): a file view shown again over the terminal
+// draws an open drawer as it is, since a plain animation would replay when the view comes back
+export function slideIn(dom: HTMLElement) {
+  dom.setAttribute('data-opening', '')
+  const settle = () => dom.removeAttribute('data-opening')
+  dom.addEventListener('animationend', settle, { once: true })
+  setTimeout(settle, SLIDE_LIMIT_MS)
+}
+
 // CodeMirror takes a closed drawer out at once, so a copy of it, inert, slides back up under the header
 // (styles/editor.css); with reduced motion, or a view on its way out, it simply goes
 export function slideOut(view: EditorView, dom: HTMLElement) {

@@ -201,7 +201,8 @@
   }
 }
 
-/* Opening, the drawer slides down from under the header's edge; closing, a copy of it slides back up
+/* Opening, the drawer slides down from under the header's edge, only while `data-opening` is on it so a
+   file shown again does not replay it (find-field.ts); closing, a copy of it slides back up
    (find-field.ts). Transform and opacity only, and nothing per key typed. The replace row opens with its
    height. With reduced motion everything appears at once */
 @media (prefers-reduced-motion: no-preference) {
@@ -209,7 +210,7 @@
     transition: grid-template-rows var(--motion-fast) var(--motion-easing);
   }
 
-  .cm-panels-top > .fv-search {
+  .cm-panels-top > .fv-search[data-opening] {
     animation: fv-drawer-in var(--motion-fast) var(--motion-easing);
   }
 

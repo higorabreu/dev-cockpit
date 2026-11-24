@@ -24,7 +24,7 @@ import {
 } from '@codemirror/view'
 import { h, icon } from '../panel/dom.ts'
 import { closeGoToLine } from './editor-goto.ts'
-import { fieldBox, focusField, slideOut } from './find-field.ts'
+import { fieldBox, focusField, slideIn, slideOut } from './find-field.ts'
 
 // What the bar says, from the catalogs
 export interface SearchTexts {
@@ -272,6 +272,7 @@ function createSearchPanel(view: EditorView, mac: boolean, texts: () => SearchTe
     dom,
     top: true,
     mount() {
+      slideIn(dom)
       view.dom.append(marks)
       panels.set(view, {
         focusFind: () => focusField(find),
