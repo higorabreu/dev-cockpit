@@ -260,8 +260,11 @@ the light or dark theme, including the background color a program asks for and t
 
 ### Themes
 
-Each mode has its color theme, picked in Settings: dck's own (the default), dck's editor palettes (Grafite,
-Sálvia, Terra, Estrutura, Sinal, dck vivo), GitHub, One Dark Pro and Dracula. A theme colors the interface,
+Each mode has its color theme, picked in Settings: dck's own (the default); dck's palettes, each a whole
+theme in dark and light: dck vivo (petrol ground, dck's colors at full strength), Grafite (graphite and
+sage, code in greys), Terra (warm earth, four earth hues) and Sinal (near black, one amber signal); and
+GitHub, One Dark Pro and Dracula. Sálvia and Estrutura became part of Grafite, and a mode still set to
+either uses it. A theme colors the interface,
 every terminal and the editor at once, and every built-in one keeps WCAG AA contrast. "New theme from this
 one" writes a copy into the `themes` folder beside `settings.json` and opens it in a tab of its own, where
 Ctrl+S applies it at once: a JSON file with comments, `name`, `type` (`dark` or `light`) and the colors to

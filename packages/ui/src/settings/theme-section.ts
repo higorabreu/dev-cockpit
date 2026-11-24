@@ -78,7 +78,9 @@ export function createThemeSection(context: ThemeSectionContext) {
 
   function picker(type: ThemeName): HTMLElement {
     const key = `colorTheme.${type}`
-    const current = settings.current().colorTheme[type]
+    const named = settings.current().colorTheme[type]
+    // A merged theme's old name shows its successor, which is the theme in use
+    const current = activeTheme(themes.catalog(), settings.current(), type).mergedInto ?? named
     const entries = themes.catalog().of(type)
     const options = entries.map((entry) => ({
       value: entry.definition.name,
@@ -148,6 +150,13 @@ export function createThemeSection(context: ThemeSectionContext) {
     const lines: string[] = []
     if (active.missing)
       lines.push(t('settings.colorTheme.missing', { name: settings.current().colorTheme[type] }))
+    if (active.mergedInto)
+      lines.push(
+        t('settings.colorTheme.merged', {
+          name: settings.current().colorTheme[type],
+          theme: active.mergedInto,
+        }),
+      )
     if (file?.invalid)
       lines.push(t('settings.colorTheme.invalid', { file: file.file, ...file.invalid }))
     if (file && file.issues.length > 0)

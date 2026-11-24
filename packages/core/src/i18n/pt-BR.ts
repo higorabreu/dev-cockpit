@@ -268,6 +268,7 @@ export const ptBR = {
   'settings.colorTheme.dark': 'Tema escuro',
   'settings.colorTheme.light': 'Tema claro',
   'settings.colorTheme.missing': 'Nenhum tema se chama {name}; o dck é usado',
+  'settings.colorTheme.merged': '{name} agora faz parte do {theme}',
   'settings.colorTheme.new': 'Novo tema a partir deste',
   'settings.colorTheme.newFailed': 'Não foi possível gravar o novo tema.',
   'settings.colorTheme.openFile': 'Abrir o arquivo do tema',
