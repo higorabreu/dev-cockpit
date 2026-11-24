@@ -1,6 +1,6 @@
 {
   "name": "@devcockpit/install",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "Installs Dev Cockpit, a Guake-style terminal cockpit for developers, from its GitHub releases",
   "type": "module",
   "bin": {

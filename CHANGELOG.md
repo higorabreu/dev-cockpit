@@ -3,6 +3,16 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## [0.15.0](https://github.com/higorabreu/dev-cockpit/compare/v0.14.0...v0.15.0) (2026-11-24)
+
+
+### Features
+
+* color themes per mode, built-in and user files, with single-color overrides ([#134](https://github.com/higorabreu/dev-cockpit/issues/134)) ([af97064](https://github.com/higorabreu/dev-cockpit/commit/af970642a01988e69dcd90f2a78e05b23ea60756))
+* make dck's palettes whole themes and merge Sálvia and Estrutura into Grafite ([#136](https://github.com/higorabreu/dev-cockpit/issues/136)) ([76a0b4a](https://github.com/higorabreu/dev-cockpit/commit/76a0b4aa9cc5f269c83a92b6c01e1e571199be65))
+* move menus, search overlays and file strips as they open, and keep the window still ([#133](https://github.com/higorabreu/dev-cockpit/issues/133)) ([1f00d8a](https://github.com/higorabreu/dev-cockpit/commit/1f00d8ab464e3e26292475aac05bbb6a8531e1e1))
+* split settings into pages by subject ([#137](https://github.com/higorabreu/dev-cockpit/issues/137)) ([8114a93](https://github.com/higorabreu/dev-cockpit/commit/8114a934b6e2dd352c52e8c26151f78813f7d8d1))
+
 ## [0.14.0](https://github.com/higorabreu/dev-cockpit/compare/v0.13.1...v0.14.0) (2026-11-19)
 
 
