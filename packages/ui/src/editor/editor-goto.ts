@@ -10,7 +10,7 @@ import {
 } from '@codemirror/view'
 import { keys } from '../kit/keys.ts'
 import { h, icon } from '../panel/dom.ts'
-import { fieldBox, focusField, slideOut } from './find-field.ts'
+import { fieldBox, focusField, slideIn, slideOut } from './find-field.ts'
 
 // What the bar says, from the catalogs
 export interface GoToTexts {
@@ -148,6 +148,7 @@ function createGoToPanel(view: EditorView): Panel {
     dom,
     top: true,
     mount() {
+      slideIn(dom)
       showInside()
       focusField(input)
     },

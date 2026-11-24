@@ -120,9 +120,3 @@ body.shifting .xterm .xterm-scrollable-element > .scrollbar {
   width: calc(var(--size-scrollbar-thumb) + 2px) !important;
   background: var(--fg) !important;
 }
-
-@media (prefers-reduced-motion: no-preference) {
-  body.enter {
-    animation: enter var(--motion-normal) var(--motion-easing);
-  }
-}

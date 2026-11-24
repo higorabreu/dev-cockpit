@@ -209,6 +209,21 @@ button.notice-icon:focus-visible {
   display: none;
 }
 
+/* Opening, it grows from the point it opened at (`placeMenu` sets the origin) as the hold menu's card does;
+   closing, it goes at once, so the item clicked acts with nothing in the way */
+@media (prefers-reduced-motion: no-preference) {
+  #tab-menu {
+    animation: menu-in var(--motion-fast) var(--motion-easing);
+  }
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
 /* Why the items are offered: the items' padding, read and never focused */
 #tab-menu .menu-caption {
   flex: none;

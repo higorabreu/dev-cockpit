@@ -2052,3 +2052,47 @@ window applies any valid save at once and an invalid one only shows where the er
 have `settings:open-file` return whether something opened it, drop `ui/src/settings/settings-file-tab.ts`
 and its wiring in `ui/src/app.ts`, give `autoSave` in `ui/src/files/file-tabs.ts` no path again and drop
 `path` from `SettingsView`.
+
+## D92. What opens or closes in place moves, briefly; nothing else does
+
+**Decision:** motion is for a surface that opens or closes in place, and only to make that change easier to
+follow (the maintainer's rule, 2026-11-19, now in `.claude/rules/ui-design-system.md`). `--motion-fast`
+(120 ms) for small surfaces, `--motion-normal` (170 ms) for panes, easing `--motion-easing`; only opacity,
+transform and the size of what opens, once per open or close, all inside
+`@media (prefers-reduced-motion: no-preference)`. What moves now:
+- The side panel's width and the review pane's open and close (`--motion-normal`, D47's update); the
+  terminal keeps its grid and fits once at the end.
+- The editor's find and Go to line drawer (`--motion-fast`, transform and opacity, a copy slides back up).
+- The file's strips (merged, changed on disk, deleted, save failed) fold open from under the header in
+  `--motion-fast`, pushing the code down, and fold back up when they go (`grid-template-rows` on
+  `.fv-strip-fold`, `files/strip-slot.ts`); the strip that goes is inert at once and only its picture
+  folds. Meanwhile the file's body keeps the height it has with no strip and the view clips it, so the
+  editor resizes once (at the end of an opening, at the start of a closing). A strip that only changes its
+  words, a strip on a hidden file and a strip with reduced motion change at once.
+- The tab and context menus (`tabs/tab-menu.ts`: the tab's right click, the file segment's menu and every
+  other menu of that component) fade in and grow from 98% in `--motion-fast` from the point they opened
+  at (`placeMenu` gives the origin, the corner nearest the click above or below it); closing, they go at
+  once, so the item clicked acts with nothing in the way.
+- The project search and the file search fade in with their box coming 4 px down into place in
+  `--motion-fast`, and fade out the same way with what they showed; what was picked is already open and
+  focused underneath, and `kit/after-fade.ts` clears the field and the list once the overlay is gone.
+- The hold menu's fade and 97% scale, as before.
+- The window's own entry (the content sliding 14 px down and fading in over 170 ms each time the window
+  showed) is gone, the maintainer's choice on 2026-11-24: the window is whole and still in its first frame,
+  and what is typed right after the hotkey lands on a still screen.
+- With reduced motion asked for, one rule in `styles/base.css` ends every transition and animation at once
+  (durations and delays to 0 s), so the fades written before this rule (Settings, the work screen, the
+  hold menu, the tooltip, the section chevrons) and the review layout's transition set from code stop
+  moving too.
+Never: the terminal <-> file toggle, a tab switch, the window's show and hide (the hotkey's budget is under
+100 ms), typing, key echo, scroll, anything at rest. `styles/motion.test.ts` keeps every transition and
+animation on the tokens, the surfaces above inside the reduced motion query and the keyframes to opacity,
+transform and grid rows.
+**Reason:** a strip, a menu or an overlay that appears in one frame makes the eye look for what changed; a
+short motion from where it comes says it, while the action the user took is never delayed by it. Checked
+under Xvfb in both themes: the menus, the overlays and the strips move in 120 ms with one editor resize
+per strip, Enter in the file search shows the file in the first frame, and with reduced motion, while
+typing in the terminal or the editor and on a tab switch, no animation runs.
+**How to revert:** drop the `fv-strip-in`/`fv-strip-out` and `menu-in` keyframes, the
+`data-strip-moving` rules and the search overlays' transitions; put `setStrip` back to replacing the
+slot's children, drop `files/strip-slot.ts`, `kit/after-fade.ts` and `origin` from `placeMenu`.
