@@ -1,6 +1,6 @@
 # Themes
 
-**Status:** Phase 1 done (D92); phase 2 not started.
+**Status:** Phase 1 done (D93); phase 2 not started.
 
 ## Goal
 
@@ -114,7 +114,7 @@ Agreed with the maintainer on 2026-11-24.
 - [x] T4. ui: theme catalog and live apply (CSS variables, terminals, editor) wired in the app and on start.
 - [x] T5. ui: Settings pickers per mode, "New theme from this one", "Open the theme file", the contrast
   and file notes; both catalogs; the own-file tab generalized and theme files saved only on Ctrl+S.
-- [x] T6. docs: D92, this plan, roadmap if it lists themes.
+- [x] T6. docs: D93, this plan, roadmap if it lists themes.
 - [x] T7. Real app QA: every built-in theme with a colored terminal and a TypeScript file, the Settings
   section, the new theme flow, a live edit, a live override, a contrast warning
   (`plans/local/qa/themes/`).

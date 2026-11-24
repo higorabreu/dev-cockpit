@@ -65,4 +65,4 @@ Silicon `.dmg` with each release since 0.10.0 and is still being tested on real 
 use, Lezer's colors, autosave with a merge of a change on disk, and the viewers for images, SVG, Markdown
 and PDF ([plans/files.md](../plans/files.md), D81 to D87). Next for it, noted only: larger size limits
 after measuring, and a smooth cursor and scrolling. User themes shipped after it ([plans/themes.md](../plans/themes.md),
-D92); importing a VS Code theme file is their next phase.
+D93); importing a VS Code theme file is their next phase.

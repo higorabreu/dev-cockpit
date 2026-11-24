@@ -2053,7 +2053,7 @@ have `settings:open-file` return whether something opened it, drop `ui/src/setti
 and its wiring in `ui/src/app.ts`, give `autoSave` in `ui/src/files/file-tabs.ts` no path again and drop
 `path` from `SettingsView`.
 
-## D92. Color themes per mode, from built-in or user files, with single-color overrides in the settings
+## D93. Color themes per mode, from built-in or user files, with single-color overrides in the settings
 
 **Decision:** phase 1 of [plans/themes.md](../plans/themes.md).
 - **Theme:** one variant, `dark` or `light`, as a JSON file with comments: `name`, `type`, and the colors
