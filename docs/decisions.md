@@ -2125,9 +2125,10 @@ slot's children, drop `files/strip-slot.ts`, `kit/after-fade.ts` and `origin` fr
   matches nothing uses dck and says so. `colorCustomizations: { colors, terminal, syntax }` holds single
   colors over the theme in use, both modes, a bad entry dropped and listed.
 - **Screen:** under the mode, a picker per mode with the design system's select (a user theme shows its
-  file beside its name), and under each one its notes and two quiet links: "New theme from this one" asks
-  the host to write the whole theme (every token, without the overrides) as `<name> copy` under a free file
-  name (`themes:create`, checked with zod), makes it the mode's theme and opens it like `settings.json`
+  file beside its name), and under each one its notes and two quiet links (small buttons beside the
+  picker since D95): "New theme from this one" asks the host to write the whole theme (every token,
+  without the overrides) as `<name> copy` under a free file name (`themes:create`, checked with zod),
+  makes it the mode's theme and opens it like `settings.json`
   (D91: a tab of its own named Theme, saved only on Ctrl+S; the auto save rule now leaves out the themes
   folder too), and "Open the theme file" for a user theme. A theme or an override below AA is applied
   anyway; under its picker one quiet line in the secondary text, with the settings issues' warning dot,
@@ -2177,3 +2178,20 @@ dck's interface and terminal, and several differed only on a few roles. Asked fo
 merging of the ones too alike.
 **How to revert:** restore `salvia-*.json`, `estrutura-*.json` and the palettes' `syntax`-only files from
 before this decision, drop `mergedThemes`, `mergedInto` and the `settings.colorTheme.merged` entries.
+
+## D95. Settings pages by subject
+
+**Decision:** the settings screen (D29) lists its pages by subject: General (language and window), Appearance,
+Terminal, Files and review, Shortcuts, Projects, Connections, System and About. Appearance groups Theme (the
+mode, then only the theme picker of the mode in use, both "Dark theme" and "Light theme" in System mode,
+then the opacity), Fonts (interface and code) and Advanced (the color overrides with an Edit button that
+opens `settings.json` as D91). Beside each picker a small button copies the theme into a new user theme,
+its full meaning in the tooltip ("Copy", "New theme from this one"), and an Edit button opens a user
+theme's file; they replace D93's two quiet links. A mode changed on the page or by Ctrl+Shift+L redraws it
+with the new mode's picker; a picker the file holds wrongly shows even when its mode is not in use, so its
+warning and reset have a place. Every setting keeps its key, hint, reset and warning, and a page's mark in
+the list follows the rows it holds. The screen still opens on General.
+**Reason:** agreed with the maintainer on 2026-11-24: General had grown to every preference and the theme
+rows showed both modes' pickers and their links at once.
+**How to revert:** put the rows back on the General page in `ui/src/settings/settings-view.ts`, give
+`theme-section.ts` its `rows()` with both pickers and the links, and drop the new catalog entries.

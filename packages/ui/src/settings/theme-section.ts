@@ -29,6 +29,10 @@ export interface ThemeSectionContext {
   render(): void
   // A theme file in a tab of its own, saved only on Ctrl+S; false when there was nothing to open
   openThemeFile(location: SettingsFileLocation | undefined, name: string): Promise<boolean>
+  // settings.json in a tab of its own, where the color overrides are written
+  openSettingsFile(): void
+  // Whether settings.json holds this setting wrongly
+  hasIssue(key: string): boolean
 }
 
 // A long list would push the page down: the weakest pairs are named, the rest counted
@@ -36,6 +40,7 @@ const SHOWN = 4
 const OVERRIDES = 'colorCustomizations'
 
 const GROUPS = ['colors', 'terminal', 'syntax'] as const
+const TYPES: readonly ThemeName[] = ['dark', 'light']
 
 // How many single colors settings.json sets over the theme
 export function overrideCount(layer: Readonly<Record<(typeof GROUPS)[number], object>>): number {
@@ -114,32 +119,43 @@ export function createThemeSection(context: ThemeSectionContext) {
     if (!opened) context.render()
   }
 
-  function actions(type: ThemeName): HTMLElement {
-    const { entry } = activeTheme(themes.catalog(), settings.current(), type)
-    const create = h(
+  // A short word on the button, its full meaning in the tooltip
+  function smallButton(focus: string, label: MessageKey, tip: MessageKey, run: () => void) {
+    const button = h(
       'button',
-      { type: 'button', class: 'slink', 'data-focus': `set-theme-new-${type}` },
-      t('settings.colorTheme.new'),
+      { type: 'button', class: 'srecord', 'data-focus': focus, 'data-tip': t(tip) },
+      t(label),
     )
-    create.addEventListener('click', () => void newTheme(type))
+    button.addEventListener('click', run)
+    return button
+  }
+
+  // Beside the picker: copy the theme into a new user theme, and open the file of a user theme
+  function control(type: ThemeName): HTMLElement {
+    const { entry } = activeTheme(themes.catalog(), settings.current(), type)
     const file = entry.user
-    const open =
+    return h(
+      'span',
+      { class: 'stheme-control' },
+      picker(type),
+      smallButton(
+        `set-theme-new-${type}`,
+        'settings.colorTheme.copy',
+        'settings.colorTheme.new',
+        () => void newTheme(type),
+      ),
       file &&
-      h(
-        'button',
-        { type: 'button', class: 'slink', 'data-focus': `set-theme-open-${type}` },
-        t('settings.colorTheme.openFile'),
-      )
-    if (open && file)
-      open.addEventListener(
-        'click',
-        () =>
-          void context.openThemeFile(
-            { path: file.path, folder: themes.catalog().folder },
-            t('settings.colorTheme.tab'),
-          ),
-      )
-    return h('span', { class: 'stheme-actions' }, create, open)
+        smallButton(
+          `set-theme-open-${type}`,
+          'settings.edit',
+          'settings.colorTheme.openFile',
+          () =>
+            void context.openThemeFile(
+              { path: file.path, folder: themes.catalog().folder },
+              t('settings.colorTheme.tab'),
+            ),
+        ),
+    )
   }
 
   // Under a mode's picker: what keeps its theme from being used as written, then the low contrast line
@@ -150,13 +166,6 @@ export function createThemeSection(context: ThemeSectionContext) {
     const lines: string[] = []
     if (active.missing)
       lines.push(t('settings.colorTheme.missing', { name: settings.current().colorTheme[type] }))
-    if (active.mergedInto)
-      lines.push(
-        t('settings.colorTheme.merged', {
-          name: settings.current().colorTheme[type],
-          theme: active.mergedInto,
-        }),
-      )
     if (file?.invalid)
       lines.push(t('settings.colorTheme.invalid', { file: file.file, ...file.invalid }))
     if (file && file.issues.length > 0)
@@ -170,7 +179,19 @@ export function createThemeSection(context: ThemeSectionContext) {
       if (taken.theme?.type === type)
         lines.push(t('settings.colorTheme.taken', { file: taken.file, name: taken.theme.name }))
     if (failed === type) lines.push(t('settings.colorTheme.newFailed'))
+    // A merged name is news, not a problem: it reads in the secondary text, not the warning color
+    const merged =
+      active.mergedInto &&
+      h(
+        'span',
+        { class: 'snote snote-quiet', role: 'status' },
+        t('settings.colorTheme.merged', {
+          name: settings.current().colorTheme[type],
+          theme: active.mergedInto,
+        }),
+      )
     return [
+      merged,
       ...lines.map((line) => h('span', { class: 'snote', role: 'status' }, line)),
       lowContrast(type),
     ]
@@ -197,12 +218,22 @@ export function createThemeSection(context: ThemeSectionContext) {
   }
 
   function themeRow(type: ThemeName, label: MessageKey): HTMLElement {
+    const lines = notes(type).filter(Boolean)
     return context.row(
       `colorTheme.${type}`,
       t(label),
-      picker(type),
+      control(type),
       undefined,
-      h('span', { class: 'stheme-more' }, ...notes(type), actions(type)),
+      lines.length > 0 && h('span', { class: 'stheme-more' }, ...lines),
+    )
+  }
+
+  // The themes that can apply: the mode's, or both for System. One the file holds wrongly shows too, so
+  // its warning and reset have a place
+  function shownTypes(): readonly ThemeName[] {
+    const mode = settings.current().theme
+    return TYPES.filter(
+      (type) => mode === 'system' || mode === type || context.hasIssue(`colorTheme.${type}`),
     )
   }
 
@@ -213,21 +244,31 @@ export function createThemeSection(context: ThemeSectionContext) {
       t('settings.colorCustomizations'),
       h(
         'span',
-        { class: 'shint' },
-        count === 0
-          ? t('settings.colorCustomizations.none')
-          : i18n.plural('settings.colorCustomizations.count', count),
+        { class: 'stheme-control' },
+        h(
+          'span',
+          { class: 'shint' },
+          count === 0
+            ? t('settings.colorCustomizations.none')
+            : i18n.plural('settings.colorCustomizations.count', count),
+        ),
+        smallButton('set-overrides-edit', 'settings.edit', 'settings.file.open', () =>
+          context.openSettingsFile(),
+        ),
       ),
       t('settings.colorCustomizations.hint'),
     )
   }
 
   return {
-    rows: (): HTMLElement[] => [
-      themeRow('dark', 'settings.colorTheme.dark'),
-      themeRow('light', 'settings.colorTheme.light'),
-      overridesRow(),
-    ],
+    // One picker named Theme, or one per mode when both can apply
+    pickers: (): HTMLElement[] => {
+      const types = shownTypes()
+      return types.map((type) =>
+        themeRow(type, types.length > 1 ? `settings.colorTheme.${type}` : 'settings.colorTheme'),
+      )
+    },
+    overrides: overridesRow,
     reset() {
       failed = undefined
     },
