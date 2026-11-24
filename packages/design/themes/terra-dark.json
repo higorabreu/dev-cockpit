@@ -1,0 +1,21 @@
+{
+  "name": "Terra",
+  "type": "dark",
+  "syntax": {
+    "storage": "#b4b4b4",
+    "control": "#b4b4b4",
+    "constant": "#d6b679",
+    "type": "#9fb2c1",
+    "function": "#d4a493",
+    "string": "#86b89f",
+    "number": "#d6b679",
+    "property": "#d0d0d0",
+    "variable": "#e6e6e6",
+    "operator": "#969696",
+    "punctuation": "#969696",
+    "comment": "#969696",
+    "bracket1": "#d6b679",
+    "bracket2": "#d4a493",
+    "bracket3": "#9fb2c1"
+  }
+}

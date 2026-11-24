@@ -1,0 +1,21 @@
+{
+  "name": "Grafite",
+  "type": "light",
+  "syntax": {
+    "storage": "#1c1c1c",
+    "control": "#1c1c1c",
+    "constant": "#1c1c1c",
+    "type": "#3a3a3a",
+    "function": "#1c1c1c",
+    "string": "#555555",
+    "number": "#555555",
+    "property": "#1c1c1c",
+    "variable": "#1c1c1c",
+    "operator": "#616161",
+    "punctuation": "#616161",
+    "comment": "#616161",
+    "bracket1": "#616161",
+    "bracket2": "#616161",
+    "bracket3": "#616161"
+  }
+}
