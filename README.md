@@ -61,6 +61,9 @@ changed, and your pull requests, merge requests and tasks. The clips show exampl
 - **Themes.** One color theme colors the interface, every terminal and the editor at once, one for the dark
   mode and one for the light: dck's own, four whole themes of dck's (dck vivo, Grafite, Terra, Sinal),
   GitHub, One Dark Pro and Dracula, or your own in a JSON file (below).
+- **Motion.** What opens in place moves briefly (120 to 170 ms): the side panel, the review, menus, the
+  project and file search, the editor's find bar and the file's strips. The window, tab switches, typing
+  and scrolling never animate, so `F12` stays instant; with reduced motion set in the system, nothing moves.
 
 <p align="center">
   <img src="docs/media/editor.gif" alt="Files in the cockpit, at full height: Ctrl+Shift+O finds src/orders.ts in the acme-api project and opens it over the tab in syntax colors, a number is changed and the hollow ring of unsaved on the tab goes away when it saves by itself, Ctrl+F highlights the matches of a search, the project's README.md opens and Ctrl+Shift+J shows its preview, Ctrl+Shift+Space goes back to the terminal, and a Ctrl+click on src/orders.ts:42:5 in the output of tsc opens the file at that line" width="960">
