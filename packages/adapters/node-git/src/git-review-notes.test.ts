@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import type { ErrorBody, Result } from '@dck/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createGitReviewNotes } from './git-review-notes.ts'
@@ -43,6 +43,9 @@ beforeEach(async () => {
 
 afterEach(() => rm(directory, { recursive: true, force: true }))
 
+// Windows keeps no Unix mode bits, so privacy there comes from the user's profile folder
+const unixModes = process.platform !== 'win32'
+
 describe('createGitReviewNotes', () => {
   it('should write the review in the git folder of a repository, private and out of git status', async () => {
     // Arrange
@@ -55,8 +58,10 @@ describe('createGitReviewNotes', () => {
     // Assert
     expect(path).toBe(join(root, '.git', 'dck', 'review-20261117-143000.md'))
     expect(await readFile(path, 'utf8')).toBe('# Review comments\n')
-    expect((await stat(path)).mode & 0o777).toBe(0o600)
-    expect((await stat(join(root, '.git', 'dck'))).mode & 0o777).toBe(0o700)
+    if (unixModes) {
+      expect((await stat(path)).mode & 0o777).toBe(0o600)
+      expect((await stat(join(root, '.git', 'dck'))).mode & 0o777).toBe(0o700)
+    }
     expect(git(root, 'status', '--porcelain')).toBe('')
   })
 
@@ -83,7 +88,7 @@ describe('createGitReviewNotes', () => {
     const first = value(await notes.save(root, 'one\n'))
     const second = value(await notes.save(root, 'two\n'))
 
-    expect([first, second].map((path) => path.slice(path.lastIndexOf('/') + 1))).toEqual([
+    expect([first, second].map((path) => basename(path))).toEqual([
       'review-20261117-143000.md',
       'review-20261117-143000-2.md',
     ])
@@ -104,7 +109,7 @@ describe('createGitReviewNotes', () => {
 
     // Assert
     expect(path).toBe(join(temporary, 'dck-review-20261117-143000.md'))
-    expect((await stat(path)).mode & 0o777).toBe(0o600)
+    if (unixModes) expect((await stat(path)).mode & 0o777).toBe(0o600)
     expect(await readdir(join(main, '.git'))).not.toContain('dck')
     expect(git(linked, 'status', '--porcelain')).toBe('')
   })

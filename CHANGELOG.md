@@ -21,6 +21,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 * run the daemon and CLI tests over a named pipe on Windows
 * test the terminal through cmd and PowerShell on Windows
 * skip on Windows only the tests that need a Unix feature, and run the link tests wherever links can be created
+* run the git tests on Windows: submodule URLs in either spelling, the file mode set in the index, more time for the tests that start many git processes
 
 ### Documentation
 

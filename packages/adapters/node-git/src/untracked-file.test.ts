@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs'
 import { chmod, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -102,8 +103,22 @@ beforeEach(async () => {
 
 afterEach(() => rm(directory, { recursive: true, force: true }))
 
+// Windows creates symbolic links only in Developer Mode or as an administrator (as CI runners are)
+function canCreateSymlinks(): boolean {
+  const probe = mkdtempSync(join(tmpdir(), 'dck-link-'))
+  try {
+    symlinkSync(probe, join(probe, 'link'))
+    return true
+  } catch {
+    return false
+  } finally {
+    rmSync(probe, { recursive: true, force: true })
+  }
+}
+const symlinks = canCreateSymlinks()
+
 describe('untracked files read in process', () => {
-  it.each([[false], [true]])(
+  it.runIf(symlinks).each([[false], [true]])(
     'should equal what git diff --no-index gives when reading every kind of file (ignore whitespace: %s)',
     async (ignoreWhitespace) => {
       // Arrange
@@ -131,40 +146,43 @@ describe('untracked files read in process', () => {
     },
   )
 
-  it('should equal git and keep git only for the files it transforms when attributes or settings apply', async () => {
-    // Arrange
-    const path = await repo('attributes', {
-      '.gitattributes': [
-        '*.dat binary',
-        'forced.txt diff',
-        'driver.txt diff=custom',
-        'eol-*.txt text eol=lf',
-        'kept.txt -text',
-        '',
-      ].join('\n'),
-      'blob.dat': 'plain text\n',
-      'forced.txt': Buffer.from('a\0b\n'),
-      'driver.txt': 'driven\n',
-      'eol-crlf.txt': 'one\r\ntwo\r\n',
-      'eol-lf.txt': 'one\ntwo\n',
-      'kept.txt': 'one\r\n',
-      'plain-crlf.txt': 'one\r\n',
-      'big.txt': 'x'.repeat(200),
-    })
-    git(path, 'config', 'core.bigFileThreshold', '100')
-    await symlink('big.txt', join(path, 'link'))
-    const { byGit, current, old } = readers()
-    const request = { cwd: path, scope: 'uncommitted' as const, ignoreWhitespace: false }
+  it.runIf(symlinks)(
+    'should equal git and keep git only for the files it transforms when attributes or settings apply',
+    async () => {
+      // Arrange
+      const path = await repo('attributes', {
+        '.gitattributes': [
+          '*.dat binary',
+          'forced.txt diff',
+          'driver.txt diff=custom',
+          'eol-*.txt text eol=lf',
+          'kept.txt -text',
+          '',
+        ].join('\n'),
+        'blob.dat': 'plain text\n',
+        'forced.txt': Buffer.from('a\0b\n'),
+        'driver.txt': 'driven\n',
+        'eol-crlf.txt': 'one\r\ntwo\r\n',
+        'eol-lf.txt': 'one\ntwo\n',
+        'kept.txt': 'one\r\n',
+        'plain-crlf.txt': 'one\r\n',
+        'big.txt': 'x'.repeat(200),
+      })
+      git(path, 'config', 'core.bigFileThreshold', '100')
+      await symlink('big.txt', join(path, 'link'))
+      const { byGit, current, old } = readers()
+      const request = { cwd: path, scope: 'uncommitted' as const, ignoreWhitespace: false }
 
-    // Act
-    const read = files(await current.diff(request))
-    const expected = files(await old.diff(request))
+      // Act
+      const read = files(await current.diff(request))
+      const expected = files(await old.diff(request))
 
-    // Assert
-    expect(read).toEqual(expected)
-    expect(read.find((file) => file.path === 'big.txt')).toMatchObject({ binary: true })
-    expect(byGit.sort()).toEqual(['driver.txt', 'eol-crlf.txt'])
-  })
+      // Assert
+      expect(read).toEqual(expected)
+      expect(read.find((file) => file.path === 'big.txt')).toMatchObject({ binary: true })
+      expect(byGit.sort()).toEqual(['driver.txt', 'eol-crlf.txt'])
+    },
+  )
 
   it('should equal git and send only the files with a carriage return to git when autocrlf is on', async () => {
     // Arrange

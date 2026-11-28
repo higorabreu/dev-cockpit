@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs'
 import {
   chmod,
   cp,
@@ -18,6 +19,20 @@ import type { DiffOutcome, DiffRequest, ErrorBody, Result } from '@dck/core'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { createGitDiffSource, statusModules, statusPaths, untrackedModules } from './git-diff.ts'
 import type { GitAnswer } from './git-run.ts'
+
+// Windows creates symbolic links only in Developer Mode or as an administrator (as CI runners are)
+function canCreateSymlinks(): boolean {
+  const probe = mkdtempSync(join(tmpdir(), 'dck-link-'))
+  try {
+    symlinkSync(probe, join(probe, 'link'))
+    return true
+  } catch {
+    return false
+  } finally {
+    rmSync(probe, { recursive: true, force: true })
+  }
+}
+const symlinks = canCreateSymlinks()
 
 let directory = ''
 
@@ -188,7 +203,9 @@ describe('createGitDiffSource', () => {
     })
     await writeFile(join(path, 'logo.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 9, 9]))
     await writeFile(join(path, 'win.txt'), 'one\r\nTWO\r\n')
-    await chmod(join(path, 'run.sh'), 0o755)
+    // Windows has no execute bit (core.fileMode is off there), so git records the mode in the index alone
+    if (process.platform === 'win32') run(path, 'update-index', '--chmod=+x', 'run.sh')
+    else await chmod(join(path, 'run.sh'), 0o755)
     await writeFile(join(path, 'api/schema.ts'), 'export const a = 1\n')
     await writeFile(join(path, 'legacy.txt'), Buffer.from('caf\xe9 au lait\n', 'latin1'))
     await writeFile(join(path, 'pnpm-lock.yaml'), 'lockfileVersion: 9\n')
@@ -265,16 +282,22 @@ describe('createGitDiffSource', () => {
     expect(lines).toEqual({ ok: true, value: ['one', 'two'] })
   })
 
-  it('should refuse a path or a link that leads outside the repository', async () => {
+  it('should refuse a path that leads outside the repository', async () => {
+    const path = await repo('escape', { 'a.txt': 'a\n' })
+    await writeFile(join(directory, 'secret.txt'), 'no\n')
+
+    const up = await createGitDiffSource().fileLines(path, '../secret.txt')
+
+    expect(up.ok || up.error.data?.code).toBe('DCK-GIT-004')
+  })
+
+  it.runIf(symlinks)('should refuse a link that leads outside the repository', async () => {
     const path = await repo('escape', { 'a.txt': 'a\n' })
     await writeFile(join(directory, 'secret.txt'), 'no\n')
     await symlink(join(directory, 'secret.txt'), join(path, 'link.txt'))
-    const source = createGitDiffSource()
 
-    const up = await source.fileLines(path, '../secret.txt')
-    const linked = await source.fileLines(path, 'link.txt')
+    const linked = await createGitDiffSource().fileLines(path, 'link.txt')
 
-    expect(up.ok || up.error.data?.code).toBe('DCK-GIT-004')
     expect(linked.ok || linked.error.data?.code).toBe('DCK-GIT-004')
   })
 
@@ -339,14 +362,23 @@ beforeAll(async () => {
 
 afterAll(() => rm(template, { recursive: true, force: true }))
 
+// Git writes a Windows path in its config with forward slashes or with escaped backslashes
+const spellings = (path: string) => [
+  path,
+  path.replaceAll('\\', '/'),
+  path.replaceAll('\\', '\\\\'),
+]
+
 // The copy's remotes and submodule URLs still name the template's folders: point them to the copy's own
 async function retarget(folder: string) {
   const entries = await readdir(folder, { recursive: true, withFileTypes: true })
+  const pairs = spellings(template).map((from, index) => [from, spellings(folder)[index] ?? ''])
   for (const entry of entries) {
     if (!entry.isFile() || entry.name !== 'config') continue
     const path = join(entry.parentPath, entry.name)
     const text = await readFile(path, 'utf8')
-    if (text.includes(template)) await writeFile(path, text.replaceAll(template, folder))
+    const moved = pairs.reduce((result, [from = '', to = '']) => result.replaceAll(from, to), text)
+    if (moved !== text) await writeFile(path, moved)
   }
 }
 

@@ -99,7 +99,8 @@ describe('createGitInspector', () => {
     expect(status?.submodules.map((module) => [module.path, module.ahead])).toEqual([['one', 1]])
     expect(status?.submodulesClean).toBe(1)
     expect(status?.changes).toEqual([])
-  })
+    // About twenty git processes, which take seconds to start on Windows
+  }, 30_000)
 
   it('should count changed files inside a submodule when its tree is dirty', async () => {
     const one = await repo('one')
