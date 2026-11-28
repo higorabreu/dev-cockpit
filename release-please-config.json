@@ -95,6 +95,11 @@
         },
         {
           "type": "json",
+          "path": "packages/adapters/windows-credential/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "packages/cli/package.json",
           "jsonpath": "$.version"
         },

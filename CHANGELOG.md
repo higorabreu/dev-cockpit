@@ -23,6 +23,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Miscellaneous Chores
 
+* version the Credential Manager adapter with each release
 * run `pnpm dev` on Windows: a named pipe of its own, its log in the temporary folder, Electron's path from its package
 * build the shell on Windows with node-pty's prebuild, without Visual Studio's Build Tools
 * keep LF line endings in a Windows checkout
