@@ -28,6 +28,10 @@ Written by hand on the Windows port branch until the next release replaces it.
 * give the tests more time on Windows, where starting a process is far slower
 * retry removing a git test's folder while Windows still holds it
 
+### Continuous Integration
+
+* run lint, typecheck and the tests on Windows too
+
 ### Documentation
 
 * plan the Windows port ([plans/windows.md](plans/windows.md))
