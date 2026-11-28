@@ -41,7 +41,8 @@ beforeEach(async () => {
   directory = await realpath(await mkdtemp(join(tmpdir(), 'dck-notes-')))
 })
 
-afterEach(() => rm(directory, { recursive: true, force: true }))
+// Windows cannot remove a folder while a git process that ran in it is still closing
+afterEach(() => rm(directory, { recursive: true, force: true, maxRetries: 10 }))
 
 // Windows keeps no Unix mode bits, so privacy there comes from the user's profile folder
 const unixModes = process.platform !== 'win32'

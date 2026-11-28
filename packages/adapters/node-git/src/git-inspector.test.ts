@@ -33,7 +33,8 @@ beforeEach(async () => {
   directory = await mkdtemp(join(tmpdir(), 'dck-git-'))
 })
 
-afterEach(() => rm(directory, { recursive: true, force: true }))
+// Windows cannot remove a folder while a git process that ran in it is still closing
+afterEach(() => rm(directory, { recursive: true, force: true, maxRetries: 10 }))
 
 describe('createGitInspector', () => {
   it('should be undefined when the directory is not inside a repository', async () => {

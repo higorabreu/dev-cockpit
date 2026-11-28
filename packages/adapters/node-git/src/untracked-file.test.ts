@@ -101,7 +101,8 @@ beforeEach(async () => {
   directory = await realpath(await mkdtemp(join(tmpdir(), 'dck-untracked-')))
 })
 
-afterEach(() => rm(directory, { recursive: true, force: true }))
+// Windows cannot remove a folder while a git process that ran in it is still closing
+afterEach(() => rm(directory, { recursive: true, force: true, maxRetries: 10 }))
 
 // Windows creates symbolic links only in Developer Mode or as an administrator (as CI runners are)
 function canCreateSymlinks(): boolean {

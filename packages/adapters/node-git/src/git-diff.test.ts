@@ -77,7 +77,8 @@ beforeEach(async () => {
   directory = await realpath(await mkdtemp(join(tmpdir(), 'dck-diff-')))
 })
 
-afterEach(() => rm(directory, { recursive: true, force: true }))
+// Windows cannot remove a folder while a git process that ran in it is still closing
+afterEach(() => rm(directory, { recursive: true, force: true, maxRetries: 10 }))
 
 describe('createGitDiffSource', () => {
   it('should say so when the folder is not inside a repository', async () => {
@@ -360,7 +361,8 @@ beforeAll(async () => {
   await buildNested(template)
 })
 
-afterAll(() => rm(template, { recursive: true, force: true }))
+// Windows cannot remove a folder while a git process that ran in it is still closing
+afterAll(() => rm(template, { recursive: true, force: true, maxRetries: 10 }))
 
 // Git writes a Windows path in its config with forward slashes or with escaped backslashes
 const spellings = (path: string) => [
