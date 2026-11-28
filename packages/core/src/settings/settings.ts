@@ -125,6 +125,8 @@ const themeName = z.string().trim().min(1).max(THEME_NAME_MAX).catch(DEFAULT_COL
 // A family name, or null for the default; anything else goes back to the default
 const fontName = z.string().trim().refine(isFontName).nullable().catch(null)
 
+const toggleKey = z.string().trim().min(1).max(64)
+
 export const settingsSchema = z.preprocess(
   asObject,
   z.object({
@@ -158,7 +160,7 @@ export const settingsSchema = z.preprocess(
       restoreTabs: z.boolean().catch(true),
     }),
     shortcuts: section({
-      toggleWindow: z.string().trim().min(1).max(64).catch('F12'),
+      toggleWindow: toggleKey.catch('F12'),
       // Null until the user chooses one: the window holds its keyboard's own key (D51). A key that types
       // nothing or a side mouse button (D69)
       holdTrigger: z.string().refine(isHoldTrigger).nullable().catch(null),
@@ -263,6 +265,21 @@ export function parseSettings(raw: unknown): Settings {
 }
 
 export const defaultSettings: Settings = parseSettings({})
+
+// Windows reserves F12 for its debugger and refuses it as a global key, so its window key is Ctrl+` (D96);
+// every other default is the same on every system
+const WINDOWS_TOGGLE_KEY = 'Ctrl+`'
+
+// The settings of a file on this system: a window key the file does not set validly is the system's own
+export function parseSettingsFor(raw: unknown, platform: string): Settings {
+  const settings = parseSettings(raw)
+  if (platform !== 'win32') return settings
+  const shortcuts = isRecord(raw) && isRecord(raw.shortcuts) ? raw.shortcuts : {}
+  if (toggleKey.safeParse(shortcuts.toggleWindow).success) return settings
+  return { ...settings, shortcuts: { ...settings.shortcuts, toggleWindow: WINDOWS_TOGGLE_KEY } }
+}
+
+export const settingsDefaultsFor = (platform: string): Settings => parseSettingsFor({}, platform)
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)

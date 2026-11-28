@@ -9,8 +9,10 @@ import {
   LIMITS,
   mergeSettings,
   parseSettings,
+  parseSettingsFor,
   reviewBaseFor,
   reviewBasePatch,
+  settingsDefaultsFor,
   shortcutKeysPatch,
   storedAccount,
 } from './settings.ts'
@@ -603,5 +605,25 @@ describe('color themes in the settings', () => {
     const after = mergeSettings(before, colorCustomizationsPatch({ colors: { bg: null } }))
 
     expect(after.colorCustomizations.colors).toEqual({ fg: '#eeeeee' })
+  })
+})
+
+describe('parseSettingsFor', () => {
+  it('should give Windows Ctrl+Backtick as the window key when the file sets none', () => {
+    expect(settingsDefaultsFor('win32').shortcuts.toggleWindow).toBe('Ctrl+`')
+    expect(
+      parseSettingsFor({ shortcuts: { toggleWindow: '' } }, 'win32').shortcuts.toggleWindow,
+    ).toBe('Ctrl+`')
+  })
+
+  it('should keep the window key the file sets when the system is Windows', () => {
+    const settings = parseSettingsFor({ shortcuts: { toggleWindow: 'F9' } }, 'win32')
+
+    expect(settings.shortcuts.toggleWindow).toBe('F9')
+  })
+
+  it('should keep F12 as the window key when the system is Linux or macOS', () => {
+    expect(settingsDefaultsFor('linux').shortcuts.toggleWindow).toBe('F12')
+    expect(settingsDefaultsFor('darwin')).toEqual(parseSettings({}))
   })
 })

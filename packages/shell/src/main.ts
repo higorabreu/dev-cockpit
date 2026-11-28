@@ -196,6 +196,7 @@ app.whenReady().then(async () => {
     logger,
     env: process.env,
     text: createJsoncSettingsText(),
+    platform: process.platform,
     isFolder: (path) =>
       stat(path).then(
         (stats) => stats.isDirectory(),

@@ -153,6 +153,7 @@ function open(
       openThemeFile: async () => true,
       previewOpacity: () => undefined,
       keymap: createKeymap(keyboard),
+      defaults: defaultSettings,
     },
   )
   view.open()

@@ -34,6 +34,7 @@ import {
   type SessionSnapshot,
   type SystemFontsInfo,
   sameSavedTabs,
+  settingsDefaultsFor,
   shortPath,
   stepFontSize,
   stepOpacity,
@@ -313,6 +314,7 @@ export async function startApp(
       openThemeFile: (location, name) => settingsFile.openAt(location, name),
       previewOpacity: applyOpacity,
       keymap,
+      defaults: settingsDefaultsFor(api.system.platform),
     },
   )
 

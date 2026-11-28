@@ -21,12 +21,14 @@ const folders = new Set(['/home/ana/code'])
 const make = (
   env: Record<string, string> = {},
   veto?: Parameters<typeof createSettingsStore>[0]['veto'],
+  platform = 'linux',
 ) =>
   createSettingsStore({
     file,
     logger: silentLogger,
     env,
     text: createJsoncSettingsText(),
+    platform,
     isFolder: async (path) => folders.has(path),
     ...(veto ? { veto } : {}),
   })
@@ -37,6 +39,12 @@ describe('createSettingsStore load', () => {
 
     expect(view.settings).toEqual(defaultSettings)
     expect(view.fresh).toBe(true)
+  })
+
+  it("should start with Windows' own window key when there is no file on Windows", async () => {
+    const view = await make({}, undefined, 'win32').load()
+
+    expect(view.settings.shortcuts.toggleWindow).toBe('Ctrl+`')
   })
 
   it('should read the saved values and say it is not fresh when the file exists', async () => {

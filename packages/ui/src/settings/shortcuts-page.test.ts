@@ -91,6 +91,7 @@ function openShortcuts(
       openThemeFile: async () => true,
       previewOpacity: () => undefined,
       keymap,
+      defaults: defaultSettings,
     },
   )
   view.open('shortcuts')

@@ -5,7 +5,6 @@ import {
   connectedFirst,
   connectionErrorKey,
   type DisabledConnector,
-  defaultSettings,
   type HostApi,
   LIMITS,
   type MessageKey,
@@ -100,10 +99,13 @@ export function createSettingsView(
     // Shows the opacity while the control is dragged, before saving
     previewOpacity(value: number): void
     readonly keymap: Keymap
+    // The defaults of this system, which the resets go back to (Windows has its own window key)
+    readonly defaults: Settings
   },
 ) {
   const { overlay, body } = elements
   const { settings, api, i18n } = deps
+  const defaultSettings = deps.defaults
   const mac = deps.keymap.keyboard === 'mac'
   const t = i18n.t
   let autostart = false

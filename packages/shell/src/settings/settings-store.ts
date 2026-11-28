@@ -2,10 +2,9 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import {
   changedKeys,
-  defaultSettings,
   type Logger,
   mergeSettings,
-  parseSettings,
+  parseSettingsFor,
   patchPaths,
   previewValue,
   type Settings,
@@ -16,6 +15,7 @@ import {
   type SettingsUpdate,
   type SettingsView,
   sameFileState,
+  settingsDefaultsFor,
   settingsEdits,
   settingsFileOk,
   settingsIssues,
@@ -27,6 +27,8 @@ export interface SettingsStoreOptions {
   readonly logger: Logger
   readonly env: Readonly<Record<string, string | undefined>>
   readonly text: SettingsText
+  // Node's platform name: Windows has its own window key (parseSettingsFor)
+  readonly platform: string
   // Whether the projects folder exists, so a folder that does not is reported instead of saved silently
   isFolder(path: string): Promise<boolean>
   // Decides whether a change may take effect; returns the keys that must go back to the previous value
@@ -68,7 +70,9 @@ function pick(source: Settings, keys: readonly string[]): SettingsPatch {
 const pretty = (settings: Settings) => `${JSON.stringify(settings, null, 2)}\n`
 
 export function createSettingsStore(options: SettingsStoreOptions) {
-  const { file, logger, env, text } = options
+  const { file, logger, env, text, platform } = options
+  const parseSettings = (raw: unknown) => parseSettingsFor(raw, platform)
+  const defaultSettings = settingsDefaultsFor(platform)
   const listeners = new Set<Listener>()
   const fileListeners = new Set<FileListener>()
   // What the app uses before the environment variables; equal to the file but for refused keys
