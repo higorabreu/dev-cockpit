@@ -38,6 +38,17 @@ piped through PowerShell, and Ctrl+C stopping `ping -t`. What needs a person:
 - [ ] A full-screen program (`vim` in Git Bash or WSL, `htop` in WSL) draws, resizes and quits cleanly.
 - [ ] Clear (Ctrl+Shift+K) empties the screen and the scrollback.
 
+## What a tab runs (WIN-T10)
+
+Checked by test on 2026-11-28: the real process table finds a program the test started. What needs a person:
+
+- [ ] At the prompt the tab shows as idle; while `ping -t 127.0.0.1` runs it shows as busy, in PowerShell,
+  cmd and Git Bash.
+- [ ] `claude` (native or npm install) and `codex` mark their tab as an agent, and the panel names them.
+- [ ] A program started from an npm `.cmd` shim (for example `npx prettier --help`) is named, not shown as
+  `cmd` or `node`.
+- [ ] With ten tabs open and hidden, Task Manager shows Dev Cockpit idle (no steady CPU).
+
 ## Window, key and start with Windows (WIN-T9)
 
 Not checked by script: the session had no desktop to read the foreground window from.

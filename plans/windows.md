@@ -78,6 +78,7 @@ Stated here so nobody takes them for bugs; each one has a task or a note to clos
 | Unsigned | A browser download of a future `setup.exe` shows SmartScreen; the npx path does not | WIN-T15 |
 | No arm64 build | Windows on ARM runs the x64 build under emulation | A second runner when there is demand |
 | WSL tabs: the panel knows less | A WSL tab opens and works, but its directory is a Linux path and git runs on the Windows side, so Git rows and the review may show nothing for repositories inside WSL | WIN-T16, after real use |
+| WSL tabs always look idle | Windows cannot see the processes inside a distribution, so a WSL tab never shows busy or an agent | WIN-T16 |
 | cmd tabs report no directory | cmd has no prompt hook as flexible as PowerShell's; the panel shows the start folder | Accepted (`PROMPT` with `$E]9;9;$P$E\` may do it; to try) |
 | One virtual desktop | The window shows on the desktop where it was last opened, unlike Linux and Mac | Accepted; Windows has no public API for "all desktops" |
 | No system font list | Settings offers the cockpit's fonts and a free text field | WIN-T14 |
@@ -214,11 +215,20 @@ in something usable, so the work can stop after any of them.
 
 ### Phase 2: the panel knows what runs (4 to 6 days)
 
-- [ ] WIN-T10. `adapters/windows-proc`: the process tree under the tab's shell (foreground program = the
+- [x] WIN-T10. `adapters/windows-proc`: the process tree under the tab's shell (foreground program = the
   newest descendant that is not a console host) and the scan for an old daemon by command line. Options:
   `@vscode/windows-process-tree` (native, N-API, what VS Code uses) or one batched PowerShell/CIM query per
   poll like `macos-proc` batches `ps`. Measure both against the 10 ms batch window; agent names without
-  `.exe`. (C6, C8)
+  `.exe`. (C6, C8) Done on 2026-11-28 with a third option, koffi (D98):
+  - The CIM query cost about 230 ms of CPU per poll; `@vscode/windows-process-tree` needs Build Tools. koffi
+    reads the table in about 7 ms (22 ms with the first load) and loads in Electron 45.
+  - The foreground is the newest child of the shell that started after it, through Git's bash launcher and
+    npm's cmd shims. A node program is named by its script, or by its package when the script is `cli.js`
+    or `index.js`, so an npm install of Claude Code reads `claude-code`, now one of its process names.
+  - `pwsh`, `powershell`, `cmd` and `wsl` count as a shell at the prompt.
+  - The directory is the folder the shell started in until WIN-T11; the scanner finds nothing on Windows,
+    since no daemon older than `shutdown` ran there.
+  - The real table is tested on Windows (a `ping` child of the test process).
 - [ ] WIN-T11. Shell integration for the directory: a prompt hook for PowerShell (both editions) and Git
   Bash that prints OSC 7, injected at spawn without touching the user's profile; the UI reads it and the host
   prefers it to the inspector's cwd when present. Useful on Linux and Mac too, but kept Windows-only until
