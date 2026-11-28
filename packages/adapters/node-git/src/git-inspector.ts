@@ -10,6 +10,7 @@ import {
   parseGitStatus,
   parseSubmoduleList,
 } from '@dck/core'
+import { systemPath } from './git-run.ts'
 
 const TIMEOUT_MS = 3000
 const LOG_LIMIT = '20'
@@ -73,7 +74,7 @@ export function createGitInspector(options: GitInspectorOptions = {}): GitInspec
         git(cwd, STATUS_ARGS),
       ])
       if (root === undefined || output === undefined) return undefined
-      const top = root.trim()
+      const top = systemPath(root)
       const parsed = parseGitStatus(output)
       const { upstream } = parsed
 

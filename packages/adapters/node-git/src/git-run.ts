@@ -1,4 +1,11 @@
 import { execFile } from 'node:child_process'
+import { normalize } from 'node:path'
+
+// Git for Windows prints paths with forward slashes, while the app joins and compares with the system's separator
+export function systemPath(gitPath: string): string {
+  const path = gitPath.trim()
+  return path === '' ? '' : normalize(path)
+}
 
 export interface GitRunOptions {
   readonly timeoutMs: number

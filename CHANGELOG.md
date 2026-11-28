@@ -9,6 +9,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Bug Fixes
 
+* read the paths git prints (repository root, superproject, git folder) in the system's form, so submodules and the review work on Windows
 * join paths by the platform asked for, not the host's, so Linux and macOS paths stay POSIX on Windows
 
 ### Miscellaneous Chores

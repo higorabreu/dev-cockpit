@@ -15,7 +15,7 @@ import {
   reviewStamp,
   staleReviewNotes,
 } from '@dck/core'
-import { type GitFailure, type GitRun, runGit } from './git-run.ts'
+import { type GitFailure, type GitRun, runGit, systemPath } from './git-run.ts'
 
 const QUICK = { timeoutMs: 5000, maxBytes: 64 * 1024 }
 // Names a second review written in the same second as another; past this the newest name is replaced
@@ -78,7 +78,7 @@ export function createGitReviewNotes(options: GitReviewNotesOptions = {}): Revie
   ): Promise<Result<{ folder: string; prefix: string }, ErrorBody>> {
     const answer = await run(root, ['rev-parse', '--absolute-git-dir'], QUICK)
     if (!answer.ok) return fail(failed(answer.failure))
-    const gitDir = answer.stdout.trim()
+    const gitDir = systemPath(answer.stdout)
     const [realRoot, realGit] = await Promise.all([
       files.realpath(root).catch(() => root),
       files.realpath(gitDir).catch(() => gitDir),

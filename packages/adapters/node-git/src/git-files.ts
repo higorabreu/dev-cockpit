@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
 import type { GitFiles, GitOthers, GitTracked } from '@dck/core'
-import { type GitRun, runGit } from './git-run.ts'
+import { type GitRun, runGit, systemPath } from './git-run.ts'
 
 export interface GitListOptions {
   readonly timeoutMs: number
@@ -91,7 +91,7 @@ export function createGitFiles(options: GitFilesOptions = {}): GitFiles {
         timeoutMs: TIMEOUT_MS,
         maxBytes: 64 * 1024,
       })
-      const root = top.ok ? top.stdout.trim() : ''
+      const root = top.ok ? systemPath(top.stdout) : ''
       if (root === '') return undefined
       const tracked = await list(root, TRACKED, { timeoutMs: TIMEOUT_MS, maxEntries: MAX_FILES })
       return tracked && { root, files: tracked.entries, truncated: tracked.truncated }
