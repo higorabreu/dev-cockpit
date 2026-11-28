@@ -75,7 +75,7 @@ Stated here so nobody takes them for bugs; each one has a task or a note to clos
 | Gap | Effect | Closed by |
 | --- | --- | --- |
 | No in-app update | The update notice opens the release page; the user runs `npx @devcockpit/install` again | WIN-T15 (NSIS or another updater) |
-| Unsigned | A browser download of a future `setup.exe` shows SmartScreen; the npx path does not | WIN-T15 |
+| Unsigned | A zip downloaded in a browser carries the download mark, so SmartScreen warns on the first run of `Dev Cockpit.exe` (More info, Run anyway); the npx path downloads without the mark | WIN-T15 |
 | No arm64 build | Windows on ARM runs the x64 build under emulation | A second runner when there is demand |
 | WSL tabs: the panel knows less | A WSL tab opens and works, but its directory is a Linux path and git runs on the Windows side, so Git rows and the review may show nothing for repositories inside WSL | WIN-T16, after real use |
 | WSL tabs always look idle | Windows cannot see the processes inside a distribution, so a WSL tab never shows busy or an agent | WIN-T16 |
@@ -246,10 +246,21 @@ in something usable, so the work can stop after any of them.
 
 ### Phase 3: other people can install it (3 to 5 days)
 
-- [ ] WIN-T12. `shell/scripts/package-win.mjs`, sibling of `package-mac.mjs`: copy Electron, rename
+- [x] WIN-T12. `shell/scripts/package-win.mjs`, sibling of `package-mac.mjs`: copy Electron, rename
   `electron.exe` to `Dev Cockpit.exe`, set the icon and version (rcedit), place the app, node-pty and `dck.cmd`,
   zip it as `dev-cockpit_<version>_win32-x64.zip`. A smoke mode (shared with MAC-T11 if it lands first) run in
-  CI on the zip; the release workflow attaches it. (C3)
+  CI on the zip; the release workflow attaches it. (C3) Done on 2026-11-28:
+  - `pnpm package:win` builds `release/dev-cockpit_<version>_win32-x64.zip` (155 MB, about two minutes),
+    with a `Dev Cockpit` folder at its root. rcedit (a dev dependency with its own exe) sets the icon, built
+    as an .ico of the existing PNGs, and the version resource (`x.y.z.0`).
+  - node-pty ships its `prebuilds/win32-x64` without the debug symbols; koffi and the keyring sit in
+    `resources\app\node_modules`, and the CLI is `resources\app\dck.mjs` so it finds them. `dck.cmd` runs it in
+    the packaged Electron, as VS Code's `code.cmd` does.
+  - `--smoke` in the app opens a terminal, inspects its process and reads the secret store. The script's
+    `--smoke` unpacks the zip, runs it with its own profile and pipe, then `dck ping`, and stops what ran
+    from the folder. Passed on this machine.
+  - CI builds a preview on `windows-latest`; the release builds it in `build-win` and attaches it with its
+    checksum. The .deb still decides the release.
 - [ ] WIN-T13. npm installer Windows target in `packages/install/src/windows.ts`: download, verify, unpack to
   `%LOCALAPPDATA%\Programs\Dev Cockpit`, Start menu shortcut, `dck` in the user PATH (registry
   `HKCU\Environment`, then broadcast the change), stop a running cockpit before replacing. A script for

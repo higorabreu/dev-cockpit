@@ -78,3 +78,18 @@ Not checked by script: the session had no desktop to read the foreground window 
   signing out and in, the cockpit runs hidden and the key shows it. Off removes it.
 - [ ] Settings > Shortcuts: setting the window key to F12 is refused with a notice and the old key keeps
   working; the reset button brings back Ctrl+`.
+
+## The zip (WIN-T12)
+
+Checked by script on 2026-11-28: `pnpm package:win -- --smoke` unpacks the zip, the smoke check passes
+(terminal, process table, Credential Manager) and `dck ping` answers `pong`. What needs a person:
+
+- [ ] Unzip `release/dev-cockpit_<version>_win32-x64.zip` anywhere and run `Dev Cockpit.exe`: the window
+  opens with the key, with no console window.
+- [ ] Explorer, the window and Task Manager show the Dev Cockpit icon and name (Details: version `x.y.z.0`).
+- [ ] From cmd and PowerShell, `"<folder>\resources\bin\dck.cmd" ping` answers `pong` and `toggle` shows
+  the window.
+- [ ] A copy of the zip downloaded in a browser: SmartScreen warns on the first run (expected, unsigned);
+  after Run anyway it opens normally.
+- [ ] Quitting from the tray leaves no `Dev Cockpit.exe` but the daemon, and the folder can be deleted after
+  the daemon is stopped.
