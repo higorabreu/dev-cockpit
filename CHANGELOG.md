@@ -73,6 +73,11 @@ Written by hand on the Windows port branch until the next release replaces it.
 * start the manual Windows checks ([docs/windows-testing.md](docs/windows-testing.md)) and mark the shells done in the Windows plan
 * add the terminal's manual checks and mark the ConPTY terminal done in the Windows plan
 * add the window and key checks and mark the platform wiring done in the Windows plan
+* record the process table through koffi (D98), add the tab process checks and mark WIN-T10 done in the Windows plan
+* add the tab folder checks and mark the prompt's folder reports done in the Windows plan
+* add the zip checks and mark the Windows package done in the Windows plan
+* add the installer and budget checks and mark the npx installer done in the Windows plan
+* close the Windows port: README (install, updates, build, keys, limits), CONTRIBUTING's Windows set up, the roadmap and D99
 
 ## [0.15.0](https://github.com/higorabreu/dev-cockpit/compare/v0.14.0...v0.15.0) (2026-11-24)
 
