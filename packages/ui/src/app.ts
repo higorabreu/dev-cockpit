@@ -1068,7 +1068,10 @@ export async function startApp(
       for (const session of sessions.values())
         session.setOptionAsMeta(next.terminal.macOptionAsMeta)
     }
-    const look = changed.filter((key) => key !== 'terminal.macOptionAsMeta')
+    // Neither changes how a terminal looks; the shell applies to the next tab
+    const look = changed.filter(
+      (key) => key !== 'terminal.macOptionAsMeta' && key !== 'terminal.shell',
+    )
     if (look.some((key) => key.startsWith('terminal.'))) void applyTerminalLook()
     // The layout or a kept share changed, here or in another window; a new font changes the columns
     if (changed.includes('fontSize') || changed.some((key) => key.startsWith('review.'))) {

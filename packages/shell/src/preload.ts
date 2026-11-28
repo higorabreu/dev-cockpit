@@ -140,6 +140,9 @@ const api: HostApi = {
   fonts: {
     system: () => ipcRenderer.invoke(hostChannels.fontsSystem),
   },
+  terminal: {
+    shells: () => ipcRenderer.invoke(hostChannels.terminalShells),
+  },
   tabs: {
     saved: () => ipcRenderer.invoke(hostChannels.tabsSaved),
     save: (tabs) => ipcRenderer.send(hostChannels.tabsSave, tabs),

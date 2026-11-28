@@ -26,6 +26,7 @@ const api = {
     check: async () => ({ canInstall: false, check: { kind: 'never' }, notice: { kind: 'none' } }),
     onChange: () => () => undefined,
   },
+  terminal: { shells: async () => [] },
   fonts: {
     system: async () => ({
       terminal: null,

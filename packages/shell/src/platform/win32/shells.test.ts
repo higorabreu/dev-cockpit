@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer'
 import { describe, expect, it } from 'vitest'
-import { detectWindowsShells, type ShellProbe, wslShells } from './shells.ts'
+import { chosenWslShell, detectWindowsShells, type ShellProbe, wslShells } from './shells.ts'
 
 const env = {
   Path: 'C:\\Program Files\\PowerShell\\7;C:\\Program Files\\Git\\cmd;C:\\Windows\\System32',
@@ -105,5 +105,27 @@ describe('wslShells', () => {
 
   it('should list nothing when no distribution is installed', () => {
     expect(wslShells(utf16(''), env)).toEqual([])
+  })
+})
+
+describe('chosenWslShell', () => {
+  const wsl = 'C:\\Windows\\System32\\wsl.exe'
+
+  it('should start the chosen distribution without listing them when WSL is installed', () => {
+    const shell = chosenWslShell('wsl:Ubuntu', probe([wsl]))
+
+    expect(shell).toEqual({
+      id: 'wsl:Ubuntu',
+      kind: 'wsl',
+      name: 'Ubuntu',
+      file: wsl,
+      args: ['-d', 'Ubuntu'],
+    })
+  })
+
+  it('should give nothing when the chosen shell is not a distribution or WSL is gone', () => {
+    expect(chosenWslShell('pwsh', probe([wsl]))).toBeUndefined()
+    expect(chosenWslShell(null, probe([wsl]))).toBeUndefined()
+    expect(chosenWslShell('wsl:Ubuntu', probe([]))).toBeUndefined()
   })
 })

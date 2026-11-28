@@ -66,16 +66,33 @@ export function detectWindowsShells(probe: ShellProbe): readonly TerminalShell[]
 // Docker Desktop's own distributions hold no shell for the user
 const isUserDistribution = (name: string) => !name.toLowerCase().startsWith('docker-desktop')
 
+const wslShell = (name: string, env: ShellProbe['env']): TerminalShell => ({
+  id: wslShellId(name),
+  kind: 'wsl',
+  name,
+  file: join(systemRoot(env), 'System32', 'wsl.exe'),
+  args: ['-d', name],
+})
+
+// A chosen distribution starts from its id, so a tab never waits for wsl.exe to list them
+export function chosenWslShell(
+  chosen: string | null,
+  probe: ShellProbe,
+): TerminalShell | undefined {
+  const name = chosen?.startsWith('wsl:') ? chosen.slice('wsl:'.length) : ''
+  const shell = name ? wslShell(name, probe.env) : undefined
+  return shell && probe.exists(shell.file) ? shell : undefined
+}
+
 // `wsl.exe -l -q` prints UTF-16LE, one distribution per line, with a BOM on some builds
 export function wslShells(output: Buffer, env: ShellProbe['env']): readonly TerminalShell[] {
-  const wsl = join(systemRoot(env), 'System32', 'wsl.exe')
   return output
     .toString('utf16le')
     .replace(/^\uFEFF/, '')
     .split(/\r?\n/)
     .map((line) => line.replaceAll('\0', '').trim())
     .filter((name) => name !== '' && isUserDistribution(name))
-    .map((name) => ({ id: wslShellId(name), kind: 'wsl', name, file: wsl, args: ['-d', name] }))
+    .map((name) => wslShell(name, env))
 }
 
 // Undefined when WSL is not installed: wsl.exe then prints how to install it and exits with an error
@@ -94,7 +111,11 @@ export function listWslDistributions(env: ShellProbe['env']): Promise<Buffer | u
 export function windowsShells(env: ShellProbe['env']) {
   const probe: ShellProbe = { env, exists: existsSync }
   return {
-    installed: () => detectWindowsShells(probe),
+    // Checked at each new tab, a few file checks, so a shell installed since the start is found
+    installed(chosen: string | null): readonly TerminalShell[] {
+      const wsl = chosenWslShell(chosen, probe)
+      return [...detectWindowsShells(probe), ...(wsl ? [wsl] : [])]
+    },
     async list(): Promise<readonly TerminalShell[]> {
       const output = await listWslDistributions(env)
       return [...detectWindowsShells(probe), ...(output ? wslShells(output, env) : [])]

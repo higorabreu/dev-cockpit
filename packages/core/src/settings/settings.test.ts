@@ -37,6 +37,7 @@ describe('parseSettings', () => {
         cursorStyle: 'block',
         cursorBlink: true,
         macOptionAsMeta: 'left',
+        shell: null,
       },
       window: { heightRatio: 0.5, panelOnFullHeight: true, restoreTabs: true },
       shortcuts: { toggleWindow: 'F12', holdTrigger: null, keys: {} },
@@ -62,6 +63,7 @@ describe('parseSettings', () => {
       cursorStyle: 'bar',
       cursorBlink: true,
       macOptionAsMeta: 'left',
+      shell: null,
     })
     expect(settings.appearance).toEqual({ fontFamily: null, codeFontFamily: 'Fira Code' })
   })
@@ -73,6 +75,12 @@ describe('parseSettings', () => {
     expect(parseSettings({ terminal: { macOptionAsMeta: 'none' } }).terminal.macOptionAsMeta).toBe(
       'none',
     )
+  })
+
+  it('should keep the shell a Windows tab starts and send a blank one back to the first found', () => {
+    expect(parseSettings({ terminal: { shell: 'wsl:Ubuntu' } }).terminal.shell).toBe('wsl:Ubuntu')
+    expect(parseSettings({ terminal: { shell: '  ' } }).terminal.shell).toBeNull()
+    expect(parseSettings({ terminal: { shell: 7 } }).terminal.shell).toBeNull()
   })
 
   it('should send an unknown cursor style back to the block', () => {

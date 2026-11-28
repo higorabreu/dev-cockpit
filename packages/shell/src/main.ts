@@ -27,6 +27,7 @@ import { createFolderWalk } from '@dck/adapter-node-walk'
 import {
   type ConnectionFields,
   checkProfile,
+  chooseShell,
   connectorCatalog,
   createConnections,
   createDockController,
@@ -41,6 +42,7 @@ import {
   localeFor,
   pastedText,
   type Settings,
+  shellChoice,
   storedAccount,
   type Translate,
 } from '@dck/core'
@@ -441,7 +443,11 @@ app.whenReady().then(async () => {
       },
       windowRequests.notificationClick,
     ),
-    shell: platform.terminal,
+    shell: () => {
+      const chosen = settingsStore.get().settings.terminal.shell
+      return chooseShell(chosen, platform.shells.installed(chosen), platform.terminal)
+    },
+    shells: async () => (await platform.shells.list()).map(shellChoice),
     home: homedir(),
     logger,
     send,

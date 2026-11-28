@@ -148,6 +148,8 @@ export const settingsSchema = z.preprocess(
       cursorStyle: z.enum(CURSOR_STYLES).catch('block'),
       cursorBlink: z.boolean().catch(true),
       macOptionAsMeta: z.enum(MAC_OPTION_AS_META).catch('left'),
+      // The id of the shell new tabs start where the system offers a choice (Windows); null is the first found
+      shell: z.string().trim().min(1).max(128).nullable().catch(null),
     }),
     window: section({
       heightRatio: bounded(LIMITS.heightRatio.min, LIMITS.heightRatio.max, 0.5),

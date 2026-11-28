@@ -235,7 +235,8 @@ function setup(picked: string | undefined = undefined) {
       },
     },
     pickFolder: async () => picked,
-    shell: { file: '/bin/zsh', args: [] },
+    shell: () => ({ file: '/bin/zsh', args: [] }),
+    shells: async () => [],
     home: '/home/usuario',
     logger: {
       info() {},

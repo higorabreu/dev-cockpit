@@ -113,6 +113,7 @@ const api = {
   autostart: { isEnabled: async () => false },
   about: { version: async () => '0.9.0', open: () => undefined },
   updates: updatesHost().updates,
+  terminal: { shells: async () => [] },
   fonts: {
     system: async () => ({
       terminal: 'MesloLGS NF',
@@ -295,6 +296,49 @@ describe('settings view selects', () => {
     expect(patches).toEqual([{ theme: 'light' }])
     expect(combobox('theme').querySelector('[data-current]')?.textContent).toBe('Light')
     expect(document.activeElement).toBe(combobox('theme'))
+    view.close()
+  })
+
+  it('should offer the Windows shells and save the one picked when the system lists them', async () => {
+    const windows = {
+      ...api,
+      terminal: {
+        shells: async () => [
+          { id: 'pwsh', kind: 'pwsh' },
+          { id: 'cmd', kind: 'cmd' },
+          { id: 'wsl:Ubuntu', kind: 'wsl', name: 'Ubuntu' },
+        ],
+      },
+    } as unknown as HostApi
+    const { body, combobox, page, patches, view } = open([], windows)
+    await settle()
+    page('terminal')
+    const shell = combobox('terminal.shell')
+    shell.focus()
+
+    press(shell, 'Enter')
+    const offered = [...body.querySelectorAll('[role="option"]')].map((item) => item.textContent)
+    press(shell, 'End')
+    press(shell, 'Enter')
+    await settle()
+
+    expect(offered).toEqual([
+      'Default (PowerShell 7)',
+      'PowerShell 7',
+      'Command Prompt',
+      'WSL: Ubuntu',
+    ])
+    expect(patches).toEqual([{ terminal: { shell: 'wsl:Ubuntu' } }])
+    view.close()
+  })
+
+  it('should show no shell row when the system lists no shell', async () => {
+    const { body, page, view } = open()
+    await settle()
+
+    page('terminal')
+
+    expect(body.querySelector('[data-focus="set-terminal.shell"]')).toBeNull()
     view.close()
   })
 
@@ -744,6 +788,7 @@ function connectionsHost(
     about: { version: async () => '0.9.0', open: () => undefined },
     updates: api.updates,
     fonts: api.fonts,
+    terminal: api.terminal,
   } as unknown as HostApi
   return {
     host,

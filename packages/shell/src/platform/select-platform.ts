@@ -13,6 +13,7 @@ import {
   type PtyOptions,
   type SecretStore,
   type SystemFonts,
+  type TerminalShell,
   type UpdateInstaller,
 } from '@dck/core'
 import { systemSecretStore } from '@dck/daemon/secret-store'
@@ -24,6 +25,7 @@ import { createRegularWindow } from './linux/regular-window.ts'
 import { createLinuxSystemFonts, runCommand } from './linux/system-fonts.ts'
 import { createXdgAutostart, defaultAutostartDirectory } from './linux/xdg-autostart.ts'
 import type { PlatformWindow } from './platform-window.ts'
+import { windowsShells } from './win32/shells.ts'
 
 export interface PlatformContext {
   readonly platform: NodeJS.Platform
@@ -46,6 +48,12 @@ export interface Platform {
   readonly autostart: Autostart
   readonly desktopShortcut: DesktopShortcut | undefined
   readonly terminal: Pick<PtyOptions, 'file' | 'args'>
+  // The shells a new tab can start: found without a process, with the chosen one if it is a WSL
+  // distribution (installed), or with every distribution (list); empty where the tabs follow $SHELL
+  readonly shells: {
+    installed(chosen: string | null): readonly TerminalShell[]
+    list(): Promise<readonly TerminalShell[]>
+  }
   // The PATH child processes should get, or undefined to keep the inherited one
   loginPath(): Promise<string | undefined>
   readonly window: PlatformWindow
@@ -81,10 +89,17 @@ export function selectPlatform(context: PlatformContext): Platform {
   const { platform, env, home, packaged, execPath, appPath, resourcesPath, logger } = context
   const onGnome =
     platform === 'linux' && (env.XDG_CURRENT_DESKTOP ?? '').split(':').includes('GNOME')
+  const shells =
+    platform === 'win32'
+      ? windowsShells(env)
+      : { installed: () => [], list: async () => [] as readonly TerminalShell[] }
+  // Windows has no $SHELL: its first shell found, else Windows PowerShell, which every Windows has
   const terminal =
     platform === 'darwin'
       ? { file: env.SHELL ?? '/bin/zsh', args: ['-l'] }
-      : { file: env.SHELL ?? '/bin/bash', args: [] }
+      : platform === 'win32'
+        ? (shells.installed(null)[0] ?? { file: 'powershell.exe', args: ['-NoLogo'] })
+        : { file: env.SHELL ?? '/bin/bash', args: [] }
   // A Linux workaround for Chromium's sandbox helper; the Mac runs with the sandbox
   const sandbox = platform === 'linux' ? ['--no-sandbox'] : []
   const app = packaged ? [execPath] : [execPath, appPath]
@@ -127,6 +142,7 @@ export function selectPlatform(context: PlatformContext): Platform {
         : undefined,
     // The Mac opens a login shell, like Terminal.app, so `.zprofile` runs in every tab
     terminal,
+    shells,
     loginPath: async () =>
       platform === 'darwin' ? readLoginPath({ shell: terminal.file, logger }) : undefined,
     window: platform === 'darwin' ? createPanelWindow(context.app) : createRegularWindow(),
