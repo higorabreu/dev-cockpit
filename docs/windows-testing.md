@@ -19,3 +19,21 @@ otherwise. `pnpm dev:dck ping` must answer `pong` before anything else.
 - [ ] Back to Default: the next tab opens the first shell in the list again.
 - [ ] With a WSL distribution chosen, quit and start the cockpit again: the first tab opens that distribution.
 - [ ] The Shell row does not appear on Linux or macOS (check on either if at hand).
+
+## Terminal on ConPTY (WIN-T8)
+
+Checked by script on 2026-11-28 (node-pty and PowerShell 5.1): accents from PowerShell, cmd and node, also
+piped through PowerShell, and Ctrl+C stopping `ping -t`. What needs a person:
+
+- [ ] Type `ação`, `é`, `ç`, `~`, `^` and `` ` `` with the ABNT2 dead keys: each shows once, in place.
+- [ ] AltGr on ABNT2 types `/` (AltGr+Q), `?` (AltGr+W), `°` (AltGr+E), `²` and `³` (AltGr+2, AltGr+3) and
+  runs no cockpit shortcut.
+- [ ] `git log -3` and `git log -3 | Select-String .` show accented commit messages correctly.
+- [ ] Ctrl+C stops `ping -t 127.0.0.1` and the prompt comes back.
+- [ ] Paste: Ctrl+V (PowerShell's own), Ctrl+Shift+V and the right click paste a multi-line text without
+  running each line at once (PowerShell asks or pastes it as one block).
+- [ ] Selecting text copies it; Ctrl+Shift+C copies too.
+- [ ] Resize the window from its bottom edge and toggle full height (F11): the prompt redraws without
+  repeated or broken lines, also with a long line wrapped.
+- [ ] A full-screen program (`vim` in Git Bash or WSL, `htop` in WSL) draws, resizes and quits cleanly.
+- [ ] Clear (Ctrl+Shift+K) empties the screen and the scrollback.

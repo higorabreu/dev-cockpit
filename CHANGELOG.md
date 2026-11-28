@@ -62,6 +62,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 * point the zip note in the Windows plan at the packaging task
 * separate the agent's implementation time from the manual checks in the Windows plan's estimate
 * start the manual Windows checks ([docs/windows-testing.md](docs/windows-testing.md)) and mark the shells done in the Windows plan
+* add the terminal's manual checks and mark the ConPTY terminal done in the Windows plan
 
 ## [0.15.0](https://github.com/higorabreu/dev-cockpit/compare/v0.14.0...v0.15.0) (2026-11-24)
 

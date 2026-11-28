@@ -190,9 +190,16 @@ in something usable, so the work can stop after any of them.
     chosen falls back to the first one found.
   - Checked with `pnpm dev`: the tab started Windows PowerShell 5.1 on a machine without PowerShell 7.
   - Manual checks are in [docs/windows-testing.md](../docs/windows-testing.md).
-- [ ] WIN-T8. Terminal on ConPTY: `windowsPty` in xterm, the build number passed from the host; check paste,
+- [x] WIN-T8. Terminal on ConPTY: `windowsPty` in xterm, the build number passed from the host; check paste,
   resize, Ctrl+C, AltGr on an ABNT2 keyboard (AltGr arrives as Ctrl+Alt and must not trigger
-  `Ctrl+Alt+Enter`) and Unicode output from PowerShell 5.1 (set UTF-8 output on start). (C4)
+  `Ctrl+Alt+Enter`) and Unicode output from PowerShell 5.1 (set UTF-8 output on start). (C4) Done on 2026-11-28:
+  - xterm gets `windowsPty` with the build number, which the preload reads from `process.getSystemVersion()`
+    (`HostApi.system`).
+  - A key with AltGr (Ctrl+Alt with the `AltGraph` state) never matches a shortcut.
+  - PowerShell 7 and 5.1 start with `-NoExit -Command` setting `[Console]::OutputEncoding` and
+    `$OutputEncoding` to UTF-8 without a BOM. Without it, node's or git's output piped through PowerShell
+    lost its accents (checked by script, as was Ctrl+C).
+  - Keyboard, paste and resize are manual checks in `docs/windows-testing.md`.
 - [ ] WIN-T9. Platform wiring: `selectPlatform` gets a `win32` branch (window, autostart through
   `setLoginItemSettings`, no desktop shortcut, `noSystemFonts`, no update installer); the W2 default key;
   focus after the hotkey. (C5, C9)
