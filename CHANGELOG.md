@@ -55,6 +55,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 * mark the daemon and IPC done in the Windows plan, with the pipe name gap
 * record the Credential Manager through `@napi-rs/keyring` (D97) and mark the secret store done in the Windows plan
 * point the zip note in the Windows plan at the packaging task
+* separate the agent's implementation time from the manual checks in the Windows plan's estimate
 
 ## [0.15.0](https://github.com/higorabreu/dev-cockpit/compare/v0.14.0...v0.15.0) (2026-11-24)
 

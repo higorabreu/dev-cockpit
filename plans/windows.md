@@ -221,7 +221,10 @@ in something usable, so the work can stop after any of them.
   the distribution for its repositories.
 - [ ] WIN-T17. System font list; arm64 build.
 
-**Total for phases 0 to 3: about 14 to 21 working days.** The biggest uncertainties are WIN-T1 (whether
+**Total for phases 0 to 3: about 14 to 21 working days for a developer working by hand.** With a coding agent
+the code is far faster (phase 0 and WIN-T5 and T6 took one session on 2026-11-28): about 1 to 3 days of
+sessions, paced by what needs a person, namely manual checks on Windows (keyboard, focus, hotkey feel), a clean
+install and the CI run when the pull request opens. The biggest uncertainties are WIN-T1 (whether
 node-pty needs build tools), WIN-T9 (focus and fullscreen behavior of the anchored window) and WIN-T10 (cost
 of reading the process tree).
 
