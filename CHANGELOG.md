@@ -9,6 +9,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Bug Fixes
 
+* start the daemon on Windows without opening a console window
 * keep the daemon's log in the local app data and create no folder for its named pipe on Windows
 * save the views cache one write at a time, so Windows keeps every save when two views refresh together
 * read the paths git prints (repository root, superproject, git folder) in the system's form, so submodules and the review work on Windows

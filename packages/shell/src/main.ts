@@ -633,6 +633,7 @@ app.whenReady().then(async () => {
         spawn: (command, args, options) =>
           spawn(command, [...args], {
             detached: options.detached,
+            windowsHide: options.windowsHide,
             stdio: [...options.stdio],
             env: options.env,
           }),
