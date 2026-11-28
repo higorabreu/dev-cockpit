@@ -146,9 +146,13 @@ in something usable, so the work can stop after any of them.
   the rest of the Unix-only ones are skipped on Windows with the reason beside them. Vitest gets 30 s per test
   and 60 s per hook on Windows, where git and the terminal start processes far more slowly. Still unverified on
   Linux and macOS: the CI run (WIN-T3) is the check that nothing changed there.
-- [ ] WIN-T3. CI: `windows-latest` in the `verify` matrix (W5). (C1, C12)
-- [ ] WIN-T4. `pnpm dev` on Windows: pipe endpoint for dev, Electron's path from the package, no
-  `--no-sandbox`. (C2)
+- [ ] WIN-T3. CI: `windows-latest` in the `verify` matrix (W5). (C1, C12) The matrix entry is in; the box is
+  ticked after the first green run, which needs the branch pushed.
+- [x] WIN-T4. `pnpm dev` on Windows: pipe endpoint for dev, Electron's path from the package, no
+  `--no-sandbox`. (C2) Done on 2026-11-28: `build.mjs` skips `@electron/rebuild` on Windows, `pnpm dev` opens the
+  window on `\\.\pipe\dck-dev` with the log in `%TEMP%\dck-dev`, a PowerShell tab starts, and `pnpm dev:dck ping`
+  and `toggle` answer. Brought forward from WIN-T5: the shell creates no folder for a pipe and the daemon's log
+  defaults to `%LOCALAPPDATA%\dck\logs`. The per-user pipe name is still WIN-T5.
 
 ### Phase 1: the app runs (5 to 7 days)
 
