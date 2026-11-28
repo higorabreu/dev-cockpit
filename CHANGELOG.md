@@ -32,6 +32,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 * plan the Windows port ([plans/windows.md](plans/windows.md))
 * record the Windows spike: node-pty's prebuild, PowerShell first and Ctrl+` as the default key (D96)
+* mark the portable tests done in the Windows plan
 
 ## [0.15.0](https://github.com/higorabreu/dev-cockpit/compare/v0.14.0...v0.15.0) (2026-11-24)
 

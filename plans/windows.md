@@ -135,8 +135,17 @@ in something usable, so the work can stop after any of them.
     `untracked-file`), `shell/src/electron/host-bridge`, `shell/src/files/files-bridge`.
   - Slow on Windows (timeouts at 5 s and 10 s, git spawned many times): `core/src/files/merge` and `node-git`
     `git-diff`.
-- [ ] WIN-T2. Portable tests: guard the Unix-only tests, add Windows twins for node-pty (`cmd.exe /c echo`,
-  exit code, resize, cwd) and endpoint. (C1, C12)
+- [x] WIN-T2. Portable tests: guard the Unix-only tests, add Windows twins for node-pty (`cmd.exe /c echo`,
+  exit code, resize, cwd) and endpoint. (C1, C12) Done on 2026-11-28: the full gate passes on Windows
+  (3269 tests, 34 skipped), three runs in a row. Two production bugs came out of it: git's paths (root,
+  superproject, git folder) arrive with forward slashes on Windows, so submodules were never read in their
+  own scope (`systemPath` in `node-git`); and two saves of the views cache at once lost one on Windows (saves
+  now run in turn). Paths of Linux and macOS code are joined with `node:path/posix`, and `endpoint.ts` joins
+  by the injected platform. The daemon tests use `temporaryEndpoint` from `node-net`, a named pipe on Windows.
+  Tests that need symbolic links run where the system allows them (Developer Mode, an administrator, CI), and
+  the rest of the Unix-only ones are skipped on Windows with the reason beside them. Vitest gets 30 s per test
+  and 60 s per hook on Windows, where git and the terminal start processes far more slowly. Still unverified on
+  Linux and macOS: the CI run (WIN-T3) is the check that nothing changed there.
 - [ ] WIN-T3. CI: `windows-latest` in the `verify` matrix (W5). (C1, C12)
 - [ ] WIN-T4. `pnpm dev` on Windows: pipe endpoint for dev, Electron's path from the package, no
   `--no-sandbox`. (C2)
