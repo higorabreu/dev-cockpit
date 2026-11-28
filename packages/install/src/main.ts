@@ -1,6 +1,6 @@
 import { chmod } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
-import { delimiter } from 'node:path'
+import { delimiter, join } from 'node:path'
 import { createGitHubReleaseSource } from '@dck/adapter-github'
 import { createFetchHttpClient, createReleaseDownload } from '@dck/adapter-node-fetch'
 import type { Logger } from '@dck/core'
@@ -11,6 +11,8 @@ import { runInstaller } from './installer.ts'
 import { createMacTarget } from './mac.ts'
 import { commandRunner, hasCommand, macFiles } from './node-system.ts'
 import { pickSystem } from './system.ts'
+import { createWindowsTarget } from './windows.ts'
+import { createWindowsSystem } from './windows-system.ts'
 
 const REPOSITORY = 'higorabreu/dev-cockpit'
 const RELEASES_PAGE = `https://github.com/${REPOSITORY}/releases`
@@ -61,7 +63,14 @@ async function main(argv: readonly string[]): Promise<number> {
             home: homedir(),
             out,
           })
-        : { unsupported: system.system }
+        : system.kind === 'windows'
+          ? createWindowsTarget({
+              system: createWindowsSystem(),
+              localAppData: process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local'),
+              appData: process.env.APPDATA ?? join(homedir(), 'AppData', 'Roaming'),
+              out,
+            })
+          : { unsupported: system.system }
 
   // D71's rule: the requests carry only the version, in the User-Agent
   const result = await runInstaller(command, {

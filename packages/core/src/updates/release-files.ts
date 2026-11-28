@@ -16,6 +16,11 @@ export function macImageName(version: string, arch: string): string | undefined 
   return arch === 'arm64' ? `dev-cockpit_${version}_${arch}.dmg` : undefined
 }
 
+// The Windows zip package-win.mjs builds; x64 only, Windows on ARM runs it under emulation
+export function windowsZipName(version: string, arch: string): string | undefined {
+  return arch === 'x64' ? `dev-cockpit_${version}_win32-x64.zip` : undefined
+}
+
 // `sha256sum` writes `<hash>  <name>`, or `<hash> *<name>` in binary mode; any other line is skipped
 const CHECKSUM_LINE = /^([0-9a-fA-F]{64}) [ *](.+)$/
 

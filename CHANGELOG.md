@@ -9,6 +9,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Features
 
+* `npx @devcockpit/install` installs on Windows: it unpacks the zip to `%LOCALAPPDATA%\Programs\Dev Cockpit` without administrator rights, closes a running cockpit before replacing it, adds a Start menu entry and puts `dck` on the user PATH
 * attach the Windows zip to each release, built and smoke checked on a Windows runner; CI builds a preview of it too
 * build the Windows zip with `pnpm package:win`: `Dev Cockpit.exe` with its icon and version, the app, node-pty's prebuild, the native bindings and `resources\bin\dck.cmd`; `-- --smoke` unpacks it and checks it
 * a smoke check for the packaged app (`--smoke`): it opens a terminal, reads the process table and the secret store, and exits 0 only when all of them work

@@ -16,7 +16,11 @@ the optional updates.
   password.
 - **macOS on Apple Silicon**: copies `Dev Cockpit.app` from the release's `.dmg` to `/Applications` and links
   the `dck` command into a writable folder of your `PATH` (or prints the one line to do it).
-- Other Linux distributions, Intel Macs and Windows: not available yet; see the
+- **Windows 10 and 11** (x64, and ARM under emulation): unpacks the release's zip to
+  `%LOCALAPPDATA%\Programs\Dev Cockpit` with no administrator rights, closes a running cockpit before
+  replacing it, adds a Start menu entry and puts the `dck` command on your user `PATH` (open a new terminal
+  to use it). The app is unsigned.
+- Other Linux distributions and Intel Macs: not available yet; see the
   [Releases](https://github.com/higorabreu/dev-cockpit/releases) page.
 
 Options:

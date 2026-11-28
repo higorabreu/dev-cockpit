@@ -1,4 +1,10 @@
-import { debPackageName, type ErrorBody, macImageName, type Result } from '@dck/core'
+import {
+  debPackageName,
+  type ErrorBody,
+  macImageName,
+  type Result,
+  windowsZipName,
+} from '@dck/core'
 
 export interface CommandRunner {
   // Collects the output, for a question to the system
@@ -31,6 +37,7 @@ export interface InstallTarget {
 export type SystemKind =
   | { readonly kind: 'debian' }
   | { readonly kind: 'mac' }
+  | { readonly kind: 'windows' }
   | { readonly kind: 'unsupported'; readonly system: string }
 
 // Node's names: process.platform and process.arch
@@ -46,5 +53,11 @@ export function pickSystem(platform: string, arch: string, hasApt: boolean): Sys
       ? { kind: 'mac' }
       : { kind: 'unsupported', system: 'Intel Mac' }
   }
-  return { kind: 'unsupported', system: platform === 'win32' ? 'Windows' : platform }
+  if (platform === 'win32') {
+    // Windows on ARM runs the x64 build under emulation, so Node there may report either
+    return windowsZipName('0.0.0', arch === 'arm64' ? 'x64' : arch)
+      ? { kind: 'windows' }
+      : { kind: 'unsupported', system: `Windows on ${arch}` }
+  }
+  return { kind: 'unsupported', system: platform }
 }
