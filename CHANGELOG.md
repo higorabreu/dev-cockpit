@@ -3,6 +3,14 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## Unreleased
+
+Written by hand on the Windows port branch until the next release replaces it.
+
+### Documentation
+
+* plan the Windows port ([plans/windows.md](plans/windows.md))
+
 ## [0.15.0](https://github.com/higorabreu/dev-cockpit/compare/v0.14.0...v0.15.0) (2026-11-24)
 
 
