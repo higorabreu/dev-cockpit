@@ -11,6 +11,8 @@ const common = {
   platform: 'node',
   format: 'esm',
   logLevel: 'warning',
+  // `dck daemon` on Windows loads the Credential Manager binding, a native module the bundle cannot hold
+  external: ['@napi-rs/keyring'],
   // Its UMD build loads its parts with a require the bundler cannot follow; the ESM build bundles whole
   alias: {
     'jsonc-parser': join(

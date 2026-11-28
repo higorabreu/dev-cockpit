@@ -27,7 +27,8 @@ const common = {
   format: 'cjs',
   sourcemap: true,
   logLevel: 'info',
-  external: ['electron', 'node-pty'],
+  // Native modules load from dist/node_modules; the keyring only on Windows, which is the only system that copies it
+  external: ['electron', 'node-pty', '@napi-rs/keyring'],
   // Its UMD build loads its parts with a require the bundler cannot follow; the ESM build bundles whole
   alias: {
     'jsonc-parser': join(
@@ -75,6 +76,19 @@ writeFileSync(
   join(dist, 'package.json'),
   JSON.stringify({ name: 'dck-shell-runtime', dependencies: { 'node-pty': '*' } }),
 )
+// The Credential Manager binding and its prebuilt binary for this machine, which pnpm links beside it
+if (process.platform === 'win32') {
+  const fromAdapter = createRequire(
+    join(root, '..', 'adapters', 'windows-credential', 'package.json'),
+  )
+  const keyring = realpathSync(dirname(fromAdapter.resolve('@napi-rs/keyring/package.json')))
+  for (const name of readdirSync(dirname(keyring))) {
+    cpSync(join(dirname(keyring), name), join(dist, 'node_modules', '@napi-rs', name), {
+      recursive: true,
+      dereference: true,
+    })
+  }
+}
 const electronVersion = JSON.parse(
   readFileSync(require.resolve('electron/package.json'), 'utf8'),
 ).version
