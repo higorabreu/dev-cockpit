@@ -104,6 +104,7 @@ import { createQuitFiles } from './quit/quit-files.ts'
 import { createQuitGuard } from './quit/quit-guard.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
 import { watchSettingsFile } from './settings/settings-watch.ts'
+import { runSmoke, SMOKE_FLAG } from './smoke/smoke-run.ts'
 import { createSavedTabsFile } from './tabs/saved-tabs-file.ts'
 import { createThemeStore } from './themes/theme-store.ts'
 import { watchThemesFolder } from './themes/themes-watch.ts'
@@ -715,6 +716,22 @@ app.whenReady().then(async () => {
     setTimeout(() => updater.start(), UPDATE_START_MS)
     logger.info('window ready', { endpoint })
   })
+
+  // The release checks the built package with it: exits 0 only when what the app loads works
+  if (process.argv.includes(SMOKE_FLAG)) {
+    window.webContents.once('did-finish-load', async () => {
+      const passed = await runSmoke({
+        platform: process.platform,
+        ptyHost: createNodePtyHost(),
+        secrets: platform.secrets,
+        processes: platform.processes,
+        home: homedir(),
+        ...(terminalDirectories ? { started: terminalDirectories.started } : {}),
+        logger,
+      })
+      app.exit(passed ? 0 : 1)
+    })
+  }
 
   // Only to check the interface without looking at the screen: runs a script in the page, saves a capture and exits
   const evalScript = process.env.DCK_EVAL
