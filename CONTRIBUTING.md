@@ -15,8 +15,15 @@ By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Set up
 
-Requirements: Node 24 (`nvm use`), pnpm 9, and Linux (X11 or Wayland) or macOS to run the app (the tests
-run anywhere).
+Requirements: Node 24 (`nvm use`), pnpm 9, and Linux (X11 or Wayland), macOS or Windows 10 or 11 to run
+the app (the tests run anywhere).
+
+On Windows: Node 24 through nvm-windows (`nvm install 24`, `nvm use 24`) and pnpm through `corepack enable`;
+no Visual Studio Build Tools, since node-pty, koffi and the keyring come prebuilt. Git for Windows checks
+the code out with LF (`.gitattributes`). If `pnpm dev` says Electron is missing, run
+`node node_modules/electron/install.js` inside `packages/shell`. `pnpm package:win -- --smoke` builds the zip
+and checks it, and [docs/windows-testing.md](docs/windows-testing.md) lists what a person checks on a real
+machine before a release that touches Windows.
 
 ```bash
 pnpm install

@@ -1,6 +1,8 @@
 # Windows port
 
-Status: planned, not started (2026-11-28).
+Status: code complete on 2026-11-28 (D96 to D99). Open: the manual checks in
+[docs/windows-testing.md](../docs/windows-testing.md) on a real machine and the first CI run on Windows
+(WIN-T3), when the branch's pull request opens.
 
 ## Goal
 
@@ -82,7 +84,7 @@ Stated here so nobody takes them for bugs; each one has a task or a note to clos
 | WSL tabs always look idle | Windows cannot see the processes inside a distribution, so a WSL tab never shows busy or an agent | WIN-T16 |
 | Git Bash's folder depends on PROMPT_COMMAND | A `~/.bashrc` that sets PROMPT_COMMAND without keeping the old value drops the folder report; the panel keeps the start folder | Accepted; the user can add the report to their own PROMPT_COMMAND |
 | One virtual desktop | The window shows on the desktop where it was last opened, unlike Linux and Mac | Accepted; Windows has no public API for "all desktops" |
-| No system font list | Settings offers the cockpit's fonts and a free text field | WIN-T14 |
+| No system font list | Settings offers the cockpit's fonts and a free text field | WIN-T17 |
 | `pnpm install:local` does not exist on Windows | Contributors use `pnpm dev` or the zip | Accepted |
 | A pipe name can be taken first by another account | On a shared machine another user could create `dck-<user>-daemon` before the daemon and stand in for it; the default pipe permissions keep that user from sending requests to a real daemon | Accepted for a single-user PC; a check of the pipe's owner needs a native call Node lacks |
 
@@ -279,8 +281,10 @@ in something usable, so the work can stop after any of them.
     manual.
   - The upstream releases have no zip yet, so `npx @devcockpit/install` on Windows reports "no package for
     this system" until a release carries one.
-- [ ] WIN-T14. Close: README section, `docs/roadmap.md` (Windows packaging leaves the backlog), a decision
-  in `docs/decisions.md` for the port's choices, full gate. (C12)
+- [x] WIN-T14. Close: README section, `docs/roadmap.md` (Windows packaging leaves the backlog), a decision
+  in `docs/decisions.md` for the port's choices, full gate. (C12) Done on 2026-11-28: README (install,
+  updates, build, keys, limits), CONTRIBUTING (Windows set up), the roadmap's backlog and D99. The full gate
+  passes on Windows (3382 tests, 35 skipped); on Linux and macOS it runs with the pull request's CI.
 
 ### Later, outside this plan's scope
 

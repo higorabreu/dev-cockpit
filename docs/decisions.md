@@ -2245,3 +2245,30 @@ Studio's Build Tools. Through koffi the table reads in about 7 ms in process. Th
 choice to the agent.
 **How to revert:** give `createProcessInspector` a `ProcessTable` that runs PowerShell, and drop koffi and its
 copy in `build.mjs`.
+
+## D99. Windows: a user-folder zip installed by npx, the folder from the prompt, the rest as adapters
+
+**Decision:** Windows 10 (1809 on) and 11, x64, is a supported system, closing the port
+([plans/windows.md](../plans/windows.md)). On top of D96 to D98:
+- The daemon listens on a per-user named pipe (`\\.\pipe\dck-<user>-daemon`) and logs to
+  `%LOCALAPPDATA%\dck\logs`; the daemon, git and docker start with no console window.
+- New tabs open the first shell found (PowerShell 7, Windows PowerShell, Git Bash, cmd), or the one chosen in
+  Settings, Terminal, WSL distributions included. PowerShell starts with UTF-8 output.
+- Windows keeps no readable directory for another process, so PowerShell, Git Bash and cmd report their
+  folder at each prompt (OSC 7) through a hook given at spawn (arguments or environment), never by editing
+  the user's profile; the host reads it from the terminal output.
+- Start with the system goes through Electron's login items with `--start-hidden`.
+- The release attaches `dev-cockpit_<version>_win32-x64.zip`, built from the project's Electron with rcedit and
+  checked by a smoke run (`--smoke`). `npx @devcockpit/install` unpacks it to
+  `%LOCALAPPDATA%\Programs\Dev Cockpit`, closes a running cockpit, adds a Start menu entry and puts `dck` on the
+  user PATH. No administrator rights at any step.
+- Unsigned, no in-app update and no uninstaller for now (WIN-T15); WSL tabs and the system font list stay
+  partial (WIN-T16, WIN-T17).
+**Reason:** the porting developer asked for the fewest requirements for other users: a zip in the user's own
+folder needs no administrator, no signing certificate and no installer toolchain, and the npx path already
+existed for Linux and the Mac (D76). Reading the folder from the prompt is what VS Code's terminal does on
+Windows; the alternative, reading another process's memory, does not work for PowerShell. Measured on the
+package (`scripts/measure-windows.mjs`, 2026-11-28): window ready in 441 ms and 275 MB of idle private memory
+for the window and the daemon, within D90's budget.
+**How to revert:** drop `build-win` from the release and `windows.ts` from the installer; the adapters stay
+inert on Linux and macOS.
