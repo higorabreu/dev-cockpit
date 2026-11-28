@@ -49,6 +49,18 @@ Checked by test on 2026-11-28: the real process table finds a program the test s
   `cmd` or `node`.
 - [ ] With ten tabs open and hidden, Task Manager shows Dev Cockpit idle (no steady CPU).
 
+## The tab's folder (WIN-T11)
+
+Checked through node-pty on 2026-11-28: PowerShell 5.1, cmd and Git Bash report the folder after `cd`. What
+needs a person:
+
+- [ ] `cd` into a repository in PowerShell: the panel's git rows show that repository within a poll (2 s).
+- [ ] The same in Git Bash (`cd /c/...`) and in cmd (`cd /d D:\...`).
+- [ ] A folder with spaces and accents (`C:\Users\<you>\Área de Trabalho`) shows correctly.
+- [ ] With oh-my-posh or starship in the PowerShell profile, the prompt looks the same as outside the cockpit,
+  shows a failed last command as failed, and the folder still follows.
+- [ ] A new tab opens in the folder of the tab that was active.
+
 ## Window, key and start with Windows (WIN-T9)
 
 Not checked by script: the session had no desktop to read the foreground window from.

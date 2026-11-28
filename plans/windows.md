@@ -79,7 +79,7 @@ Stated here so nobody takes them for bugs; each one has a task or a note to clos
 | No arm64 build | Windows on ARM runs the x64 build under emulation | A second runner when there is demand |
 | WSL tabs: the panel knows less | A WSL tab opens and works, but its directory is a Linux path and git runs on the Windows side, so Git rows and the review may show nothing for repositories inside WSL | WIN-T16, after real use |
 | WSL tabs always look idle | Windows cannot see the processes inside a distribution, so a WSL tab never shows busy or an agent | WIN-T16 |
-| cmd tabs report no directory | cmd has no prompt hook as flexible as PowerShell's; the panel shows the start folder | Accepted (`PROMPT` with `$E]9;9;$P$E\` may do it; to try) |
+| Git Bash's folder depends on PROMPT_COMMAND | A `~/.bashrc` that sets PROMPT_COMMAND without keeping the old value drops the folder report; the panel keeps the start folder | Accepted; the user can add the report to their own PROMPT_COMMAND |
 | One virtual desktop | The window shows on the desktop where it was last opened, unlike Linux and Mac | Accepted; Windows has no public API for "all desktops" |
 | No system font list | Settings offers the cockpit's fonts and a free text field | WIN-T14 |
 | `pnpm install:local` does not exist on Windows | Contributors use `pnpm dev` or the zip | Accepted |
@@ -229,10 +229,20 @@ in something usable, so the work can stop after any of them.
   - The directory is the folder the shell started in until WIN-T11; the scanner finds nothing on Windows,
     since no daemon older than `shutdown` ran there.
   - The real table is tested on Windows (a `ping` child of the test process).
-- [ ] WIN-T11. Shell integration for the directory: a prompt hook for PowerShell (both editions) and Git
+- [x] WIN-T11. Shell integration for the directory: a prompt hook for PowerShell (both editions) and Git
   Bash that prints OSC 7, injected at spawn without touching the user's profile; the UI reads it and the host
   prefers it to the inspector's cwd when present. Useful on Linux and Mac too, but kept Windows-only until
-  measured there. (C8)
+  measured there. (C8) Done on 2026-11-28:
+  - PowerShell: `-Command`, which runs after the profile, wraps the prompt the profile left (oh-my-posh,
+    starship or the default); the old prompt runs first so it still sees `$?`.
+  - Git Bash: `PROMPT_COMMAND` in the tab's environment prints `$PWD`, mapped from `/c/...` to `C:\...`.
+  - cmd: `PROMPT` in the environment, `$E]7;file://localhost/$P$E\` before the user's prompt, which closes
+    the old cmd gap.
+  - The host reads the reports, not the window: the main process sees every byte of the terminal, and
+    the Windows inspector takes the folder from it (`terminal-directories.ts`, the parser in core
+    `directory-reports.ts`, safe across cut chunks).
+  - Checked through node-pty on this machine: PowerShell 5.1, cmd and Git Bash report the start folder and
+    the new one after `cd`. WSL reports nothing yet (WIN-T16).
 
 ### Phase 3: other people can install it (3 to 5 days)
 
