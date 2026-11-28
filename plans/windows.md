@@ -110,14 +110,31 @@ in something usable, so the work can stop after any of them.
 
 ### Phase 0: the repository works on Windows (2 to 3 days)
 
-- [ ] WIN-T0. Toolchain on the developer's machine: Node 24 (`.nvmrc`; this machine has 23) and pnpm 9 through
-  `corepack enable`. Documented in CONTRIBUTING.md.
-- [ ] WIN-T1. **Spike, half a day.** `.gitattributes` (`* text=auto eol=lf`) and a renormalized checkout;
+- [x] WIN-T0. Toolchain on the developer's machine: Node 24 (`.nvmrc`; this machine has 23) and pnpm 9 through
+  `corepack enable`. Documented in CONTRIBUTING.md. Done: `nvm install 24` (nvm-windows) and `corepack enable`
+  in that version; CONTRIBUTING.md still to update with WIN-T14. Electron's binary was not downloaded by
+  `pnpm install`; it arrived with `node install.js` in its package (to check with `pnpm dev`, WIN-T4).
+- [x] WIN-T1. **Spike, half a day.** `.gitattributes` (`* text=auto eol=lf`) and a renormalized checkout;
   `pnpm install`, `lint`, `typecheck`, `test`; list what fails. Check whether node-pty's Windows prebuild
   loads in Electron 45 without `@electron/rebuild`; if it does, `build.mjs` skips the rebuild on `win32`,
   otherwise Build Tools become a contributor requirement (never a user one). Open a PowerShell PTY from
   Electron and type in it. Check that `globalShortcut` refuses F12 (W2). The result becomes a decision in
-  `docs/decisions.md`. (C1)
+  `docs/decisions.md`. (C1) Done on 2026-11-28, D96: the prebuild loads in Electron and runs PowerShell;
+  `@electron/rebuild` fails without Build Tools, so `build.mjs` must skip it on Windows (WIN-T4); F12 is
+  refused and `Ctrl+\`` registers. Lint and typecheck pass. 95 tests fail in 27 files, by cause:
+  - Unix sockets in a temporary folder, refused by the folder privacy check (no `uid` on Windows): `node-net`
+    `ipc`, `daemon`, `cli` (`agent-signal`, `cli`, `daemon-command`), `shell/scripts/cli-bundle`. A pipe name
+    in the tests on Windows.
+  - Paths joined with the host's separator while the test injects another platform: `node-net` `endpoint`,
+    `platform/linux/xdg-autostart`, `install` `mac` and `node-system`. The functions should join with
+    `path.posix` or `path.win32` by the injected platform.
+  - Unix programs and features: `node-pty` `pty-host` (`/bin/*`) and `spawn-helper` (mode bits), `linux-proc`,
+    `platform/darwin/login-path`, `shell/scripts/mac-bundle` (`/bin/sh`), `platform/linux/wayland-bounds`,
+    symbolic links and modes in `node-fs`, `node-walk`, `node-fetch` `release-download`.
+  - Paths compared as strings with `/`: `node-git` (`git-base`, `git-files`, `git-review-notes`,
+    `untracked-file`), `shell/src/electron/host-bridge`, `shell/src/files/files-bridge`.
+  - Slow on Windows (timeouts at 5 s and 10 s, git spawned many times): `core/src/files/merge` and `node-git`
+    `git-diff`.
 - [ ] WIN-T2. Portable tests: guard the Unix-only tests, add Windows twins for node-pty (`cmd.exe /c echo`,
   exit code, resize, cwd) and endpoint. (C1, C12)
 - [ ] WIN-T3. CI: `windows-latest` in the `verify` matrix (W5). (C1, C12)

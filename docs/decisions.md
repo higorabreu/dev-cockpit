@@ -2195,3 +2195,21 @@ the list follows the rows it holds. The screen still opens on General.
 rows showed both modes' pickers and their links at once.
 **How to revert:** put the rows back on the General page in `ui/src/settings/settings-view.ts`, give
 `theme-section.ts` its `rows()` with both pickers and the links, and drop the new catalog entries.
+
+## D96. Windows: node-pty's prebuild, PowerShell first and `Ctrl+Backtick` as the default key
+
+**Decision:** the WIN-T1 spike settles the base of [plans/windows.md](../plans/windows.md). On Windows the
+shell does not rebuild node-pty with `@electron/rebuild`: node-pty 1.x is N-API and ships Windows prebuilds,
+which load in Electron, so neither contributors nor users need Visual Studio Build Tools. The default shell is
+`pwsh.exe` when it is in the PATH and Windows PowerShell 5.1 otherwise; Git Bash, cmd and WSL are options.
+The default key on Windows is `Ctrl+Backtick`, since Windows reserves F12 for the debugger; Linux and macOS
+keep F12 (D42). A Windows checkout keeps LF line endings through `.gitattributes`. Tested on Windows 11
+x64 with Node 24.22.3 and Electron 45.3.0 on 2026-11-28: `pnpm install` used the prebuilds with no compiler;
+`@electron/rebuild` failed in node-gyp (winpty's `GetCommitHash.bat`); the prebuild, loaded with
+`ELECTRON_RUN_AS_NODE`, ran `powershell.exe` through ConPTY with its output and exit code; `globalShortcut`
+refused `F12` and registered `Ctrl+Backtick` and `F9`. `pnpm lint` and `pnpm typecheck` passed; 95 of 3297
+tests failed in 27 files, listed in the plan.
+**Reason:** the spike on the porting developer's machine; one key per platform is the cost of Windows'
+reserved F12, and PowerShell 5.1 is the only shell every Windows has.
+**How to revert:** build node-pty from source on Windows (Build Tools become a contributor requirement), or
+another default key for Windows in `core/src/settings`.
