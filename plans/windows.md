@@ -82,6 +82,7 @@ Stated here so nobody takes them for bugs; each one has a task or a note to clos
 | One virtual desktop | The window shows on the desktop where it was last opened, unlike Linux and Mac | Accepted; Windows has no public API for "all desktops" |
 | No system font list | Settings offers the cockpit's fonts and a free text field | WIN-T14 |
 | `pnpm install:local` does not exist on Windows | Contributors use `pnpm dev` or the zip | Accepted |
+| A pipe name can be taken first by another account | On a shared machine another user could create `dck-<user>-daemon` before the daemon and stand in for it; the default pipe permissions keep that user from sending requests to a real daemon | Accepted for a single-user PC; a check of the pipe's owner needs a native call Node lacks |
 
 ## Acceptance criteria
 
@@ -156,8 +157,20 @@ in something usable, so the work can stop after any of them.
 
 ### Phase 1: the app runs (5 to 7 days)
 
-- [ ] WIN-T5. Daemon and IPC: per-user and per-profile pipe name, no folder created for a pipe, logs in
+- [x] WIN-T5. Daemon and IPC: per-user and per-profile pipe name, no folder created for a pipe, logs in
   `%LOCALAPPDATA%\dck\logs`, `windowsHide: true`, `SIGTERM` paths reviewed (Windows only kills). (C6)
+  Done on 2026-11-28:
+  - The pipe is `\\.\pipe\dck-<USERNAME>-daemon`. Not per profile, as on Unix, where the profile only
+    names the secrets; a development run sets its own `DCK_ENDPOINT`.
+  - The daemon starts with `windowsHide`, and git and docker run with it from the window's process; without it
+    Windows opens a console for each.
+  - `SIGTERM` needs no change: the daemon stops cleanly through the `shutdown` request; on Windows the signal
+    kills at once, and a pipe, unlike a socket file, leaves nothing behind.
+  - Gap: the stale-daemon search (`processScanner`) finds nothing on Windows until it has an adapter there
+    (WIN-T10). It only matters for a daemon older than `shutdown`, which never shipped on Windows.
+  - Gap: another account on the same machine could create a user's pipe name first. The default pipe
+    permissions keep it from sending requests to a real daemon, but a squatter could stand in for the daemon.
+    Node cannot check the server's owner. Accepted for a single-user PC; noted in the gaps table.
 - [ ] WIN-T6. Secret store, `adapters/windows-credential` with the `SecretStore` contract and codes.
   Two options, to pick in the spike: (a) `@napi-rs/keyring`, a prebuilt N-API binding (fast, one native
   dependency, no build tools); (b) PowerShell calling `CredRead`/`CredWrite` with the value on stdin (no native
