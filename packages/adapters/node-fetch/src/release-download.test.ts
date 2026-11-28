@@ -121,9 +121,12 @@ describe('createReleaseDownload discard', () => {
   it('should not own or remove a file when it lies outside its folders', async () => {
     const { files } = setup()
 
-    await files.discard('/etc/passwd')
+    // A file that exists on every system and lies outside the download folders
+    const outside = process.execPath
 
-    expect(files.owns('/etc/passwd')).toBe(false)
-    expect(existsSync('/etc/passwd')).toBe(true)
+    await files.discard(outside)
+
+    expect(files.owns(outside)).toBe(false)
+    expect(existsSync(outside)).toBe(true)
   })
 })

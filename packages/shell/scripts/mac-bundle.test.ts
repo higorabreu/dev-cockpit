@@ -41,7 +41,8 @@ beforeEach(() => {
 
 afterEach(() => rmSync(root, { recursive: true, force: true }))
 
-describe('dckWrapper', () => {
+// Runs the /bin/sh wrapper through symbolic links, as on a Mac
+describe.skipIf(process.platform === 'win32')('dckWrapper', () => {
   it.each([
     { when: 'it is run from the bundle', link: () => join(resources, 'bin', 'dck') },
     {

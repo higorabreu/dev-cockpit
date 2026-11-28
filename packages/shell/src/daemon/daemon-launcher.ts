@@ -2,6 +2,7 @@ import type { Logger } from '@dck/core'
 
 export interface SpawnOptions {
   readonly detached: boolean
+  readonly windowsHide: boolean
   readonly stdio: readonly ['ignore', number | 'ignore', number | 'ignore']
   readonly env: Readonly<Record<string, string | undefined>>
 }
@@ -18,6 +19,8 @@ export interface LauncherDeps {
 export function launchDaemon(deps: LauncherDeps, logger: Logger) {
   const child = deps.spawn(deps.execPath, [deps.script], {
     detached: true,
+    // A detached child gets its own console on Windows, which would open as a window
+    windowsHide: true,
     stdio: ['ignore', deps.logFd, deps.logFd],
     env: { ...deps.env, ELECTRON_RUN_AS_NODE: '1' },
   })

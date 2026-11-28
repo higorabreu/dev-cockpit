@@ -1,5 +1,6 @@
 import { connect } from 'node:net'
-import { isAbsolute, join } from 'node:path'
+// This system's paths are POSIX, so they are joined the same when a test runs on Windows
+import { isAbsolute, join } from 'node:path/posix'
 import type { SystemScreen } from '../../electron/screen.ts'
 
 export interface Size {

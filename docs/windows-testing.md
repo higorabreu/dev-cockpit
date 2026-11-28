@@ -1,0 +1,113 @@
+# Manual checks on Windows
+
+What the automated tests cannot see: a real keyboard, the window manager, the feel of the hotkey. Run them on
+a real Windows 10 or 11 machine before a release that touches Windows, and tick each one with the build and
+the date. Grown task by task during the port ([plans/windows.md](../plans/windows.md)).
+
+Start the development cockpit with `pnpm dev` (key `F9`, its own profile and pipe) unless a check says
+otherwise. `pnpm dev:dck ping` must answer `pong` before anything else.
+
+## Shells (WIN-T7)
+
+- [ ] The first tab opens PowerShell 7 when it is installed, otherwise Windows PowerShell (`PS C:\Users\...>`).
+- [ ] Settings > Terminal shows a Shell row listing what is installed: PowerShell 7, Windows PowerShell, Git
+  Bash, Command Prompt and one `WSL: <name>` per distribution (Docker Desktop's are left out).
+- [ ] Picking Git Bash opens it in the next new tab (`$` prompt, `~/.bash_profile` read); tabs already open
+  keep their shell.
+- [ ] Picking a WSL distribution opens it in the next new tab, starting in the tab's folder as `/mnt/c/...`.
+- [ ] Picking Command Prompt opens `cmd.exe` in the next new tab.
+- [ ] Back to Default: the next tab opens the first shell in the list again.
+- [ ] With a WSL distribution chosen, quit and start the cockpit again: the first tab opens that distribution.
+- [ ] The Shell row does not appear on Linux or macOS (check on either if at hand).
+
+## Terminal on ConPTY (WIN-T8)
+
+Checked by script on 2026-11-28 (node-pty and PowerShell 5.1): accents from PowerShell, cmd and node, also
+piped through PowerShell, and Ctrl+C stopping `ping -t`. What needs a person:
+
+- [ ] Type `ação`, `é`, `ç`, `~`, `^` and `` ` `` with the ABNT2 dead keys: each shows once, in place.
+- [ ] AltGr on ABNT2 types `/` (AltGr+Q), `?` (AltGr+W), `°` (AltGr+E), `²` and `³` (AltGr+2, AltGr+3) and
+  runs no cockpit shortcut.
+- [ ] `git log -3` and `git log -3 | Select-String .` show accented commit messages correctly.
+- [ ] Ctrl+C stops `ping -t 127.0.0.1` and the prompt comes back.
+- [ ] Paste: Ctrl+V (PowerShell's own), Ctrl+Shift+V and the right click paste a multi-line text without
+  running each line at once (PowerShell asks or pastes it as one block).
+- [ ] Selecting text copies it; Ctrl+Shift+C copies too.
+- [ ] Resize the window from its bottom edge and toggle full height (F11): the prompt redraws without
+  repeated or broken lines, also with a long line wrapped.
+- [ ] A full-screen program (`vim` in Git Bash or WSL, `htop` in WSL) draws, resizes and quits cleanly.
+- [ ] Clear (Ctrl+Shift+K) empties the screen and the scrollback.
+
+## What a tab runs (WIN-T10)
+
+Checked by test on 2026-11-28: the real process table finds a program the test started. What needs a person:
+
+- [ ] At the prompt the tab shows as idle; while `ping -t 127.0.0.1` runs it shows as busy, in PowerShell,
+  cmd and Git Bash.
+- [ ] `claude` (native or npm install) and `codex` mark their tab as an agent, and the panel names them.
+- [ ] A program started from an npm `.cmd` shim (for example `npx prettier --help`) is named, not shown as
+  `cmd` or `node`.
+- [ ] With ten tabs open and hidden, Task Manager shows Dev Cockpit idle (no steady CPU).
+
+## The tab's folder (WIN-T11)
+
+Checked through node-pty on 2026-11-28: PowerShell 5.1, cmd and Git Bash report the folder after `cd`. What
+needs a person:
+
+- [ ] `cd` into a repository in PowerShell: the panel's git rows show that repository within a poll (2 s).
+- [ ] The same in Git Bash (`cd /c/...`) and in cmd (`cd /d D:\...`).
+- [ ] A folder with spaces and accents (`C:\Users\<you>\Área de Trabalho`) shows correctly.
+- [ ] With oh-my-posh or starship in the PowerShell profile, the prompt looks the same as outside the cockpit,
+  shows a failed last command as failed, and the folder still follows.
+- [ ] A new tab opens in the folder of the tab that was active.
+
+## Window, key and start with Windows (WIN-T9)
+
+Not checked by script: the session had no desktop to read the foreground window from.
+
+- [ ] Installed run (or `pnpm dev` with `DCK_KEY` unset, after quitting any other cockpit): Ctrl+` shows and
+  hides the window. On ABNT2 it is the key left of 1 (`'` and `"`), the same place as on a US keyboard.
+- [ ] After the key shows the window, typing goes straight to the terminal with no click, also when another
+  app (a browser, VS Code) had the focus.
+- [ ] `pnpm dev:dck toggle` from another terminal shows the window with the keyboard in it (Windows may refuse
+  the focus to a window that did not get the key; note whether it does).
+- [ ] The hold trigger (Right Ctrl held) opens its menu and the menu takes the keys.
+- [ ] The window stays above other windows, has no taskbar button and hides when another app is clicked.
+- [ ] F11 toggles full height; the bottom edge resizes it and the height is kept after a restart.
+- [ ] Settings > General: Start with the system on adds Dev Cockpit to Task Manager's Startup apps; after
+  signing out and in, the cockpit runs hidden and the key shows it. Off removes it.
+- [ ] Settings > Shortcuts: setting the window key to F12 is refused with a notice and the old key keeps
+  working; the reset button brings back Ctrl+`.
+
+## The zip (WIN-T12)
+
+Checked by script on 2026-11-28: `pnpm package:win -- --smoke` unpacks the zip, the smoke check passes
+(terminal, process table, Credential Manager) and `dck ping` answers `pong`. What needs a person:
+
+- [ ] Unzip `release/dev-cockpit_<version>_win32-x64.zip` anywhere and run `Dev Cockpit.exe`: the window
+  opens with the key, with no console window.
+- [ ] Explorer, the window and Task Manager show the Dev Cockpit icon and name (Details: version `x.y.z.0`).
+- [ ] From cmd and PowerShell, `"<folder>\resources\bin\dck.cmd" ping` answers `pong` and `toggle` shows
+  the window.
+- [ ] A copy of the zip downloaded in a browser: SmartScreen warns on the first run (expected, unsigned);
+  after Run anyway it opens normally.
+- [ ] Quitting from the tray leaves no `Dev Cockpit.exe` but the daemon, and the folder can be deleted after
+  the daemon is stopped.
+
+## The npx installer and the budgets (WIN-T13)
+
+Checked by script on 2026-11-28: the real zip installed twice into a temporary folder, the PATH change in a
+test registry key, and `node scripts/measure-windows.mjs` (cold start 441 ms, idle private memory 275 MB).
+`npx @devcockpit/install` needs a release that carries the zip; until then, test the installer from the
+repository against a fork's release, or check its steps with `--download-only`. What needs a person:
+
+- [ ] `npx @devcockpit/install` from PowerShell, with no administrator rights: it downloads, verifies,
+  unpacks to `%LOCALAPPDATA%\Programs\Dev Cockpit` and says to open a new terminal.
+- [ ] Dev Cockpit is in the Start menu and opens; in a new terminal `dck ping` answers `pong`.
+- [ ] `echo $env:Path` in the new terminal ends with `...\Dev Cockpit\resources\bin`, and the entries that
+  were there (with their `%VARIABLES%`, see `regedit` under `HKEY_CURRENT_USER\Environment`) are kept.
+- [ ] Run it again with the cockpit open: it says it closed it, replaces it and the Start menu entry opens
+  the new one. With `--version <older>` it goes back to that release.
+- [ ] `node scripts/measure-windows.mjs` after `pnpm package:win` stays within budget on your machine.
+- [ ] Hotkey to visible window feels instant (budget 100 ms) and keys echo at once (16 ms), also with a
+  busy tab.

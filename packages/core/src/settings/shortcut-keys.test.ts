@@ -135,6 +135,27 @@ describe('matchesChord', () => {
     expect(matchesChord(press('t', { ctrlKey: true }), chord)).toBe(true)
     expect(matchesChord(press('T', { ctrlKey: true, shiftKey: true }), chord)).toBe(false)
   })
+
+  it('should leave a key to the terminal when Windows sends AltGr as Ctrl+Alt', () => {
+    const chord = { key: 'q', ctrl: true, alt: true }
+    const altGraph = (state: string) => state === 'AltGraph'
+
+    const typed = press('/', {
+      ctrlKey: true,
+      altKey: true,
+      code: 'KeyQ',
+      getModifierState: altGraph,
+    })
+    const held = press('q', {
+      ctrlKey: true,
+      altKey: true,
+      code: 'KeyQ',
+      getModifierState: () => false,
+    })
+
+    expect(matchesChord(typed, chord)).toBe(false)
+    expect(matchesChord(held, chord)).toBe(true)
+  })
 })
 
 describe('sameChord', () => {

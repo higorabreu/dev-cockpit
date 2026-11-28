@@ -1,7 +1,20 @@
 import type { AgentProfile } from '../ports/agent.ts'
 import { type SessionActivity, UNKNOWN_FOREGROUND } from '../ports/session.ts'
 
-const SHELLS = new Set(['bash', 'zsh', 'fish', 'sh', 'dash', 'ksh', 'tcsh'])
+// Windows' shells too; `wsl` stands for the whole distribution, whose processes Windows cannot see
+const SHELLS = new Set([
+  'bash',
+  'zsh',
+  'fish',
+  'sh',
+  'dash',
+  'ksh',
+  'tcsh',
+  'pwsh',
+  'powershell',
+  'cmd',
+  'wsl',
+])
 
 export interface Classification {
   readonly activity: SessionActivity

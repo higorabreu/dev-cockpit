@@ -41,7 +41,8 @@ async function fakeProcess(pid: number, cwd: string, stat: string) {
   await writeFile(join(proc, String(pid), 'stat'), stat)
 }
 
-describe('createProcessInspector', () => {
+// The fake /proc needs symbolic links, which Windows only creates in Developer Mode or as an administrator
+describe.skipIf(process.platform === 'win32')('createProcessInspector', () => {
   it('should report the working directory and the foreground process name when inspecting', async () => {
     await fakeProcess(10, '/work/project', '10 (zsh) S 1 10 10 1 20 0')
     await mkdir(join(proc, '20'), { recursive: true })

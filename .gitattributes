@@ -1,0 +1,2 @@
+# Biome and the tests expect LF; Git for Windows would otherwise check out CRLF (core.autocrlf)
+* text=auto eol=lf

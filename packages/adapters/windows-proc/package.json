@@ -1,0 +1,17 @@
+{
+  "name": "@dck/adapter-windows-proc",
+  "private": true,
+  "version": "0.15.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@dck/core": "workspace:^",
+    "koffi": "^3.3.8"
+  },
+  "license": "AGPL-3.0-only"
+}

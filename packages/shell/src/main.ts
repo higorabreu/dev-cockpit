@@ -15,12 +15,19 @@ import {
   createGitInspector,
   createGitReviewNotes,
 } from '@dck/adapter-node-git'
-import { connectTo, defaultConfigDir, defaultEndpoint, defaultLogDir } from '@dck/adapter-node-net'
+import {
+  connectTo,
+  defaultConfigDir,
+  defaultEndpoint,
+  defaultLogDir,
+  isPipe,
+} from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
 import { createFolderWalk } from '@dck/adapter-node-walk'
 import {
   type ConnectionFields,
   checkProfile,
+  chooseShell,
   connectorCatalog,
   createConnections,
   createDockController,
@@ -35,6 +42,7 @@ import {
   localeFor,
   pastedText,
   type Settings,
+  shellChoice,
   storedAccount,
   type Translate,
 } from '@dck/core'
@@ -75,6 +83,7 @@ import { downloadAllowed, frameNavigation, isPdfViewer } from './files/frame-gua
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
+import { createTerminalDirectories } from './inspectors/terminal-directories.ts'
 import { createDockActions } from './platform/dock-actions.ts'
 import {
   boundedScreen,
@@ -84,6 +93,7 @@ import {
 } from './platform/linux/wayland-bounds.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
 import { nativeWayland, selectPlatform } from './platform/select-platform.ts'
+import { START_HIDDEN_FLAG } from './platform/win32/login-item-autostart.ts'
 import { createWindowRequests } from './platform/window-requests.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
@@ -94,6 +104,7 @@ import { createQuitFiles } from './quit/quit-files.ts'
 import { createQuitGuard } from './quit/quit-guard.ts'
 import { createSettingsStore } from './settings/settings-store.ts'
 import { watchSettingsFile } from './settings/settings-watch.ts'
+import { runSmoke, SMOKE_FLAG } from './smoke/smoke-run.ts'
 import { createSavedTabsFile } from './tabs/saved-tabs-file.ts'
 import { createThemeStore } from './themes/theme-store.ts'
 import { watchThemesFolder } from './themes/themes-watch.ts'
@@ -158,6 +169,9 @@ app.whenReady().then(async () => {
   const toggleWindow = () => void dockActions.toggle()
   const showWindow = () => void dockActions.show()
 
+  // Read from the prompt only on Windows for now; Linux and macOS read the directory from the process
+  const terminalDirectories =
+    process.platform === 'win32' ? createTerminalDirectories('win32') : undefined
   const platform = selectPlatform({
     platform: process.platform,
     env: process.env,
@@ -169,6 +183,7 @@ app.whenReady().then(async () => {
     appVersion: app.getVersion(),
     logger,
     app,
+    ...(terminalDirectories ? { terminalDirectory: terminalDirectories.get } : {}),
   })
   // Off the boot path: the tabs open a login shell and need nothing; only the daemon waits for it
   const loginPath = platform.loginPath().then((path) => {
@@ -188,6 +203,7 @@ app.whenReady().then(async () => {
     logger,
     env: process.env,
     text: createJsoncSettingsText(),
+    platform: process.platform,
     isFolder: (path) =>
       stat(path).then(
         (stats) => stats.isDirectory(),
@@ -408,6 +424,7 @@ app.whenReady().then(async () => {
     reviewNotes: createGitReviewNotes(),
     sessions: sessionInspector,
     agents: agentProfiles,
+    ...(terminalDirectories ? { directories: terminalDirectories } : {}),
 
     environment: createEnvironmentInspector({
       processes: platform.processes,
@@ -435,7 +452,11 @@ app.whenReady().then(async () => {
       },
       windowRequests.notificationClick,
     ),
-    shell: platform.terminal,
+    shell: () => {
+      const chosen = settingsStore.get().settings.terminal.shell
+      return chooseShell(chosen, platform.shells.installed(chosen), platform.terminal)
+    },
+    shells: async () => (await platform.shells.list()).map(shellChoice),
     home: homedir(),
     logger,
     send,
@@ -619,7 +640,7 @@ app.whenReady().then(async () => {
 
   async function startDaemonProcess() {
     await loginPath
-    mkdirSync(dirname(endpoint), { recursive: true, mode: 0o700 })
+    if (!isPipe(endpoint)) mkdirSync(dirname(endpoint), { recursive: true, mode: 0o700 })
     const logDir = process.env.DCK_LOG_DIR ?? defaultLogDir(endpoint)
     mkdirSync(logDir, { recursive: true, mode: 0o700 })
     launchDaemon(
@@ -627,6 +648,7 @@ app.whenReady().then(async () => {
         spawn: (command, args, options) =>
           spawn(command, [...args], {
             detached: options.detached,
+            windowsHide: options.windowsHide,
             stdio: [...options.stdio],
             env: options.env,
           }),
@@ -687,12 +709,29 @@ app.whenReady().then(async () => {
 
   void window.loadFile(join(__dirname, 'ui', 'index.html'))
   window.webContents.once('did-finish-load', () => {
-    if (!process.env.DCK_START_HIDDEN) showWindow()
+    // Linux and macOS start it hidden through the environment, Windows' login item through a flag
+    if (!process.env.DCK_START_HIDDEN && !process.argv.includes(START_HIDDEN_FLAG)) showWindow()
     // A height of 100% saved last time lays the window out for the whole screen from the start
     syncLayout()
     setTimeout(() => updater.start(), UPDATE_START_MS)
     logger.info('window ready', { endpoint })
   })
+
+  // The release checks the built package with it: exits 0 only when what the app loads works
+  if (process.argv.includes(SMOKE_FLAG)) {
+    window.webContents.once('did-finish-load', async () => {
+      const passed = await runSmoke({
+        platform: process.platform,
+        ptyHost: createNodePtyHost(),
+        secrets: platform.secrets,
+        processes: platform.processes,
+        home: homedir(),
+        ...(terminalDirectories ? { started: terminalDirectories.started } : {}),
+        logger,
+      })
+      app.exit(passed ? 0 : 1)
+    })
+  }
 
   // Only to check the interface without looking at the screen: runs a script in the page, saves a capture and exits
   const evalScript = process.env.DCK_EVAL

@@ -33,7 +33,8 @@ beforeEach(async () => {
   directory = await mkdtemp(join(tmpdir(), 'dck-git-'))
 })
 
-afterEach(() => rm(directory, { recursive: true, force: true }))
+// Windows cannot remove a folder while a git process that ran in it is still closing
+afterEach(() => rm(directory, { recursive: true, force: true, maxRetries: 10 }))
 
 describe('createGitInspector', () => {
   it('should be undefined when the directory is not inside a repository', async () => {
@@ -99,7 +100,8 @@ describe('createGitInspector', () => {
     expect(status?.submodules.map((module) => [module.path, module.ahead])).toEqual([['one', 1]])
     expect(status?.submodulesClean).toBe(1)
     expect(status?.changes).toEqual([])
-  })
+    // About twenty git processes, which take seconds to start on Windows
+  }, 30_000)
 
   it('should count changed files inside a submodule when its tree is dirty', async () => {
     const one = await repo('one')

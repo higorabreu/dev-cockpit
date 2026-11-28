@@ -10,6 +10,7 @@ import {
   type Result,
   type Transport,
 } from '@dck/core'
+import { isPipe } from './endpoint.ts'
 import { transportFromSocket } from './transport.ts'
 
 export interface Listener {
@@ -28,8 +29,6 @@ function probe(endpoint: string): Promise<'alive' | 'stale' | 'absent'> {
     })
   })
 }
-
-const isPipe = (endpoint: string) => endpoint.startsWith('\\\\')
 
 // In a shared folder such as /tmp another user could create the socket's folder first and stand in for the
 // daemon, so a folder that is not ours alone (a link, another owner, open to the group) is refused

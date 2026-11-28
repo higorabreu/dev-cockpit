@@ -2195,3 +2195,80 @@ the list follows the rows it holds. The screen still opens on General.
 rows showed both modes' pickers and their links at once.
 **How to revert:** put the rows back on the General page in `ui/src/settings/settings-view.ts`, give
 `theme-section.ts` its `rows()` with both pickers and the links, and drop the new catalog entries.
+
+## D96. Windows: node-pty's prebuild, PowerShell first and `Ctrl+Backtick` as the default key
+
+**Decision:** the WIN-T1 spike settles the base of [plans/windows.md](../plans/windows.md). On Windows the
+shell does not rebuild node-pty with `@electron/rebuild`: node-pty 1.x is N-API and ships Windows prebuilds,
+which load in Electron, so neither contributors nor users need Visual Studio Build Tools. The default shell is
+`pwsh.exe` when it is in the PATH and Windows PowerShell 5.1 otherwise; Git Bash, cmd and WSL are options.
+The default key on Windows is `Ctrl+Backtick`, since Windows reserves F12 for the debugger; Linux and macOS
+keep F12 (D42). A Windows checkout keeps LF line endings through `.gitattributes`. Tested on Windows 11
+x64 with Node 24.22.3 and Electron 45.3.0 on 2026-11-28: `pnpm install` used the prebuilds with no compiler;
+`@electron/rebuild` failed in node-gyp (winpty's `GetCommitHash.bat`); the prebuild, loaded with
+`ELECTRON_RUN_AS_NODE`, ran `powershell.exe` through ConPTY with its output and exit code; `globalShortcut`
+refused `F12` and registered `Ctrl+Backtick` and `F9`. `pnpm lint` and `pnpm typecheck` passed; 95 of 3297
+tests failed in 27 files, listed in the plan.
+**Reason:** the spike on the porting developer's machine; one key per platform is the cost of Windows'
+reserved F12, and PowerShell 5.1 is the only shell every Windows has.
+**How to revert:** build node-pty from source on Windows (Build Tools become a contributor requirement), or
+another default key for Windows in `core/src/settings`.
+
+## D97. Windows: secrets in the Credential Manager through `@napi-rs/keyring`
+
+**Decision:** on Windows the `SecretStore` is `adapters/windows-credential`, which keeps each secret as a
+generic credential of the `dev-cockpit` service through `@napi-rs/keyring` (keyring-rs, an N-API binding with
+prebuilt binaries). The module loads by `import()` on the first secret, so Linux and macOS never load it,
+and the bundles leave it out (`external`): `build.mjs` copies it with its binary into `dist/node_modules`
+on Windows only. Its integration test writes to the real store only with `DCK_CREDENTIAL_TEST=1`, which the
+Windows runner sets. Checked on 2026-11-28 in Node 24 and in Electron 45.3.0 run as Node.
+**Reason:** the other way, PowerShell calling `CredRead` and `CredWrite`, needs no native module but costs
+about 300 ms per call and a script to keep the secret out of the arguments; the binding is fast, needs no
+build tools and the secret never leaves the process. Agreed with the porting developer on 2026-11-28.
+**How to revert:** replace `createCredentialStore`'s `open` with a PowerShell runner fed through stdin, and
+drop the dependency and the copy in `build.mjs`.
+
+## D98. Windows: the process table through koffi
+
+**Decision:** on Windows the `ProcessInspector` is `adapters/windows-proc`, which reads the process table with
+`CreateToolhelp32Snapshot`, the start times with `GetProcessTimes` and a node program's command line with
+`NtQueryInformationProcess`, called through koffi (an FFI library with prebuilt binaries, MIT). What a tab
+runs is the newest child of its shell that started after it, past console hosts, Git's bash launcher and
+npm's cmd shims. The directory does not come from the process: Windows keeps none readable, and PowerShell
+never changes its own; the host passes the folder the shell started in and later what the shell reports
+(WIN-T11). The `ProcessScanner` finds nothing: it exists for daemons older than `shutdown`, none of which
+ran on Windows. koffi loads by `import()` on the first poll and `build.mjs` copies it into `dist/node_modules`
+on Windows, as for the keyring (D97).
+**Reason:** measured on 2026-11-28: one PowerShell CIM query per 2 s poll costs about 230 ms of CPU (about 12%
+of a core) and a second of delay; `@vscode/windows-process-tree` builds with node-gyp, so it needs Visual
+Studio's Build Tools. Through koffi the table reads in about 7 ms in process. The porting developer left the
+choice to the agent.
+**How to revert:** give `createProcessInspector` a `ProcessTable` that runs PowerShell, and drop koffi and its
+copy in `build.mjs`.
+
+## D99. Windows: a user-folder zip installed by npx, the folder from the prompt, the rest as adapters
+
+**Decision:** Windows 10 (1809 on) and 11, x64, is a supported system, closing the port
+([plans/windows.md](../plans/windows.md)). On top of D96 to D98:
+- The daemon listens on a per-user named pipe (`\\.\pipe\dck-<user>-daemon`) and logs to
+  `%LOCALAPPDATA%\dck\logs`; the daemon, git and docker start with no console window.
+- New tabs open the first shell found (PowerShell 7, Windows PowerShell, Git Bash, cmd), or the one chosen in
+  Settings, Terminal, WSL distributions included. PowerShell starts with UTF-8 output.
+- Windows keeps no readable directory for another process, so PowerShell, Git Bash and cmd report their
+  folder at each prompt (OSC 7) through a hook given at spawn (arguments or environment), never by editing
+  the user's profile; the host reads it from the terminal output.
+- Start with the system goes through Electron's login items with `--start-hidden`.
+- The release attaches `dev-cockpit_<version>_win32-x64.zip`, built from the project's Electron with rcedit and
+  checked by a smoke run (`--smoke`). `npx @devcockpit/install` unpacks it to
+  `%LOCALAPPDATA%\Programs\Dev Cockpit`, closes a running cockpit, adds a Start menu entry and puts `dck` on the
+  user PATH. No administrator rights at any step.
+- Unsigned, no in-app update and no uninstaller for now (WIN-T15); WSL tabs and the system font list stay
+  partial (WIN-T16, WIN-T17).
+**Reason:** the porting developer asked for the fewest requirements for other users: a zip in the user's own
+folder needs no administrator, no signing certificate and no installer toolchain, and the npx path already
+existed for Linux and the Mac (D76). Reading the folder from the prompt is what VS Code's terminal does on
+Windows; the alternative, reading another process's memory, does not work for PowerShell. Measured on the
+package (`scripts/measure-windows.mjs`, 2026-11-28): window ready in 441 ms and 275 MB of idle private memory
+for the window and the daemon, within D90's budget.
+**How to revert:** drop `build-win` from the release and `windows.ts` from the installer; the adapters stay
+inert on Linux and macOS.

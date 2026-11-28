@@ -36,6 +36,7 @@ const ptyData = byTerminal<string>(hostChannels.ptyData)
 const ptyExit = byTerminal<PtyExit>(hostChannels.ptyExit)
 
 const api: HostApi = {
+  system: { platform: process.platform, version: process.getSystemVersion() },
   pty: {
     create: (options) => ipcRenderer.invoke(hostChannels.ptyCreate, options),
     write: (id, data) => ipcRenderer.send(hostChannels.ptyWrite, id, data),
@@ -139,6 +140,9 @@ const api: HostApi = {
   },
   fonts: {
     system: () => ipcRenderer.invoke(hostChannels.fontsSystem),
+  },
+  terminal: {
+    shells: () => ipcRenderer.invoke(hostChannels.terminalShells),
   },
   tabs: {
     saved: () => ipcRenderer.invoke(hostChannels.tabsSaved),

@@ -1,4 +1,11 @@
 import { execFile } from 'node:child_process'
+import { normalize } from 'node:path'
+
+// Git for Windows prints paths with forward slashes, while the app joins and compares with the system's separator
+export function systemPath(gitPath: string): string {
+  const path = gitPath.trim()
+  return path === '' ? '' : normalize(path)
+}
 
 export interface GitRunOptions {
   readonly timeoutMs: number
@@ -47,6 +54,8 @@ export const runGit: GitRun = (cwd, args, options) =>
         timeout: options.timeoutMs,
         maxBuffer: options.maxBytes,
         encoding: 'utf8',
+        // Windows would flash a console window for each run started from the window's process
+        windowsHide: true,
         env: { ...process.env, GIT_PAGER: 'cat', GIT_TERMINAL_PROMPT: '0', LC_ALL: 'C' },
       },
       (error, stdout, stderr) => {

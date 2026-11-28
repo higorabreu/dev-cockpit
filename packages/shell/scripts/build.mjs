@@ -27,7 +27,9 @@ const common = {
   format: 'cjs',
   sourcemap: true,
   logLevel: 'info',
-  external: ['electron', 'node-pty'],
+  // Native modules load from dist/node_modules; the keyring and koffi only on Windows, the only system
+  // that copies them
+  external: ['electron', 'node-pty', '@napi-rs/keyring', 'koffi'],
   // Its UMD build loads its parts with a require the bundler cannot follow; the ESM build bundles whole
   alias: {
     'jsonc-parser': join(
@@ -75,9 +77,30 @@ writeFileSync(
   join(dist, 'package.json'),
   JSON.stringify({ name: 'dck-shell-runtime', dependencies: { 'node-pty': '*' } }),
 )
+// Windows' native bindings, the Credential Manager's and koffi for the process table, each with the
+// prebuilt binary for this machine that pnpm links beside it (beside the scope folder for the keyring)
+if (process.platform === 'win32') {
+  const bindings = [
+    { adapter: 'windows-credential', name: '@napi-rs/keyring', into: '@napi-rs' },
+    { adapter: 'windows-proc', name: 'koffi', into: '' },
+  ]
+  for (const { adapter, name, into } of bindings) {
+    // Through the adapter's own link, since koffi's exports hide its package.json from require.resolve
+    const binding = realpathSync(join(root, '..', 'adapters', adapter, 'node_modules', name))
+    for (const sibling of readdirSync(dirname(binding))) {
+      cpSync(join(dirname(binding), sibling), join(dist, 'node_modules', into, sibling), {
+        recursive: true,
+        dereference: true,
+      })
+    }
+  }
+}
 const electronVersion = JSON.parse(
   readFileSync(require.resolve('electron/package.json'), 'utf8'),
 ).version
-await rebuild({ buildPath: dist, electronVersion, onlyModules: ['node-pty'], force: true })
+// node-pty ships an N-API prebuild for Windows that Electron loads as is (D96), and rebuilding it would
+// require Visual Studio's Build Tools
+if (process.platform !== 'win32')
+  await rebuild({ buildPath: dist, electronVersion, onlyModules: ['node-pty'], force: true })
 await ensureSpawnHelperExecutable(join(dist, 'node_modules', 'node-pty'))
 console.log(`shell built in ${dist} for Electron ${electronVersion}`)

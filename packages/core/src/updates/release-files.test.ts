@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Release } from '../ports/updates.ts'
-import { debPackageName, macImageName, parseChecksums, releaseFiles } from './release-files.ts'
+import {
+  debPackageName,
+  macImageName,
+  parseChecksums,
+  releaseFiles,
+  windowsZipName,
+} from './release-files.ts'
 
 const HASH_A = 'a'.repeat(64)
 const HASH_B = 'B'.repeat(64)
@@ -50,6 +56,16 @@ describe('macImageName', () => {
 
   it('should name nothing when the processor is Intel', () => {
     expect(macImageName('0.10.0', 'x64')).toBeUndefined()
+  })
+})
+
+describe('windowsZipName', () => {
+  it('should name the x64 zip when the processor is x64', () => {
+    expect(windowsZipName('0.10.0', 'x64')).toBe('dev-cockpit_0.10.0_win32-x64.zip')
+  })
+
+  it('should name nothing when the processor is ARM, which runs the x64 build', () => {
+    expect(windowsZipName('0.10.0', 'arm64')).toBeUndefined()
   })
 })
 

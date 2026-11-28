@@ -10,6 +10,7 @@ import type { Result } from '../result.ts'
 import type { Settings, SettingsPatch, SettingsUpdate, SettingsView } from '../settings/settings.ts'
 import type { SettingsFileLocation, SettingsFileState } from '../settings/settings-file.ts'
 import type { SavedTabs } from '../tabs/saved-tabs.ts'
+import type { ShellChoice } from '../terminal/shells.ts'
 import type { ThemeFile, UserThemes } from '../themes/theme-file.ts'
 import type { UpdateState } from '../updates/updater.ts'
 import type { AgentProfile } from './agent.ts'
@@ -41,6 +42,12 @@ export interface ResolvedPath {
 
 // What the UI can ask the main process; the preload exposes this as window.dck
 export interface HostApi {
+  // The operating system under the window, known before any request: Node's platform name and its version
+  // (10.0.26200 on Windows 11)
+  readonly system: {
+    readonly platform: string
+    readonly version: string
+  }
   readonly pty: {
     create(options: PtyCreateOptions): Promise<number>
     write(id: number, data: string): void
@@ -194,6 +201,10 @@ export interface HostApi {
   readonly fonts: {
     system(): Promise<SystemFontsInfo>
   }
+  // The shells the system offers for new tabs (Windows); empty where the tabs follow $SHELL
+  readonly terminal: {
+    shells(): Promise<readonly ShellChoice[]>
+  }
   // The tabs of the last run, kept for the next start
   readonly tabs: {
     saved(): Promise<SavedTabs | undefined>
@@ -304,6 +315,7 @@ export const hostChannels = {
   projectsToggleFavorite: 'projects:toggle-favorite',
   projectsChooseRoot: 'projects:choose-root',
   fontsSystem: 'fonts:system',
+  terminalShells: 'terminal:shells',
   tabsSaved: 'tabs:saved',
   tabsSave: 'tabs:save',
   aboutVersion: 'about:version',

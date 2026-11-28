@@ -1,8 +1,23 @@
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs'
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createFolderWalk } from './folder-walk.ts'
+
+// Windows creates symbolic links only in Developer Mode or as an administrator (as CI runners are)
+function canCreateSymlinks(): boolean {
+  const probe = mkdtempSync(join(tmpdir(), 'dck-link-'))
+  try {
+    symlinkSync(probe, join(probe, 'link'))
+    return true
+  } catch {
+    return false
+  } finally {
+    rmSync(probe, { recursive: true, force: true })
+  }
+}
+const symlinks = canCreateSymlinks()
 
 let directory = ''
 
@@ -82,17 +97,20 @@ describe('createFolderWalk', () => {
     ])
   })
 
-  it('should list a link to a file and never follow a link to a folder', async () => {
-    await tree(['real/inside.txt', 'file.txt'])
-    await symlink(join(directory, 'real'), join(directory, 'folder-link'))
-    await symlink(join(directory, 'file.txt'), join(directory, 'file-link'))
+  it.runIf(symlinks)(
+    'should list a link to a file and never follow a link to a folder',
+    async () => {
+      await tree(['real/inside.txt', 'file.txt'])
+      await symlink(join(directory, 'real'), join(directory, 'folder-link'))
+      await symlink(join(directory, 'file.txt'), join(directory, 'file-link'))
 
-    const result = await createFolderWalk().walk(directory, '', unlimited)
+      const result = await createFolderWalk().walk(directory, '', unlimited)
 
-    expect(result.entries).toEqual(['file-link', 'file.txt', 'real/inside.txt'])
-  })
+      expect(result.entries).toEqual(['file-link', 'file.txt', 'real/inside.txt'])
+    },
+  )
 
-  it('should list nothing when the folder to step into is a link', async () => {
+  it.runIf(symlinks)('should list nothing when the folder to step into is a link', async () => {
     await tree(['real/inside.txt'])
     await symlink(join(directory, 'real'), join(directory, 'linked'))
 

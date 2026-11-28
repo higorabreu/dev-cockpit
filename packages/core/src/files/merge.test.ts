@@ -265,7 +265,8 @@ describe('mergeThreeWay', () => {
       if (!git.clean) expect(ours.kind).toBe('conflict')
     }
     expect(cleanBoth).toBeGreaterThan(50)
-  })
+    // 150 runs of git merge-file, which take seconds to start on Windows
+  }, 30_000)
 })
 
 describe('mergeRegions', () => {

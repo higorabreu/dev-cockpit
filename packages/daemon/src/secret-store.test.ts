@@ -4,11 +4,17 @@ import { systemSecretStore } from './secret-store.ts'
 
 const factories = () => {
   const keychain = new MemorySecretStore()
+  const credentialManager = new MemorySecretStore()
   const secretTool = new MemorySecretStore()
   return {
     keychain,
+    credentialManager,
     secretTool,
-    inject: { keychain: () => keychain, secretTool: () => secretTool },
+    inject: {
+      keychain: () => keychain,
+      credentialManager: () => credentialManager,
+      secretTool: () => secretTool,
+    },
   }
 }
 
@@ -21,7 +27,15 @@ describe('systemSecretStore', () => {
     expect(store).toBe(keychain)
   })
 
-  it.each(['linux', 'win32', 'freebsd'] as const)(
+  it('should pick the Credential Manager when the platform is win32', () => {
+    const { credentialManager, inject } = factories()
+
+    const store = systemSecretStore('win32', inject)
+
+    expect(store).toBe(credentialManager)
+  })
+
+  it.each(['linux', 'freebsd'] as const)(
     'should pick secret-tool when the platform is %s',
     (platform) => {
       const { secretTool, inject } = factories()

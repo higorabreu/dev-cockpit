@@ -42,6 +42,12 @@ describe('launchDaemon', () => {
     expect(unreferenced).toBe(true)
   })
 
+  it('should hide the console Windows would open for the daemon when launching', () => {
+    const { call } = launch()
+
+    expect(call?.options.windowsHide).toBe(true)
+  })
+
   it('should keep the endpoint of the environment when launching', () => {
     const { call } = launch({ DCK_ENDPOINT: '/tmp/x.sock' })
 

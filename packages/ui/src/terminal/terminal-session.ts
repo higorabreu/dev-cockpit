@@ -1,6 +1,6 @@
 import type { CursorStyle, HostApi, MacOptionAsMeta, PaneGrid, ProgramStatus } from '@dck/core'
 import { FitAddon } from '@xterm/addon-fit'
-import { Terminal } from '@xterm/xterm'
+import { type IWindowsPty, Terminal } from '@xterm/xterm'
 import type { Keymap } from '../platform/keymap.ts'
 import type { TerminalColors } from '../platform/theme.ts'
 import { attachClipboard } from './clipboard-behavior.ts'
@@ -53,6 +53,8 @@ export interface SessionOptions {
   readonly cursorStyle: CursorStyle
   readonly cursorBlink: boolean
   readonly macOptionAsMeta: MacOptionAsMeta
+  // Set on Windows: the terminal runs on ConPTY
+  readonly windowsPty?: IWindowsPty
   readonly cwd?: string
   readonly exitedText: string
   // How a file or folder path printed in the terminal opens; the host checks it on disk
@@ -94,6 +96,7 @@ export async function createTerminalSession(options: SessionOptions): Promise<Te
     // clipboard before Paste
     rightClickSelectsWord: false,
     theme: options.theme,
+    ...(options.windowsPty ? { windowsPty: options.windowsPty } : {}),
   })
   const fit = new FitAddon()
   terminal.loadAddon(fit)

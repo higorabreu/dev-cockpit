@@ -22,8 +22,19 @@ describe('pickSystem', () => {
     expect(pickSystem('darwin', 'arm64', false)).toEqual({ kind: 'mac' })
   })
 
-  it('should not install when the Mac is Intel or the system is Windows', () => {
+  it('should not install when the Mac is Intel', () => {
     expect(pickSystem('darwin', 'x64', false)).toEqual({ kind: 'unsupported', system: 'Intel Mac' })
-    expect(pickSystem('win32', 'x64', false)).toEqual({ kind: 'unsupported', system: 'Windows' })
+  })
+
+  it('should install the zip when the system is Windows on x64 or on ARM', () => {
+    expect(pickSystem('win32', 'x64', false)).toEqual({ kind: 'windows' })
+    expect(pickSystem('win32', 'arm64', false)).toEqual({ kind: 'windows' })
+  })
+
+  it('should not install when Windows runs on a 32-bit processor', () => {
+    expect(pickSystem('win32', 'ia32', false)).toEqual({
+      kind: 'unsupported',
+      system: 'Windows on ia32',
+    })
   })
 })

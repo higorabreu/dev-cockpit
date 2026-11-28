@@ -3,6 +3,82 @@
 Newest first. Generated from Conventional Commits by release-please. The 0.1.0 entry at the end was
 written by hand for a private build, before the first public release.
 
+## Unreleased
+
+Written by hand on the Windows port branch until the next release replaces it.
+
+### Features
+
+* `npx @devcockpit/install` installs on Windows: it unpacks the zip to `%LOCALAPPDATA%\Programs\Dev Cockpit` without administrator rights, closes a running cockpit before replacing it, adds a Start menu entry and puts `dck` on the user PATH
+* build the Windows zip with `pnpm package:win`: `Dev Cockpit.exe` with its icon and version, the app, node-pty's prebuild, the native bindings and `resources\bin\dck.cmd`; `-- --smoke` unpacks it and checks it
+* a smoke check for the packaged app (`--smoke`): it opens a terminal, reads the process table and the secret store, and exits 0 only when all of them work
+* follow each Windows tab's folder as PowerShell, Git Bash and cmd report it at the prompt (OSC 7), without touching the user's profile, so the panel's git rows and new tabs use the folder the tab is in
+* see on Windows what each tab runs, so the panel and the tab marks know a busy tab and Claude Code or Codex in it; the process table is read through koffi, with no console window
+* start with Windows through Electron's login items, hidden until the key is pressed
+* Ctrl+` shows and hides the window by default on Windows, which refuses F12 as a global key; Linux and macOS keep F12
+* tell the terminal it runs on ConPTY, with the Windows build, so it reflows and wraps lines as Windows rewrites them
+* choose the shell new tabs start on Windows (Terminal settings); by default PowerShell 7, else Windows PowerShell
+* find the shells a Windows tab can start: PowerShell 7, Windows PowerShell, Git Bash, cmd and each WSL distribution
+* keep the connection tokens in the Credential Manager on Windows; the window, the daemon and `dck daemon` load the binding only there
+* a secret store adapter for Windows' Credential Manager, through the prebuilt `@napi-rs/keyring`
+
+### Bug Fixes
+
+* keep the accents of a program's output piped through PowerShell, which starts in the OEM code page, by switching it to UTF-8
+* a key typed with AltGr writes its character and never runs a shortcut, since Windows reports AltGr as Ctrl+Alt
+* give each Windows user a daemon pipe of their own, since pipe names are shared by the machine
+* run git and docker on Windows without flashing a console window
+* start the daemon on Windows without opening a console window
+* keep the daemon's log in the local app data and create no folder for its named pipe on Windows
+* save the views cache one write at a time, so Windows keeps every save when two views refresh together
+* read the paths git prints (repository root, superproject, git folder) in the system's form, so submodules and the review work on Windows
+* join paths by the platform asked for, not the host's, so Linux and macOS paths stay POSIX on Windows
+
+### Miscellaneous Chores
+
+* measure the Windows package against the budgets (`scripts/measure-windows.mjs`): cold start and idle memory
+* version the Credential Manager adapter with each release
+* run `pnpm dev` on Windows: a named pipe of its own, its log in the temporary folder, Electron's path from its package
+* build the shell on Windows with node-pty's prebuild, without Visual Studio's Build Tools
+* keep LF line endings in a Windows checkout
+
+### Tests
+
+* run the daemon and CLI tests over a named pipe on Windows
+* drop the path imports the named pipe change left unused in the CLI tests
+* test the terminal through cmd and PowerShell on Windows
+* skip on Windows only the tests that need a Unix feature, and run the link tests wherever links can be created
+* run the git tests on Windows: submodule URLs in either spelling, the file mode set in the index, more time for the tests that start many git processes
+* compare the terminal and file bridge paths in the system's form, so their tests pass on Windows
+* give the tests more time on Windows, where starting a process is far slower
+* retry removing a git test's folder while Windows still holds it
+
+### Continuous Integration
+
+* attach the Windows zip to each release, built and smoke checked on a Windows runner; CI builds a preview of it too
+* store, read and delete a secret in the real Credential Manager on the Windows runner
+* quote the Credential Manager test flag the way Biome formats YAML
+* run lint, typecheck and the tests on Windows too
+
+### Documentation
+
+* plan the Windows port ([plans/windows.md](plans/windows.md))
+* record the Windows spike: node-pty's prebuild, PowerShell first and Ctrl+` as the default key (D96)
+* mark the portable tests done in the Windows plan
+* mark `pnpm dev` done in the Windows plan
+* mark the daemon and IPC done in the Windows plan, with the pipe name gap
+* record the Credential Manager through `@napi-rs/keyring` (D97) and mark the secret store done in the Windows plan
+* point the zip note in the Windows plan at the packaging task
+* separate the agent's implementation time from the manual checks in the Windows plan's estimate
+* start the manual Windows checks ([docs/windows-testing.md](docs/windows-testing.md)) and mark the shells done in the Windows plan
+* add the terminal's manual checks and mark the ConPTY terminal done in the Windows plan
+* add the window and key checks and mark the platform wiring done in the Windows plan
+* record the process table through koffi (D98), add the tab process checks and mark WIN-T10 done in the Windows plan
+* add the tab folder checks and mark the prompt's folder reports done in the Windows plan
+* add the zip checks and mark the Windows package done in the Windows plan
+* add the installer and budget checks and mark the npx installer done in the Windows plan
+* close the Windows port: README (install, updates, build, keys, limits), CONTRIBUTING's Windows set up, the roadmap and D99
+
 ## [0.15.0](https://github.com/higorabreu/dev-cockpit/compare/v0.14.0...v0.15.0) (2026-11-24)
 
 

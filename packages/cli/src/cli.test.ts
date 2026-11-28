@@ -1,7 +1,4 @@
-import { mkdtempSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { connectTo } from '@dck/adapter-node-net'
+import { connectTo, temporaryEndpoint } from '@dck/adapter-node-net'
 import { createClient, createTranslator, silentLogger } from '@dck/core'
 import { createFakeViews } from '@dck/core/testing'
 import { startDaemon } from '@dck/daemon'
@@ -27,7 +24,7 @@ function run(argv: string[], endpoint: string, locale: 'pt-BR' | 'en' = 'pt-BR')
 }
 
 async function bootDaemon() {
-  const endpoint = join(mkdtempSync(join(tmpdir(), 'dck-cli-')), 'daemon.sock')
+  const endpoint = temporaryEndpoint('dck-cli')
   const started = await startDaemon({
     endpoint,
     logger: silentLogger,
@@ -67,7 +64,7 @@ describe('runCli', () => {
   })
 
   it('should explain how to start the daemon when it is not running', async () => {
-    const endpoint = join(mkdtempSync(join(tmpdir(), 'dck-cli-')), 'daemon.sock')
+    const endpoint = temporaryEndpoint('dck-cli')
 
     const result = run(['toggle'], endpoint)
 

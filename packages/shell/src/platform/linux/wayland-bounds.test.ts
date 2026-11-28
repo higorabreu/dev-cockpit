@@ -83,7 +83,8 @@ function compositor(options: FakeCompositor) {
   return fake
 }
 
-describe('readWaylandBounds', () => {
+// The fake compositor listens on a Unix socket, which Windows' net module does not offer
+describe.skipIf(process.platform === 'win32')('readWaylandBounds', () => {
   it('should return the work area the compositor gives when a window would open now', async () => {
     const fake = compositor({ wmBaseVersion: 6, bounds: { width: 1280, height: 737 } })
 

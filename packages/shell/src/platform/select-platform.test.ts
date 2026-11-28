@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import * as linuxProc from '@dck/adapter-linux-proc'
@@ -33,7 +33,12 @@ const context = (overrides: Partial<PlatformContext>): PlatformContext => ({
   resourcesPath: '/opt/dck/resources',
   appVersion: '0.9.0',
   logger: silentLogger,
-  app: { focus: () => undefined, hide: () => undefined },
+  app: {
+    focus: () => undefined,
+    hide: () => undefined,
+    getLoginItemSettings: () => ({ openAtLogin: false }),
+    setLoginItemSettings: () => undefined,
+  },
   ...overrides,
 })
 
@@ -153,6 +158,42 @@ describe('selectPlatform', () => {
     expect(job).toContain('<array>\n    <string>/opt/dck/electron</string>\n  </array>')
     expect(job).toContain('<key>DCK_START_HIDDEN</key>')
     expect(job).not.toContain('--no-sandbox')
+  })
+
+  it('should start the app hidden with Windows through its login items when the platform is Windows', async () => {
+    // Arrange
+    const saved: { openAtLogin: boolean; path: string; args: string[] }[] = []
+    const app = {
+      focus: () => undefined,
+      hide: () => undefined,
+      getLoginItemSettings: () => ({ openAtLogin: false }),
+      setLoginItemSettings: (settings: (typeof saved)[number]) => void saved.push(settings),
+    }
+    const { autostart } = selectPlatform(
+      context({ platform: 'win32', execPath: 'C:\\dck\\Dev Cockpit.exe', app }),
+    )
+
+    // Act
+    await autostart.setEnabled(true)
+
+    // Assert
+    expect(saved).toEqual([
+      { openAtLogin: true, path: 'C:\\dck\\Dev Cockpit.exe', args: ['--start-hidden'] },
+    ])
+    expect(await readdir(directory)).toEqual([])
+  })
+
+  it('should open Windows PowerShell when Windows has no other shell on the path', () => {
+    // Arrange
+    const selected = context({ platform: 'win32', env: { SystemRoot: 'C:\\Windows', Path: '' } })
+
+    // Act
+    const platform = selectPlatform(selected)
+
+    // Assert
+    expect(platform.terminal.file).toMatch(/powershell\.exe$/i)
+    expect(platform.desktopShortcut).toBeUndefined()
+    expect(platform.updateInstaller).toBeUndefined()
   })
 
   it.each([

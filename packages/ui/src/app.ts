@@ -34,6 +34,7 @@ import {
   type SessionSnapshot,
   type SystemFontsInfo,
   sameSavedTabs,
+  settingsDefaultsFor,
   shortPath,
   stepFontSize,
   stepOpacity,
@@ -78,6 +79,7 @@ import { createTabList } from './tabs/tab-list.ts'
 import { createTabMenu } from './tabs/tab-menu.ts'
 import { type FilePlace, filePathHint, folderPathHint, pathRoute } from './terminal/path-open.ts'
 import { createTerminalSession, type TerminalSession } from './terminal/terminal-session.ts'
+import { windowsPtyFor } from './terminal/windows-pty.ts'
 import { activeTheme } from './themes/theme-catalog.ts'
 import type { ThemesClient } from './themes/themes-client.ts'
 import { createUpdateNotice } from './updates/update-notice.ts'
@@ -156,6 +158,7 @@ export async function startApp(
   const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
   const nativeMiddlePaste = navigator.platform.startsWith('Linux')
+  const windowsPty = windowsPtyFor(api.system.platform, api.system.version)
   // The hold menu's key or mouse button, read at each use: Settings can change it while the window is open
   const holdTrigger = () => settings.current().shortcuts.holdTrigger ?? keymap.holdTrigger
   const notice = createNotice(elements.notice, i18n, elements.tabs)
@@ -311,6 +314,7 @@ export async function startApp(
       openThemeFile: (location, name) => settingsFile.openAt(location, name),
       previewOpacity: applyOpacity,
       keymap,
+      defaults: settingsDefaultsFor(api.system.platform),
     },
   )
 
@@ -866,6 +870,7 @@ export async function startApp(
       holdFit: () => heldFit || view.isMoving(),
       ...terminalLook(settings.current(), systemFonts),
       macOptionAsMeta: settings.current().terminal.macOptionAsMeta,
+      ...(windowsPty ? { windowsPty } : {}),
       ...(options.cwd ? { cwd: options.cwd } : {}),
       exitedText: i18n.t('terminal.exited'),
       nativeMiddlePaste,
@@ -1068,7 +1073,10 @@ export async function startApp(
       for (const session of sessions.values())
         session.setOptionAsMeta(next.terminal.macOptionAsMeta)
     }
-    const look = changed.filter((key) => key !== 'terminal.macOptionAsMeta')
+    // Neither changes how a terminal looks; the shell applies to the next tab
+    const look = changed.filter(
+      (key) => key !== 'terminal.macOptionAsMeta' && key !== 'terminal.shell',
+    )
     if (look.some((key) => key.startsWith('terminal.'))) void applyTerminalLook()
     // The layout or a kept share changed, here or in another window; a new font changes the columns
     if (changed.includes('fontSize') || changed.some((key) => key.startsWith('review.'))) {

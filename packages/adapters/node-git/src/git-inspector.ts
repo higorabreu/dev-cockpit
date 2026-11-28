@@ -10,6 +10,7 @@ import {
   parseGitStatus,
   parseSubmoduleList,
 } from '@dck/core'
+import { systemPath } from './git-run.ts'
 
 const TIMEOUT_MS = 3000
 const LOG_LIMIT = '20'
@@ -26,7 +27,8 @@ function git(cwd: string, args: readonly string[]): Promise<string | undefined> 
     execFile(
       'git',
       ['--no-optional-locks', '-C', cwd, ...args],
-      { timeout: TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 },
+      // Windows would flash a console window for each run started from the window's process
+      { timeout: TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024, windowsHide: true },
       (error, stdout) => resolve(error ? undefined : stdout),
     )
   })
@@ -73,7 +75,7 @@ export function createGitInspector(options: GitInspectorOptions = {}): GitInspec
         git(cwd, STATUS_ARGS),
       ])
       if (root === undefined || output === undefined) return undefined
-      const top = root.trim()
+      const top = systemPath(root)
       const parsed = parseGitStatus(output)
       const { upstream } = parsed
 

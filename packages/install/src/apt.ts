@@ -1,4 +1,5 @@
-import { dirname } from 'node:path'
+// This system's paths are POSIX, so they are joined the same when a test runs on Windows
+import { dirname } from 'node:path/posix'
 import { debPackageName, errorBody, fail, ok } from '@dck/core'
 import type { CommandRunner, InstallTarget } from './system.ts'
 

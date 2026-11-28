@@ -12,7 +12,8 @@ beforeEach(async () => {
   directory = await realpath(await mkdtemp(join(tmpdir(), 'dck-ignore-')))
 })
 
-afterEach(() => rm(directory, { recursive: true, force: true }))
+// Windows cannot remove a folder while a git process that ran in it is still closing
+afterEach(() => rm(directory, { recursive: true, force: true, maxRetries: 10 }))
 
 describe('createGitIgnoreCheck', () => {
   it('should tell an ignored file from a tracked one when the repository ignores it', async () => {

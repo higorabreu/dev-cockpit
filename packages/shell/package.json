@@ -12,17 +12,18 @@
     "@dck/adapter-docker-cli": "workspace:^",
     "@dck/adapter-github": "workspace:^",
     "@dck/adapter-gitlab": "workspace:^",
+    "@dck/adapter-gnome-shortcuts": "workspace:^",
     "@dck/adapter-jira": "workspace:^",
     "@dck/adapter-jsonc": "workspace:^",
-    "@dck/adapter-gnome-shortcuts": "workspace:^",
     "@dck/adapter-linux-proc": "workspace:^",
     "@dck/adapter-macos-proc": "workspace:^",
     "@dck/adapter-node-fetch": "workspace:^",
     "@dck/adapter-node-fs": "workspace:^",
     "@dck/adapter-node-git": "workspace:^",
     "@dck/adapter-node-net": "workspace:^",
-    "@dck/adapter-node-walk": "workspace:^",
     "@dck/adapter-node-pty": "workspace:^",
+    "@dck/adapter-node-walk": "workspace:^",
+    "@dck/adapter-windows-proc": "workspace:^",
     "@dck/core": "workspace:^",
     "@dck/daemon": "workspace:^",
     "node-pty": "^1.1.0",
@@ -31,7 +32,8 @@
   "devDependencies": {
     "@electron/rebuild": "^4.2.1",
     "electron": "^45.3.0",
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "rcedit": "^5.0.2"
   },
   "license": "AGPL-3.0-only"
 }

@@ -21,7 +21,14 @@ import {
   subprojectCommits,
 } from '@dck/core'
 import { createBaseFinder } from './git-base.ts'
-import { type GitAnswer, type GitFailure, type GitRun, inBatches, runGit } from './git-run.ts'
+import {
+  type GitAnswer,
+  type GitFailure,
+  type GitRun,
+  inBatches,
+  runGit,
+  systemPath,
+} from './git-run.ts'
 import {
   addedFile,
   needsGit,
@@ -183,7 +190,7 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
   async function topOf(cwd: string): Promise<string | undefined> {
     const known = tops.get(cwd)
     if (known !== undefined) return known
-    const top = await answer(cwd, ['rev-parse', '--show-toplevel'])
+    const top = systemPath((await answer(cwd, ['rev-parse', '--show-toplevel'])) ?? '')
     if (top) tops.set(cwd, top)
     return top || undefined
   }
@@ -349,7 +356,8 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       return ok(1)
     }
     // Not checked out, the folder belongs to the parent and git answers with the parent's top
-    if ((await answer(dir, ['rev-parse', '--show-toplevel'])) !== dir) return keep()
+    if (systemPath((await answer(dir, ['rev-parse', '--show-toplevel'])) ?? '') !== dir)
+      return keep()
     const recorded =
       changed.old === undefined
         ? await emptyTree(dir)
@@ -552,7 +560,7 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       const top = await quick(request.cwd, ['rev-parse', '--show-toplevel'])
       if (!top.ok && top.failure.kind === 'exit') return ok({ kind: 'not-repository' })
       if (!top.ok) return fail(failed(top.failure, 'rev-parse'))
-      const root = top.stdout.trim()
+      const root = systemPath(top.stdout)
 
       const current = await head(root)
       if (!current.ok) return current
@@ -615,7 +623,7 @@ export function createGitDiffSource(options: GitDiffOptions = {}): DiffSource {
       for (let depth = 0; top !== undefined && depth < MAX_ROOT_DEPTH; depth++) {
         const outer = await answer(top, ['rev-parse', '--show-superproject-working-tree'])
         if (!outer) return top
-        top = outer
+        top = systemPath(outer)
       }
       return top
     },

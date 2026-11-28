@@ -28,6 +28,7 @@ import {
   type SettingsPatch,
   type SettingsUpdate,
   type SettingsView,
+  type ShellChoice,
   type SystemFonts,
   type ThemeFile,
   themeFileSchema,
@@ -36,6 +37,7 @@ import {
 } from '@dck/core'
 import { z } from 'zod'
 import type { ViewsGateway } from '../daemon/views-gateway.ts'
+import type { TerminalDirectories } from '../inspectors/terminal-directories.ts'
 import { savedTabsSchema } from '../tabs/saved-tabs-file.ts'
 import { createTerminalPaths, type TerminalFiles } from './terminal-paths.ts'
 
@@ -182,7 +184,13 @@ export interface BridgeOptions {
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
   }
   readonly agents: readonly AgentProfile[]
-  readonly shell: Pick<PtyOptions, 'file' | 'args'>
+  // Told where each shell starts, what it prints and when it ends, on systems whose inspector cannot read
+  // its directory
+  readonly directories?: Pick<TerminalDirectories, 'started' | 'output' | 'ended'>
+  // Asked at each new tab, so a shell chosen in the settings applies to the next one
+  shell(): Pick<PtyOptions, 'file' | 'args' | 'env'>
+  // The shells the system offers for new tabs; empty where the tabs follow $SHELL
+  shells(): Promise<readonly ShellChoice[]>
   readonly home: string
   readonly logger: Logger
   send(channel: string, ...args: unknown[]): void
@@ -208,17 +216,23 @@ export function registerHostBridge(options: BridgeOptions) {
     const id = nextId++
     // A folder a restored tab kept may be gone since: the terminal starts at home rather than not at all
     const cwd = create.cwd !== undefined && (await isFolder(create.cwd)) ? create.cwd : options.home
+    const shell = options.shell()
     const session = ptyHost.spawn({
-      file: options.shell.file,
-      args: options.shell.args,
+      file: shell.file,
+      args: shell.args,
       cwd,
       // Anything running in this terminal, like an agent's hooks, knows which tab it belongs to
-      env: { DCK_PTY_ID: String(id) },
+      env: { ...shell.env, DCK_PTY_ID: String(id) },
       cols: create.cols,
       rows: create.rows,
     })
-    session.onData((data) => send(hostChannels.ptyData, id, data))
+    options.directories?.started(session.pid, cwd)
+    session.onData((data) => {
+      options.directories?.output(session.pid, data)
+      send(hostChannels.ptyData, id, data)
+    })
     session.onExit((exit) => {
+      options.directories?.ended(session.pid)
       sessions.delete(id)
       send(hostChannels.ptyExit, id, exit)
     })
@@ -431,6 +445,7 @@ export function registerHostBridge(options: BridgeOptions) {
     options.endResizeWindow(keep === true),
   )
   ipcMain.handle(hostChannels.fontsSystem, () => options.fonts.read())
+  ipcMain.handle(hostChannels.terminalShells, () => options.shells())
   ipcMain.handle(hostChannels.tabsSaved, () => options.savedTabs.load())
   ipcMain.on(hostChannels.tabsSave, (_event, payload: unknown) => {
     const parsed = savedTabsSchema.safeParse(payload)

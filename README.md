@@ -19,8 +19,8 @@
   <img src="docs/media/hero.gif" alt="A morning with Dev Cockpit over a desktop with an editor and a browser: the Work button's dot opens a pull request to review and the Jira tasks, a task's key is copied, the action wheel opens the acme-api project and starts Claude Code on the task, the developer runs the tests in another tab, the agent's tab is marked and a desktop notification says the agent needs you, a click on it brings the cockpit to that tab, the command is approved, and F12 hides the cockpit and brings it back" width="960">
 </p>
 
-`dck` lives behind a global key, like Guake or Quake's console: press `F12` and it drops over whatever
-you are doing; press it again and it is gone. Around the terminal it keeps what a working day needs: your
+`dck` lives behind a global key, like Guake or Quake's console: press `F12` (`` Ctrl+` `` on Windows) and it
+drops over whatever you are doing; press it again and it is gone. Around the terminal it keeps what a working day needs: your
 projects, the repository's state, the containers, the coding agent running in each tab, a review of what
 changed, and your pull requests, merge requests and tasks. The clips show example data.
 
@@ -138,6 +138,19 @@ link it into a folder on your PATH, for example
 `ln -s "/Applications/Dev Cockpit.app/Contents/Resources/bin/dck" /usr/local/bin/dck`. Data lives in
 `~/Library/Application Support/Dev Cockpit`.
 
+On Windows 10 (1809 or newer) or 11, x64 (ARM runs it under emulation), releases carry a zip from the
+first one that includes the Windows port. `npx @devcockpit/install` unpacks it to
+`%LOCALAPPDATA%\Programs\Dev Cockpit` without administrator rights, adds **Dev Cockpit** to the Start menu
+and puts the `dck` command on your user PATH (open a new terminal to use it); run again, it closes a
+running cockpit and replaces it. By hand: check the zip against `SHA256SUMS`
+(`Get-FileHash dev-cockpit_<version>_win32-x64.zip`), unzip it anywhere and run `Dev Cockpit.exe`; the
+`dck` command is `resources\bin\dck.cmd`. The app is not signed, so a zip downloaded by a browser makes
+SmartScreen warn on the first run (More info, Run anyway). The default global key is **`` Ctrl+` ``** (the key
+left of 1), since Windows keeps F12 for debuggers; new tabs open PowerShell 7, else Windows PowerShell, and
+Settings, Terminal picks Git Bash, Command Prompt or a WSL distribution instead. To remove it, quit it,
+delete the folder and the Start menu entry and take `resources\bin` out of your user PATH. Data lives in
+`%APPDATA%\Dev Cockpit`. What still differs from Linux and the Mac is in [Known limits](#known-limits).
+
 ## Updates
 
 Off by default: the cockpit makes no network call of its own. **Updates** in Settings, About chooses:
@@ -153,7 +166,7 @@ Off by default: the cockpit makes no network call of its own. **Updates** in Set
   runs. Not restarted, the new version starts the next time.
 
 **Check now** beside the setting checks at once. Only stable releases count. A Mac only gets the link to
-the release page. The About page also shows the version and links to the repository, the release notes
+the release page, and so does Windows, where `npx @devcockpit/install` updates it. The About page also shows the version and links to the repository, the release notes
 and a new issue.
 
 ## Build from source
@@ -168,13 +181,15 @@ pnpm install:local         # builds the .deb package and installs it (asks for y
 If the cockpit is open, the script **asks before restarting**, because restarting closes the tabs and the
 commands running in them. `pnpm install:local --no-restart` installs and lets the new version apply on the
 next launch, `--yes` restarts without asking and `--skip-build` installs the `.deb` already built. On a
-Mac, `pnpm package:mac` builds the `.app` and the `.dmg` in `release/`.
+Mac, `pnpm package:mac` builds the `.app` and the `.dmg` in `release/`. On Windows, Node 24 (nvm-windows)
+and pnpm through `corepack enable` are enough, with no Visual Studio Build Tools: `pnpm package:win` builds
+the zip in `release/`, and `pnpm package:win -- --smoke` also unpacks it and checks that it starts.
 
 ## Keys
 
 | Key | What it does |
 | --- | --- |
-| `F12` (configurable) | Shows or hides the window, on the monitor where the mouse is |
+| `F12` (configurable; `` Ctrl+` `` on Windows) | Shows or hides the window, on the monitor where the mouse is |
 | `F11` | Full height or anchored |
 | `Ctrl+Shift+T` / `W` | New tab / close tab (a middle click on a tab also closes it) |
 | `Ctrl+Shift+R` | Rename the tab in place (also a double-click on it); an empty name brings back the automatic one. The tabs, with their folders and names, open again on the next start |
@@ -280,15 +295,21 @@ pnpm dev:dck toggle        # the repository's CLI, talking to the development co
 pnpm lint && pnpm typecheck && pnpm test
 ```
 
-The development build uses `~/.config/dev-cockpit-dev` and the `dck-dev` socket, so it lives beside the
-installed one. Read [CONTRIBUTING.md](CONTRIBUTING.md) before sending a change, [docs/](docs/) for the
+The development build uses `~/.config/dev-cockpit-dev` and the `dck-dev` socket (`%APPDATA%\Dev
+Cockpit-dev` and the `dck-dev` named pipe on Windows), so it lives beside the installed one. Read [CONTRIBUTING.md](CONTRIBUTING.md) before sending a change, [docs/](docs/) for the
 architecture, decisions and roadmap, and [AGENTS.md](AGENTS.md) for the coding standards. The clips in
 this README are recorded from the built app by [scripts/media](scripts/media/README.md).
 
 ## Known limits
 
 - Linux is tested on Ubuntu with GNOME on X11 and Wayland. The Mac build is still being tested on real
-  Macs ([plans/macos.md](plans/macos.md)) and cannot update itself; Windows comes after it, as adapters.
+  Macs ([plans/macos.md](plans/macos.md)) and cannot update itself.
+- The Windows build is new and checked on Windows 11 ([plans/windows.md](plans/windows.md), manual checks in
+  [docs/windows-testing.md](docs/windows-testing.md)). It is unsigned, cannot update itself and has no
+  uninstaller; the window shows on one virtual desktop; the terminal font list offers the cockpit's fonts
+  only; a WSL tab works but the panel knows less about it (no busy or agent mark, git rows only for
+  repositories on the Windows side); and a Git Bash whose `~/.bashrc` replaces PROMPT_COMMAND keeps the
+  tab's start folder in the panel.
 - The Linux package runs with `--no-sandbox`, because of Ubuntu's sandbox restriction.
 - No agent metrics or approvals banner in the panel: the cockpit marks the tab where an agent needs you
   instead (D37).

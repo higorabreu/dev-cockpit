@@ -57,9 +57,15 @@ hook and the signal of the review loop were still bets.
 ## Backlog of ideas (outside the milestones)
 
 A graph of people and blockers, automatic context resumption, a "what if" simulation of deadlines, day
-planning against the calendar, project actions for ops, Windows packaging. The macOS port ships an Apple
+planning against the calendar, project actions for ops. The macOS port ships an Apple
 Silicon `.dmg` with each release since 0.10.0 and is still being tested on real Macs; what is left is in
 [plans/macos.md](../plans/macos.md).
+
+Windows packaging left this list with the Windows port ([plans/windows.md](../plans/windows.md), D99): the
+cockpit runs on Windows 10 and 11 as new adapters (named pipe, Credential Manager, shells, process table,
+login items), releases carry a zip and `npx @devcockpit/install` installs it in the user's folder. Still
+outside it: an installer with in-app updates and signing (WIN-T15), WSL as a first-class tab (WIN-T16), the
+system font list and an arm64 build (WIN-T17).
 
 **Editing files** (asked by the maintainer, 2026-11-17) shipped in 0.13.0: CodeMirror 6 loaded on first
 use, Lezer's colors, autosave with a merge of a change on disk, and the viewers for images, SVG, Markdown

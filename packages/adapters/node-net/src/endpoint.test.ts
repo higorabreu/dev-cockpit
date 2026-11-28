@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { defaultConfigDir, defaultEndpoint, defaultLogDir, defaultStateDir } from './endpoint.ts'
+import {
+  defaultConfigDir,
+  defaultEndpoint,
+  defaultLogDir,
+  defaultStateDir,
+  isPipe,
+} from './endpoint.ts'
 
 describe('defaultEndpoint', () => {
   const macTmp = '/var/folders/ab/cdefgh0123456789/T'
@@ -10,6 +16,7 @@ describe('defaultEndpoint', () => {
       runtimeDir: '/run/user/1000',
       tmpDir: '/tmp',
       uid: 1000,
+      user: undefined,
     })
 
     expect(result).toBe('/run/user/1000/dck/daemon.sock')
@@ -21,6 +28,7 @@ describe('defaultEndpoint', () => {
       runtimeDir: undefined,
       tmpDir: macTmp,
       uid: 501,
+      user: undefined,
     })
 
     expect(result).toBe(`${macTmp}/dck-501/daemon.sock`)
@@ -34,6 +42,7 @@ describe('defaultEndpoint', () => {
       runtimeDir: undefined,
       tmpDir: longTmp,
       uid: 501,
+      user: undefined,
     })
 
     expect(result).toBe('/tmp/dck-501/daemon.sock')
@@ -42,22 +51,67 @@ describe('defaultEndpoint', () => {
   it('should keep a socket path of 104 to 107 bytes when the platform is Linux', () => {
     const runtimeDir = `/run/${'x'.repeat(107 - '/run//dck/daemon.sock'.length)}`
 
-    const linux = defaultEndpoint({ platform: 'linux', runtimeDir, tmpDir: '/tmp', uid: 1000 })
-    const mac = defaultEndpoint({ platform: 'darwin', runtimeDir, tmpDir: '/tmp', uid: 501 })
+    const linux = defaultEndpoint({
+      platform: 'linux',
+      runtimeDir,
+      tmpDir: '/tmp',
+      uid: 1000,
+      user: undefined,
+    })
+    const mac = defaultEndpoint({
+      platform: 'darwin',
+      runtimeDir,
+      tmpDir: '/tmp',
+      uid: 501,
+      user: undefined,
+    })
 
     expect(Buffer.byteLength(linux)).toBe(107)
     expect(mac).toBe('/tmp/dck-501/daemon.sock')
   })
 
-  it('should use a named pipe when the platform is Windows', () => {
+  it('should use a named pipe of the user when the platform is Windows', () => {
     const result = defaultEndpoint({
       platform: 'win32',
       runtimeDir: undefined,
       tmpDir: 'C:\\Temp',
       uid: undefined,
+      user: 'ana',
     })
 
-    expect(result).toBe('\\\\.\\pipe\\dck-daemon')
+    expect(result).toBe('\\\\.\\pipe\\dck-ana-daemon')
+  })
+
+  it('should give two Windows users different pipes when both run the cockpit', () => {
+    const windows = {
+      platform: 'win32',
+      runtimeDir: undefined,
+      tmpDir: 'C:\\Temp',
+      uid: undefined,
+    } as const
+
+    const ana = defaultEndpoint({ ...windows, user: 'ana' })
+    const bia = defaultEndpoint({ ...windows, user: 'bia' })
+
+    expect(ana).not.toBe(bia)
+  })
+})
+
+describe('isPipe', () => {
+  it('should recognize a named pipe when the endpoint is in the pipe namespace', () => {
+    // Act
+    const result = isPipe('\\\\.\\pipe\\dck-daemon')
+
+    // Assert
+    expect(result).toBe(true)
+  })
+
+  it('should not take a socket for a pipe when the endpoint is a file path', () => {
+    // Act
+    const result = isPipe('C:\\Users\\ana\\daemon.sock')
+
+    // Assert
+    expect(result).toBe(false)
   })
 })
 
@@ -66,6 +120,7 @@ describe('defaultLogDir', () => {
     const result = defaultLogDir('/tmp/dck-501/daemon.sock', {
       platform: 'darwin',
       home: '/Users/ana',
+      localAppData: undefined,
     })
 
     expect(result).toBe('/Users/ana/Library/Logs/dck')
@@ -75,9 +130,30 @@ describe('defaultLogDir', () => {
     const result = defaultLogDir('/run/user/1000/dck/daemon.sock', {
       platform: 'linux',
       home: '/home/ana',
+      localAppData: undefined,
     })
 
     expect(result).toBe('/run/user/1000/dck')
+  })
+
+  it('should use the local app data when the platform is Windows, whose pipe has no folder', () => {
+    const result = defaultLogDir('\\\\.\\pipe\\dck-daemon', {
+      platform: 'win32',
+      home: 'C:\\Users\\ana',
+      localAppData: 'C:\\Users\\ana\\AppData\\Local',
+    })
+
+    expect(result).toBe('C:\\Users\\ana\\AppData\\Local\\dck\\logs')
+  })
+
+  it('should fall back to AppData in the home folder when Windows has no LOCALAPPDATA', () => {
+    const result = defaultLogDir('\\\\.\\pipe\\dck-daemon', {
+      platform: 'win32',
+      home: 'C:\\Users\\ana',
+      localAppData: undefined,
+    })
+
+    expect(result).toBe('C:\\Users\\ana\\AppData\\Local\\dck\\logs')
   })
 })
 

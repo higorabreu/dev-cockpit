@@ -1,15 +1,23 @@
 import { homedir, tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { posix, win32 } from 'node:path'
 
 export interface EndpointEnvironment {
   readonly platform: NodeJS.Platform
   readonly runtimeDir: string | undefined
   readonly tmpDir: string
   readonly uid: number | undefined
+  // Windows has no uid: the account name keeps users' pipes apart
+  readonly user: string | undefined
 }
+
+// Joined by the platform asked for, not the host's, so one system's paths can be computed and tested on another
+const pathsOf = (platform: NodeJS.Platform) => (platform === 'win32' ? win32 : posix)
 
 // sun_path holds 104 bytes on macOS and 108 elsewhere, the closing NUL included
 const socketPathMax = (platform: NodeJS.Platform) => (platform === 'darwin' ? 103 : 107)
+
+// A named pipe lives in the pipe namespace, not in a folder that could be created or checked
+export const isPipe = (endpoint: string) => endpoint.startsWith('\\\\')
 
 // Unix uses a socket file; Windows uses a named pipe, which the net module accepts the same way
 export function defaultEndpoint(
@@ -18,9 +26,13 @@ export function defaultEndpoint(
     runtimeDir: process.env.XDG_RUNTIME_DIR,
     tmpDir: tmpdir(),
     uid: process.getuid?.(),
+    user: process.env.USERNAME,
   },
 ): string {
-  if (environment.platform === 'win32') return '\\\\.\\pipe\\dck-daemon'
+  // Pipe names are shared by the whole machine, so each user's daemon needs its own
+  if (environment.platform === 'win32')
+    return `\\\\.\\pipe\\dck-${environment.user ?? 'user'}-daemon`
+  const { join } = posix
   const user = `dck-${environment.uid ?? 'user'}`
   const directory = environment.runtimeDir
     ? join(environment.runtimeDir, 'dck')
@@ -47,6 +59,7 @@ export function defaultStateDir(
     localAppData: process.env.LOCALAPPDATA,
   },
 ): string {
+  const { join } = pathsOf(environment.platform)
   if (environment.platform === 'win32')
     return join(environment.localAppData ?? join(environment.home, 'AppData', 'Local'), 'dck')
   if (environment.platform === 'darwin')
@@ -57,14 +70,27 @@ export function defaultStateDir(
 export interface LogDirEnvironment {
   readonly platform: NodeJS.Platform
   readonly home: string
+  readonly localAppData: string | undefined
 }
 
-// Where the daemon's log goes: the Mac's Console.app reads ~/Library/Logs; elsewhere beside the socket
+// Where the daemon's log goes: the Mac's Console.app reads ~/Library/Logs; Windows' pipe has no folder, so
+// the local app data; elsewhere beside the socket
 export function defaultLogDir(
   endpoint: string,
-  environment: LogDirEnvironment = { platform: process.platform, home: homedir() },
+  environment: LogDirEnvironment = {
+    platform: process.platform,
+    home: homedir(),
+    localAppData: process.env.LOCALAPPDATA,
+  },
 ): string {
+  const { dirname, join } = pathsOf(environment.platform)
   if (environment.platform === 'darwin') return join(environment.home, 'Library', 'Logs', 'dck')
+  if (environment.platform === 'win32')
+    return join(
+      environment.localAppData ?? join(environment.home, 'AppData', 'Local'),
+      'dck',
+      'logs',
+    )
   return dirname(endpoint)
 }
 
@@ -88,6 +114,7 @@ export function defaultConfigDir(
     appData: process.env.APPDATA,
   },
 ): string {
+  const { join } = pathsOf(environment.platform)
   if (environment.platform === 'win32')
     return join(environment.appData ?? join(environment.home, 'AppData', 'Roaming'), PRODUCT_FOLDER)
   if (environment.platform === 'darwin')

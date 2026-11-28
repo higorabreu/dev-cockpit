@@ -88,7 +88,8 @@ beforeEach(async () => {
   directory = await realpath(await mkdtemp(join(tmpdir(), 'dck-base-')))
 })
 
-afterEach(() => rm(directory, { recursive: true, force: true }))
+// Windows cannot remove a folder while a git process that ran in it is still closing
+afterEach(() => rm(directory, { recursive: true, force: true, maxRetries: 10 }))
 
 describe('the base of the branch scope', () => {
   it('should compare with the branch the current one was created from when it came from develop', async () => {

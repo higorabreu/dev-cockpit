@@ -5,7 +5,6 @@ import {
   connectedFirst,
   connectionErrorKey,
   type DisabledConnector,
-  defaultSettings,
   type HostApi,
   LIMITS,
   type MessageKey,
@@ -14,6 +13,7 @@ import {
   type SettingsFileLocation,
   type SettingsIssue,
   type SettingsPatch,
+  type ShellChoice,
   type SystemFontsInfo,
   shortcutKeysPatch,
   type Translator,
@@ -99,10 +99,13 @@ export function createSettingsView(
     // Shows the opacity while the control is dragged, before saving
     previewOpacity(value: number): void
     readonly keymap: Keymap
+    // The defaults of this system, which the resets go back to (Windows has its own window key)
+    readonly defaults: Settings
   },
 ) {
   const { overlay, body } = elements
   const { settings, api, i18n } = deps
+  const defaultSettings = deps.defaults
   const mac = deps.keymap.keyboard === 'mac'
   const t = i18n.t
   let autostart = false
@@ -112,6 +115,8 @@ export function createSettingsView(
   let update: UpdateState | undefined
   // The fonts installed, asked for each time the screen opens so a font installed since then shows up
   let fonts: SystemFontsInfo = noSystemFonts
+  // The shells the system offers for new tabs, asked for each time the screen opens; empty off Windows
+  let shells: readonly ShellChoice[] = []
   let confirmingReset = false
   // The last "Open the settings file" found no file to open; cleared when the screen opens again
   let openFailed = false
@@ -327,6 +332,40 @@ export function createSettingsView(
         ...names.map((name) => ({ value: name, label: name })),
       ],
       value: current,
+      labelledBy: labelId(key),
+      disabled: disabled(key),
+      onChange: (value) => void commit(patchFor(key, value === '' ? null : value)),
+    })
+    control.button.dataset.focus = `set-${key}`
+    return control.element
+  }
+
+  const shellLabel = (shell: ShellChoice) =>
+    shell.kind === 'wsl'
+      ? t('settings.shell.wsl', { name: shell.name ?? '' })
+      : t(`settings.shell.${shell.kind}`)
+
+  // The first option is the default (null in the file), the first shell found; a shell chosen and since
+  // uninstalled stays listed by its id, so the control never shows another shell than the file's
+  function shellSelect(): HTMLElement {
+    const key = 'terminal.shell'
+    const chosen = settings.current().terminal.shell ?? ''
+    const listed = shells.map((shell) => ({ value: shell.id, label: shellLabel(shell) }))
+    const options =
+      chosen && !shells.some((shell) => shell.id === chosen)
+        ? [{ value: chosen, label: chosen }, ...listed]
+        : listed
+    const first = shells[0]
+    const control = createSelect({
+      id: 'set-terminal-shell',
+      options: [
+        {
+          value: '',
+          label: t('settings.shell.default', { shell: first ? shellLabel(first) : '' }),
+        },
+        ...options,
+      ],
+      value: chosen,
       labelledBy: labelId(key),
       disabled: disabled(key),
       onChange: (value) => void commit(patchFor(key, value === '' ? null : value)),
@@ -1029,6 +1068,9 @@ export function createSettingsView(
       terminal: [
         group(
           undefined,
+          // Only Windows offers a choice; Linux and macOS start the user's own $SHELL
+          shells.length > 0 &&
+            row('terminal.shell', t('settings.shell'), shellSelect(), t('settings.shell.hint')),
           row(
             'terminal.fontFamily',
             t('settings.terminalFont'),
@@ -1199,6 +1241,10 @@ export function createSettingsView(
     void loadConnections()
     void api.fonts.system().then((found) => {
       fonts = found
+      if (isOpen()) render()
+    })
+    void api.terminal.shells().then((found) => {
+      shells = found
       if (isOpen()) render()
     })
     void api.about.version().then((found) => {

@@ -1,3 +1,4 @@
+import { normalize } from 'node:path'
 import { type FileChange, hostChannels, silentLogger } from '@dck/core'
 import { MemoryFileStore } from '@dck/core/testing'
 import { describe, expect, it } from 'vitest'
@@ -6,6 +7,9 @@ import { createFileProtocol } from './file-protocol.ts'
 import { registerFilesBridge } from './files-bridge.ts'
 
 const ID = '0a1b2c3d-0000-4000-8000-000000000001'
+
+// The path as the bridge writes it on this system: with backslashes on Windows, where it walks folders
+const native = (path: string) => normalize(path)
 
 function setup(links: Readonly<Record<string, string>> = {}) {
   let ids = 0
@@ -234,19 +238,20 @@ describe('registerFilesBridge editorconfig and ignored', () => {
   it('should list the editorconfig files above an opened file up to the one marked root', async () => {
     // Arrange
     const { call, store } = setup()
-    store.put('/home/ana/acme/src/login.ts', 'x\n')
-    store.put('/home/ana/acme/src/.editorconfig', '[*.ts]\nindent_size = 4\n')
-    store.put('/home/ana/acme/.editorconfig', 'root = true\n[*]\nindent_size = 2\n')
-    store.put('/home/ana/.editorconfig', '[*]\nindent_style = tab\n')
-    await call(hostChannels.filesOpen, '/home/ana/acme/src/login.ts')
+    const login = native('/home/ana/acme/src/login.ts')
+    store.put(login, 'x\n')
+    store.put(native('/home/ana/acme/src/.editorconfig'), '[*.ts]\nindent_size = 4\n')
+    store.put(native('/home/ana/acme/.editorconfig'), 'root = true\n[*]\nindent_size = 2\n')
+    store.put(native('/home/ana/.editorconfig'), '[*]\nindent_style = tab\n')
+    await call(hostChannels.filesOpen, login)
 
     // Act
-    const files = await call(hostChannels.filesEditorConfig, '/home/ana/acme/src/login.ts')
+    const files = await call(hostChannels.filesEditorConfig, login)
 
     // Assert
     expect(files).toEqual([
-      { dir: '/home/ana/acme/src', text: '[*.ts]\nindent_size = 4\n' },
-      { dir: '/home/ana/acme', text: 'root = true\n[*]\nindent_size = 2\n' },
+      { dir: native('/home/ana/acme/src'), text: '[*.ts]\nindent_size = 4\n' },
+      { dir: native('/home/ana/acme'), text: 'root = true\n[*]\nindent_size = 2\n' },
     ])
   })
 
@@ -276,13 +281,15 @@ describe('registerFilesBridge editorconfig and ignored', () => {
 })
 
 describe('registerFilesBridge Markdown images', () => {
-  const README = '/home/ana/acme/docs/README.md'
+  const README = native('/home/ana/acme/docs/README.md')
+  const SHOT = native('/home/ana/acme/docs/img/shot.png')
+  const LOGO = native('/home/ana/acme/docs/logo.svg')
 
   async function openReadme(links: Readonly<Record<string, string>> = {}) {
     const bench = setup(links)
     bench.store.put(README, '# Acme\n')
-    bench.store.put('/home/ana/acme/docs/img/shot.png', Uint8Array.of(0x89, 0x50))
-    bench.store.put('/home/ana/acme/docs/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>')
+    bench.store.put(SHOT, Uint8Array.of(0x89, 0x50))
+    bench.store.put(LOGO, '<svg xmlns="http://www.w3.org/2000/svg"/>')
     bench.store.put('/home/ana/acme/docs/notes.txt', 'secret\n')
     bench.store.put('/home/ana/acme/logo.png', Uint8Array.of(0x89))
     await bench.call(hostChannels.filesOpen, README)
@@ -296,7 +303,7 @@ describe('registerFilesBridge Markdown images', () => {
     // Act
     const urls = (await call(hostChannels.filesAssets, {
       document: README,
-      paths: ['/home/ana/acme/docs/img/shot.png', '/home/ana/acme/docs/logo.svg'],
+      paths: [SHOT, LOGO],
     })) as string[]
     const png = await protocol(new Request(urls[0] ?? ''))
     const svg = await protocol(new Request(urls[1] ?? ''))
@@ -359,7 +366,7 @@ describe('registerFilesBridge Markdown images', () => {
     const { call, protocol } = await openReadme()
     const [url] = (await call(hostChannels.filesAssets, {
       document: README,
-      paths: ['/home/ana/acme/docs/img/shot.png'],
+      paths: [SHOT],
     })) as string[]
 
     // Act
