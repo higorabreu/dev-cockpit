@@ -10,7 +10,6 @@ Written by hand on the Windows port branch until the next release replaces it.
 ### Features
 
 * `npx @devcockpit/install` installs on Windows: it unpacks the zip to `%LOCALAPPDATA%\Programs\Dev Cockpit` without administrator rights, closes a running cockpit before replacing it, adds a Start menu entry and puts `dck` on the user PATH
-* attach the Windows zip to each release, built and smoke checked on a Windows runner; CI builds a preview of it too
 * build the Windows zip with `pnpm package:win`: `Dev Cockpit.exe` with its icon and version, the app, node-pty's prebuild, the native bindings and `resources\bin\dck.cmd`; `-- --smoke` unpacks it and checks it
 * a smoke check for the packaged app (`--smoke`): it opens a terminal, reads the process table and the secret store, and exits 0 only when all of them work
 * follow each Windows tab's folder as PowerShell, Git Bash and cmd report it at the prompt (OSC 7), without touching the user's profile, so the panel's git rows and new tabs use the folder the tab is in
@@ -37,6 +36,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Miscellaneous Chores
 
+* measure the Windows package against the budgets (`scripts/measure-windows.mjs`): cold start and idle memory
 * version the Credential Manager adapter with each release
 * run `pnpm dev` on Windows: a named pipe of its own, its log in the temporary folder, Electron's path from its package
 * build the shell on Windows with node-pty's prebuild, without Visual Studio's Build Tools
@@ -55,6 +55,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Continuous Integration
 
+* attach the Windows zip to each release, built and smoke checked on a Windows runner; CI builds a preview of it too
 * store, read and delete a secret in the real Credential Manager on the Windows runner
 * quote the Credential Manager test flag the way Biome formats YAML
 * run lint, typecheck and the tests on Windows too
