@@ -14,6 +14,9 @@ const pathsOf = (platform: NodeJS.Platform) => (platform === 'win32' ? win32 : p
 // sun_path holds 104 bytes on macOS and 108 elsewhere, the closing NUL included
 const socketPathMax = (platform: NodeJS.Platform) => (platform === 'darwin' ? 103 : 107)
 
+// A named pipe lives in the pipe namespace, not in a folder that could be created or checked
+export const isPipe = (endpoint: string) => endpoint.startsWith('\\\\')
+
 // Unix uses a socket file; Windows uses a named pipe, which the net module accepts the same way
 export function defaultEndpoint(
   environment: EndpointEnvironment = {
@@ -62,15 +65,27 @@ export function defaultStateDir(
 export interface LogDirEnvironment {
   readonly platform: NodeJS.Platform
   readonly home: string
+  readonly localAppData: string | undefined
 }
 
-// Where the daemon's log goes: the Mac's Console.app reads ~/Library/Logs; elsewhere beside the socket
+// Where the daemon's log goes: the Mac's Console.app reads ~/Library/Logs; Windows' pipe has no folder, so
+// the local app data; elsewhere beside the socket
 export function defaultLogDir(
   endpoint: string,
-  environment: LogDirEnvironment = { platform: process.platform, home: homedir() },
+  environment: LogDirEnvironment = {
+    platform: process.platform,
+    home: homedir(),
+    localAppData: process.env.LOCALAPPDATA,
+  },
 ): string {
   const { dirname, join } = pathsOf(environment.platform)
   if (environment.platform === 'darwin') return join(environment.home, 'Library', 'Logs', 'dck')
+  if (environment.platform === 'win32')
+    return join(
+      environment.localAppData ?? join(environment.home, 'AppData', 'Local'),
+      'dck',
+      'logs',
+    )
   return dirname(endpoint)
 }
 

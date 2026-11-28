@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { defaultConfigDir, defaultEndpoint, defaultLogDir, defaultStateDir } from './endpoint.ts'
+import {
+  defaultConfigDir,
+  defaultEndpoint,
+  defaultLogDir,
+  defaultStateDir,
+  isPipe,
+} from './endpoint.ts'
 
 describe('defaultEndpoint', () => {
   const macTmp = '/var/folders/ab/cdefgh0123456789/T'
@@ -61,11 +67,30 @@ describe('defaultEndpoint', () => {
   })
 })
 
+describe('isPipe', () => {
+  it('should recognize a named pipe when the endpoint is in the pipe namespace', () => {
+    // Act
+    const result = isPipe('\\\\.\\pipe\\dck-daemon')
+
+    // Assert
+    expect(result).toBe(true)
+  })
+
+  it('should not take a socket for a pipe when the endpoint is a file path', () => {
+    // Act
+    const result = isPipe('C:\\Users\\ana\\daemon.sock')
+
+    // Assert
+    expect(result).toBe(false)
+  })
+})
+
 describe('defaultLogDir', () => {
   it('should use the Logs folder in the Library when the platform is macOS', () => {
     const result = defaultLogDir('/tmp/dck-501/daemon.sock', {
       platform: 'darwin',
       home: '/Users/ana',
+      localAppData: undefined,
     })
 
     expect(result).toBe('/Users/ana/Library/Logs/dck')
@@ -75,9 +100,30 @@ describe('defaultLogDir', () => {
     const result = defaultLogDir('/run/user/1000/dck/daemon.sock', {
       platform: 'linux',
       home: '/home/ana',
+      localAppData: undefined,
     })
 
     expect(result).toBe('/run/user/1000/dck')
+  })
+
+  it('should use the local app data when the platform is Windows, whose pipe has no folder', () => {
+    const result = defaultLogDir('\\\\.\\pipe\\dck-daemon', {
+      platform: 'win32',
+      home: 'C:\\Users\\ana',
+      localAppData: 'C:\\Users\\ana\\AppData\\Local',
+    })
+
+    expect(result).toBe('C:\\Users\\ana\\AppData\\Local\\dck\\logs')
+  })
+
+  it('should fall back to AppData in the home folder when Windows has no LOCALAPPDATA', () => {
+    const result = defaultLogDir('\\\\.\\pipe\\dck-daemon', {
+      platform: 'win32',
+      home: 'C:\\Users\\ana',
+      localAppData: undefined,
+    })
+
+    expect(result).toBe('C:\\Users\\ana\\AppData\\Local\\dck\\logs')
   })
 })
 

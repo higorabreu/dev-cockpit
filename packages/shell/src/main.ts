@@ -15,7 +15,13 @@ import {
   createGitInspector,
   createGitReviewNotes,
 } from '@dck/adapter-node-git'
-import { connectTo, defaultConfigDir, defaultEndpoint, defaultLogDir } from '@dck/adapter-node-net'
+import {
+  connectTo,
+  defaultConfigDir,
+  defaultEndpoint,
+  defaultLogDir,
+  isPipe,
+} from '@dck/adapter-node-net'
 import { createNodePtyHost } from '@dck/adapter-node-pty'
 import { createFolderWalk } from '@dck/adapter-node-walk'
 import {
@@ -619,7 +625,7 @@ app.whenReady().then(async () => {
 
   async function startDaemonProcess() {
     await loginPath
-    mkdirSync(dirname(endpoint), { recursive: true, mode: 0o700 })
+    if (!isPipe(endpoint)) mkdirSync(dirname(endpoint), { recursive: true, mode: 0o700 })
     const logDir = process.env.DCK_LOG_DIR ?? defaultLogDir(endpoint)
     mkdirSync(logDir, { recursive: true, mode: 0o700 })
     launchDaemon(
