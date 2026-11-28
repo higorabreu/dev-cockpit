@@ -177,7 +177,7 @@ in something usable, so the work can stop after any of them.
   dependency, about 300 ms per call, cached by the daemon). Proposal: (a). (C7) Done on 2026-11-28 with (a),
   D97: `createCredentialStore` loads `@napi-rs/keyring` on the first secret; the window and the daemon use
   it on `win32`; the bundles leave it external and `build.mjs` copies it into `dist/node_modules` on
-  Windows. The real store test runs in CI (`DCK_CREDENTIAL_TEST=1`) and passed locally. For WIN-T11: the zip
+  Windows. The real store test runs in CI (`DCK_CREDENTIAL_TEST=1`) and passed locally. For WIN-T12: the zip
   must keep `dist/node_modules/@napi-rs`, and the packaged `dck` CLI must find it beside its bundle.
 - [ ] WIN-T7. Shell detection (W1) in `shell/src/platform/win32/shells.ts`: pwsh, powershell, Git Bash (from
   `git.exe`'s folder or the registry), cmd, WSL distributions (`wsl.exe -l -q`, UTF-16 output). A
