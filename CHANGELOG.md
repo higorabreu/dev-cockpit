@@ -9,6 +9,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Features
 
+* tell the terminal it runs on ConPTY, with the Windows build, so it reflows and wraps lines as Windows rewrites them
 * choose the shell new tabs start on Windows (Terminal settings); by default PowerShell 7, else Windows PowerShell
 * find the shells a Windows tab can start: PowerShell 7, Windows PowerShell, Git Bash, cmd and each WSL distribution
 * keep the connection tokens in the Credential Manager on Windows; the window, the daemon and `dck daemon` load the binding only there

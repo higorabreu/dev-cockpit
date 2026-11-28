@@ -78,6 +78,7 @@ import { createTabList } from './tabs/tab-list.ts'
 import { createTabMenu } from './tabs/tab-menu.ts'
 import { type FilePlace, filePathHint, folderPathHint, pathRoute } from './terminal/path-open.ts'
 import { createTerminalSession, type TerminalSession } from './terminal/terminal-session.ts'
+import { windowsPtyFor } from './terminal/windows-pty.ts'
 import { activeTheme } from './themes/theme-catalog.ts'
 import type { ThemesClient } from './themes/themes-client.ts'
 import { createUpdateNotice } from './updates/update-notice.ts'
@@ -156,6 +157,7 @@ export async function startApp(
   const i18n = createLiveTranslator(localeFor(settings.current().language, navigator.languages))
   translateStatic(i18n)
   const nativeMiddlePaste = navigator.platform.startsWith('Linux')
+  const windowsPty = windowsPtyFor(api.system.platform, api.system.version)
   // The hold menu's key or mouse button, read at each use: Settings can change it while the window is open
   const holdTrigger = () => settings.current().shortcuts.holdTrigger ?? keymap.holdTrigger
   const notice = createNotice(elements.notice, i18n, elements.tabs)
@@ -866,6 +868,7 @@ export async function startApp(
       holdFit: () => heldFit || view.isMoving(),
       ...terminalLook(settings.current(), systemFonts),
       macOptionAsMeta: settings.current().terminal.macOptionAsMeta,
+      ...(windowsPty ? { windowsPty } : {}),
       ...(options.cwd ? { cwd: options.cwd } : {}),
       exitedText: i18n.t('terminal.exited'),
       nativeMiddlePaste,

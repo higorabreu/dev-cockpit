@@ -42,6 +42,12 @@ export interface ResolvedPath {
 
 // What the UI can ask the main process; the preload exposes this as window.dck
 export interface HostApi {
+  // The operating system under the window, known before any request: Node's platform name and its version
+  // (10.0.26200 on Windows 11)
+  readonly system: {
+    readonly platform: string
+    readonly version: string
+  }
   readonly pty: {
     create(options: PtyCreateOptions): Promise<number>
     write(id: number, data: string): void
