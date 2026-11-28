@@ -1,5 +1,5 @@
 import { homedir, tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { posix, win32 } from 'node:path'
 
 export interface EndpointEnvironment {
   readonly platform: NodeJS.Platform
@@ -7,6 +7,9 @@ export interface EndpointEnvironment {
   readonly tmpDir: string
   readonly uid: number | undefined
 }
+
+// Joined by the platform asked for, not the host's, so one system's paths can be computed and tested on another
+const pathsOf = (platform: NodeJS.Platform) => (platform === 'win32' ? win32 : posix)
 
 // sun_path holds 104 bytes on macOS and 108 elsewhere, the closing NUL included
 const socketPathMax = (platform: NodeJS.Platform) => (platform === 'darwin' ? 103 : 107)
@@ -21,6 +24,7 @@ export function defaultEndpoint(
   },
 ): string {
   if (environment.platform === 'win32') return '\\\\.\\pipe\\dck-daemon'
+  const { join } = posix
   const user = `dck-${environment.uid ?? 'user'}`
   const directory = environment.runtimeDir
     ? join(environment.runtimeDir, 'dck')
@@ -47,6 +51,7 @@ export function defaultStateDir(
     localAppData: process.env.LOCALAPPDATA,
   },
 ): string {
+  const { join } = pathsOf(environment.platform)
   if (environment.platform === 'win32')
     return join(environment.localAppData ?? join(environment.home, 'AppData', 'Local'), 'dck')
   if (environment.platform === 'darwin')
@@ -64,6 +69,7 @@ export function defaultLogDir(
   endpoint: string,
   environment: LogDirEnvironment = { platform: process.platform, home: homedir() },
 ): string {
+  const { dirname, join } = pathsOf(environment.platform)
   if (environment.platform === 'darwin') return join(environment.home, 'Library', 'Logs', 'dck')
   return dirname(endpoint)
 }
@@ -88,6 +94,7 @@ export function defaultConfigDir(
     appData: process.env.APPDATA,
   },
 ): string {
+  const { join } = pathsOf(environment.platform)
   if (environment.platform === 'win32')
     return join(environment.appData ?? join(environment.home, 'AppData', 'Roaming'), PRODUCT_FOLDER)
   if (environment.platform === 'darwin')

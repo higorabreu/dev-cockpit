@@ -1,5 +1,6 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+// This system's paths are POSIX, so they are joined the same when a test runs on Windows
+import { join } from 'node:path/posix'
 import type { Autostart } from '@dck/core'
 
 export interface AutostartConfig {

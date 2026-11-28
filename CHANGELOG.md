@@ -7,6 +7,10 @@ written by hand for a private build, before the first public release.
 
 Written by hand on the Windows port branch until the next release replaces it.
 
+### Bug Fixes
+
+* join paths by the platform asked for, not the host's, so Linux and macOS paths stay POSIX on Windows
+
 ### Miscellaneous Chores
 
 * keep LF line endings in a Windows checkout
