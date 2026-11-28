@@ -1,3 +1,4 @@
+import { join, resolve } from 'node:path'
 import {
   type ConnectionFields,
   type Connector,
@@ -30,6 +31,11 @@ interface DiskEntry {
 
 const file = (mode = 0o644): DiskEntry => ({ kind: 'file', mode })
 const dir: DiskEntry = { kind: 'dir', mode: 0o755 }
+
+// The fake disk is POSIX; on Windows the bridge resolves a path on the current drive, with backslashes
+const onDisk = (path: string) => path.replace(/^[A-Za-z]:/, '').replaceAll('\\', '/')
+// What the bridge gives for one of the disk's paths on this system
+const resolved = (path: string) => resolve(path)
 
 const disk = new Map<string, DiskEntry>([
   ['/home/usuario', dir],
@@ -104,7 +110,7 @@ function setup(picked: string | undefined = undefined) {
     },
     files: {
       stat: async (path) => {
-        const entry = disk.get(path)
+        const entry = disk.get(onDisk(path))
         if (!entry) throw new Error('ENOENT')
         return {
           mode: entry.mode,
@@ -112,7 +118,7 @@ function setup(picked: string | undefined = undefined) {
           isDirectory: () => entry.kind === 'dir',
         }
       },
-      realpath: async (path) => disk.get(path)?.real ?? path,
+      realpath: async (path) => disk.get(onDisk(path))?.real ?? path,
       openPath: async (path) => {
         openedPaths.push(path)
         return ''
@@ -793,13 +799,13 @@ describe('registerHostBridge terminal links', () => {
 })
 
 describe('registerHostBridge terminal paths', () => {
-  const resolve = (call: (channel: string, ...args: unknown[]) => unknown, request: unknown) =>
+  const resolvePaths = (call: (channel: string, ...args: unknown[]) => unknown, request: unknown) =>
     call(hostChannels.pathsResolve, request)
 
   it('should resolve each path against the base and the home folder when the request is valid', async () => {
     const { call } = setup()
 
-    const resolved = await resolve(call, {
+    const paths = await resolvePaths(call, {
       base: '/srv/acme/backend',
       paths: [
         'src/app.ts',
@@ -810,31 +816,32 @@ describe('registerHostBridge terminal paths', () => {
       ],
     })
 
-    expect(resolved).toEqual([
-      { path: '/srv/acme/backend/src/app.ts', kind: 'file' },
-      { path: '/srv/acme/backend/src', kind: 'dir' },
-      { path: '/srv/acme/backend/src/app.ts', kind: 'file' },
-      { path: '/home/usuario/notes.md', kind: 'file' },
-      { path: '/home/usuario/notes.md', kind: 'file' },
+    expect(paths).toEqual([
+      { path: resolved('/srv/acme/backend/src/app.ts'), kind: 'file' },
+      { path: resolved('/srv/acme/backend/src'), kind: 'dir' },
+      { path: resolved('/srv/acme/backend/src/app.ts'), kind: 'file' },
+      { path: resolved('/home/usuario/notes.md'), kind: 'file' },
+      // The home folder is joined as given, with no drive added
+      { path: join('/home/usuario', 'notes.md'), kind: 'file' },
     ])
   })
 
   it('should report a path as missing when it is not on disk', async () => {
     const { call } = setup()
 
-    const resolved = await resolve(call, { base: '/srv/acme/backend', paths: ['src/gone.ts'] })
+    const paths = await resolvePaths(call, { base: '/srv/acme/backend', paths: ['src/gone.ts'] })
 
-    expect(resolved).toEqual([{ path: '/srv/acme/backend/src/gone.ts', kind: 'missing' }])
+    expect(paths).toEqual([{ path: resolved('/srv/acme/backend/src/gone.ts'), kind: 'missing' }])
   })
 
   it('should report a relative path as missing when the tab directory is unknown', async () => {
     const { call } = setup()
 
-    const resolved = await resolve(call, { paths: ['src/app.ts', '/srv/acme/backend'] })
+    const paths = await resolvePaths(call, { paths: ['src/app.ts', '/srv/acme/backend'] })
 
-    expect(resolved).toEqual([
+    expect(paths).toEqual([
       { path: 'src/app.ts', kind: 'missing' },
-      { path: '/srv/acme/backend', kind: 'dir' },
+      { path: resolved('/srv/acme/backend'), kind: 'dir' },
     ])
   })
 
@@ -849,7 +856,7 @@ describe('registerHostBridge terminal paths', () => {
   ])('should resolve nothing and log the kind when the request has %s', async (_label, request) => {
     const { call, warnings } = setup()
 
-    const resolved = await resolve(call, request)
+    const resolved = await resolvePaths(call, request)
 
     expect(resolved).toEqual([])
     expect(warnings).toEqual([

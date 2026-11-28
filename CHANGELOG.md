@@ -22,6 +22,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 * test the terminal through cmd and PowerShell on Windows
 * skip on Windows only the tests that need a Unix feature, and run the link tests wherever links can be created
 * run the git tests on Windows: submodule URLs in either spelling, the file mode set in the index, more time for the tests that start many git processes
+* compare the terminal and file bridge paths in the system's form, so their tests pass on Windows
 
 ### Documentation
 
