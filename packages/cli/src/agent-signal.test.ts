@@ -1,4 +1,3 @@
-import { join } from 'node:path'
 import { connectTo, temporaryEndpoint } from '@dck/adapter-node-net'
 import { createClient, createHub, ok, silentLogger } from '@dck/core'
 import { connectLoopback, createFakeViews } from '@dck/core/testing'
