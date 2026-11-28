@@ -7,6 +7,10 @@ written by hand for a private build, before the first public release.
 
 Written by hand on the Windows port branch until the next release replaces it.
 
+### Features
+
+* a secret store adapter for Windows' Credential Manager, through the prebuilt `@napi-rs/keyring`
+
 ### Bug Fixes
 
 * give each Windows user a daemon pipe of their own, since pipe names are shared by the machine
