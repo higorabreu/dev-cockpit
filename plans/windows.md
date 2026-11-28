@@ -179,9 +179,17 @@ in something usable, so the work can stop after any of them.
   it on `win32`; the bundles leave it external and `build.mjs` copies it into `dist/node_modules` on
   Windows. The real store test runs in CI (`DCK_CREDENTIAL_TEST=1`) and passed locally. For WIN-T12: the zip
   must keep `dist/node_modules/@napi-rs`, and the packaged `dck` CLI must find it beside its bundle.
-- [ ] WIN-T7. Shell detection (W1) in `shell/src/platform/win32/shells.ts`: pwsh, powershell, Git Bash (from
+- [x] WIN-T7. Shell detection (W1) in `shell/src/platform/win32/shells.ts`: pwsh, powershell, Git Bash (from
   `git.exe`'s folder or the registry), cmd, WSL distributions (`wsl.exe -l -q`, UTF-16 output). A
-  `terminal.shell` setting with the translated labels in `en.ts` and `pt-BR.ts`. (C4)
+  `terminal.shell` setting with the translated labels in `en.ts` and `pt-BR.ts`. (C4) Done on 2026-11-28:
+  - Shells are found by file checks at each new tab: the PATH, PowerShell 7's and Git's install folders,
+    `%ComSpec%`. Git Bash is found beside `git.exe`, not through the registry. The settings screen
+    lists the WSL distributions when it opens.
+  - A chosen distribution starts from its id (`wsl.exe -d <name>`), so no tab waits for the list.
+  - `terminal.shell` holds the id, and null is the first one found. A shell uninstalled since it was
+    chosen falls back to the first one found.
+  - Checked with `pnpm dev`: the tab started Windows PowerShell 5.1 on a machine without PowerShell 7.
+  - Manual checks are in [docs/windows-testing.md](../docs/windows-testing.md).
 - [ ] WIN-T8. Terminal on ConPTY: `windowsPty` in xterm, the build number passed from the host; check paste,
   resize, Ctrl+C, AltGr on an ABNT2 keyboard (AltGr arrives as Ctrl+Alt and must not trigger
   `Ctrl+Alt+Enter`) and Unicode output from PowerShell 5.1 (set UTF-8 output on start). (C4)
