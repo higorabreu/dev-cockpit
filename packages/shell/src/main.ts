@@ -92,6 +92,7 @@ import {
 } from './platform/linux/wayland-bounds.ts'
 import { createGtkWorkareas } from './platform/linux/x11-workareas.ts'
 import { nativeWayland, selectPlatform } from './platform/select-platform.ts'
+import { START_HIDDEN_FLAG } from './platform/win32/login-item-autostart.ts'
 import { createWindowRequests } from './platform/window-requests.ts'
 import { createFavoritesStore } from './projects/favorites-store.ts'
 import { createProjectCatalog } from './projects/project-catalog.ts'
@@ -701,7 +702,8 @@ app.whenReady().then(async () => {
 
   void window.loadFile(join(__dirname, 'ui', 'index.html'))
   window.webContents.once('did-finish-load', () => {
-    if (!process.env.DCK_START_HIDDEN) showWindow()
+    // Linux and macOS start it hidden through the environment, Windows' login item through a flag
+    if (!process.env.DCK_START_HIDDEN && !process.argv.includes(START_HIDDEN_FLAG)) showWindow()
     // A height of 100% saved last time lays the window out for the whole screen from the start
     syncLayout()
     setTimeout(() => updater.start(), UPDATE_START_MS)

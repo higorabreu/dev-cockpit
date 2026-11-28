@@ -25,6 +25,7 @@ import { createRegularWindow } from './linux/regular-window.ts'
 import { createLinuxSystemFonts, runCommand } from './linux/system-fonts.ts'
 import { createXdgAutostart, defaultAutostartDirectory } from './linux/xdg-autostart.ts'
 import type { PlatformWindow } from './platform-window.ts'
+import { createLoginItemAutostart, type LoginItems } from './win32/login-item-autostart.ts'
 import { windowsShells } from './win32/shells.ts'
 
 export interface PlatformContext {
@@ -37,8 +38,9 @@ export interface PlatformContext {
   readonly resourcesPath: string
   readonly appVersion: string
   readonly logger: Logger
-  // Electron's app, which the Mac panel activates, hides and keeps out of the Dock
-  readonly app: PanelApp
+  // Electron's app, which the Mac panel activates, hides and keeps out of the Dock, and which keeps
+  // Windows' login items
+  readonly app: PanelApp & LoginItems
 }
 
 export interface Platform {
@@ -110,20 +112,22 @@ export function selectPlatform(context: PlatformContext): Platform {
     processScanner: proc.createProcessScanner(),
     secrets: systemSecretStore(platform),
     autostart:
-      platform === 'darwin'
-        ? createLaunchdAutostart({
-            directory: env.DCK_AUTOSTART_DIR ?? join(home, 'Library', 'LaunchAgents'),
-            // The bundle identifier package-mac.mjs gives the app
-            label: 'io.github.devcockpit',
-            command: app,
-            env: { DCK_START_HIDDEN: '1' },
-          })
-        : createXdgAutostart({
-            directory: env.DCK_AUTOSTART_DIR ?? defaultAutostartDirectory(env, home),
-            name: 'Dev Cockpit',
-            command: [...app, ...sandbox],
-            env: { DCK_START_HIDDEN: '1' },
-          }),
+      platform === 'win32'
+        ? createLoginItemAutostart(context.app, app)
+        : platform === 'darwin'
+          ? createLaunchdAutostart({
+              directory: env.DCK_AUTOSTART_DIR ?? join(home, 'Library', 'LaunchAgents'),
+              // The bundle identifier package-mac.mjs gives the app
+              label: 'io.github.devcockpit',
+              command: app,
+              env: { DCK_START_HIDDEN: '1' },
+            })
+          : createXdgAutostart({
+              directory: env.DCK_AUTOSTART_DIR ?? defaultAutostartDirectory(env, home),
+              name: 'Dev Cockpit',
+              command: [...app, ...sandbox],
+              env: { DCK_START_HIDDEN: '1' },
+            }),
     // The system shortcut calls the packaged CLI; in dev mode Electron registers the key
     desktopShortcut:
       packaged && onGnome
