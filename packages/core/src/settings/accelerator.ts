@@ -5,6 +5,8 @@ export interface KeyInput {
   readonly shiftKey: boolean
   readonly altKey: boolean
   readonly metaKey: boolean
+  // A DOM KeyboardEvent's; Windows sends AltGr as Ctrl+Alt, and only this tells them apart
+  getModifierState?(key: string): boolean
 }
 
 const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'AltGraph', 'OS'])

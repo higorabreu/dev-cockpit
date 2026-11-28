@@ -45,6 +45,9 @@ function bind(keyboard: Keyboard, custom: CustomKeys = {}) {
 
 const press = (init: KeyboardEventInit) => {
   const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init })
+  // happy-dom answers AltGraph with altKey; a browser does only for AltGr, which these keys are not
+  const state = event.getModifierState.bind(event)
+  event.getModifierState = (key) => key !== 'AltGraph' && state(key)
   document.body.dispatchEvent(event)
   return event
 }

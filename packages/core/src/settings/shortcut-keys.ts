@@ -197,7 +197,13 @@ export function eventKey(event: KeyInput): string {
   return isCharacter(event.key) ? event.key.toLowerCase() : event.key
 }
 
+// A key typed with AltGr writes a character (AltGr+Q is / on ABNT2) and never runs a shortcut, even one set
+// to Ctrl+Alt, which is how Windows reports AltGr
+const isAltGraph = (event: KeyInput) =>
+  event.ctrlKey && event.altKey && event.getModifierState?.('AltGraph') === true
+
 export const matchesChord = (event: KeyInput, chord: Chord) =>
+  !isAltGraph(event) &&
   event.ctrlKey === Boolean(chord.ctrl) &&
   event.altKey === Boolean(chord.alt) &&
   event.shiftKey === Boolean(chord.shift) &&
