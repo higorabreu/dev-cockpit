@@ -17,6 +17,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Bug Fixes
 
+* keep the accents of a program's output piped through PowerShell, which starts in the OEM code page, by switching it to UTF-8
 * a key typed with AltGr writes its character and never runs a shortcut, since Windows reports AltGr as Ctrl+Alt
 * give each Windows user a daemon pipe of their own, since pipe names are shared by the machine
 * run git and docker on Windows without flashing a console window

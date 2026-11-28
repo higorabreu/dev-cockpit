@@ -36,6 +36,16 @@ function gitBash(probe: ShellProbe): string | undefined {
   ])
 }
 
+// The console starts in the OEM code page (850 on a Brazilian Windows): PowerShell would decode a UTF-8
+// program's output piped through it (node, git) into mojibake. UTF-8 without a BOM, so a pipe into a program
+// gets no stray bytes; the user's profile still runs before it
+const POWERSHELL_ARGS = [
+  '-NoLogo',
+  '-NoExit',
+  '-Command',
+  '[Console]::OutputEncoding = $OutputEncoding = New-Object System.Text.UTF8Encoding $false',
+]
+
 const systemRoot = (env: ShellProbe['env']) => env.SystemRoot ?? env.windir ?? 'C:\\Windows'
 
 // Found without starting a process, so the first tab knows its shell at once; WSL is listed apart
@@ -53,9 +63,14 @@ export function detectWindowsShells(probe: ShellProbe): readonly TerminalShell[]
     cmd: firstExisting(probe, [probe.env.ComSpec, join(system32, 'cmd.exe')]),
   }
   const shells: TerminalShell[] = []
-  if (found.pwsh) shells.push({ id: 'pwsh', kind: 'pwsh', file: found.pwsh, args: ['-NoLogo'] })
+  if (found.pwsh) shells.push({ id: 'pwsh', kind: 'pwsh', file: found.pwsh, args: POWERSHELL_ARGS })
   if (found.powershell)
-    shells.push({ id: 'powershell', kind: 'powershell', file: found.powershell, args: ['-NoLogo'] })
+    shells.push({
+      id: 'powershell',
+      kind: 'powershell',
+      file: found.powershell,
+      args: POWERSHELL_ARGS,
+    })
   // A login shell reads ~/.bash_profile, as Git Bash's own window does
   if (found.gitBash)
     shells.push({ id: 'gitBash', kind: 'gitBash', file: found.gitBash, args: ['--login', '-i'] })

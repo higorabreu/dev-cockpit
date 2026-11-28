@@ -39,8 +39,21 @@ describe('detectWindowsShells', () => {
       id: 'powershell',
       kind: 'powershell',
       file: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
-      args: ['-NoLogo'],
+      args: expect.arrayContaining(['-NoLogo', '-NoExit']),
     })
+  })
+
+  it('should switch PowerShell to UTF-8 output when it starts, so piped program output keeps its accents', () => {
+    const shells = detectWindowsShells(probe(allInstalled))
+
+    const setup = shells
+      .filter((shell) => shell.kind === 'pwsh' || shell.kind === 'powershell')
+      .map((shell) => shell.args.at(-1))
+
+    expect(setup).toEqual([
+      '[Console]::OutputEncoding = $OutputEncoding = New-Object System.Text.UTF8Encoding $false',
+      '[Console]::OutputEncoding = $OutputEncoding = New-Object System.Text.UTF8Encoding $false',
+    ])
   })
 
   it('should take the bash beside git and never the WSL bash in System32 when Git is on the path', () => {
