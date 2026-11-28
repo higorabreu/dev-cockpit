@@ -127,7 +127,8 @@ describe('readLoginPath', () => {
 })
 
 // Real processes: what matters here is how the operating system stops a shell that will not end
-describe('runLoginShell', () => {
+// Runs a real POSIX shell and kills its process group, neither of which Windows has
+describe.skipIf(process.platform === 'win32')('runLoginShell', () => {
   const running = (command: string) =>
     execFileSync('ps', ['-eo', 'args'], { encoding: 'utf8' })
       .split('\n')

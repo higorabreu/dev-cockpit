@@ -19,6 +19,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 * run the daemon and CLI tests over a named pipe on Windows
 * test the terminal through cmd and PowerShell on Windows
+* skip on Windows only the tests that need a Unix feature, and run the link tests wherever links can be created
 
 ### Documentation
 

@@ -22,7 +22,8 @@ describe('hasCommand', () => {
   })
 })
 
-describe('macFiles', () => {
+// Creates a symbolic link, which Windows only allows in Developer Mode or as an administrator
+describe.skipIf(process.platform === 'win32')('macFiles', () => {
   it('should tell a missing path, a link and another file apart', async () => {
     await writeFile(join(root, 'dck'), '')
     await symlink('/Applications/Dev Cockpit.app/Contents/Resources/bin/dck', join(root, 'link'))

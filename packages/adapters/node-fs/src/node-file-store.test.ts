@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs'
 import {
   chmod,
   link,
@@ -39,6 +40,20 @@ beforeEach(async () => {
 })
 
 afterEach(() => rm(folder, { recursive: true, force: true }))
+
+// Windows creates symbolic links only in Developer Mode or as an administrator (as CI runners are)
+function canCreateSymlinks(): boolean {
+  const probe = mkdtempSync(join(tmpdir(), 'dck-link-'))
+  try {
+    symlinkSync(probe, join(probe, 'link'))
+    return true
+  } catch {
+    return false
+  } finally {
+    rmSync(probe, { recursive: true, force: true })
+  }
+}
+const symlinks = canCreateSymlinks()
 
 describe('createNodeFileStore read', () => {
   it('should read the bytes with their size and SHA-256 when the file exists', async () => {
@@ -93,7 +108,8 @@ describe('createNodeFileStore write', () => {
 
     // Assert
     expect(await readFile(path, 'utf8')).toBe('#!/bin/sh\necho two\n')
-    expect((await stat(path)).mode & 0o7777).toBe(0o750)
+    // Windows keeps no Unix mode bits to carry over
+    if (process.platform !== 'win32') expect((await stat(path)).mode & 0o7777).toBe(0o750)
     expect((await stat(path)).ino).not.toBe(before.ino)
     expect(written).toEqual({ kind: 'written', stamp: await stampOf(path) })
     expect(await readdir(folder)).toEqual(['run.sh'])
@@ -146,20 +162,23 @@ describe('createNodeFileStore write', () => {
     expect(await readFile(path, 'utf8')).toBe('mine\n')
   })
 
-  it('should write through a symbolic link to its file and keep the link', async () => {
-    // Arrange
-    const real = join(folder, 'real.json')
-    const linked = join(folder, 'linked.json')
-    await writeFile(real, '{}\n')
-    await symlink('real.json', linked)
+  it.runIf(symlinks)(
+    'should write through a symbolic link to its file and keep the link',
+    async () => {
+      // Arrange
+      const real = join(folder, 'real.json')
+      const linked = join(folder, 'linked.json')
+      await writeFile(real, '{}\n')
+      await symlink('real.json', linked)
 
-    // Act
-    await createNodeFileStore().write(linked, text('{ "a": 1 }\n'), await stampOf(linked))
+      // Act
+      await createNodeFileStore().write(linked, text('{ "a": 1 }\n'), await stampOf(linked))
 
-    // Assert
-    expect(await readFile(real, 'utf8')).toBe('{ "a": 1 }\n')
-    expect(await readlink(linked)).toBe('real.json')
-  })
+      // Assert
+      expect(await readFile(real, 'utf8')).toBe('{ "a": 1 }\n')
+      expect(await readlink(linked)).toBe('real.json')
+    },
+  )
 
   it('should write in place when the file has another hard link, so both names see the text', async () => {
     // Arrange
