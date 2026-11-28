@@ -7,6 +7,10 @@ written by hand for a private build, before the first public release.
 
 Written by hand on the Windows port branch until the next release replaces it.
 
+### Miscellaneous Chores
+
+* keep LF line endings in a Windows checkout
+
 ### Documentation
 
 * plan the Windows port ([plans/windows.md](plans/windows.md))
