@@ -9,6 +9,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Bug Fixes
 
+* give each Windows user a daemon pipe of their own, since pipe names are shared by the machine
 * run git and docker on Windows without flashing a console window
 * start the daemon on Windows without opening a console window
 * keep the daemon's log in the local app data and create no folder for its named pipe on Windows

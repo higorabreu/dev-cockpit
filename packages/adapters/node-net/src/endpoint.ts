@@ -6,6 +6,8 @@ export interface EndpointEnvironment {
   readonly runtimeDir: string | undefined
   readonly tmpDir: string
   readonly uid: number | undefined
+  // Windows has no uid: the account name keeps users' pipes apart
+  readonly user: string | undefined
 }
 
 // Joined by the platform asked for, not the host's, so one system's paths can be computed and tested on another
@@ -24,9 +26,12 @@ export function defaultEndpoint(
     runtimeDir: process.env.XDG_RUNTIME_DIR,
     tmpDir: tmpdir(),
     uid: process.getuid?.(),
+    user: process.env.USERNAME,
   },
 ): string {
-  if (environment.platform === 'win32') return '\\\\.\\pipe\\dck-daemon'
+  // Pipe names are shared by the whole machine, so each user's daemon needs its own
+  if (environment.platform === 'win32')
+    return `\\\\.\\pipe\\dck-${environment.user ?? 'user'}-daemon`
   const { join } = posix
   const user = `dck-${environment.uid ?? 'user'}`
   const directory = environment.runtimeDir
