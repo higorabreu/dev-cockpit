@@ -9,6 +9,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Features
 
+* find the shells a Windows tab can start: PowerShell 7, Windows PowerShell, Git Bash, cmd and each WSL distribution
 * keep the connection tokens in the Credential Manager on Windows; the window, the daemon and `dck daemon` load the binding only there
 * a secret store adapter for Windows' Credential Manager, through the prebuilt `@napi-rs/keyring`
 
