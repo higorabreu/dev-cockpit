@@ -16,6 +16,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Miscellaneous Chores
 
+* build the shell on Windows with node-pty's prebuild, without Visual Studio's Build Tools
 * keep LF line endings in a Windows checkout
 
 ### Tests

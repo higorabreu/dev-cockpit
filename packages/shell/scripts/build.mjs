@@ -78,6 +78,9 @@ writeFileSync(
 const electronVersion = JSON.parse(
   readFileSync(require.resolve('electron/package.json'), 'utf8'),
 ).version
-await rebuild({ buildPath: dist, electronVersion, onlyModules: ['node-pty'], force: true })
+// node-pty ships an N-API prebuild for Windows that Electron loads as is (D96), and rebuilding it would
+// require Visual Studio's Build Tools
+if (process.platform !== 'win32')
+  await rebuild({ buildPath: dist, electronVersion, onlyModules: ['node-pty'], force: true })
 await ensureSpawnHelperExecutable(join(dist, 'node_modules', 'node-pty'))
 console.log(`shell built in ${dist} for Electron ${electronVersion}`)
