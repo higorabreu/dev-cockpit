@@ -2213,3 +2213,17 @@ tests failed in 27 files, listed in the plan.
 reserved F12, and PowerShell 5.1 is the only shell every Windows has.
 **How to revert:** build node-pty from source on Windows (Build Tools become a contributor requirement), or
 another default key for Windows in `core/src/settings`.
+
+## D97. Windows: secrets in the Credential Manager through `@napi-rs/keyring`
+
+**Decision:** on Windows the `SecretStore` is `adapters/windows-credential`, which keeps each secret as a
+generic credential of the `dev-cockpit` service through `@napi-rs/keyring` (keyring-rs, an N-API binding with
+prebuilt binaries). The module loads by `import()` on the first secret, so Linux and macOS never load it,
+and the bundles leave it out (`external`): `build.mjs` copies it with its binary into `dist/node_modules`
+on Windows only. Its integration test writes to the real store only with `DCK_CREDENTIAL_TEST=1`, which the
+Windows runner sets. Checked on 2026-11-28 in Node 24 and in Electron 45.3.0 run as Node.
+**Reason:** the other way, PowerShell calling `CredRead` and `CredWrite`, needs no native module but costs
+about 300 ms per call and a script to keep the secret out of the arguments; the binding is fast, needs no
+build tools and the secret never leaves the process. Agreed with the porting developer on 2026-11-28.
+**How to revert:** replace `createCredentialStore`'s `open` with a PowerShell runner fed through stdin, and
+drop the dependency and the copy in `build.mjs`.

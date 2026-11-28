@@ -171,10 +171,14 @@ in something usable, so the work can stop after any of them.
   - Gap: another account on the same machine could create a user's pipe name first. The default pipe
     permissions keep it from sending requests to a real daemon, but a squatter could stand in for the daemon.
     Node cannot check the server's owner. Accepted for a single-user PC; noted in the gaps table.
-- [ ] WIN-T6. Secret store, `adapters/windows-credential` with the `SecretStore` contract and codes.
+- [x] WIN-T6. Secret store, `adapters/windows-credential` with the `SecretStore` contract and codes.
   Two options, to pick in the spike: (a) `@napi-rs/keyring`, a prebuilt N-API binding (fast, one native
   dependency, no build tools); (b) PowerShell calling `CredRead`/`CredWrite` with the value on stdin (no native
-  dependency, about 300 ms per call, cached by the daemon). Proposal: (a). (C7)
+  dependency, about 300 ms per call, cached by the daemon). Proposal: (a). (C7) Done on 2026-11-28 with (a),
+  D97: `createCredentialStore` loads `@napi-rs/keyring` on the first secret; the window and the daemon use
+  it on `win32`; the bundles leave it external and `build.mjs` copies it into `dist/node_modules` on
+  Windows. The real store test runs in CI (`DCK_CREDENTIAL_TEST=1`) and passed locally. For WIN-T11: the zip
+  must keep `dist/node_modules/@napi-rs`, and the packaged `dck` CLI must find it beside its bundle.
 - [ ] WIN-T7. Shell detection (W1) in `shell/src/platform/win32/shells.ts`: pwsh, powershell, Git Bash (from
   `git.exe`'s folder or the registry), cmd, WSL distributions (`wsl.exe -l -q`, UTF-16 output). A
   `terminal.shell` setting with the translated labels in `en.ts` and `pt-BR.ts`. (C4)
