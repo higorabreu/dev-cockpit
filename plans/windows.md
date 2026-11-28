@@ -200,9 +200,17 @@ in something usable, so the work can stop after any of them.
     `$OutputEncoding` to UTF-8 without a BOM. Without it, node's or git's output piped through PowerShell
     lost its accents (checked by script, as was Ctrl+C).
   - Keyboard, paste and resize are manual checks in `docs/windows-testing.md`.
-- [ ] WIN-T9. Platform wiring: `selectPlatform` gets a `win32` branch (window, autostart through
+- [x] WIN-T9. Platform wiring: `selectPlatform` gets a `win32` branch (window, autostart through
   `setLoginItemSettings`, no desktop shortcut, `noSystemFonts`, no update installer); the W2 default key;
-  focus after the hotkey. (C5, C9)
+  focus after the hotkey. (C5, C9) Done on 2026-11-28, except the focus check:
+  - `selectPlatform` on `win32` gives login items for autostart, with `--start-hidden`, since a Run key
+    entry carries no environment.
+  - The rest of the branch: the shells of WIN-T7 and the regular window, with no desktop shortcut, no
+    system fonts and no update installer.
+  - The window key defaults to Ctrl+` on Windows through `parseSettingsFor` and `settingsDefaultsFor`, which
+    the settings store and the screen's resets share.
+  - Focus after the key is unchanged and left to the manual checks; the session had no desktop to read the
+    foreground window from.
 
 ### Phase 2: the panel knows what runs (4 to 6 days)
 

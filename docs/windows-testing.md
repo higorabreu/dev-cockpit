@@ -37,3 +37,21 @@ piped through PowerShell, and Ctrl+C stopping `ping -t`. What needs a person:
   repeated or broken lines, also with a long line wrapped.
 - [ ] A full-screen program (`vim` in Git Bash or WSL, `htop` in WSL) draws, resizes and quits cleanly.
 - [ ] Clear (Ctrl+Shift+K) empties the screen and the scrollback.
+
+## Window, key and start with Windows (WIN-T9)
+
+Not checked by script: the session had no desktop to read the foreground window from.
+
+- [ ] Installed run (or `pnpm dev` with `DCK_KEY` unset, after quitting any other cockpit): Ctrl+` shows and
+  hides the window. On ABNT2 it is the key left of 1 (`'` and `"`), the same place as on a US keyboard.
+- [ ] After the key shows the window, typing goes straight to the terminal with no click, also when another
+  app (a browser, VS Code) had the focus.
+- [ ] `pnpm dev:dck toggle` from another terminal shows the window with the keyboard in it (Windows may refuse
+  the focus to a window that did not get the key; note whether it does).
+- [ ] The hold trigger (Right Ctrl held) opens its menu and the menu takes the keys.
+- [ ] The window stays above other windows, has no taskbar button and hides when another app is clicked.
+- [ ] F11 toggles full height; the bottom edge resizes it and the height is kept after a restart.
+- [ ] Settings > General: Start with the system on adds Dev Cockpit to Task Manager's Startup apps; after
+  signing out and in, the cockpit runs hidden and the key shows it. Off removes it.
+- [ ] Settings > Shortcuts: setting the window key to F12 is refused with a notice and the old key keeps
+  working; the reset button brings back Ctrl+`.
