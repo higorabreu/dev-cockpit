@@ -24,6 +24,14 @@ describe('chooseShell', () => {
     expect(shell.file).toBe('C:\\pwsh.exe')
   })
 
+  it('should hand over the environment of its prompt hook when the shell has one', () => {
+    const hooked: TerminalShell = { ...cmd, env: { PROMPT: '$P$G' } }
+
+    const shell = chooseShell('cmd', [hooked], fallback)
+
+    expect(shell).toEqual({ file: 'C:\\cmd.exe', args: [], env: { PROMPT: '$P$G' } })
+  })
+
   it("should start the platform's default when the system lists no shell", () => {
     const shell = chooseShell('cmd', [], fallback)
 

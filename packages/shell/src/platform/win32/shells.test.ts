@@ -18,7 +18,7 @@ const allInstalled = [
   'C:\\Windows\\System32\\bash.exe',
 ]
 
-const probe = (files: readonly string[], environment = env): ShellProbe => ({
+const probe = (files: readonly string[], environment: ShellProbe['env'] = env): ShellProbe => ({
   env: environment,
   exists: (path) => files.includes(path),
 })
@@ -48,7 +48,7 @@ describe('detectWindowsShells', () => {
 
     const setup = shells
       .filter((shell) => shell.kind === 'pwsh' || shell.kind === 'powershell')
-      .map((shell) => shell.args.at(-1))
+      .map((shell) => shell.args.at(-1)?.split('; ')[0])
 
     expect(setup).toEqual([
       '[Console]::OutputEncoding = $OutputEncoding = New-Object System.Text.UTF8Encoding $false',
@@ -64,7 +64,18 @@ describe('detectWindowsShells', () => {
       kind: 'gitBash',
       file: 'C:\\Program Files\\Git\\bin\\bash.exe',
       args: ['--login', '-i'],
+      env: { PROMPT_COMMAND: expect.stringContaining(']7;file://%s%s') },
     })
+  })
+
+  it('should report the folder at each prompt when PowerShell, Git Bash or cmd starts', () => {
+    const shells = detectWindowsShells(probe(allInstalled, { ...env, PROMPT: '$T $P$G' }))
+    const byId = (id: string) => shells.find((shell) => shell.id === id)
+
+    expect(byId('pwsh')?.args.at(-1)).toContain('function global:prompt')
+    expect(byId('pwsh')?.args.at(-1)).not.toContain('"')
+    expect(byId('gitBash')?.env?.PROMPT_COMMAND).toContain('"$PWD"')
+    expect(byId('cmd')?.env).toEqual({ PROMPT: '$E]7;file://localhost/$P$E\\$T $P$G' })
   })
 
   it('should find Git Bash in Program Files when git is not on the path', () => {

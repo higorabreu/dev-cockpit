@@ -168,7 +168,9 @@ app.whenReady().then(async () => {
   const toggleWindow = () => void dockActions.toggle()
   const showWindow = () => void dockActions.show()
 
-  const terminalDirectories = createTerminalDirectories()
+  // Read from the prompt only on Windows for now; Linux and macOS read the directory from the process
+  const terminalDirectories =
+    process.platform === 'win32' ? createTerminalDirectories('win32') : undefined
   const platform = selectPlatform({
     platform: process.platform,
     env: process.env,
@@ -180,7 +182,7 @@ app.whenReady().then(async () => {
     appVersion: app.getVersion(),
     logger,
     app,
-    terminalDirectory: terminalDirectories.get,
+    ...(terminalDirectories ? { terminalDirectory: terminalDirectories.get } : {}),
   })
   // Off the boot path: the tabs open a login shell and need nothing; only the daemon waits for it
   const loginPath = platform.loginPath().then((path) => {
@@ -421,7 +423,7 @@ app.whenReady().then(async () => {
     reviewNotes: createGitReviewNotes(),
     sessions: sessionInspector,
     agents: agentProfiles,
-    directories: terminalDirectories,
+    ...(terminalDirectories ? { directories: terminalDirectories } : {}),
 
     environment: createEnvironmentInspector({
       processes: platform.processes,

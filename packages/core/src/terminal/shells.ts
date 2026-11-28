@@ -10,15 +10,14 @@ export interface ShellChoice {
   readonly name?: string
 }
 
-export interface TerminalShell extends ShellChoice {
-  readonly file: string
-  readonly args: readonly string[]
-}
-
 export interface ShellCommand {
   readonly file: string
   readonly args: readonly string[]
+  // Added to the terminal's environment, for a prompt hook the shell reads from it
+  readonly env?: Readonly<Record<string, string>>
 }
+
+export interface TerminalShell extends ShellChoice, ShellCommand {}
 
 export const wslShellId = (distribution: string) => `wsl:${distribution}`
 
@@ -33,5 +32,7 @@ export function chooseShell(
   fallback: ShellCommand,
 ): ShellCommand {
   const shell = shells.find((each) => each.id === chosen) ?? shells[0]
-  return shell ? { file: shell.file, args: shell.args } : fallback
+  if (!shell) return fallback
+  const { file, args, env } = shell
+  return env === undefined ? { file, args } : { file, args, env }
 }

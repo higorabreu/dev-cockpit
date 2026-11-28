@@ -9,6 +9,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Features
 
+* follow each Windows tab's folder as PowerShell, Git Bash and cmd report it at the prompt (OSC 7), without touching the user's profile, so the panel's git rows and new tabs use the folder the tab is in
 * see on Windows what each tab runs, so the panel and the tab marks know a busy tab and Claude Code or Codex in it; the process table is read through koffi, with no console window
 * start with Windows through Electron's login items, hidden until the key is pressed
 * Ctrl+` shows and hides the window by default on Windows, which refuses F12 as a global key; Linux and macOS keep F12

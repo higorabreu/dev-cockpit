@@ -184,10 +184,11 @@ export interface BridgeOptions {
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
   }
   readonly agents: readonly AgentProfile[]
-  // Told where each shell starts and when it ends, on systems whose inspector cannot read it
-  readonly directories?: Pick<TerminalDirectories, 'started' | 'ended'>
+  // Told where each shell starts, what it prints and when it ends, on systems whose inspector cannot read
+  // its directory
+  readonly directories?: Pick<TerminalDirectories, 'started' | 'output' | 'ended'>
   // Asked at each new tab, so a shell chosen in the settings applies to the next one
-  shell(): Pick<PtyOptions, 'file' | 'args'>
+  shell(): Pick<PtyOptions, 'file' | 'args' | 'env'>
   // The shells the system offers for new tabs; empty where the tabs follow $SHELL
   shells(): Promise<readonly ShellChoice[]>
   readonly home: string
@@ -221,12 +222,15 @@ export function registerHostBridge(options: BridgeOptions) {
       args: shell.args,
       cwd,
       // Anything running in this terminal, like an agent's hooks, knows which tab it belongs to
-      env: { DCK_PTY_ID: String(id) },
+      env: { ...shell.env, DCK_PTY_ID: String(id) },
       cols: create.cols,
       rows: create.rows,
     })
     options.directories?.started(session.pid, cwd)
-    session.onData((data) => send(hostChannels.ptyData, id, data))
+    session.onData((data) => {
+      options.directories?.output(session.pid, data)
+      send(hostChannels.ptyData, id, data)
+    })
     session.onExit((exit) => {
       options.directories?.ended(session.pid)
       sessions.delete(id)

@@ -236,10 +236,11 @@ function setup(picked: string | undefined = undefined) {
       },
     },
     pickFolder: async () => picked,
-    shell: () => ({ file: '/bin/zsh', args: [] }),
+    shell: () => ({ file: '/bin/zsh', args: [], env: { PROMPT_COMMAND: 'report_folder' } }),
     shells: async () => [],
     directories: {
       started: (pid, cwd) => void directoryEvents.push(`started ${pid} ${cwd}`),
+      output: (pid, data) => void directoryEvents.push(`output ${pid} ${data}`),
       ended: (pid) => void directoryEvents.push(`ended ${pid}`),
     },
     home: '/home/usuario',
@@ -359,13 +360,18 @@ describe('registerHostBridge pty', () => {
     expect(ptyHost.sessions[0]?.written).toEqual([])
   })
 
-  it('should tell where each shell starts and when it ends when the system cannot read it', async () => {
+  it('should tell where each shell starts, what it prints and when it ends when the system cannot read it', async () => {
     const { call, ptyHost, directoryEvents } = setup()
     await call(hostChannels.ptyCreate, { cols: 80, rows: 24, cwd: '/srv/acme/backend/src' })
 
+    ptyHost.sessions[0]?.emitData('prompt')
     ptyHost.sessions[0]?.emitExit({ code: 0, signal: null })
 
-    expect(directoryEvents).toEqual(['started 1 /srv/acme/backend/src', 'ended 1'])
+    expect(directoryEvents).toEqual([
+      'started 1 /srv/acme/backend/src',
+      'output 1 prompt',
+      'ended 1',
+    ])
   })
 
   it('should kill every session when the bridge is shut down', async () => {
@@ -537,6 +543,14 @@ describe('registerHostBridge clipboard and window', () => {
 
     expect(ptyHost.sessions[0]?.env.DCK_PTY_ID).toBe(String(first))
     expect(ptyHost.sessions[1]?.env.DCK_PTY_ID).toBe(String(second))
+  })
+
+  it("should pass the shell's prompt hook in the environment when the shell has one", async () => {
+    const { call, ptyHost } = setup()
+
+    await call(hostChannels.ptyCreate, { cols: 80, rows: 24 })
+
+    expect(ptyHost.sessions[0]?.env.PROMPT_COMMAND).toBe('report_folder')
   })
 
   it('should return the new favorite state when the interface toggles a project', async () => {

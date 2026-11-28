@@ -38,13 +38,38 @@ function gitBash(probe: ShellProbe): string | undefined {
 
 // The console starts in the OEM code page (850 on a Brazilian Windows): PowerShell would decode a UTF-8
 // program's output piped through it (node, git) into mojibake. UTF-8 without a BOM, so a pipe into a program
-// gets no stray bytes; the user's profile still runs before it
+// gets no stray bytes
+const UTF8_OUTPUT =
+  '[Console]::OutputEncoding = $OutputEncoding = New-Object System.Text.UTF8Encoding $false'
+
+// Wraps the prompt the profile left (oh-my-posh's, starship's or the default) to report the folder as
+// OSC 7, since Windows keeps no readable directory for another process. The old prompt runs first, so it
+// still sees the last command's `$?`; single quotes only, as the line passes through Windows' argument quoting
+const POWERSHELL_DIRECTORY_HOOK = [
+  '$global:__dckPrompt = $function:prompt',
+  'function global:prompt { $out = & $global:__dckPrompt',
+  '$here = $executionContext.SessionState.Path.CurrentLocation',
+  "if ($here.Provider.Name -eq 'FileSystem') { $url = ($here.ProviderPath -split '\\\\' | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/'",
+  "[Console]::Write([char]27 + ']7;file://' + $env:COMPUTERNAME + '/' + $url + [char]7) }",
+  '$out }',
+].join('; ')
+
+// -Command runs after the user's profile, so the hook wraps whatever prompt the profile set
 const POWERSHELL_ARGS = [
   '-NoLogo',
   '-NoExit',
   '-Command',
-  '[Console]::OutputEncoding = $OutputEncoding = New-Object System.Text.UTF8Encoding $false',
+  `${UTF8_OUTPUT}; ${POWERSHELL_DIRECTORY_HOOK}`,
 ]
+
+// Git Bash reports `$PWD` (`/c/Users/ana`), which the reader maps to the drive. A PROMPT_COMMAND the
+// user's ~/.bashrc sets replaces this one
+const GIT_BASH_ENV = { PROMPT_COMMAND: `printf '\\e]7;file://%s%s\\a' "$HOSTNAME" "$PWD"` }
+
+// cmd expands `$E` to ESC and `$P` to the folder; the user's own PROMPT, or cmd's default, follows
+const cmdEnv = (env: ShellProbe['env']) => ({
+  PROMPT: `$E]7;file://localhost/$P$E\\${env.PROMPT ?? '$P$G'}`,
+})
 
 const systemRoot = (env: ShellProbe['env']) => env.SystemRoot ?? env.windir ?? 'C:\\Windows'
 
@@ -73,8 +98,15 @@ export function detectWindowsShells(probe: ShellProbe): readonly TerminalShell[]
     })
   // A login shell reads ~/.bash_profile, as Git Bash's own window does
   if (found.gitBash)
-    shells.push({ id: 'gitBash', kind: 'gitBash', file: found.gitBash, args: ['--login', '-i'] })
-  if (found.cmd) shells.push({ id: 'cmd', kind: 'cmd', file: found.cmd, args: [] })
+    shells.push({
+      id: 'gitBash',
+      kind: 'gitBash',
+      file: found.gitBash,
+      args: ['--login', '-i'],
+      env: GIT_BASH_ENV,
+    })
+  if (found.cmd)
+    shells.push({ id: 'cmd', kind: 'cmd', file: found.cmd, args: [], env: cmdEnv(probe.env) })
   return shells
 }
 
