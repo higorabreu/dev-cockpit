@@ -22,7 +22,8 @@ const helper = async (relative: string, mode: number) => {
   return file
 }
 
-describe('ensureSpawnHelperExecutable', () => {
+// Windows has no execute bit to set, and its node-pty ships no spawn-helper
+describe.skipIf(process.platform === 'win32')('ensureSpawnHelperExecutable', () => {
   it('should make a prebuilt helper executable when it ships without the execute bit', async () => {
     const file = await helper('prebuilds/darwin-arm64/spawn-helper', 0o644)
 

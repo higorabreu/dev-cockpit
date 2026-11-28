@@ -18,6 +18,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 ### Tests
 
 * run the daemon and CLI tests over a named pipe on Windows
+* test the terminal through cmd and PowerShell on Windows
 
 ### Documentation
 
