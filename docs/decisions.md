@@ -2227,3 +2227,21 @@ about 300 ms per call and a script to keep the secret out of the arguments; the 
 build tools and the secret never leaves the process. Agreed with the porting developer on 2026-11-28.
 **How to revert:** replace `createCredentialStore`'s `open` with a PowerShell runner fed through stdin, and
 drop the dependency and the copy in `build.mjs`.
+
+## D98. Windows: the process table through koffi
+
+**Decision:** on Windows the `ProcessInspector` is `adapters/windows-proc`, which reads the process table with
+`CreateToolhelp32Snapshot`, the start times with `GetProcessTimes` and a node program's command line with
+`NtQueryInformationProcess`, called through koffi (an FFI library with prebuilt binaries, MIT). What a tab
+runs is the newest child of its shell that started after it, past console hosts, Git's bash launcher and
+npm's cmd shims. The directory does not come from the process: Windows keeps none readable, and PowerShell
+never changes its own; the host passes the folder the shell started in and later what the shell reports
+(WIN-T11). The `ProcessScanner` finds nothing: it exists for daemons older than `shutdown`, none of which
+ran on Windows. koffi loads by `import()` on the first poll and `build.mjs` copies it into `dist/node_modules`
+on Windows, as for the keyring (D97).
+**Reason:** measured on 2026-11-28: one PowerShell CIM query per 2 s poll costs about 230 ms of CPU (about 12%
+of a core) and a second of delay; `@vscode/windows-process-tree` builds with node-gyp, so it needs Visual
+Studio's Build Tools. Through koffi the table reads in about 7 ms in process. The porting developer left the
+choice to the agent.
+**How to revert:** give `createProcessInspector` a `ProcessTable` that runs PowerShell, and drop koffi and its
+copy in `build.mjs`.

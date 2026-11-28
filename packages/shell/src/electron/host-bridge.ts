@@ -37,6 +37,7 @@ import {
 } from '@dck/core'
 import { z } from 'zod'
 import type { ViewsGateway } from '../daemon/views-gateway.ts'
+import type { TerminalDirectories } from '../inspectors/terminal-directories.ts'
 import { savedTabsSchema } from '../tabs/saved-tabs-file.ts'
 import { createTerminalPaths, type TerminalFiles } from './terminal-paths.ts'
 
@@ -183,6 +184,8 @@ export interface BridgeOptions {
     snapshot(pid: number): Promise<SessionSnapshot | undefined>
   }
   readonly agents: readonly AgentProfile[]
+  // Told where each shell starts and when it ends, on systems whose inspector cannot read it
+  readonly directories?: Pick<TerminalDirectories, 'started' | 'ended'>
   // Asked at each new tab, so a shell chosen in the settings applies to the next one
   shell(): Pick<PtyOptions, 'file' | 'args'>
   // The shells the system offers for new tabs; empty where the tabs follow $SHELL
@@ -222,8 +225,10 @@ export function registerHostBridge(options: BridgeOptions) {
       cols: create.cols,
       rows: create.rows,
     })
+    options.directories?.started(session.pid, cwd)
     session.onData((data) => send(hostChannels.ptyData, id, data))
     session.onExit((exit) => {
+      options.directories?.ended(session.pid)
       sessions.delete(id)
       send(hostChannels.ptyExit, id, exit)
     })

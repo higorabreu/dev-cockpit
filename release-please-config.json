@@ -100,6 +100,11 @@
         },
         {
           "type": "json",
+          "path": "packages/adapters/windows-proc/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "packages/cli/package.json",
           "jsonpath": "$.version"
         },

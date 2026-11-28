@@ -8,7 +8,8 @@ export const agentProfiles: readonly AgentProfile[] = [
   {
     id: 'claude-code',
     name: 'Claude Code',
-    processes: ['claude'],
+    // On Windows an npm install runs as node with @anthropic-ai/claude-code's script, named by its package
+    processes: ['claude', 'claude-code'],
     connect: {
       shell: claudeCodeInstall,
       // Claude Code runs a line that starts with `!` in a shell, so it installs without quitting

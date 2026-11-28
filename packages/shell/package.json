@@ -23,6 +23,7 @@
     "@dck/adapter-node-net": "workspace:^",
     "@dck/adapter-node-walk": "workspace:^",
     "@dck/adapter-node-pty": "workspace:^",
+    "@dck/adapter-windows-proc": "workspace:^",
     "@dck/core": "workspace:^",
     "@dck/daemon": "workspace:^",
     "node-pty": "^1.1.0",

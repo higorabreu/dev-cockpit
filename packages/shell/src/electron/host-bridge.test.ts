@@ -60,6 +60,7 @@ function setup(picked: string | undefined = undefined) {
   }
   const ptyHost = new FakePtyHost()
   const clipboard = new MemoryClipboard('conteúdo')
+  const directoryEvents: string[] = []
   const sent: Array<[string, ...unknown[]]> = []
   let fullHeightToggles = 0
   const resizes: number[] = []
@@ -237,6 +238,10 @@ function setup(picked: string | undefined = undefined) {
     pickFolder: async () => picked,
     shell: () => ({ file: '/bin/zsh', args: [] }),
     shells: async () => [],
+    directories: {
+      started: (pid, cwd) => void directoryEvents.push(`started ${pid} ${cwd}`),
+      ended: (pid) => void directoryEvents.push(`ended ${pid}`),
+    },
     home: '/home/usuario',
     logger: {
       info() {},
@@ -283,6 +288,7 @@ function setup(picked: string | undefined = undefined) {
     fullHeights: () => fullHeightToggles,
     resizes,
     resizeEnds,
+    directoryEvents,
   }
 }
 
@@ -351,6 +357,15 @@ describe('registerHostBridge pty', () => {
 
     expect(sent).toContainEqual([hostChannels.ptyExit, 1, { code: 0, signal: null }])
     expect(ptyHost.sessions[0]?.written).toEqual([])
+  })
+
+  it('should tell where each shell starts and when it ends when the system cannot read it', async () => {
+    const { call, ptyHost, directoryEvents } = setup()
+    await call(hostChannels.ptyCreate, { cols: 80, rows: 24, cwd: '/srv/acme/backend/src' })
+
+    ptyHost.sessions[0]?.emitExit({ code: 0, signal: null })
+
+    expect(directoryEvents).toEqual(['started 1 /srv/acme/backend/src', 'ended 1'])
   })
 
   it('should kill every session when the bridge is shut down', async () => {

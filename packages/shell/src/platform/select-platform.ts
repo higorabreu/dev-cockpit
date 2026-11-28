@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { createGnomeShortcut } from '@dck/adapter-gnome-shortcuts'
 import * as linuxProc from '@dck/adapter-linux-proc'
 import * as macosProc from '@dck/adapter-macos-proc'
+import * as windowsProc from '@dck/adapter-windows-proc'
 import {
   type Autostart,
   type DesktopShortcut,
@@ -41,6 +42,8 @@ export interface PlatformContext {
   // Electron's app, which the Mac panel activates, hides and keeps out of the Dock, and which keeps
   // Windows' login items
   readonly app: PanelApp & LoginItems
+  // The directory each terminal's shell reported, where the system keeps none readable (Windows)
+  readonly terminalDirectory?: (pid: number) => string | undefined
 }
 
 export interface Platform {
@@ -108,8 +111,14 @@ export function selectPlatform(context: PlatformContext): Platform {
   const proc = processAdapters(platform)
 
   return {
-    processes: proc.createProcessInspector(),
-    processScanner: proc.createProcessScanner(),
+    processes:
+      platform === 'win32'
+        ? windowsProc.createProcessInspector({
+            cwdOf: context.terminalDirectory ?? (() => undefined),
+          })
+        : proc.createProcessInspector(),
+    processScanner:
+      platform === 'win32' ? windowsProc.createProcessScanner() : proc.createProcessScanner(),
     secrets: systemSecretStore(platform),
     autostart:
       platform === 'win32'

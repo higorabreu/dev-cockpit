@@ -9,6 +9,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Features
 
+* see on Windows what each tab runs, so the panel and the tab marks know a busy tab and Claude Code or Codex in it; the process table is read through koffi, with no console window
 * start with Windows through Electron's login items, hidden until the key is pressed
 * Ctrl+` shows and hides the window by default on Windows, which refuses F12 as a global key; Linux and macOS keep F12
 * tell the terminal it runs on ConPTY, with the Windows build, so it reflows and wraps lines as Windows rewrites them

@@ -14,7 +14,7 @@ describe('agentProfiles', () => {
     const claude = agentProfiles.find((profile) => profile.id === 'claude-code')
 
     expect(claude?.name).toBe('Claude Code')
-    expect(claude?.processes).toEqual(['claude'])
+    expect(claude?.processes).toEqual(['claude', 'claude-code'])
   })
 
   it('should connect Claude Code with the documented commands and no Enter when typed', () => {

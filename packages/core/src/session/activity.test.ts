@@ -10,6 +10,9 @@ describe('classifyActivity', () => {
   it('should be idle when the foreground process is a shell', () => {
     expect(classifyActivity('zsh').activity).toBe('idle')
     expect(classifyActivity('bash').activity).toBe('idle')
+    expect(classifyActivity('pwsh').activity).toBe('idle')
+    expect(classifyActivity('powershell').activity).toBe('idle')
+    expect(classifyActivity('cmd').activity).toBe('idle')
   })
 
   it('should recognize a known agent when its process is in the foreground', () => {

@@ -83,6 +83,7 @@ import { downloadAllowed, frameNavigation, isPdfViewer } from './files/frame-gua
 import { agentProfiles } from './inspectors/agent-profiles.ts'
 import { createEnvironmentInspector } from './inspectors/environment-inspector.ts'
 import { createSessionInspector } from './inspectors/session-inspector.ts'
+import { createTerminalDirectories } from './inspectors/terminal-directories.ts'
 import { createDockActions } from './platform/dock-actions.ts'
 import {
   boundedScreen,
@@ -167,6 +168,7 @@ app.whenReady().then(async () => {
   const toggleWindow = () => void dockActions.toggle()
   const showWindow = () => void dockActions.show()
 
+  const terminalDirectories = createTerminalDirectories()
   const platform = selectPlatform({
     platform: process.platform,
     env: process.env,
@@ -178,6 +180,7 @@ app.whenReady().then(async () => {
     appVersion: app.getVersion(),
     logger,
     app,
+    terminalDirectory: terminalDirectories.get,
   })
   // Off the boot path: the tabs open a login shell and need nothing; only the daemon waits for it
   const loginPath = platform.loginPath().then((path) => {
@@ -418,6 +421,7 @@ app.whenReady().then(async () => {
     reviewNotes: createGitReviewNotes(),
     sessions: sessionInspector,
     agents: agentProfiles,
+    directories: terminalDirectories,
 
     environment: createEnvironmentInspector({
       processes: platform.processes,
