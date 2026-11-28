@@ -34,7 +34,7 @@ jobs:
       - name: Credential Manager integration test (Windows)
         if: runner.os == 'Windows'
         env:
-          DCK_CREDENTIAL_TEST: '1'
+          DCK_CREDENTIAL_TEST: "1"
         run: pnpm exec vitest run packages/adapters/windows-credential
       # Saved so the restore step can give the runner its keychains back, even on a failure
       - name: Save the keychain search list (macOS)

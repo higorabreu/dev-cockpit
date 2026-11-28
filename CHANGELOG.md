@@ -43,6 +43,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 ### Continuous Integration
 
 * store, read and delete a secret in the real Credential Manager on the Windows runner
+* quote the Credential Manager test flag the way Biome formats YAML
 * run lint, typecheck and the tests on Windows too
 
 ### Documentation
