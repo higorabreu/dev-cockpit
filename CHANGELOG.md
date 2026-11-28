@@ -9,6 +9,7 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 ### Features
 
+* attach the Windows zip to each release, built and smoke checked on a Windows runner; CI builds a preview of it too
 * build the Windows zip with `pnpm package:win`: `Dev Cockpit.exe` with its icon and version, the app, node-pty's prebuild, the native bindings and `resources\bin\dck.cmd`; `-- --smoke` unpacks it and checks it
 * a smoke check for the packaged app (`--smoke`): it opens a terminal, reads the process table and the secret store, and exits 0 only when all of them work
 * follow each Windows tab's folder as PowerShell, Git Bash and cmd report it at the prompt (OSC 7), without touching the user's profile, so the panel's git rows and new tabs use the folder the tab is in
