@@ -74,6 +74,7 @@ Stated here so nobody takes them for bugs; each one has a task or a note to clos
 
 | Gap | Effect | Closed by |
 | --- | --- | --- |
+| No uninstaller | Removing it is by hand: quit it, delete `%LOCALAPPDATA%\Programs\Dev Cockpit` and the Start menu entry, take `resources\bin` out of the user PATH | WIN-T15 |
 | No in-app update | The update notice opens the release page; the user runs `npx @devcockpit/install` again | WIN-T15 (NSIS or another updater) |
 | Unsigned | A zip downloaded in a browser carries the download mark, so SmartScreen warns on the first run of `Dev Cockpit.exe` (More info, Run anyway); the npx path downloads without the mark | WIN-T15 |
 | No arm64 build | Windows on ARM runs the x64 build under emulation | A second runner when there is demand |
@@ -261,10 +262,23 @@ in something usable, so the work can stop after any of them.
     from the folder. Passed on this machine.
   - CI builds a preview on `windows-latest`; the release builds it in `build-win` and attaches it with its
     checksum. The .deb still decides the release.
-- [ ] WIN-T13. npm installer Windows target in `packages/install/src/windows.ts`: download, verify, unpack to
+- [x] WIN-T13. npm installer Windows target in `packages/install/src/windows.ts`: download, verify, unpack to
   `%LOCALAPPDATA%\Programs\Dev Cockpit`, Start menu shortcut, `dck` in the user PATH (registry
   `HKCU\Environment`, then broadcast the change), stop a running cockpit before replacing. A script for
-  the manual Windows test (`docs/windows-testing.md`) with the budgets measured. (C10, C11)
+  the manual Windows test (`docs/windows-testing.md`) with the budgets measured. (C10, C11) Done on
+  2026-11-28:
+  - The zip unpacks to `.Dev Cockpit.new` beside the app; the window and the daemon run from the app
+    folder stop; the old folder moves to `.Dev Cockpit.old` and back if the new one cannot take its place.
+  - The PATH is read and written raw in its own kind (`REG_EXPAND_SZ` keeps `%USERPROFILE%`), never through
+    setx, which cuts at 1024 characters; then `WM_SETTINGCHANGE` goes out. The Start menu entry is a .lnk made
+    through WScript.Shell. Paths reach PowerShell through the environment and the script as base64.
+  - The real steps are tested on Windows (unpack, PATH in a test key, shortcut, stopping a process run from
+    the folder). An install of the real zip into a temporary folder, twice, took about 5 s each.
+  - `scripts/measure-windows.mjs` measures the package: on this machine cold start to the window took 441 ms
+    and idle private memory of the window and daemon 275 MB, both within budget. The key and the echo stay
+    manual.
+  - The upstream releases have no zip yet, so `npx @devcockpit/install` on Windows reports "no package for
+    this system" until a release carries one.
 - [ ] WIN-T14. Close: README section, `docs/roadmap.md` (Windows packaging leaves the backlog), a decision
   in `docs/decisions.md` for the port's choices, full gate. (C12)
 

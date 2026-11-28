@@ -93,3 +93,21 @@ Checked by script on 2026-11-28: `pnpm package:win -- --smoke` unpacks the zip, 
   after Run anyway it opens normally.
 - [ ] Quitting from the tray leaves no `Dev Cockpit.exe` but the daemon, and the folder can be deleted after
   the daemon is stopped.
+
+## The npx installer and the budgets (WIN-T13)
+
+Checked by script on 2026-11-28: the real zip installed twice into a temporary folder, the PATH change in a
+test registry key, and `node scripts/measure-windows.mjs` (cold start 441 ms, idle private memory 275 MB).
+`npx @devcockpit/install` needs a release that carries the zip; until then, test the installer from the
+repository against a fork's release, or check its steps with `--download-only`. What needs a person:
+
+- [ ] `npx @devcockpit/install` from PowerShell, with no administrator rights: it downloads, verifies,
+  unpacks to `%LOCALAPPDATA%\Programs\Dev Cockpit` and says to open a new terminal.
+- [ ] Dev Cockpit is in the Start menu and opens; in a new terminal `dck ping` answers `pong`.
+- [ ] `echo $env:Path` in the new terminal ends with `...\Dev Cockpit\resources\bin`, and the entries that
+  were there (with their `%VARIABLES%`, see `regedit` under `HKEY_CURRENT_USER\Environment`) are kept.
+- [ ] Run it again with the cockpit open: it says it closed it, replaces it and the Start menu entry opens
+  the new one. With `--version <older>` it goes back to that release.
+- [ ] `node scripts/measure-windows.mjs` after `pnpm package:win` stays within budget on your machine.
+- [ ] Hotkey to visible window feels instant (budget 100 ms) and keys echo at once (16 ms), also with a
+  busy tab.
