@@ -16,7 +16,7 @@ describe('shipsNodePtyFile', () => {
     join('lib', 'worker', 'conoutSocketWorker.js'),
   ])('should ship %s when the app may load it', (path) => {
     // Act
-    const shipped = shipsNodePtyFile(path)
+    const shipped = shipsNodePtyFile(path, 'linux-x64')
 
     // Assert
     expect(shipped).toBe(true)
@@ -41,9 +41,20 @@ describe('shipsNodePtyFile', () => {
     join('lib', 'unixTerminal.test.js'),
   ])('should leave %s out when only the build or the tests use it', (path) => {
     // Act
-    const shipped = shipsNodePtyFile(path)
+    const shipped = shipsNodePtyFile(path, 'linux-x64')
 
     // Assert
     expect(shipped).toBe(false)
+  })
+
+  it.each([
+    { path: join('prebuilds', 'win32-x64', 'conpty.node'), expected: true },
+    { path: join('prebuilds', 'win32-x64', 'conpty_console_list.node'), expected: true },
+    { path: join('prebuilds', 'win32-x64', 'winpty-agent.exe'), expected: true },
+    { path: join('prebuilds', 'win32-x64', 'conpty.pdb'), expected: false },
+    { path: join('prebuilds', 'win32-arm64', 'conpty.node'), expected: false },
+    { path: join('prebuilds', 'darwin-arm64', 'pty.node'), expected: false },
+  ])('should ship $path $expected when the package is for Windows x64', ({ path, expected }) => {
+    expect(shipsNodePtyFile(path, 'win32-x64')).toBe(expected)
   })
 })

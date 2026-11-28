@@ -15,8 +15,18 @@ const files = new Set([
   'lib',
 ])
 
-// path is relative to node-pty's folder; a folder must pass for cpSync to look inside it
-export function shipsNodePtyFile(path) {
+// Windows runs node-pty's own prebuild (D96): ConPTY's binaries, and winpty's for a Windows without ConPTY.
+// The debug symbols stay out
+const shipsWindowsPrebuild = (path, target) => {
+  const folder = join('prebuilds', target)
+  if (path === 'prebuilds' || path === folder) return true
+  return path.startsWith(`${folder}${sep}`) && !path.endsWith('.pdb')
+}
+
+// path is relative to node-pty's folder; a folder must pass for cpSync to look inside it. target is the
+// platform and architecture packaged, as node-pty names its prebuild folders
+export function shipsNodePtyFile(path, target = `${process.platform}-${process.arch}`) {
   if (files.has(path)) return true
+  if (target.startsWith('win32-') && shipsWindowsPrebuild(path, target)) return true
   return path.startsWith(`lib${sep}`) && !path.endsWith('.test.js')
 }
