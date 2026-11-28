@@ -15,6 +15,10 @@ Written by hand on the Windows port branch until the next release replaces it.
 
 * keep LF line endings in a Windows checkout
 
+### Tests
+
+* run the daemon and CLI tests over a named pipe on Windows
+
 ### Documentation
 
 * plan the Windows port ([plans/windows.md](plans/windows.md))

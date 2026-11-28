@@ -1,7 +1,5 @@
-import { mkdtempSync } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { connectTo } from '@dck/adapter-node-net'
+import { connectTo, temporaryEndpoint } from '@dck/adapter-node-net'
 import { createClient, createHub, ok, silentLogger } from '@dck/core'
 import { connectLoopback, createFakeViews } from '@dck/core/testing'
 import { startDaemon } from '@dck/daemon'
@@ -14,7 +12,7 @@ afterEach(async () => {
 })
 
 async function bootDaemon() {
-  const endpoint = join(mkdtempSync(join(tmpdir(), 'dck-signal-')), 'daemon.sock')
+  const endpoint = temporaryEndpoint('dck-signal')
   const started = await startDaemon({
     endpoint,
     logger: silentLogger,
@@ -71,7 +69,7 @@ describe('dck agent signal', () => {
   })
 
   it('should exit successfully and print nothing when the cockpit is closed', async () => {
-    const endpoint = join(mkdtempSync(join(tmpdir(), 'dck-signal-')), 'daemon.sock')
+    const endpoint = temporaryEndpoint('dck-signal')
 
     const result = await signal(['your-turn'], endpoint, { DCK_PTY_ID: '1' })
 

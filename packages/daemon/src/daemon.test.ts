@@ -1,7 +1,4 @@
-import { mkdtempSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { connectTo } from '@dck/adapter-node-net'
+import { connectTo, temporaryEndpoint } from '@dck/adapter-node-net'
 import { createClient, DAEMON_PROTOCOL, silentLogger } from '@dck/core'
 import { createFakeViews } from '@dck/core/testing'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -13,7 +10,7 @@ afterEach(async () => {
 })
 
 async function boot() {
-  const endpoint = join(mkdtempSync(join(tmpdir(), 'dck-daemon-')), 'daemon.sock')
+  const endpoint = temporaryEndpoint('dck-daemon')
   const started = await startDaemon({
     endpoint,
     logger: silentLogger,
@@ -109,7 +106,7 @@ describe('startDaemon', () => {
 
   it('should answer and then call the shutdown hook when asked to shut down', async () => {
     let stopped = 0
-    const endpoint = join(mkdtempSync(join(tmpdir(), 'dck-daemon-')), 'daemon.sock')
+    const endpoint = temporaryEndpoint('dck-daemon')
     const started = await startDaemon({
       views: new Map([['gitlab', createFakeViews()]]),
       endpoint,

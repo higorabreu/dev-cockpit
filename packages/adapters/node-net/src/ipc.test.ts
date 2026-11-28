@@ -1,17 +1,19 @@
-import { chmodSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { chmodSync, writeFileSync } from 'node:fs'
 import { connect } from 'node:net'
-import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname } from 'node:path'
 import { createClient, createHub, silentLogger } from '@dck/core'
 import { afterEach, describe, expect, it } from 'vitest'
 import { connectTo, listenOn } from './ipc.ts'
+import { temporaryEndpoint } from './temporary-endpoint.ts'
 
 const closers: Array<() => Promise<void>> = []
 afterEach(async () => {
   for (const close of closers.splice(0)) await close()
 })
 
-const endpoint = () => join(mkdtempSync(join(tmpdir(), 'dck-net-')), 'daemon.sock')
+const endpoint = () => temporaryEndpoint('dck-net')
+// A named pipe has no folder and leaves no file behind, so these cases only exist on Unix
+const onUnix = process.platform !== 'win32'
 
 async function serve(path: string) {
   const hub = createHub({ ping: () => 'pong' }, silentLogger)
@@ -29,19 +31,22 @@ async function serve(path: string) {
 }
 
 describe('node-net IPC', () => {
-  it('should refuse to listen or connect when the socket folder is open to other users', async () => {
-    // Arrange
-    const path = endpoint()
-    chmodSync(dirname(path), 0o777)
+  it.runIf(onUnix)(
+    'should refuse to listen or connect when the socket folder is open to other users',
+    async () => {
+      // Arrange
+      const path = endpoint()
+      chmodSync(dirname(path), 0o777)
 
-    // Act
-    const listening = await serve(path)
-    const connected = await connectTo(path, silentLogger)
+      // Act
+      const listening = await serve(path)
+      const connected = await connectTo(path, silentLogger)
 
-    // Assert
-    expect(listening.ok ? 'listening' : listening.error.message).toContain('not a private folder')
-    expect(connected.ok ? 'connected' : connected.error.message).toContain('not a private folder')
-  })
+      // Assert
+      expect(listening.ok ? 'listening' : listening.error.message).toContain('not a private folder')
+      expect(connected.ok ? 'connected' : connected.error.message).toContain('not a private folder')
+    },
+  )
 
   it('should answer a request over a real socket when the daemon is listening', async () => {
     const path = endpoint()
@@ -66,7 +71,7 @@ describe('node-net IPC', () => {
     if (!second.ok) expect(second.error.data?.code).toBe('DCK-DMN-001')
   })
 
-  it('should take over the endpoint when a stale file is left there', async () => {
+  it.runIf(onUnix)('should take over the endpoint when a stale file is left there', async () => {
     const path = endpoint()
     writeFileSync(path, '')
 

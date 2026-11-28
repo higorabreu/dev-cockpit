@@ -2,17 +2,19 @@ import { type ChildProcess, spawn, spawnSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { connectTo } from '@dck/adapter-node-net'
+import { connectTo, temporaryEndpoint } from '@dck/adapter-node-net'
 import { createClient, silentLogger } from '@dck/core'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { buildCli } from './cli-bundle.mjs'
 
 let resources = ''
+let endpoint = ''
 // dck.mjs alone, without the cli/ folder: what runs here loads nothing else
 let entryOnly = ''
 
 beforeAll(async () => {
   resources = mkdtempSync(join(tmpdir(), 'dck-cli-bundle-'))
+  endpoint = temporaryEndpoint('dck-cli-bundle')
   await buildCli(join(resources, 'dck.mjs'))
   entryOnly = join(resources, 'entry-only')
   mkdirSync(entryOnly)
@@ -24,7 +26,7 @@ afterAll(() => rmSync(resources, { recursive: true, force: true }))
 const environment = (extra: Record<string, string> = {}) => ({
   PATH: process.env.PATH,
   LANG: 'en_US.UTF-8',
-  DCK_ENDPOINT: join(resources, 'run', 'daemon.sock'),
+  DCK_ENDPOINT: endpoint,
   DCK_CONFIG_DIR: join(resources, 'config'),
   DCK_STATE_DIR: join(resources, 'state'),
   ...extra,
@@ -55,7 +57,6 @@ const dckAsync = (args: readonly string[], extra: Record<string, string> = {}) =
   })
 
 async function startDaemon(): Promise<ChildProcess> {
-  mkdirSync(join(resources, 'run'), { mode: 0o700 })
   const daemon = spawn(process.execPath, [join(resources, 'dck.mjs'), 'daemon'], {
     env: environment(),
     stdio: 'ignore',
