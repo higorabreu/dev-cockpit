@@ -25,6 +25,8 @@ export const listGit: GitList = (cwd, args, options) =>
   new Promise((resolve) => {
     const child = spawn('git', ['--no-optional-locks', '-C', cwd, ...args], {
       stdio: ['ignore', 'pipe', 'ignore'],
+      // Windows would flash a console window for each run started from the window's process
+      windowsHide: true,
       env: { ...process.env, GIT_TERMINAL_PROMPT: '0', LC_ALL: 'C' },
     })
     const entries: string[] = []

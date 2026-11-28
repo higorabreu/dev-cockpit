@@ -54,6 +54,8 @@ export const runGit: GitRun = (cwd, args, options) =>
         timeout: options.timeoutMs,
         maxBuffer: options.maxBytes,
         encoding: 'utf8',
+        // Windows would flash a console window for each run started from the window's process
+        windowsHide: true,
         env: { ...process.env, GIT_PAGER: 'cat', GIT_TERMINAL_PROMPT: '0', LC_ALL: 'C' },
       },
       (error, stdout, stderr) => {

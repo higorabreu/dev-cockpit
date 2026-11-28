@@ -27,7 +27,8 @@ function git(cwd: string, args: readonly string[]): Promise<string | undefined> 
     execFile(
       'git',
       ['--no-optional-locks', '-C', cwd, ...args],
-      { timeout: TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 },
+      // Windows would flash a console window for each run started from the window's process
+      { timeout: TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024, windowsHide: true },
       (error, stdout) => resolve(error ? undefined : stdout),
     )
   })
